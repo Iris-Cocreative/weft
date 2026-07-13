@@ -19,7 +19,12 @@ const App = {
   serialize() {
     return {
       format: GRAPH_FORMAT,
-      nodes: App.graph.nodes.map(n => ({ id: n.id, type: n.type, x: n.x, y: n.y, values: n.values })),
+      nodes: App.graph.nodes.map(n => {
+        const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: n.values };
+        if (n.enabled === false) o.enabled = false;
+        if (n.preview === false) o.preview = false;
+        return o;
+      }),
       wires: App.graph.wires.map(w => ({ id: w.id, from: w.from, to: w.to }))
     };
   },
@@ -137,6 +142,7 @@ const App = {
     Editor.init(() => App.onGraphChanged());
     Viewport.init();
     App.buildPalette();
+    App.buildTypeKey();
     App.bindToolbar();
     App.bindKeys();
     App.bindSplitter();
@@ -155,6 +161,18 @@ const App = {
       if (k === 'z' && !e.shiftKey) { e.preventDefault(); App.undo(); }
       else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); App.redo(); }
       else if (k === 'a') { e.preventDefault(); Editor.selectAll(); }
+      else if (k === 'c' || k === 'x') {
+        // async-clipboard fallback so copy works even if the native copy event
+        // doesn't reach us; on file:// (no clipboard API) the copy event path runs
+        const frag = Editor.copySelection();
+        if (frag && navigator.clipboard && navigator.clipboard.writeText) {
+          e.preventDefault();
+          navigator.clipboard.writeText(JSON.stringify(frag, null, 1)).then(() => {
+            App.flash(frag.nodes.length + ' node(s) ' + (k === 'x' ? 'cut' : 'copied') + ' — paste here or into any chat');
+            if (k === 'x') Editor.deleteSelection();
+          }).catch(() => {});
+        }
+      }
     });
   },
 
@@ -172,21 +190,78 @@ const App = {
         const defs = Object.values(NODE_DEFS)
           .filter(d => d.cat === cat)
           .filter(d => !q || d.title.toLowerCase().includes(q) || d.id.includes(q))
-          .sort((a, b) => a.title.localeCompare(b.title));
+          .sort((a, b) => ((a.grp || 9) - (b.grp || 9)) || a.title.localeCompare(b.title));
         if (!defs.length) continue;
         html += `<div class="pal-cat" style="--c:${CATS[cat]}">${cat}</div>`;
-        html += defs.map(d =>
-          `<div class="pal-item" data-type="${d.id}" title="${d.desc || ''}">
+        let prevGrp = null;
+        for (const d of defs) {
+          if (prevGrp !== null && (d.grp || 9) !== prevGrp) html += '<div class="pal-gap"></div>';
+          prevGrp = d.grp || 9;
+          html += `<div class="pal-item" data-type="${d.id}" title="${d.desc || ''}">
             <span class="dot" style="background:${CATS[cat]}"></span>${d.title}
-          </div>`).join('');
+          </div>`;
+        }
       }
       list.innerHTML = html;
     };
     render('');
     search.addEventListener('input', () => render(search.value));
-    list.addEventListener('click', e => {
+
+    /* drag a node from the palette onto the loom (or an Anchor onto the cloth) */
+    let pd = null;
+    list.addEventListener('pointerdown', e => {
       const item = e.target.closest('.pal-item');
-      if (item) Editor.addAtCenter(item.dataset.type);
+      if (!item) return;
+      e.preventDefault();
+      pd = { type: item.dataset.type, title: item.textContent.trim(), sx: e.clientX, sy: e.clientY, ghost: null };
+    });
+    window.addEventListener('pointermove', e => {
+      if (!pd) return;
+      if (!pd.ghost && Math.abs(e.clientX - pd.sx) + Math.abs(e.clientY - pd.sy) > 6) {
+        pd.ghost = document.createElement('div');
+        pd.ghost.className = 'drag-ghost';
+        pd.ghost.textContent = pd.title;
+        document.body.appendChild(pd.ghost);
+      }
+      if (pd.ghost) {
+        pd.ghost.style.left = (e.clientX + 12) + 'px';
+        pd.ghost.style.top = (e.clientY + 8) + 'px';
+      }
+    });
+    window.addEventListener('pointerup', e => {
+      if (!pd) return;
+      const p = pd;
+      pd = null;
+      if (!p.ghost) {
+        if (e.target.closest && e.target.closest('.pal-item')) Editor.addAtCenter(p.type);
+        return;
+      }
+      p.ghost.remove();
+      const ed = document.getElementById('editor').getBoundingClientRect();
+      const pv = document.getElementById('preview').getBoundingClientRect();
+      const within = r => e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (within(ed)) {
+        Editor.addAt(p.type, e.clientX, e.clientY);
+      } else if (within(pv) && p.type === 'params/anchor') {
+        const n = Editor.addAtCenter('params/anchor');
+        if (n) {
+          n.values.x = Math.round(e.clientX - pv.left - pv.width / 2);
+          n.values.y = Math.round(e.clientY - pv.top - pv.height / 2);
+          App.onGraphChanged();
+          App.flash('anchor pinned to the cloth — drag its handle any time');
+        }
+      }
+    });
+  },
+
+  buildTypeKey() {
+    const body = document.querySelector('#typeKey .tk-body');
+    const order = ['number', 'point', 'geometry', 'color', 'bool', 'string', 'any'];
+    body.innerHTML = order.map(t =>
+      `<div class="tk-row"><span class="tk-line" style="background:${TYPE_COLORS[t]}"></span>${t}</div>`).join('') +
+      `<div class="tk-note">wires take the colour of their source output</div>`;
+    document.querySelector('#typeKey .tk-head').addEventListener('click', () => {
+      document.getElementById('typeKey').classList.toggle('closed');
     });
   },
 

@@ -20,6 +20,8 @@ const Editor = (() => {
 
   const nodeById = id => S.graph.nodes.find(n => n.id === id);
   const defOf = n => NODE_DEFS[n.type];
+  const previewCapable = def => !!def && def.cat !== 'Display' && def.id !== 'params/anchor' &&
+    (def.outputs || []).some(o => o.type === 'geometry' || o.type === 'point');
 
   function worldPos(e) {
     const r = editorEl.getBoundingClientRect();
@@ -70,19 +72,27 @@ const Editor = (() => {
     drawWires();
   }
 
-  function duplicateNode(id) {
-    const n = nodeById(id);
-    if (!n) return;
-    const c = { id: nextId(), type: n.type, x: n.x + 28, y: n.y + 28, values: JSON.parse(JSON.stringify(n.values || {})) };
-    S.graph.nodes.push(c);
-    buildNode(c);
-    selectOnly(c.id);
+  /* duplicate the selection: internal wires come along via the fragment,
+   * incoming wires from OUTSIDE the selection are recreated too (GH behavior) */
+  function duplicateSelection() {
+    const frag = copySelection();
+    if (!frag) return;
+    const ext = S.graph.wires
+      .filter(w => S.sel.has(w.to[0]) && !S.sel.has(w.from[0]))
+      .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
+    const idMap = pasteFragment(frag);
+    if (!idMap) return;
+    for (const w of ext) {
+      const t = idMap[w.to[0]];
+      if (t) S.graph.wires.push({ id: 'w' + (S.widc++), from: w.from, to: [t, w.to[1]] });
+    }
+    refreshAllLiterals();
     drawWires();
     changed();
   }
 
-  function findWireToInput(nodeId, port) {
-    return S.graph.wires.find(w => w.to[0] === nodeId && w.to[1] === port);
+  function wiresToInput(nodeId, port) {
+    return S.graph.wires.filter(w => w.to[0] === nodeId && w.to[1] === port);
   }
 
   function wouldCycle(srcId, dstId) {
@@ -100,8 +110,8 @@ const Editor = (() => {
 
   function connect(fromId, fromPort, toId, toPort) {
     if (wouldCycle(fromId, toId)) { App.flash('that connection would create a cycle'); return false; }
-    const old = findWireToInput(toId, toPort);
-    if (old) S.graph.wires.splice(S.graph.wires.indexOf(old), 1);
+    // multiple wires per input are allowed (lists concatenate); only exact duplicates are refused
+    if (S.graph.wires.some(w => w.from[0] === fromId && w.from[1] === fromPort && w.to[0] === toId && w.to[1] === toPort)) return false;
     S.graph.wires.push({ id: 'w' + (S.widc++), from: [fromId, fromPort], to: [toId, toPort] });
     refreshLiterals(toId);
     drawWires();
@@ -128,6 +138,9 @@ const Editor = (() => {
     el.className = 'node';
     el.dataset.id = n.id;
     if (def && def.width) el.style.width = def.width + 'px';
+    if (def && def.compact) el.classList.add('compact');
+    if (n.enabled === false) el.classList.add('disabled');
+    if (n.preview === false) el.classList.add('no-prev');
 
     if (!def) {
       el.innerHTML = `<div class="node-head"><span class="dot" style="background:#f87171"></span><span class="title">? ${n.type}</span></div>`;
@@ -141,6 +154,19 @@ const Editor = (() => {
     head.className = 'node-head';
     head.innerHTML = `<span class="dot" style="background:${CATS[def.cat] || '#888'}"></span><span class="title">${def.title}</span>`;
     head.title = def.desc || '';
+    if (previewCapable(def)) {
+      const pt = document.createElement('span');
+      pt.className = 'prev-toggle';
+      pt.title = 'toggle geometry preview';
+      pt.addEventListener('pointerdown', e => e.stopPropagation());
+      pt.addEventListener('click', e => {
+        e.stopPropagation();
+        n.preview = n.preview === false ? true : false;
+        el.classList.toggle('no-prev', n.preview === false);
+        changed();
+      });
+      head.appendChild(pt);
+    }
     el.appendChild(head);
 
     const rows = document.createElement('div');
@@ -171,6 +197,12 @@ const Editor = (() => {
       row.appendChild(lit);
       buildLiteral(n, inp, lit);
       rows.appendChild(row);
+    }
+
+    if ((def.outputs || []).length) {
+      const dd = document.createElement('div');
+      dd.className = 'node-data';
+      el.appendChild(dd);
     }
 
     nodesEl.appendChild(el);
@@ -234,7 +266,7 @@ const Editor = (() => {
     const el = S.els.get(nodeId);
     if (!el) return;
     el.querySelectorAll('.row.in').forEach(row => {
-      const connected = !!findWireToInput(nodeId, row.dataset.input);
+      const connected = wiresToInput(nodeId, row.dataset.input).length > 0;
       row.classList.toggle('connected', connected);
     });
   }
@@ -251,9 +283,13 @@ const Editor = (() => {
     if (!n || !nodeEl) return { x: 0, y: 0 };
     const el = nodeEl.querySelector(`.port[data-dir="${dir}"][data-port="${name}"]`);
     if (!el) return { x: n.x, y: n.y };
-    let x = el.offsetWidth / 2, y = el.offsetHeight / 2;
-    for (let o = el; o && o !== nodeEl; o = o.offsetParent) { x += o.offsetLeft; y += o.offsetTop; }
-    return { x: n.x + x, y: n.y + y };
+    // measure through real geometry so CSS transforms can't skew wire endpoints
+    const pr = el.getBoundingClientRect();
+    const er = editorEl.getBoundingClientRect();
+    return {
+      x: (pr.left + pr.width / 2 - er.left - S.pan.x) / S.zoom,
+      y: (pr.top + pr.height / 2 - er.top - S.pan.y) / S.zoom
+    };
   }
 
   function wirePath(p1, p2) {
@@ -342,8 +378,9 @@ const Editor = (() => {
     let fixed = { node: nodeId, dir, port };
     let detached = false;
     if (dir === 'in') {
-      const w = findWireToInput(nodeId, port);
-      if (w) {
+      const ws = wiresToInput(nodeId, port);
+      if (ws.length) {
+        const w = ws[ws.length - 1]; // grab the newest wire
         S.graph.wires.splice(S.graph.wires.indexOf(w), 1);
         refreshLiterals(nodeId);
         fixed = { node: w.from[0], dir: 'out', port: w.from[1] };
@@ -392,11 +429,29 @@ const Editor = (() => {
   }
 
   function onPointerDown(e) {
-    if (e.button === 2) return;
     closeCtx();
+    if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu, #typeKey')) return;
     const portEl = e.target.closest && e.target.closest('.port');
-    if (portEl) { startWire(e, portEl); return; }
     const nodeEl = e.target.closest && e.target.closest('.node');
+
+    if (e.button === 2) {
+      // right button: pan on background; clean right-click opens menu on release
+      e.preventDefault();
+      if (nodeEl) { S.drag = { kind: 'rnode', id: nodeEl.dataset.id, sx: e.clientX, sy: e.clientY, moved: false }; return; }
+      closeQA();
+      S.drag = { kind: 'pan', rmb: true, sx: e.clientX, sy: e.clientY, ox: S.pan.x, oy: S.pan.y, moved: false };
+      editorEl.classList.add('panning');
+      return;
+    }
+    if (e.button === 1) {
+      e.preventDefault();
+      S.drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, ox: S.pan.x, oy: S.pan.y, moved: false };
+      editorEl.classList.add('panning');
+      return;
+    }
+    if (e.button !== 0) return;
+
+    if (portEl) { startWire(e, portEl); return; }
     if (nodeEl) {
       if (e.target.closest('input, textarea, select, button, [contenteditable]')) return;
       e.preventDefault();
@@ -405,20 +460,16 @@ const Editor = (() => {
       startNodeDrag(e, nodeEl.dataset.id);
       return;
     }
-    if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu')) return;
+    // background left-drag: marquee (shift = add to selection)
     closeQA();
-    if (e.shiftKey) {
-      // background + shift: marquee select
-      const wp = worldPos(e);
-      S.drag = { kind: 'marquee', x0: wp.x, y0: wp.y };
-      marqueeEl = document.createElement('div');
-      marqueeEl.id = 'marquee';
-      editorEl.appendChild(marqueeEl);
-      return;
-    }
-    // background: pan
-    S.drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, ox: S.pan.x, oy: S.pan.y, moved: false };
-    editorEl.classList.add('panning');
+    const wp = worldPos(e);
+    S.drag = {
+      kind: 'marquee', x0: wp.x, y0: wp.y,
+      base: e.shiftKey ? new Set(S.sel) : new Set()
+    };
+    marqueeEl = document.createElement('div');
+    marqueeEl.id = 'marquee';
+    editorEl.appendChild(marqueeEl);
   }
 
   function onPointerMove(e) {
@@ -443,17 +494,27 @@ const Editor = (() => {
       const wp = worldPos(e);
       const x = Math.min(d.x0, wp.x), y = Math.min(d.y0, wp.y);
       const w = Math.abs(wp.x - d.x0), h = Math.abs(wp.y - d.y0);
+      // CAD semantics: drag left = crossing (touch selects), drag right = window (contain selects)
+      const crossing = wp.x < d.x0;
+      marqueeEl.classList.toggle('crossing', crossing);
       marqueeEl.style.left = (x * S.zoom + S.pan.x) + 'px';
       marqueeEl.style.top = (y * S.zoom + S.pan.y) + 'px';
       marqueeEl.style.width = (w * S.zoom) + 'px';
       marqueeEl.style.height = (h * S.zoom) + 'px';
-      S.sel.clear(); S.selWire = null;
+      const sel = new Set(d.base);
       for (const n of S.graph.nodes) {
         const el = S.els.get(n.id);
         if (!el) continue;
-        if (n.x < x + w && n.x + el.offsetWidth > x && n.y < y + h && n.y + el.offsetHeight > y) S.sel.add(n.id);
+        const nw = el.offsetWidth, nh = el.offsetHeight;
+        const hit = crossing
+          ? (n.x < x + w && n.x + nw > x && n.y < y + h && n.y + nh > y)
+          : (n.x >= x && n.x + nw <= x + w && n.y >= y && n.y + nh <= y + h);
+        if (hit) sel.add(n.id);
       }
+      S.sel = sel; S.selWire = null;
       updateSelection();
+    } else if (d.kind === 'rnode') {
+      if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 4) d.moved = true;
     } else if (d.kind === 'wire') {
       const wp = worldPos(e);
       d.mx = wp.x; d.my = wp.y;
@@ -477,10 +538,15 @@ const Editor = (() => {
       S.drag = null;
       return;
     }
+    if (d.kind === 'rnode') {
+      S.drag = null;
+      if (!d.moved) openCtx(e, d.id);
+      return;
+    }
     S.drag = null;
     editorEl.classList.remove('panning');
     if (d.kind === 'node' && d.moved) changed();
-    if (d.kind === 'pan' && !d.moved) clearSel();
+    if (d.kind === 'pan' && d.rmb && !d.moved) openQA(e);
   }
 
   function onWheel(e) {
@@ -501,7 +567,7 @@ const Editor = (() => {
     else if (e.key === 'Escape') { closeQA(); closeCtx(); clearSel(); }
     else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
-      for (const id of [...S.sel]) duplicateNode(id);
+      duplicateSelection();
     }
   }
 
@@ -565,8 +631,12 @@ const Editor = (() => {
 
   function copySelection() {
     if (!S.sel.size) return null;
-    const nodes = S.graph.nodes.filter(n => S.sel.has(n.id)).map(n =>
-      ({ id: n.id, type: n.type, x: n.x, y: n.y, values: JSON.parse(JSON.stringify(n.values || {})) }));
+    const nodes = S.graph.nodes.filter(n => S.sel.has(n.id)).map(n => {
+      const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: JSON.parse(JSON.stringify(n.values || {})) };
+      if (n.enabled === false) o.enabled = false;
+      if (n.preview === false) o.preview = false;
+      return o;
+    });
     const wires = S.graph.wires
       .filter(w => S.sel.has(w.from[0]) && S.sel.has(w.to[0]))
       .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
@@ -630,6 +700,8 @@ const Editor = (() => {
         x: Math.round((+src.x || 0) + 26), y: Math.round((+src.y || 0) + 26 + yShift),
         values
       };
+      if (src.enabled === false) n.enabled = false;
+      if (src.preview === false) n.preview = false;
       idMap[src.id] = n.id;
       S.graph.nodes.push(n);
       buildNode(n);
@@ -651,10 +723,10 @@ const Editor = (() => {
     drawWires();
     changed();
     const unknown = nodes.filter(n => n && n.type && !NODE_DEFS[n.type]).length;
-    App.flash('pasted ' + newIds.length + ' node(s)' +
+    App.flash('added ' + newIds.length + ' node(s)' +
       (dropped ? ' · ' + dropped + ' wire(s) dropped' : '') +
       (unknown ? ' · ' + unknown + ' unknown type(s)' : ''));
-    return true;
+    return idMap;
   }
 
   function isTypingTarget(t) {
@@ -690,18 +762,42 @@ const Editor = (() => {
   /* ------------------------------ context menu ------------------------------ */
 
   function openCtx(e, nodeId) {
+    const n = nodeById(nodeId);
+    if (!n) return;
+    const def = defOf(n);
     const r = editorEl.getBoundingClientRect();
     ctxEl.classList.remove('hidden');
     ctxEl.style.left = (e.clientX - r.left) + 'px';
     ctxEl.style.top = (e.clientY - r.top) + 'px';
+    const many = S.sel.has(nodeId) && S.sel.size > 1;
     ctxEl.innerHTML = `
-      <div class="ctx-item" data-act="dup">Duplicate</div>
-      <div class="ctx-item danger" data-act="del">Delete</div>`;
+      <div class="ctx-item" data-act="dup">Duplicate${many ? ' (' + S.sel.size + ')' : ''}</div>
+      <div class="ctx-item" data-act="able">${n.enabled === false ? 'Enable' : 'Disable (pass through)'}</div>
+      ${previewCapable(def) ? `<div class="ctx-item" data-act="prev">${n.preview === false ? 'Preview on' : 'Preview off'}</div>` : ''}
+      <div class="ctx-item danger" data-act="del">Delete${many ? ' (' + S.sel.size + ')' : ''}</div>`;
     ctxEl.onpointerdown = ev => {
       ev.stopPropagation();
       const act = ev.target.dataset && ev.target.dataset.act;
-      if (act === 'dup') duplicateNode(nodeId);
-      if (act === 'del') { removeNode(nodeId); changed(); }
+      if (act === 'dup') {
+        if (!S.sel.has(nodeId)) selectOnly(nodeId);
+        duplicateSelection();
+      }
+      if (act === 'able') {
+        n.enabled = n.enabled === false ? true : false;
+        const el = S.els.get(nodeId);
+        if (el) el.classList.toggle('disabled', n.enabled === false);
+        changed();
+      }
+      if (act === 'prev') {
+        n.preview = n.preview === false ? true : false;
+        const el = S.els.get(nodeId);
+        if (el) el.classList.toggle('no-prev', n.preview === false);
+        changed();
+      }
+      if (act === 'del') {
+        if (S.sel.has(nodeId)) deleteSelection();
+        else { removeNode(nodeId); changed(); }
+      }
       closeCtx();
     };
   }
@@ -729,15 +825,11 @@ const Editor = (() => {
       window.addEventListener('keydown', onKeyDown);
 
       editorEl.addEventListener('dblclick', e => {
-        if (e.target.closest('.node, #quickAdd, #ctxMenu')) return;
+        if (e.target.closest('.node, #quickAdd, #ctxMenu, #typeKey')) return;
         openQA(e);
       });
-      editorEl.addEventListener('contextmenu', e => {
-        e.preventDefault();
-        const nodeEl = e.target.closest && e.target.closest('.node');
-        if (nodeEl) openCtx(e, nodeEl.dataset.id);
-        else openQA(e);
-      });
+      // right-click behavior lives in pointerdown/up (clean click = menu, drag = pan)
+      editorEl.addEventListener('contextmenu', e => e.preventDefault());
       bindQA();
       bindClipboard();
       applyTransform();
@@ -767,6 +859,7 @@ const Editor = (() => {
       const c = worldCenter();
       const n = addNode(type, c.x - 80 + Math.random() * 40, c.y - 40 + Math.random() * 40);
       if (n) selectOnly(n.id);
+      return n;
     },
 
     selectAll() {
@@ -779,6 +872,9 @@ const Editor = (() => {
     copySelection,
 
     postEval(ctx) {
+      const now = performance.now();
+      const readouts = now - (S._lastRead || 0) > 150;
+      if (readouts) S._lastRead = now;
       for (const n of S.graph.nodes) {
         const el = S.els.get(n.id);
         if (!el) continue;
@@ -790,8 +886,33 @@ const Editor = (() => {
         }
         const def = defOf(n);
         if (def && def.postEval) def.postEval(n, el, ctx);
+        if (readouts && def) {
+          const dd = el.lastElementChild;
+          if (dd && dd.classList.contains('node-data')) {
+            const outs = ctx.out[n.id] || {};
+            let s = '';
+            for (const o of def.outputs || []) {
+              const L = outs[o.name] || [];
+              s += (s ? '\n' : '') + o.name + '  ' +
+                (L.length ? LM.fmt(L[0]) : '—') + (L.length > 1 ? '  ×' + L.length : '');
+            }
+            if (dd._s !== s) { dd._s = s; dd.textContent = s; }
+          }
+        }
       }
     },
+
+    selectedIds() { return S.sel; },
+
+    addAt(type, clientX, clientY) {
+      const wp = worldPos({ clientX, clientY });
+      const n = addNode(type, wp.x - 20, wp.y - 14);
+      if (n) selectOnly(n.id);
+      return n;
+    },
+
+    deleteSelection,
+    duplicateSelection,
 
     get graph() { return S.graph; }
   };

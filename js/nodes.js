@@ -104,6 +104,25 @@ defNode('params/swatch', {
   }
 });
 
+defNode('params/anchor', {
+  title: 'Anchor Point', cat: 'Params', desc: 'A point pinned to the cloth (render canvas) — drag its handle there directly',
+  inputs: [], outputs: [{ name: 'P', type: 'point' }],
+  defaults: { x: 0, y: 0 },
+  compute: (a, c, node) => ({ P: { x: node.values.x || 0, y: node.values.y || 0 } }),
+  buildBody: (node, body, changed) => {
+    const row = _mk('div', 'anchor-row', body);
+    const ix = _numInput('anch-x', node.values.x, row); ix.title = 'x';
+    const iy = _numInput('anch-y', node.values.y, row); iy.title = 'y';
+    ix.addEventListener('change', () => { node.values.x = parseFloat(ix.value) || 0; changed(); });
+    iy.addEventListener('change', () => { node.values.y = parseFloat(iy.value) || 0; changed(); });
+  },
+  postEval: (node, el) => {
+    const ix = el.querySelector('.anch-x'), iy = el.querySelector('.anch-y');
+    if (ix && document.activeElement !== ix && +ix.value !== Math.round(node.values.x || 0)) ix.value = Math.round(node.values.x || 0);
+    if (iy && document.activeElement !== iy && +iy.value !== Math.round(node.values.y || 0)) iy.value = Math.round(node.values.y || 0);
+  }
+});
+
 defNode('params/panel', {
   title: 'Panel', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200,
   inputs: [{ name: 'V', type: 'any' }], outputs: [{ name: 'V', type: 'any' }],
@@ -182,6 +201,13 @@ defNode('math/pi', {
   inputs: [{ name: 'F', type: 'number', default: 1, label: 'factor' }],
   outputs: [{ name: 'P', type: 'number' }],
   compute: a => ({ P: a.F * Math.PI })
+});
+
+defNode('math/phi', {
+  title: 'Phi', cat: 'Maths', desc: 'F · φ (golden ratio, 1.618…)',
+  inputs: [{ name: 'F', type: 'number', default: 1, label: 'factor' }],
+  outputs: [{ name: 'P', type: 'number' }],
+  compute: a => ({ P: a.F * 1.618033988749895 })
 });
 
 defNode('math/remap', {
@@ -400,6 +426,14 @@ defNode('crv/polygon', {
   }
 });
 
+defNode('crv/arc', {
+  title: 'Arc', cat: 'Curve', desc: 'Arc at P from angle A0 to A1 (radians)',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }, { name: 'R', type: 'number', default: 60 },
+    { name: 'A0', type: 'number', default: 0, label: 'start angle' }, { name: 'A1', type: 'number', default: 3.14159, label: 'end angle' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => ({ C: { kind: 'arc', cx: a.P.x, cy: a.P.y, r: Math.abs(a.R), a0: a.A0, a1: a.A1 } })
+});
+
 defNode('crv/polyline', {
   title: 'PolyLine', cat: 'Curve', desc: 'Straight segments through points V',
   inputs: [{ name: 'V', type: 'point', label: 'vertices' }, { name: 'C', type: 'bool', default: false, label: 'closed' }],
@@ -512,3 +546,27 @@ defNode('disp/bg', {
   outputs: [],
   compute: (a, ctx) => { ctx.bg = a.C; return {}; }
 });
+
+/* ---- palette grouping (cluster related nodes) + compact styling ---- */
+(function () {
+  const groups = {
+    /* Maths: 1 arithmetic · 2 trig · 3 rounding/limits · 4 mapping · 5 constants */
+    'math/add': 1, 'math/sub': 1, 'math/mul': 1, 'math/div': 1, 'math/mod': 1, 'math/pow': 1, 'math/sqrt': 1,
+    'math/sin': 2, 'math/cos': 2, 'math/tan': 2, 'math/atan2': 2, 'math/rad': 2, 'math/deg': 2,
+    'math/neg': 3, 'math/abs': 3, 'math/round': 3, 'math/floor': 3, 'math/ceil': 3, 'math/min': 3, 'math/max': 3,
+    'math/remap': 4, 'math/clamp': 4, 'math/lerp': 4, 'math/smooth': 4, 'math/expr': 4, 'math/noise': 4,
+    'math/pi': 5, 'math/phi': 5,
+    /* Params: 1 values · 2 canvas objects · 3 inspection */
+    'params/slider': 1, 'params/toggle': 1, 'params/swatch': 1,
+    'params/anchor': 2,
+    'params/panel': 3,
+    /* Curve: 1 primitives · 2 from points · 3 operations */
+    'crv/line': 1, 'crv/circle': 1, 'crv/ellipse': 1, 'crv/rect': 1, 'crv/polygon': 1, 'crv/arc': 1,
+    'crv/polyline': 2, 'crv/interp': 2,
+    'crv/divide': 3, 'crv/eval': 3
+  };
+  for (const id in groups) if (NODE_DEFS[id]) NODE_DEFS[id].grp = groups[id];
+  const compact = ['math/neg', 'math/abs', 'math/round', 'math/floor', 'math/ceil', 'math/sqrt',
+    'math/sin', 'math/cos', 'math/tan', 'math/rad', 'math/deg', 'math/pi', 'math/phi'];
+  for (const id of compact) if (NODE_DEFS[id]) NODE_DEFS[id].compact = true;
+})();

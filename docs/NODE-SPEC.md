@@ -41,8 +41,14 @@ Rules:
   (dependency depth → columns). LLMs should omit positions rather than invent them.
 - `values` — literals for unwired inputs, plus node-specific state (a slider's
   `min`/`max`/`value`). Everything in `values` must be JSON-serializable.
+- `enabled` (optional, default true) — `false` bypasses the node: each output
+  passes through the first same-type input untouched (n8n-style deactivation).
+- `preview` (optional, default true) — `false` hides the node's ghost preview
+  in the viewport. Rendering via Draw nodes is unaffected.
 - Wires are `{from: [nodeId, outputPort], to: [nodeId, inputPort]}`. Cycles are
   invalid (the editor refuses them; the evaluator flags them as errors).
+  **An input may receive any number of wires** — their lists concatenate in
+  wire order before list matching (see §4). Outputs fan out freely.
 - Unknown node `type`s are preserved and displayed as placeholder nodes — they
   error at evaluation, never crash. Forward compatibility is graceful.
 
@@ -80,6 +86,9 @@ coercion exists the result is a neutral value (0, `{x:0,y:0}`, white), never an 
 
 Every port value is a **list**. A bare literal is a one-item list.
 
+- **Multi-wire merge:** when several wires feed one input, their lists
+  concatenate in wire order — wiring an angle and its negation into one
+  Rotate's angle input yields two rotated copies from a single node chain.
 - **Longest-list matching:** a node's compute runs once per index up to the
   longest input list; shorter lists repeat their **last** item. Wiring a
   200-item Series into Circle's center makes 200 circles; a single number wired

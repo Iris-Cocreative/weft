@@ -30,7 +30,11 @@ const WeftExport = (() => {
 
   function serializeGraph(graph) {
     return JSON.stringify({
-      nodes: graph.nodes.map(n => ({ id: n.id, type: n.type, values: n.values || {} })),
+      nodes: graph.nodes.map(n => {
+        const o = { id: n.id, type: n.type, values: n.values || {} };
+        if (n.enabled === false) o.enabled = false;
+        return o;
+      }),
       wires: graph.wires.map(w => ({ from: w.from, to: w.to }))
     });
   }

@@ -37,6 +37,16 @@ Canvas size in px (origin is the center)
 
 ## Params
 
+### `params/anchor` — Anchor Point
+
+A point pinned to the cloth (render canvas) — drag its handle there directly
+
+| out | type | note |
+|---|---|---|
+| P | point |  |
+
+Node values (`values` keys, not ports): `{"x":0,"y":0}`
+
 ### `params/toggle` — Boolean Toggle
 
 True / false switch
@@ -302,6 +312,18 @@ Smooth 2D value noise, output 0..1
 | out | type | note |
 |---|---|---|
 | N | number |  |
+
+### `math/phi` — Phi
+
+F · φ (golden ratio, 1.618…)
+
+| in | type | default | note |
+|---|---|---|---|
+| F | number | `1` | factor |
+
+| out | type | note |
+|---|---|---|
+| P | number |  |
 
 ### `math/pi` — Pi
 
@@ -596,6 +618,21 @@ Point at angle A (radians) and radius R from origin O
 | P | point |  |
 
 ## Curve
+
+### `crv/arc` — Arc
+
+Arc at P from angle A0 to A1 (radians)
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point | `{"x":0,"y":0}` |  |
+| R | number | `60` |  |
+| A0 | number | `0` | start angle |
+| A1 | number | `3.14159` | end angle |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
 
 ### `crv/circle` — Circle
 

@@ -1,5 +1,12 @@
 'use strict';
-/* Weft viewport — the live 2D render target. Evaluates the graph every frame. */
+/*
+ * Weft viewport ("the cloth") — the live 2D render target.
+ * Evaluates the graph every frame, renders three layers:
+ *   1. ghost previews — every geometry-producing node draws faint scaffolding
+ *      (toggleable per node, GH-style; selected nodes render green, on top)
+ *   2. the drawList — explicit Draw/Display output
+ *   3. anchors — canvas-input handles, draggable directly on the cloth
+ */
 const Viewport = {
   playing: true,
 
@@ -8,13 +15,111 @@ const Viewport = {
     const g2 = canvas.getContext('2d');
     const fpsEl = document.getElementById('fps');
 
+    const GHOST = { r: 139, g: 158, b: 191, a: 0.32 };
+    const SEL = { r: 74, g: 222, b: 128, a: 0.95 };
+    const SEL_FILL = { r: 74, g: 222, b: 128, a: 0.10 };
+
     const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false };
     let mx = null, my = null;
+    let anchorDrag = null, anchorHot = null;
+
+    const centered = (clientX, clientY, rect) => ({
+      x: clientX - rect.left - rect.width / 2,
+      y: clientY - rect.top - rect.height / 2
+    });
+
+    const anchors = () => App.graph.nodes.filter(n => n.type === 'params/anchor' && n.enabled !== false);
+
     window.addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; });
-    canvas.addEventListener('pointerdown', () => { mouse.down = true; });
-    window.addEventListener('pointerup', () => { mouse.down = false; });
+    canvas.addEventListener('pointerdown', e => {
+      const p = centered(e.clientX, e.clientY, canvas.getBoundingClientRect());
+      for (const n of anchors()) {
+        if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) {
+          anchorDrag = n;
+          canvas.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          return; // grabbing an anchor is not a "mouse down" gesture for the graph
+        }
+      }
+      mouse.down = true;
+    });
+    canvas.addEventListener('pointermove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const p = centered(e.clientX, e.clientY, rect);
+      if (anchorDrag) {
+        anchorDrag.values.x = Math.round(p.x);
+        anchorDrag.values.y = Math.round(p.y);
+        return;
+      }
+      anchorHot = null;
+      for (const n of anchors()) {
+        if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) { anchorHot = n; break; }
+      }
+      canvas.style.cursor = anchorHot ? 'grab' : '';
+    });
+    window.addEventListener('pointerup', () => {
+      if (anchorDrag) { anchorDrag = null; App.onGraphChanged(); }
+      mouse.down = false;
+    });
 
     let t = 0, frame = 0, last = performance.now(), fpsA = 60, lastFps = 0;
+
+    const drawGhosts = (ctx, wantSelected) => {
+      const selIds = Editor.selectedIds();
+      for (const n of App.graph.nodes) {
+        if (n.enabled === false || n.preview === false) continue;
+        if (n.type === 'params/anchor') continue; // its handle is its preview
+        const def = NODE_DEFS[n.type];
+        if (!def || def.cat === 'Display') continue;
+        const selected = selIds.has(n.id);
+        if (selected !== wantSelected) continue;
+        const outs = ctx.out[n.id];
+        if (!outs) continue;
+        for (const o of def.outputs || []) {
+          if (o.type !== 'geometry' && o.type !== 'point') continue;
+          const L = outs[o.name] || [];
+          for (const g of L) {
+            if (!g || typeof g !== 'object') continue;
+            try {
+              LM.drawItem(g2, {
+                geom: g,
+                stroke: selected ? SEL : GHOST,
+                fill: selected && LM.isClosedGeom(g) ? SEL_FILL : null,
+                width: selected ? 1.6 : 1
+              });
+            } catch (e) { /* skip bad item */ }
+          }
+        }
+      }
+    };
+
+    const drawAnchors = () => {
+      for (const n of anchors()) {
+        const x = n.values.x || 0, y = n.values.y || 0;
+        const hot = n === anchorDrag || n === anchorHot;
+        g2.beginPath();
+        g2.arc(x, y, 6.5, 0, Math.PI * 2);
+        g2.fillStyle = 'rgba(11,14,20,0.85)';
+        g2.fill();
+        g2.strokeStyle = hot ? '#5eead4' : 'rgba(94,234,212,0.75)';
+        g2.lineWidth = hot ? 2 : 1.5;
+        g2.stroke();
+        g2.beginPath();
+        g2.moveTo(x - 10, y); g2.lineTo(x - 4, y);
+        g2.moveTo(x + 4, y); g2.lineTo(x + 10, y);
+        g2.moveTo(x, y - 10); g2.lineTo(x, y - 4);
+        g2.moveTo(x, y + 4); g2.lineTo(x, y + 10);
+        g2.strokeStyle = hot ? '#5eead4' : 'rgba(94,234,212,0.45)';
+        g2.lineWidth = 1;
+        g2.stroke();
+        if (hot) {
+          g2.font = '10px ui-monospace, Consolas, monospace';
+          g2.textAlign = 'left'; g2.textBaseline = 'bottom';
+          g2.fillStyle = 'rgba(94,234,212,0.9)';
+          g2.fillText(Math.round(x) + ', ' + Math.round(y), x + 12, y - 8);
+        }
+      }
+    };
 
     const loop = now => {
       requestAnimationFrame(loop);
@@ -28,7 +133,7 @@ const Viewport = {
       const pw = Math.round(rect.width * dpr), ph = Math.round(rect.height * dpr);
       if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
 
-      if (mx !== null) {
+      if (mx !== null && !anchorDrag) {
         mouse.x = mx - rect.left - rect.width / 2;
         mouse.y = my - rect.top - rect.height / 2;
         mouse.nx = (mx - rect.left) / rect.width;
@@ -43,9 +148,12 @@ const Viewport = {
       g2.fillRect(0, 0, rect.width, rect.height);
       g2.save();
       g2.translate(rect.width / 2, rect.height / 2);
+      drawGhosts(ctx, false);
       for (const it of ctx.drawList) {
         try { LM.drawItem(g2, it); } catch (e) { /* skip bad item */ }
       }
+      drawGhosts(ctx, true);
+      drawAnchors();
       g2.restore();
 
       Editor.postEval(ctx);

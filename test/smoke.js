@@ -52,6 +52,25 @@ for (const name of Object.keys(EXAMPLES)) {
   try { new Function(WeftExport.buildJS(g)); }
   catch (e) { failures.push('example "' + name + '": exported JS does not compile → ' + e.message); }
 }
+
+/* 4 — engine semantics: multi-wire merge + disabled-node bypass */
+{
+  const g = { nodes: [
+      { id: 's1', type: 'params/slider', values: { min: 0, max: 10, value: 1 } },
+      { id: 's2', type: 'params/slider', values: { min: 0, max: 10, value: 2 } },
+      { id: 'ng', type: 'math/neg', values: {} } ],
+    wires: [ { from: ['s1', 'N'], to: ['ng', 'V'] }, { from: ['s2', 'N'], to: ['ng', 'V'] } ] };
+  const c = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  const r = (c.out.ng || {}).R || [];
+  if (r.join(',') !== '-1,-2') failures.push('multi-wire merge: expected -1,-2 got [' + r.join(',') + ']');
+  g.nodes[2].enabled = false;
+  const c2 = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c2);
+  const r2 = (c2.out.ng || {}).R || [];
+  if (r2.join(',') !== '1,2') failures.push('disabled bypass: expected 1,2 got [' + r2.join(',') + ']');
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

@@ -35,6 +35,25 @@ The "establish and visualize the language up front" phase.
 Exit met: an agent handed NODE-SPEC + CATALOG can produce a valid patch blind
 (the spec's own example patch pastes and runs).
 
+## Phase 1.5 — Workshop pass (James's hands-on feedback) — ✅ SHIPPED 2026-07-12 (v0.3)
+
+- ✅ Wire endpoints measured through real geometry (centered on ports).
+- ✅ GH-style **ghost previews**: every geometry node draws faint scaffolding;
+  selected nodes render green; per-node toggle (head dot + context menu).
+- ✅ **Disable with pass-through** (n8n-style bypass) via context menu.
+- ✅ **Multi-wire inputs** — lists concatenate in wire order (engine semantic).
+- ✅ Live **value readouts** on every node (first item + ×count, 150ms throttle).
+- ✅ Duplicate keeps incoming wires (GH behavior); works on multi-selections.
+- ✅ Plain-drag **marquee** with CAD direction semantics (← touch, → contain);
+  right/middle-drag pans; right-click = quick-add (canvas) / menu (node).
+- ✅ Palette **drag-to-canvas**; dropping an Anchor on the cloth pins it there.
+- ✅ **Anchor Point** — first canvas input object, draggable on the cloth.
+- ✅ Wire-color **legend** (bottom-right, collapsible).
+- ✅ Palette clustering (arithmetic/trig/mapping/constants…), Phi + Arc nodes,
+  compact styling for small nodes. Async-clipboard fallback for Ctrl+C/X.
+- Specialty control nodes (Flow Gate, Blocker, Shift, joystick, dial, vector
+  pad) recorded in ROADMAP §3.5 — most belong with Phase 2's event system.
+
 ## Phase 2 — The interaction engine (events + state)
 
 Weft's identity feature; what makes it an instrument for *experiences* rather

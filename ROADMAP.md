@@ -67,6 +67,27 @@ Prompts for James (per the slow-cook rule, these are questions, not answers):
 - Action harmony: the phyllotaxis example took ~18 nodes. Where did the tool
   fight the intention?
 
+## 3.5 Node visual language & control nodes (James, 2026-07-12)
+
+Direction: nodes should *look like what they do* — a language of node shapes,
+not uniform boxes. Shipped so far: compact styling for small unary/constant
+nodes, live value readouts, preview toggles, ghost previews, disable/bypass.
+Queued ideas (build alongside Phase 2 events, since most are interaction nodes):
+
+- **Flow Gate** — a trigger switches a data flow between paths, cycles through
+  options, or randomizes the route. (Phase 2 natural fit.)
+- **Blocker** — a scalable/rotatable rectangle on the loom that cuts data flow
+  on any wire it covers; click to toggle. (Disable/bypass covers the per-node
+  case; the blocker is the *spatial* version — design against groups/frames.)
+- **Shift** — slider + addition fused into one slim vertical node (nudge a value
+  in-wire without two nodes).
+- **Shift XY** — radial joystick (dot in circle) nudging a point; configurable
+  radius; readout shows the offset.
+- **Angle dial** — angle input as a draggable 360° dial, toggleable to numeric.
+- **Vector pad** — draggable vector on an XY grid (3D version later).
+- Custom body = the mechanism for all of these; they're defs with buildBody,
+  no engine changes needed.
+
 ## 4. Branding & design language
 
 - Working title stays **Weft** until the better name proves itself. Criteria:

@@ -258,6 +258,9 @@ const LM = {
    * the node's compute runs once per index, shorter lists repeat their last
    * item. Inputs named in def.listInputs receive the whole list instead.
    * If compute returns an array for an output it is spread flat into the list.
+   * An input may receive MULTIPLE wires — their lists concatenate in wire order.
+   * A node with enabled === false is bypassed: each output passes through the
+   * first same-type input (or the first input) untouched.
    */
   evaluateGraph: (graph, defs, ctx) => {
     ctx.drawList = ctx.drawList || [];
@@ -265,8 +268,12 @@ const LM = {
     ctx.out = ctx.out || {};
     const byId = {};
     for (const n of graph.nodes) byId[n.id] = n;
-    const inWire = {};
-    for (const w of graph.wires) inWire[w.to[0] + ':' + w.to[1]] = w.from;
+    const inWires = {};
+    for (const w of graph.wires) {
+      const k = w.to[0] + ':' + w.to[1];
+      if (!inWires[k]) inWires[k] = [];
+      inWires[k].push(w.from);
+    }
 
     const order = [], mark = {};
     const visit = n => {
@@ -275,8 +282,8 @@ const LM = {
       mark[n.id] = 1;
       const def = defs[n.type];
       if (def) for (const inp of def.inputs || []) {
-        const src = inWire[n.id + ':' + inp.name];
-        if (src && byId[src[0]]) visit(byId[src[0]]);
+        const srcs = inWires[n.id + ':' + inp.name];
+        if (srcs) for (const src of srcs) if (byId[src[0]]) visit(byId[src[0]]);
       }
       mark[n.id] = 2;
       order.push(n);
@@ -289,14 +296,29 @@ const LM = {
       try {
         const resolved = {};
         for (const inp of def.inputs || []) {
-          const src = inWire[n.id + ':' + inp.name];
+          const srcs = inWires[n.id + ':' + inp.name];
           let list;
-          if (src && ctx.out[src[0]]) list = ctx.out[src[0]][src[1]] || [];
-          else {
+          if (srcs && srcs.length) {
+            list = [];
+            for (const src of srcs) {
+              const o = ctx.out[src[0]];
+              if (o && o[src[1]]) for (const v of o[src[1]]) list.push(v);
+            }
+          } else {
             const v = (n.values && n.values[inp.name] !== undefined) ? n.values[inp.name] : inp.default;
             list = v === undefined ? [] : [v];
           }
           resolved[inp.name] = list.map(v => LM.coerce(v, inp.type));
+        }
+        if (n.enabled === false) {
+          const outs = {};
+          for (const o of def.outputs || []) {
+            const m = (def.inputs || []).find(i => i.type === o.type) || (def.inputs || [])[0];
+            outs[o.name] = m ? resolved[m.name] : [];
+          }
+          ctx.out[n.id] = outs;
+          n._last = { ins: resolved, outs };
+          continue;
         }
         const outs = {};
         for (const o of def.outputs || []) outs[o.name] = [];
