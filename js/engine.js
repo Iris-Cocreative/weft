@@ -68,6 +68,7 @@ const LM = {
       case 'string':
         return typeof v === 'string' ? v : LM.fmt(v);
       case 'point':
+      case 'vector': // structurally identical to point; the distinction is semantic
         if (typeof v === 'object' && v.x !== undefined) return { x: +v.x || 0, y: +v.y || 0 };
         if (typeof v === 'number') return { x: v, y: v };
         return { x: 0, y: 0 };

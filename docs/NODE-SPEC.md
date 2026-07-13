@@ -57,12 +57,18 @@ Rules:
 Copying a selection produces the same shape with a marker:
 
 ```json
-{ "weft": "patch", "format": 1, "nodes": [...], "wires": [...] }
+{ "weft": "patch", "format": 1, "nodes": [...], "wires": [...], "ext": [...] }
 ```
 
 Paste accepts either form (fragment or full graph); ids are remapped on paste,
 so id collisions between the clipboard and the canvas are impossible. This is
 the standard way to hand a patch to or from an LLM: plain JSON in a chat.
+
+`ext` (optional) lists incoming wires from nodes *outside* the fragment
+(`from` ids are NOT remapped). On paste they reattach if the source node
+exists in the target graph — so same-graph paste behaves like duplicate,
+keeping input connections — and drop silently otherwise. LLM-authored patches
+should omit `ext`.
 
 ## 3. Types
 
@@ -72,6 +78,7 @@ the standard way to hand a patch to or from an LLM: plain JSON in a chat.
 | `bool` | JS boolean | checkbox |
 | `string` | JS string | text field |
 | `point` | `{x, y}` | two number fields |
+| `vector` | `{x, y}` — structurally a point; semantically a direction/translation | two number fields |
 | `color` | `{r, g, b, a}` — rgb 0–255, a 0–1 | color picker + alpha |
 | `geometry` | see §5 | none |
 | `any` | passthrough | none |

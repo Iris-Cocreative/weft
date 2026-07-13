@@ -72,23 +72,11 @@ const Editor = (() => {
     drawWires();
   }
 
-  /* duplicate the selection: internal wires come along via the fragment,
-   * incoming wires from OUTSIDE the selection are recreated too (GH behavior) */
+  /* duplicate = copy + paste in place; the fragment's ext list preserves
+   * incoming wires from outside the selection (GH behavior) */
   function duplicateSelection() {
     const frag = copySelection();
-    if (!frag) return;
-    const ext = S.graph.wires
-      .filter(w => S.sel.has(w.to[0]) && !S.sel.has(w.from[0]))
-      .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
-    const idMap = pasteFragment(frag);
-    if (!idMap) return;
-    for (const w of ext) {
-      const t = idMap[w.to[0]];
-      if (t) S.graph.wires.push({ id: 'w' + (S.widc++), from: w.from, to: [t, w.to[1]] });
-    }
-    refreshAllLiterals();
-    drawWires();
-    changed();
+    if (frag) pasteFragment(frag);
   }
 
   function wiresToInput(nodeId, port) {
@@ -249,7 +237,7 @@ const Editor = (() => {
       i.addEventListener('input', upd);
       al.addEventListener('change', upd);
       holder.appendChild(i); holder.appendChild(al);
-    } else if (inp.type === 'point') {
+    } else if (inp.type === 'point' || inp.type === 'vector') {
       const p = cur() || { x: 0, y: 0 };
       const ix = document.createElement('input');
       const iy = document.createElement('input');
@@ -640,7 +628,12 @@ const Editor = (() => {
     const wires = S.graph.wires
       .filter(w => S.sel.has(w.from[0]) && S.sel.has(w.to[0]))
       .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
-    return { weft: 'patch', format: 1, nodes, wires };
+    // external incoming wires: reattached on paste when the source still exists
+    // (same-graph paste behaves like duplicate; cross-graph they drop silently)
+    const ext = S.graph.wires
+      .filter(w => S.sel.has(w.to[0]) && !S.sel.has(w.from[0]))
+      .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
+    return { weft: 'patch', format: 1, nodes, wires, ext };
   }
 
   /* nodes without x/y (e.g. LLM-authored patches) get laid out in topological columns */
@@ -708,14 +701,21 @@ const Editor = (() => {
       newIds.push(n.id);
     }
     let dropped = 0;
-    const seenInputs = new Set();
+    const seenWires = new Set();
     for (const w of wires) {
       if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) { dropped++; continue; }
       const f = idMap[w.from[0]], t = idMap[w.to[0]];
-      const key = t + ':' + w.to[1];
-      if (!f || !t || seenInputs.has(key)) { dropped++; continue; }
-      seenInputs.add(key);
+      const key = f + ':' + w.from[1] + '>' + t + ':' + w.to[1];
+      if (!f || !t || seenWires.has(key)) { dropped++; continue; }
+      seenWires.add(key);
       S.graph.wires.push({ id: 'w' + (S.widc++), from: [f, w.from[1]], to: [t, w.to[1]] });
+    }
+    // reattach external incoming wires whose source node exists in this graph
+    for (const w of (Array.isArray(data.ext) ? data.ext : [])) {
+      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) continue;
+      const t = idMap[w.to[0]];
+      if (!t || !nodeById(w.from[0])) continue;
+      S.graph.wires.push({ id: 'w' + (S.widc++), from: [w.from[0], w.from[1]], to: [t, w.to[1]] });
     }
     S.sel = new Set(newIds); S.selWire = null;
     updateSelection();

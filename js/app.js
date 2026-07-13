@@ -256,7 +256,7 @@ const App = {
 
   buildTypeKey() {
     const body = document.querySelector('#typeKey .tk-body');
-    const order = ['number', 'point', 'geometry', 'color', 'bool', 'string', 'any'];
+    const order = ['number', 'point', 'vector', 'geometry', 'color', 'bool', 'string', 'any'];
     body.innerHTML = order.map(t =>
       `<div class="tk-row"><span class="tk-line" style="background:${TYPE_COLORS[t]}"></span>${t}</div>`).join('') +
       `<div class="tk-note">wires take the colour of their source output</div>`;

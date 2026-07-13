@@ -331,6 +331,20 @@ main { display: flex; flex: 1; min-height: 0; }
 .anchor-row { display: flex; gap: 5px; }
 .anchor-row input { width: 56px; }
 
+/* any input in a custom node body defaults to the dark style —
+   prevents white-on-white fields when a body forgets to style its inputs */
+.node-body input[type="number"], .node-body input[type="text"] {
+  background: #0c111c; border: 1px solid #26304a; border-radius: 5px;
+  color: #c8d2e4; font-size: 11px; padding: 1px 5px; outline: none;
+}
+.node-body input[type="number"]:focus, .node-body input[type="text"]:focus {
+  border-color: var(--accent-dim);
+}
+/* keep the slider's deliberate styling despite the generic rule above */
+.node-body input.s-val { color: var(--accent); }
+.node-body input.s-dom { background: transparent; border-color: transparent; color: var(--faint); font-size: 10px; }
+.node-body input.s-dom:hover, .node-body input.s-dom:focus { border-color: #26304a; background: #0c111c; color: var(--dim); }
+
 #ctxMenu {
   position: absolute; z-index: 30; min-width: 130px;
   background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;

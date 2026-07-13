@@ -11,7 +11,7 @@ const CATS = {
 };
 const TYPE_COLORS = {
   number: '#7ab8ff', bool: '#f87171', string: '#fbbf24', point: '#ffa94d',
-  color: '#f0abfc', geometry: '#c4b5fd', any: '#9aa4b2'
+  vector: '#a9e34b', color: '#f0abfc', geometry: '#c4b5fd', any: '#9aa4b2'
 };
 
 const NODE_DEFS = {};
@@ -54,6 +54,36 @@ defNode('input/viewport', {
 });
 
 /* ============================== PARAMS ============================== */
+
+/* Pass-through containers (GH-style params): weave a flow through a stable
+ * reference, swap the source later without rewiring downstream. Identity
+ * per-item mapping preserves lists exactly; the literal is used when unwired.
+ * (Each compute is written out literally — closures would break export.) */
+const _PARAM_DESC = 'Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream';
+defNode('params/number', {
+  title: 'Number', cat: 'Params', desc: _PARAM_DESC,
+  inputs: [{ name: 'N', type: 'number', default: 0, label: 'source (optional)' }],
+  outputs: [{ name: 'N', type: 'number' }],
+  compute: a => ({ N: a.N })
+});
+defNode('params/point', {
+  title: 'Point', cat: 'Params', desc: _PARAM_DESC,
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'source (optional)' }],
+  outputs: [{ name: 'P', type: 'point' }],
+  compute: a => ({ P: a.P })
+});
+defNode('params/vector', {
+  title: 'Vector', cat: 'Params', desc: _PARAM_DESC,
+  inputs: [{ name: 'V', type: 'vector', default: { x: 0, y: 0 }, label: 'source (optional)' }],
+  outputs: [{ name: 'V', type: 'vector' }],
+  compute: a => ({ V: a.V })
+});
+defNode('params/curve', {
+  title: 'Curve', cat: 'Params', desc: _PARAM_DESC,
+  inputs: [{ name: 'C', type: 'geometry', label: 'source (optional)' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => ({ C: a.C })
+});
 
 defNode('params/slider', {
   title: 'Number Slider', cat: 'Params', desc: 'Draggable number', width: 220,
@@ -361,6 +391,60 @@ defNode('vec/deconstruct', {
   compute: a => ({ X: a.P.x, Y: a.P.y })
 });
 
+defNode('vec/vecxy', {
+  title: 'Vector XY', cat: 'Vector', desc: 'Vector from X and Y components',
+  inputs: [{ name: 'X', type: 'number', default: 0 }, { name: 'Y', type: 'number', default: 0 }],
+  outputs: [{ name: 'V', type: 'vector' }],
+  compute: a => ({ V: { x: a.X, y: a.Y } })
+});
+
+defNode('vec/pt2vec', {
+  title: 'Point to Vector', cat: 'Vector', desc: 'Reinterpret a point as a translation vector (origin → point)',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }],
+  outputs: [{ name: 'V', type: 'vector' }],
+  compute: a => ({ V: { x: a.P.x, y: a.P.y } })
+});
+
+defNode('vec/vec2pt', {
+  title: 'Vector 2Pt', cat: 'Vector', desc: 'Vector from point A to point B (optionally unitized)',
+  inputs: [{ name: 'A', type: 'point', default: { x: 0, y: 0 } }, { name: 'B', type: 'point', default: { x: 100, y: 0 } }, { name: 'U', type: 'bool', default: false, label: 'unitize' }],
+  outputs: [{ name: 'V', type: 'vector' }, { name: 'L', type: 'number', label: 'length' }],
+  compute: a => {
+    let x = a.B.x - a.A.x, y = a.B.y - a.A.y;
+    const L = Math.hypot(x, y);
+    if (a.U && L > 0) { x /= L; y /= L; }
+    return { V: { x, y }, L };
+  }
+});
+
+defNode('vec/amp', {
+  title: 'Amplitude', cat: 'Vector', desc: 'Scale vector V to length A',
+  inputs: [{ name: 'V', type: 'vector', default: { x: 1, y: 0 } }, { name: 'A', type: 'number', default: 1, label: 'length' }],
+  outputs: [{ name: 'V', type: 'vector' }],
+  compute: a => {
+    const L = Math.hypot(a.V.x, a.V.y);
+    if (L === 0) return { V: { x: 0, y: 0 } };
+    return { V: { x: a.V.x / L * a.A, y: a.V.y / L * a.A } };
+  }
+});
+
+defNode('vec/unit', {
+  title: 'Unit Vector', cat: 'Vector', desc: 'Normalize V to length 1',
+  inputs: [{ name: 'V', type: 'vector', default: { x: 1, y: 0 } }],
+  outputs: [{ name: 'V', type: 'vector' }],
+  compute: a => {
+    const L = Math.hypot(a.V.x, a.V.y);
+    return { V: L === 0 ? { x: 0, y: 0 } : { x: a.V.x / L, y: a.V.y / L } };
+  }
+});
+
+defNode('vec/reverse', {
+  title: 'Reverse', cat: 'Vector', desc: 'Flip vector V',
+  inputs: [{ name: 'V', type: 'vector', default: { x: 1, y: 0 } }],
+  outputs: [{ name: 'V', type: 'vector' }],
+  compute: a => ({ V: { x: -a.V.x, y: -a.V.y } })
+});
+
 defNode('vec/distance', {
   title: 'Distance', cat: 'Vector', desc: 'Distance between points A and B',
   inputs: [{ name: 'A', type: 'point', default: { x: 0, y: 0 } }, { name: 'B', type: 'point', default: { x: 0, y: 0 } }],
@@ -480,7 +564,7 @@ defNode('crv/eval', {
 
 defNode('xf/move', {
   title: 'Move', cat: 'Transform', desc: 'Translate geometry by vector T',
-  inputs: [{ name: 'G', type: 'geometry' }, { name: 'T', type: 'point', default: { x: 0, y: 0 }, label: 'translation' }],
+  inputs: [{ name: 'G', type: 'geometry' }, { name: 'T', type: 'vector', default: { x: 0, y: 0 }, label: 'translation vector' }],
   outputs: [{ name: 'G', type: 'geometry' }],
   compute: a => a.G === undefined ? {} : ({ G: LM.xformGeom(a.G, LM.matMove(a.T.x, a.T.y)) })
 });
@@ -556,10 +640,15 @@ defNode('disp/bg', {
     'math/neg': 3, 'math/abs': 3, 'math/round': 3, 'math/floor': 3, 'math/ceil': 3, 'math/min': 3, 'math/max': 3,
     'math/remap': 4, 'math/clamp': 4, 'math/lerp': 4, 'math/smooth': 4, 'math/expr': 4, 'math/noise': 4,
     'math/pi': 5, 'math/phi': 5,
-    /* Params: 1 values · 2 canvas objects · 3 inspection */
+    /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
+    'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/curve': 0,
     'params/slider': 1, 'params/toggle': 1, 'params/swatch': 1,
     'params/anchor': 2,
     'params/panel': 3,
+    /* Vector: 1 points · 2 vectors · 3 measures */
+    'vec/construct': 1, 'vec/deconstruct': 1, 'vec/polar': 1,
+    'vec/vecxy': 2, 'vec/pt2vec': 2, 'vec/vec2pt': 2, 'vec/amp': 2, 'vec/unit': 2, 'vec/reverse': 2,
+    'vec/distance': 3, 'vec/angle': 3,
     /* Curve: 1 primitives · 2 from points · 3 operations */
     'crv/line': 1, 'crv/circle': 1, 'crv/ellipse': 1, 'crv/rect': 1, 'crv/polygon': 1, 'crv/arc': 1,
     'crv/polyline': 2, 'crv/interp': 2,

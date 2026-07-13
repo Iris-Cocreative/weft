@@ -67,6 +67,30 @@ Pick a colour
 
 Node values (`values` keys, not ports): `{"hex":"#5eead4","a":1}`
 
+### `params/curve` — Curve
+
+Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  | source (optional) |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
+### `params/number` — Number
+
+Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
+
+| in | type | default | note |
+|---|---|---|---|
+| N | number | `0` | source (optional) |
+
+| out | type | note |
+|---|---|---|
+| N | number |  |
+
 ### `params/slider` — Number Slider
 
 Draggable number
@@ -90,6 +114,30 @@ Inspect data flowing through, or type a value
 | V | any |  |
 
 Node values (`values` keys, not ports): `{"text":"hello weft"}`
+
+### `params/point` — Point
+
+Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point | `{"x":0,"y":0}` | source (optional) |
+
+| out | type | note |
+|---|---|---|
+| P | point |  |
+
+### `params/vector` — Vector
+
+Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
+
+| in | type | default | note |
+|---|---|---|---|
+| V | vector | `{"x":0,"y":0}` | source (optional) |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
 
 ## Maths
 
@@ -551,6 +599,19 @@ Arithmetic series: S, S+N, S+2N, … (C values)
 
 ## Vector
 
+### `vec/amp` — Amplitude
+
+Scale vector V to length A
+
+| in | type | default | note |
+|---|---|---|---|
+| V | vector | `{"x":1,"y":0}` |  |
+| A | number | `1` | length |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+
 ### `vec/angle` — Angle
 
 Angle of the vector from A to B (radians)
@@ -616,6 +677,70 @@ Point at angle A (radians) and radius R from origin O
 | out | type | note |
 |---|---|---|
 | P | point |  |
+
+### `vec/pt2vec` — Point to Vector
+
+Reinterpret a point as a translation vector (origin → point)
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point | `{"x":0,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+
+### `vec/reverse` — Reverse
+
+Flip vector V
+
+| in | type | default | note |
+|---|---|---|---|
+| V | vector | `{"x":1,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+
+### `vec/unit` — Unit Vector
+
+Normalize V to length 1
+
+| in | type | default | note |
+|---|---|---|---|
+| V | vector | `{"x":1,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+
+### `vec/vec2pt` — Vector 2Pt
+
+Vector from point A to point B (optionally unitized)
+
+| in | type | default | note |
+|---|---|---|---|
+| A | point | `{"x":0,"y":0}` |  |
+| B | point | `{"x":100,"y":0}` |  |
+| U | bool | `false` | unitize |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+| L | number | length |
+
+### `vec/vecxy` — Vector XY
+
+Vector from X and Y components
+
+| in | type | default | note |
+|---|---|---|---|
+| X | number | `0` |  |
+| Y | number | `0` |  |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
 
 ## Curve
 
@@ -767,7 +892,7 @@ Translate geometry by vector T
 | in | type | default | note |
 |---|---|---|---|
 | G | geometry |  |  |
-| T | point | `{"x":0,"y":0}` | translation |
+| T | vector | `{"x":0,"y":0}` | translation vector |
 
 | out | type | note |
 |---|---|---|
