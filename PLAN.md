@@ -3,7 +3,7 @@
 Ordered phases. Each phase is roughly 1–3 sessions, ends with smoke + browser
 verification, and leaves the app releasable. `ROADMAP.md` holds per-track detail;
 this file holds the *order* and the *why*. Research compiles continuously into
-`2nd Brain/50-Research/Weft — Node Tool Precedents.md`.
+the `2nd Brain/50-Research/Weft/` folder (precedents · possible paths · the idea).
 
 **Ordering logic:** (1) make iteration safe, (2) define the language before
 building on it, (3) build the identity feature (events/state), (4) open the
@@ -82,6 +82,27 @@ Exit met: the Click toy is a zero-code toy interface; both examples verified
 interactive in the editor **and** as exported standalone JS in a real browser
 (smoke now also covers hit testing + cross-frame state semantics).
 
+## Phase 2.5 — Visual language & the articulated library (pulled forward, James 2026-07-13)
+
+Design was Phase 5 cargo; James wants it now, and it pays for itself: icons and
+node-shape language make every later phase more legible. Runs as **lite
+sessions** (short preference-iteration sittings over prepared option boards)
+interleaved with normal build sessions — see `docs/DESIGN-PLAN.md` for the
+decision list (D1–D8), board method, and icon pipeline.
+
+1. ✅ `docs/NODE-LIBRARY.md` — the articulated library: category roles, planned
+   nodes with descriptions, library principles. (2026-07-13)
+2. Set nodes ship as the warm-up build: **Set Union / Intersection / Difference**
+   (+ `LM.setEq`), then Cull Pattern / Shift List / Dispatch as appetite allows.
+3. Lite sessions D1–D4 (silhouette, category color, ports, icon style) →
+   locked tokens in `docs/DESIGN.md`.
+4. Category glyphs (9) shipped in `assets/icons.svg`; palette + quick-add use them.
+5. Per-node glyph batches continue in the background through later phases;
+   gen-catalog reports coverage.
+
+Exit: a stranger can tell input / math / geometry / display nodes apart at 50%
+zoom without reading labels.
+
 ## Phase 3 — LLM co-creation
 
 The graph is a *shared artifact* human and model both edit. Parameters mean
@@ -98,6 +119,11 @@ iteration without re-prompting; precedent validated by ComfyBench/ComfyUI-R1.
 4. **Share links** — graph compressed into URL hash; zero-backend sharing.
 5. Demo of the thesis: take an existing hand-coded animation from the IRIS
    library, re-express it as a patch, tweak it by slider. Measure the feel.
+6. **Small-model help channel** — `docs/RECIPES.md` (task → node-chain
+   cookbook) + a Haiku-powered `weft-guide` subagent whose context is
+   CATALOG + SPEC + RECIPES stuffed whole (no RAG; cache the prompt). How-to
+   answers go to the small model; patch authoring stays with big models.
+   (Details in ROADMAP track 2.)
 
 Exit: a non-coder can ask an AI for an experience and then *play* it into shape.
 

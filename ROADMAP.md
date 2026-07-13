@@ -5,6 +5,11 @@ Each session: pick the next PLAN item, read `CLAUDE.md`, build it, pass smoke +
 browser verification, update status here and in PLAN.
 Status: `idea → next → in progress → shipped`.
 
+**Node backlog lives in `docs/NODE-LIBRARY.md`** (planned nodes + descriptions
++ library principles) — new node ideas go there, not here. Next up (James
+2026-07-13): **Set Union / Set Intersection / Set Difference** (Sets category,
+shared `LM.setEq` equality predicate).
+
 ## 0. Foundation hardening — do these before the tracks below get heavy
 
 - [shipped v0.2] **Graph format version** — `format: 1` + `App.migrate()`.
@@ -50,6 +55,13 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   drawList JSON → diff. (smoke.js already checks "runs + draws"; goldens
   catch silent visual regressions.)
 - GitHub Actions: run smoke on PR. Node-only, no browser needed.
+- [idea] **Weft guide on a small model** — "how do I…" help answered by Haiku
+  with NODE-CATALOG + NODE-SPEC + a `docs/RECIPES.md` cookbook stuffed in
+  context (no RAG needed — the whole corpus fits in one prompt, cache it).
+  Two surfaces: a `weft-guide` subagent in `.claude/agents/` for dev sessions,
+  and later an in-app "?" panel via an n8n proxy webhook. Division of labor:
+  small model answers *how-to* (the answer exists verbatim in the docs);
+  patch *authoring* stays with big models (Phase 3).
 
 ## 3. Digital Pattern Language
 
@@ -92,6 +104,10 @@ is now in, so any of these can be picked up in a workshop pass):
 
 ## 4. Branding & design language
 
+- [next] **Visual language via lite sessions** — plan and decision list live in
+  `docs/DESIGN-PLAN.md` (D1 silhouette → D2 category color → D3 ports → D4 icon
+  style → glyphs). Option boards in `design/`, locked decisions accrete into
+  `docs/DESIGN.md`, icons into `assets/icons.svg`.
 - Working title stays **Weft** until the better name proves itself. Criteria:
   weaving/thread metaphor honest to the mechanics, one syllable-ish, ownable
   domain, no collision (Loom is taken by loom.com). Candidates to sit with:
