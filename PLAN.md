@@ -99,6 +99,18 @@ decision list (D1–D8), board method, and icon pipeline.
 4. Category glyphs (9) shipped in `assets/icons.svg`; palette + quick-add use them.
 5. Per-node glyph batches continue in the background through later phases;
    gen-catalog reports coverage.
+6. **GHX importer v1** (`tools/ghx-import.html`) — paste a Grasshopper .ghx →
+   Weft patch JSON. Successor to the IRIS GHX Parser (which targeted bespoke
+   LLM-generated HTML); this targets the loom directly. 1:1 name mapping where
+   Weft has the node; unmapped types emit placeholder nodes that render as `?`
+   (loader already degrades gracefully — invariant #5), so **every pasted GH
+   demo is its own gap report**. Must fix the old parser's floating-param bug
+   (Colour/Point/Curve params keep `Source` wires on the Container, not in
+   `param_input` chunks) and carry: slider min/max/value, swatch ARGB, panel
+   text, inline input expressions (as a note on the node), and GH pivot
+   positions scaled to loom coordinates. Corpus: `Grasshopper Demos/` in the
+   workspace (7 official demos + screenshots); study notes in
+   `2nd Brain/70-Ideas/Weft/GH Inspo Backlog/`.
 
 Exit: a stranger can tell input / math / geometry / display nodes apart at 50%
 zoom without reading labels.

@@ -30,7 +30,7 @@ decisions constrain later ones — silhouette before icons, icons before polish.
 | D2 | **Category color system** | Where does category hue live? | header tint · left edge stripe · icon color only · none (type color does all the work) |
 | D3 | **Port encoding** | Today: color per type. Add shape per type? | color only (today) · +shape (circle number, diamond point, square list/any, ring geometry…) · +hollow/filled for optional/required |
 | D4 | **Icon style** | The glyph language. | geometric stroke (1.5px, 16px grid, GH-literal: a circle node shows a circle) · filled minimal · "diagram of the operation" (input→output micro-pictures) |
-| D5 | **Wire language** | Curvature, width, color = source type (today). Do triggers/state wires look alive? | as-is · trigger wires pulse on fire · list-thickness (thicker = longer list) |
+| D5 | **Wire language** | Curvature, width, color = source type (today). Do triggers/state wires look alive? | as-is · trigger wires pulse on fire · list-thickness (thicker = longer list). GH precedent (demo corpus): single wire = one value, double wire = a list, dashed = a tree — cardinality drawn on the wire itself, worth boarding. |
 | D6 | **Typography & density** | Node title case, mono vs sans for values, compact vs airy. | current lowercase-calm + mono readouts · tighter GH-density pass |
 | D7 | **Cloth & atmosphere** | Canvas background, grid, selection green, ghost previews — the room the nodes live in. | current dark · refined dark (subtle vignette, dot grid options) · light theme (later?) |
 | D8 | **Brand mark** | Wordmark + favicon for Weft (or successor name). | deferred to Phase 5 naming decision — do last |

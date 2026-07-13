@@ -44,6 +44,18 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
 - **Set Intersection** `sets/intersection` — distinct items that appear in both A and B.
 - **Set Difference** `sets/difference` — items in A that are not in B (order preserved from A).
 
+### Colour — harvested from the GH demo corpus, James 2026-07-13 *(planned — high)*
+
+- **Colour** `params/colour` — pass-through colour param, completing the v0.3.1
+  param family (Number/Point/Vector/Curve exist; Colour doesn't). GH demos use
+  it constantly to bundle swatches: N swatches → one Col param via multi-wire.
+- **Split Colour** `disp/splitcol` — colour → components, with a **mode toggle**
+  (AHSL / AHSV / ARGB) instead of GH's three separate nodes. James's design;
+  see library principle 5. Demo 3 turns hue/luminance into coordinates — colour
+  *as data* is very Weft.
+- **Gradient (multi-stop)** — extend `disp/gradient` beyond A→B: stops list +
+  positions, GH-style draggable-stop body later. Demos 2 and 4 both need ≥3 stops.
+
 ### Sets — list surgery *(planned)*
 
 - **Cull Pattern** `sets/cullpat` — keep items of L where the (repeating) bool pattern P is true. The other half of Series: Series makes rhythm, Cull edits it.
@@ -51,11 +63,21 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
 - **Dispatch** `sets/dispatch` — route items of L into outputs A/B by bool pattern P. The list-level if/else.
 - **Sort List** `sets/sort` — sort keys K (numbers), optionally dragging a values list L along with them.
 - **Weave** `sets/weave` — interleave lists by a pattern (GH name; too on-brand to skip).
+- **Interpolate Data** `sets/interpdata` — resample a list at parameter t
+  (0..1), interpolating between items — numbers, points, *and colours*
+  (polymorphic via coerce). GH Demo 2's whole trick; kin to Evaluate Curve but
+  for any data.
 
 ### Maths *(planned)*
 
 - **Graph Mapper** `math/graph` — remap 0..1 through a hand-drawn curve (custom body: draggable curve editor). The most-loved GH node; pure easing power.
 - **Average** `math/avg` — mean of the whole list L (listInput). First reduction node; opens the door to statistics for the dashboard path.
+- **Bounds** `math/bounds` — min/max of a list as a domain. GH's normalize
+  idiom is Bounds → Remap ("distances can be any positive value; remap into a
+  fixed domain") — Demos 5 and 6 both lean on it; belongs in RECIPES too.
+- **Expression: variable ports** — GH's Expression grows named inputs to match
+  the formula (a,b,c,d,x…); Weft's is fixed X,Y,Z,T. Port-count-follows-
+  expression is the upgrade (Demo 4's polynomial needs 5 inputs).
 
 ### Curve *(planned / phase 6 for the hard ones)*
 
@@ -63,6 +85,26 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
 - **Offset** `crv/offset` — polyline offset of C by distance D. *(planned — polygon-offset math, no dependencies)*
 - **Region Union / Intersection / Difference** — 2D boolean ops on closed regions. The geometric cousins of the set nodes; need real polygon clipping (Greiner–Hormann or vendored lib = deliberate decision, invariant #7). *(phase 6)*
 - **Fillet** `crv/fillet` — round polyline corners by radius R. *(phase 6)*
+
+### Curve / Vector — harvested from the GH demo corpus *(planned)*
+
+- **Curve Closest Point** `crv/closest` — nearest point on C to P, + distance.
+  The engine of GH's attractor patterns (Demos 5, 6); cheap via `LM.toPoly`.
+- **Point In Curve** `crv/incurve` — is P inside closed region C (bool).
+  `LM.pointInGeom` already exists for Hotspot — this just exposes it as data.
+- **Bounding Box** `crv/bbox` — rect bounds of geometry (whole-list mode via
+  listInput). Demo 6: measure shape → size grid to fit.
+- **Grids** — **Square Grid** / **Hex Grid** `vec/gridsq` `vec/gridhex` —
+  point lattices with extents + spacing. The generative workhorse GH puts
+  behind every pattern demo; Weft has nothing like it yet and it's pure list
+  fun (grid → cull → attractor = the classic trio).
+- **Join Curves** `crv/join` — merge touching curves into one polyline.
+
+### Text *(pull Format forward)*
+
+- **Format** `txt/format` — template string with `{0} {1}` slots, values in,
+  string out (GH Demos 1, 5: `{0:0.00} mm` → live labels). Cheap, and readouts
+  + Panel + Text make it immediately useful — build alongside the set nodes.
 
 ### Transform *(planned)*
 
@@ -76,6 +118,12 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
 - **Angle Dial** `ctl/dial` — angle as a draggable 360° dial.
 - **Vector Pad** `ctl/vecpad` — draggable vector on an XY grid.
 - **Blocker** — spatial wire-cutter rectangle; design against groups/frames first.
+- **Value List** `params/valuelist` — named-options dropdown (GH Demo 1).
+  Core UI for presets and modes; simple custom body.
+- Later input objects from GH Demo 1's gallery: Digit Scroller, Calendar/Clock
+  (a **Date/Time** input node — real-world data on the loom), Colour Wheel
+  (see also the 3D colour picker note in the vault — design study for a richer
+  swatch/picker body).
 
 ### Input — later inputs *(phase 3+)*
 
@@ -105,7 +153,10 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
 
 ### Future packs *(pack — not core)*
 
-- **Charts pack** — Line Chart, Bar Chart, Scatter, Indicator/Dial, Time Slider: render nodes for the data-canvas path (see 2nd Brain `Weft — Possible Paths`).
+- **Charts pack** — Line Chart, Bar Chart, Scatter, Indicator/Dial, Time Slider: render nodes for the data-canvas path (see 2nd Brain `Weft — Possible Paths`). Precedent from *inside* GH: Bar Graph and Quick Graph render live charts on the canvas (Demo 5) — the dashboard path exists in embryo in Grasshopper itself.
+- **Mesh/Field pack** — Mesh Spray-style colour fields: points + colours →
+  smooth 2D gradient field (Demo 3's output). In web terms: colour-field
+  interpolation on canvas; gorgeous, later.
 - **System-dynamics pack** — Stock, Flow, Converter, Delay (Machinations/Loopy precedent) — phase 7.
 - **3D pack** — Vector3, Mesh, Camera — phase 6, three.js target.
 
@@ -121,3 +172,7 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
    when in doubt, prove demand in a Custom JS body first, promote to a def later.
 4. **Every node ships with:** one-sentence `desc`, catalog entry (automatic),
    smoke coverage (automatic), and — once the icon system exists — a glyph.
+5. **Mode toggles over node families** (James, from the GH corpus study).
+   Where GH ships three siblings (Split AHSL/AHSV/ASRGB), Weft ships one node
+   with a mode toggle. GH itself half-does this (Interpolate's scheme lives in
+   its context menu). Keeps the library small and the palette learnable.

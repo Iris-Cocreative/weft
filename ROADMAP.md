@@ -18,6 +18,12 @@ shared `LM.setEq` equality predicate).
   graph-JSON fragments with id-remap + auto-layout for coordinate-less patches.
 - [idea] Share links: graph JSON compressed into the URL hash → anyone with the
   file/URL opens the exact patch. Zero-backend sharing. (Phase 3)
+- [next] **GHX importer** (`tools/ghx-import.html`) — .ghx → Weft patch JSON;
+  unmapped GH types become `?` placeholder nodes so imports double as gap
+  reports. Spec in PLAN Phase 2.5 item 6. The GH demo corpus
+  (`Grasshopper Demos/` + notes in `2nd Brain/70-Ideas/Weft/GH Inspo Backlog/`)
+  is the test set; "Weft opens Grasshopper's own demos" is a Phase 5 gallery
+  headline.
 - [idea] Dirty-flag evaluation (skip re-eval when no animated inputs and
   nothing changed) — only when someone hits a perf wall; measure first.
 
@@ -127,6 +133,12 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 - [idea] insert node onto an existing wire (drop-on-wire splices it in)
+- [idea] **inline expressions on inputs** (GH's port expressions — type `*2`
+  or `x/360` on a port to modify values in-wire; James priority: mid). Design
+  against the Expression node and the planned Shift control so we don't ship
+  three overlapping answers.
+- [idea] Relay/reroute pins on wires (GH Relay; double-click wire to insert) —
+  pairs with the existing "wire reroute handles" idea.
 - [idea] drag from an empty port → quick-add pre-wired (GH's best gesture)
 - [idea] node alignment/distribution, comment/group frames
 - [idea] keyboard palette (Tab, like GH), arrow-key nudge
