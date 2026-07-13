@@ -1,0 +1,514 @@
+'use strict';
+/*
+ * Weft node library — Grasshopper-inspired, 2D, web-native inputs.
+ * compute() must be a pure arrow function using only (args, ctx, node) and LM.*
+ * — it gets serialized into exported experiences. buildBody/postEval are
+ * editor-only and never exported.
+ */
+const CATS = {
+  Input: '#4ade80', Params: '#2dd4bf', Maths: '#60a5fa', Sets: '#a78bfa',
+  Vector: '#fb923c', Curve: '#e879f9', Transform: '#f472b6', Display: '#facc15'
+};
+const TYPE_COLORS = {
+  number: '#7ab8ff', bool: '#f87171', string: '#fbbf24', point: '#ffa94d',
+  color: '#f0abfc', geometry: '#c4b5fd', any: '#9aa4b2'
+};
+
+const NODE_DEFS = {};
+function defNode(id, d) { d.id = id; NODE_DEFS[id] = d; }
+
+/* small DOM helpers for custom bodies (editor only) */
+function _mk(tag, cls, parent) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function _numInput(cls, value, parent) {
+  const i = _mk('input', cls, parent);
+  i.type = 'number'; i.step = 'any'; i.value = value;
+  return i;
+}
+
+/* ============================== INPUT ============================== */
+
+defNode('input/time', {
+  title: 'Time', cat: 'Input', desc: 'Seconds since start, frame count',
+  inputs: [], outputs: [{ name: 'T', type: 'number', label: 'seconds' }, { name: 'F', type: 'number', label: 'frame' }],
+  compute: (a, ctx) => ({ T: ctx.t, F: ctx.frame })
+});
+
+defNode('input/mouse', {
+  title: 'Mouse', cat: 'Input', desc: 'Pointer position (canvas-centered px + normalized 0..1) and button state',
+  inputs: [], outputs: [
+    { name: 'X', type: 'number', label: 'x (centered px)' }, { name: 'Y', type: 'number', label: 'y (centered px)' },
+    { name: 'NX', type: 'number', label: 'x normalized 0..1' }, { name: 'NY', type: 'number', label: 'y normalized 0..1' },
+    { name: 'D', type: 'bool', label: 'pointer down' }],
+  compute: (a, ctx) => ({ X: ctx.mouse.x, Y: ctx.mouse.y, NX: ctx.mouse.nx, NY: ctx.mouse.ny, D: ctx.mouse.down })
+});
+
+defNode('input/viewport', {
+  title: 'Viewport', cat: 'Input', desc: 'Canvas size in px (origin is the center)',
+  inputs: [], outputs: [{ name: 'W', type: 'number', label: 'width' }, { name: 'H', type: 'number', label: 'height' }],
+  compute: (a, ctx) => ({ W: ctx.W, H: ctx.H })
+});
+
+/* ============================== PARAMS ============================== */
+
+defNode('params/slider', {
+  title: 'Number Slider', cat: 'Params', desc: 'Draggable number', width: 220,
+  inputs: [], outputs: [{ name: 'N', type: 'number' }],
+  defaults: { min: 0, max: 10, value: 5 },
+  compute: (a, c, node) => ({ N: node.values.value === undefined ? 0 : node.values.value }),
+  buildBody: (node, body, changed) => {
+    const v = node.values;
+    const top = _mk('div', 'slider-row', body);
+    const range = _mk('input', 's-range', top);
+    range.type = 'range'; range.step = 'any'; range.min = v.min; range.max = v.max; range.value = v.value;
+    const num = _numInput('s-val', v.value, top);
+    const dom = _mk('div', 'slider-dom', body);
+    const mn = _numInput('s-dom', v.min, dom);
+    _mk('span', 's-sep', dom).textContent = '…';
+    const mx = _numInput('s-dom', v.max, dom);
+    range.addEventListener('input', () => { v.value = parseFloat(range.value); num.value = Math.round(v.value * 1000) / 1000; changed(); });
+    num.addEventListener('change', () => { v.value = parseFloat(num.value) || 0; range.value = v.value; changed(); });
+    mn.addEventListener('change', () => { v.min = parseFloat(mn.value) || 0; range.min = v.min; changed(); });
+    mx.addEventListener('change', () => { v.max = parseFloat(mx.value) || 0; range.max = v.max; changed(); });
+  }
+});
+
+defNode('params/toggle', {
+  title: 'Boolean Toggle', cat: 'Params', desc: 'True / false switch',
+  inputs: [], outputs: [{ name: 'B', type: 'bool' }],
+  defaults: { on: true },
+  compute: (a, c, node) => ({ B: !!node.values.on }),
+  buildBody: (node, body, changed) => {
+    const row = _mk('label', 'toggle-row', body);
+    const cb = _mk('input', '', row); cb.type = 'checkbox'; cb.checked = !!node.values.on;
+    _mk('span', '', row).textContent = 'on';
+    cb.addEventListener('change', () => { node.values.on = cb.checked; changed(); });
+  }
+});
+
+defNode('params/swatch', {
+  title: 'Colour Swatch', cat: 'Params', desc: 'Pick a colour',
+  inputs: [], outputs: [{ name: 'C', type: 'color' }],
+  defaults: { hex: '#5eead4', a: 1 },
+  compute: (a, c, node) => ({ C: LM.hexToColor(node.values.hex, node.values.a) }),
+  buildBody: (node, body, changed) => {
+    const row = _mk('div', 'swatch-row', body);
+    const col = _mk('input', '', row); col.type = 'color'; col.value = node.values.hex;
+    const al = _numInput('s-alpha', node.values.a, row); al.min = 0; al.max = 1; al.title = 'alpha';
+    col.addEventListener('input', () => { node.values.hex = col.value; changed(); });
+    al.addEventListener('change', () => { node.values.a = LM.clamp(parseFloat(al.value) || 0, 0, 1); changed(); });
+  }
+});
+
+defNode('params/panel', {
+  title: 'Panel', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200,
+  inputs: [{ name: 'V', type: 'any' }], outputs: [{ name: 'V', type: 'any' }],
+  listInputs: ['V'],
+  defaults: { text: 'hello weft' },
+  compute: (a, c, node) => ({ V: a.V && a.V.length ? a.V : [node.values.text] }),
+  buildBody: (node, body) => {
+    const ta = _mk('textarea', 'panel-src', body);
+    ta.value = node.values.text; ta.rows = 1; ta.spellcheck = false;
+    ta.addEventListener('input', () => { node.values.text = ta.value; });
+    _mk('pre', 'panel-out', body);
+  },
+  postEval: (node, el) => {
+    const out = el.querySelector('.panel-out');
+    const src = el.querySelector('.panel-src');
+    const connected = node._last && node._last.ins.V && node._last.ins.V.length;
+    if (src) src.style.display = connected ? 'none' : '';
+    const list = (node._last && node._last.outs.V) || [];
+    let s;
+    if (!connected) s = '';
+    else if (list.length <= 1) s = LM.fmt(list[0]);
+    else s = list.slice(0, 14).map((v, i) => i + '  ' + LM.fmt(v)).join('\n') + (list.length > 14 ? '\n… ' + list.length + ' items' : '\n— ' + list.length + ' items');
+    if (out && out.textContent !== s) out.textContent = s;
+    if (out) out.style.display = connected ? '' : 'none';
+  }
+});
+
+/* ============================== MATHS ============================== */
+
+function defBinary(id, title, fn, desc) {
+  defNode(id, {
+    title, cat: 'Maths', desc: desc || title + ' of A and B',
+    inputs: [{ name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 0 }],
+    outputs: [{ name: 'R', type: 'number' }],
+    compute: fn
+  });
+}
+defBinary('math/add', 'Addition', a => ({ R: a.A + a.B }));
+defBinary('math/sub', 'Subtraction', a => ({ R: a.A - a.B }));
+defBinary('math/mul', 'Multiplication', a => ({ R: a.A * a.B }));
+defBinary('math/div', 'Division', a => ({ R: a.B === 0 ? 0 : a.A / a.B }));
+defBinary('math/mod', 'Modulus', a => ({ R: a.B === 0 ? 0 : ((a.A % a.B) + a.B) % a.B }), 'Wrapped remainder of A / B');
+defBinary('math/pow', 'Power', a => ({ R: Math.pow(a.A, a.B) }));
+defBinary('math/min', 'Minimum', a => ({ R: Math.min(a.A, a.B) }));
+defBinary('math/max', 'Maximum', a => ({ R: Math.max(a.A, a.B) }));
+
+defNode('math/atan2', {
+  title: 'ArcTangent 2', cat: 'Maths', desc: 'Angle of vector (X,Y) in radians',
+  inputs: [{ name: 'X', type: 'number', default: 1 }, { name: 'Y', type: 'number', default: 0 }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => ({ R: Math.atan2(a.Y, a.X) })
+});
+
+function defUnary(id, title, fn, desc) {
+  defNode(id, {
+    title, cat: 'Maths', desc: desc || title,
+    inputs: [{ name: 'V', type: 'number', default: 0 }],
+    outputs: [{ name: 'R', type: 'number' }],
+    compute: fn
+  });
+}
+defUnary('math/neg', 'Negative', a => ({ R: -a.V }));
+defUnary('math/abs', 'Absolute', a => ({ R: Math.abs(a.V) }));
+defUnary('math/round', 'Round', a => ({ R: Math.round(a.V) }));
+defUnary('math/floor', 'Floor', a => ({ R: Math.floor(a.V) }));
+defUnary('math/ceil', 'Ceiling', a => ({ R: Math.ceil(a.V) }));
+defUnary('math/sqrt', 'Square Root', a => ({ R: Math.sqrt(Math.max(0, a.V)) }));
+defUnary('math/sin', 'Sine', a => ({ R: Math.sin(a.V) }), 'Sine (radians)');
+defUnary('math/cos', 'Cosine', a => ({ R: Math.cos(a.V) }), 'Cosine (radians)');
+defUnary('math/tan', 'Tangent', a => ({ R: Math.tan(a.V) }), 'Tangent (radians)');
+defUnary('math/rad', 'Radians', a => ({ R: a.V * Math.PI / 180 }), 'Degrees → radians');
+defUnary('math/deg', 'Degrees', a => ({ R: a.V * 180 / Math.PI }), 'Radians → degrees');
+
+defNode('math/pi', {
+  title: 'Pi', cat: 'Maths', desc: 'F · π',
+  inputs: [{ name: 'F', type: 'number', default: 1, label: 'factor' }],
+  outputs: [{ name: 'P', type: 'number' }],
+  compute: a => ({ P: a.F * Math.PI })
+});
+
+defNode('math/remap', {
+  title: 'Remap Numbers', cat: 'Maths', desc: 'Map V from source domain [S0,S1] to target [T0,T1]',
+  inputs: [
+    { name: 'V', type: 'number', default: 0.5 },
+    { name: 'S0', type: 'number', default: 0, label: 'source start' }, { name: 'S1', type: 'number', default: 1, label: 'source end' },
+    { name: 'T0', type: 'number', default: 0, label: 'target start' }, { name: 'T1', type: 'number', default: 100, label: 'target end' },
+    { name: 'C', type: 'bool', default: true, label: 'clamp' }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => {
+    let t = (a.S1 - a.S0) === 0 ? 0 : (a.V - a.S0) / (a.S1 - a.S0);
+    if (a.C) t = LM.clamp(t, 0, 1);
+    return { R: LM.lerp(a.T0, a.T1, t) };
+  }
+});
+
+defNode('math/clamp', {
+  title: 'Clamp', cat: 'Maths', desc: 'Constrain V to [A,B]',
+  inputs: [{ name: 'V', type: 'number', default: 0 }, { name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 1 }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => ({ R: LM.clamp(a.V, a.A, a.B) })
+});
+
+defNode('math/lerp', {
+  title: 'Lerp', cat: 'Maths', desc: 'Linear interpolate A→B by T',
+  inputs: [{ name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 1 }, { name: 'T', type: 'number', default: 0.5 }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => ({ R: LM.lerp(a.A, a.B, a.T) })
+});
+
+defNode('math/smooth', {
+  title: 'Smooth Step', cat: 'Maths', desc: 'Smooth interpolate A→B by T (eased)',
+  inputs: [{ name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 1 }, { name: 'T', type: 'number', default: 0.5 }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => { const t = LM.clamp(a.T, 0, 1); return { R: LM.lerp(a.A, a.B, t * t * (3 - 2 * t)) }; }
+});
+
+defNode('math/expr', {
+  title: 'Expression', cat: 'Maths', desc: 'Evaluate an expression of X, Y, Z, T (time). Math functions available.',
+  width: 190,
+  inputs: [{ name: 'X', type: 'number', default: 0 }, { name: 'Y', type: 'number', default: 0 }, { name: 'Z', type: 'number', default: 0 }],
+  outputs: [{ name: 'R', type: 'number' }],
+  defaults: { expr: 'sin(X) * Y' },
+  compute: (a, ctx, node) => {
+    const src = node.values.expr || '0';
+    if (node._exprSrc !== src) {
+      node._exprSrc = src;
+      node._exprFn = new Function('X', 'Y', 'Z', 'T', 'with(Math){return (' + src + ');}');
+    }
+    const r = +node._exprFn(a.X || 0, a.Y || 0, a.Z || 0, ctx.t);
+    return { R: isNaN(r) ? 0 : r };
+  },
+  buildBody: (node, body, changed) => {
+    const i = _mk('input', 'expr-src', body);
+    i.type = 'text'; i.value = node.values.expr; i.spellcheck = false;
+    i.addEventListener('change', () => { node.values.expr = i.value; changed(); });
+  }
+});
+
+defNode('math/noise', {
+  title: 'Noise', cat: 'Maths', desc: 'Smooth 2D value noise, output 0..1',
+  inputs: [{ name: 'X', type: 'number', default: 0 }, { name: 'Y', type: 'number', default: 0 }],
+  outputs: [{ name: 'N', type: 'number' }],
+  compute: a => ({ N: LM.noise2(a.X, a.Y) })
+});
+
+/* ============================== SETS ============================== */
+
+defNode('sets/series', {
+  title: 'Series', cat: 'Sets', desc: 'Arithmetic series: S, S+N, S+2N, … (C values)',
+  inputs: [{ name: 'S', type: 'number', default: 0, label: 'start' }, { name: 'N', type: 'number', default: 1, label: 'step' }, { name: 'C', type: 'number', default: 10, label: 'count' }],
+  outputs: [{ name: 'S', type: 'number' }],
+  compute: a => {
+    const c = LM.clamp(Math.floor(a.C), 0, 10000), out = [];
+    for (let i = 0; i < c; i++) out.push(a.S + i * a.N);
+    return { S: out };
+  }
+});
+
+defNode('sets/range', {
+  title: 'Range', cat: 'Sets', desc: 'N steps across domain [A,B] → N+1 values',
+  inputs: [{ name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 1 }, { name: 'N', type: 'number', default: 10, label: 'steps' }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => {
+    const n = LM.clamp(Math.floor(a.N), 1, 10000), out = [];
+    for (let i = 0; i <= n; i++) out.push(LM.lerp(a.A, a.B, i / n));
+    return { R: out };
+  }
+});
+
+defNode('sets/random', {
+  title: 'Random', cat: 'Sets', desc: 'N seeded random numbers in [A,B]',
+  inputs: [{ name: 'N', type: 'number', default: 10, label: 'count' }, { name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 1 }, { name: 'S', type: 'number', default: 1, label: 'seed' }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => {
+    const r = LM.rng(a.S), n = LM.clamp(Math.floor(a.N), 0, 10000), out = [];
+    for (let i = 0; i < n; i++) out.push(a.A + (a.B - a.A) * r());
+    return { R: out };
+  }
+});
+
+defNode('sets/item', {
+  title: 'List Item', cat: 'Sets', desc: 'Pick item i from list L (index wraps)',
+  inputs: [{ name: 'L', type: 'any' }, { name: 'i', type: 'number', default: 0 }],
+  outputs: [{ name: 'E', type: 'any' }],
+  listInputs: ['L'],
+  compute: a => {
+    const n = (a.L || []).length;
+    if (!n) return {};
+    let j = Math.floor(a.i) % n; if (j < 0) j += n;
+    return { E: a.L[j] };
+  }
+});
+
+defNode('sets/length', {
+  title: 'List Length', cat: 'Sets', desc: 'Number of items in L',
+  inputs: [{ name: 'L', type: 'any' }], outputs: [{ name: 'N', type: 'number' }],
+  listInputs: ['L'],
+  compute: a => ({ N: (a.L || []).length })
+});
+
+defNode('sets/merge', {
+  title: 'Merge', cat: 'Sets', desc: 'Concatenate lists A and B',
+  inputs: [{ name: 'A', type: 'any' }, { name: 'B', type: 'any' }],
+  outputs: [{ name: 'M', type: 'any' }],
+  listInputs: ['A', 'B'],
+  compute: a => ({ M: (a.A || []).concat(a.B || []) })
+});
+
+defNode('sets/reverse', {
+  title: 'Reverse List', cat: 'Sets', desc: 'Reverse the order of L',
+  inputs: [{ name: 'L', type: 'any' }], outputs: [{ name: 'R', type: 'any' }],
+  listInputs: ['L'],
+  compute: a => ({ R: (a.L || []).slice().reverse() })
+});
+
+/* ============================== VECTOR ============================== */
+
+defNode('vec/construct', {
+  title: 'Construct Point', cat: 'Vector', desc: 'Point from X and Y',
+  inputs: [{ name: 'X', type: 'number', default: 0 }, { name: 'Y', type: 'number', default: 0 }],
+  outputs: [{ name: 'P', type: 'point' }],
+  compute: a => ({ P: { x: a.X, y: a.Y } })
+});
+
+defNode('vec/deconstruct', {
+  title: 'Deconstruct', cat: 'Vector', desc: 'Split point into X and Y',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }],
+  outputs: [{ name: 'X', type: 'number' }, { name: 'Y', type: 'number' }],
+  compute: a => ({ X: a.P.x, Y: a.P.y })
+});
+
+defNode('vec/distance', {
+  title: 'Distance', cat: 'Vector', desc: 'Distance between points A and B',
+  inputs: [{ name: 'A', type: 'point', default: { x: 0, y: 0 } }, { name: 'B', type: 'point', default: { x: 0, y: 0 } }],
+  outputs: [{ name: 'D', type: 'number' }],
+  compute: a => ({ D: Math.hypot(a.B.x - a.A.x, a.B.y - a.A.y) })
+});
+
+defNode('vec/polar', {
+  title: 'Point Polar', cat: 'Vector', desc: 'Point at angle A (radians) and radius R from origin O',
+  inputs: [{ name: 'O', type: 'point', default: { x: 0, y: 0 }, label: 'origin' }, { name: 'A', type: 'number', default: 0, label: 'angle (rad)' }, { name: 'R', type: 'number', default: 100, label: 'radius' }],
+  outputs: [{ name: 'P', type: 'point' }],
+  compute: a => ({ P: { x: a.O.x + Math.cos(a.A) * a.R, y: a.O.y + Math.sin(a.A) * a.R } })
+});
+
+defNode('vec/angle', {
+  title: 'Angle', cat: 'Vector', desc: 'Angle of the vector from A to B (radians)',
+  inputs: [{ name: 'A', type: 'point', default: { x: 0, y: 0 } }, { name: 'B', type: 'point', default: { x: 100, y: 0 } }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: a => ({ R: Math.atan2(a.B.y - a.A.y, a.B.x - a.A.x) })
+});
+
+/* ============================== CURVE ============================== */
+
+defNode('crv/line', {
+  title: 'Line', cat: 'Curve', desc: 'Line between two points',
+  inputs: [{ name: 'A', type: 'point', default: { x: -100, y: 0 } }, { name: 'B', type: 'point', default: { x: 100, y: 0 } }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => ({ C: { kind: 'line', a: a.A, b: a.B } })
+});
+
+defNode('crv/circle', {
+  title: 'Circle', cat: 'Curve', desc: 'Circle at P with radius R',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }, { name: 'R', type: 'number', default: 60 }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => ({ C: { kind: 'circle', cx: a.P.x, cy: a.P.y, r: Math.abs(a.R) } })
+});
+
+defNode('crv/ellipse', {
+  title: 'Ellipse', cat: 'Curve', desc: 'Ellipse at P with radii RX, RY, rotation A',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }, { name: 'RX', type: 'number', default: 90 }, { name: 'RY', type: 'number', default: 50 }, { name: 'A', type: 'number', default: 0, label: 'rotation (rad)' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => ({ C: { kind: 'ellipse', cx: a.P.x, cy: a.P.y, rx: Math.abs(a.RX), ry: Math.abs(a.RY), rot: a.A } })
+});
+
+defNode('crv/rect', {
+  title: 'Rectangle', cat: 'Curve', desc: 'Rectangle centered at P',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }, { name: 'W', type: 'number', default: 120 }, { name: 'H', type: 'number', default: 80 }, { name: 'A', type: 'number', default: 0, label: 'rotation (rad)' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => ({ C: { kind: 'rect', cx: a.P.x, cy: a.P.y, w: Math.abs(a.W), h: Math.abs(a.H), rot: a.A } })
+});
+
+defNode('crv/polygon', {
+  title: 'Polygon', cat: 'Curve', desc: 'Regular N-gon at P with circumradius R',
+  inputs: [{ name: 'P', type: 'point', default: { x: 0, y: 0 } }, { name: 'R', type: 'number', default: 60 }, { name: 'N', type: 'number', default: 6, label: 'sides' }, { name: 'A', type: 'number', default: 0, label: 'rotation (rad)' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => {
+    const n = LM.clamp(Math.floor(a.N), 3, 720), pts = [];
+    for (let i = 0; i < n; i++) {
+      const t = a.A + i / n * LM.TAU;
+      pts.push({ x: a.P.x + Math.cos(t) * a.R, y: a.P.y + Math.sin(t) * a.R });
+    }
+    return { C: { kind: 'poly', pts, closed: true } };
+  }
+});
+
+defNode('crv/polyline', {
+  title: 'PolyLine', cat: 'Curve', desc: 'Straight segments through points V',
+  inputs: [{ name: 'V', type: 'point', label: 'vertices' }, { name: 'C', type: 'bool', default: false, label: 'closed' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  listInputs: ['V'],
+  compute: a => ({ C: { kind: 'poly', pts: (a.V || []).filter(p => p && p.x !== undefined), closed: !!a.C } })
+});
+
+defNode('crv/interp', {
+  title: 'Interpolate', cat: 'Curve', desc: 'Smooth curve through points V',
+  inputs: [{ name: 'V', type: 'point', label: 'vertices' }, { name: 'C', type: 'bool', default: false, label: 'closed' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  listInputs: ['V'],
+  compute: a => ({ C: { kind: 'spline', pts: (a.V || []).filter(p => p && p.x !== undefined), closed: !!a.C } })
+});
+
+defNode('crv/divide', {
+  title: 'Divide Curve', cat: 'Curve', desc: 'N division points along curve C (+ their parameters)',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'N', type: 'number', default: 10, label: 'segments' }],
+  outputs: [{ name: 'P', type: 'point' }, { name: 'T', type: 'number', label: 'parameters' }],
+  compute: a => {
+    if (!a.C) return {};
+    const n = LM.clamp(Math.floor(a.N), 1, 5000);
+    const closed = LM.isClosedGeom(a.C);
+    const count = closed ? n : n + 1;
+    const P = [], T = [];
+    for (let i = 0; i < count; i++) { const t = i / n; P.push(LM.curvePoint(a.C, t)); T.push(t); }
+    return { P, T };
+  }
+});
+
+defNode('crv/eval', {
+  title: 'Evaluate Curve', cat: 'Curve', desc: 'Point on curve C at parameter T (0..1; wraps on closed curves)',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'T', type: 'number', default: 0.5 }],
+  outputs: [{ name: 'P', type: 'point' }],
+  compute: a => {
+    if (!a.C) return {};
+    const t = LM.isClosedGeom(a.C) ? LM.fract(a.T) : LM.clamp(a.T, 0, 1);
+    return { P: LM.curvePoint(a.C, t) };
+  }
+});
+
+/* ============================== TRANSFORM ============================== */
+
+defNode('xf/move', {
+  title: 'Move', cat: 'Transform', desc: 'Translate geometry by vector T',
+  inputs: [{ name: 'G', type: 'geometry' }, { name: 'T', type: 'point', default: { x: 0, y: 0 }, label: 'translation' }],
+  outputs: [{ name: 'G', type: 'geometry' }],
+  compute: a => a.G === undefined ? {} : ({ G: LM.xformGeom(a.G, LM.matMove(a.T.x, a.T.y)) })
+});
+
+defNode('xf/rotate', {
+  title: 'Rotate', cat: 'Transform', desc: 'Rotate geometry by angle A (radians) around center C',
+  inputs: [{ name: 'G', type: 'geometry' }, { name: 'A', type: 'number', default: 0 }, { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'center' }],
+  outputs: [{ name: 'G', type: 'geometry' }],
+  compute: a => a.G === undefined ? {} : ({ G: LM.xformGeom(a.G, LM.matRot(a.A, a.C)) })
+});
+
+defNode('xf/scale', {
+  title: 'Scale', cat: 'Transform', desc: 'Scale geometry by factor F around center C',
+  inputs: [{ name: 'G', type: 'geometry' }, { name: 'F', type: 'number', default: 1 }, { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'center' }],
+  outputs: [{ name: 'G', type: 'geometry' }],
+  compute: a => a.G === undefined ? {} : ({ G: LM.xformGeom(a.G, LM.matScale(a.F, a.F, a.C)) })
+});
+
+/* ============================== DISPLAY ============================== */
+
+defNode('disp/draw', {
+  title: 'Draw', cat: 'Display', desc: 'Render geometry with stroke S, fill F, line width W',
+  inputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'S', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 }, label: 'stroke' },
+    { name: 'F', type: 'color', default: { r: 255, g: 255, b: 255, a: 0 }, label: 'fill' },
+    { name: 'W', type: 'number', default: 1.5, label: 'width' }],
+  outputs: [{ name: 'G', type: 'geometry' }],
+  compute: (a, ctx) => {
+    if (a.G === undefined || a.G === null) return {};
+    ctx.drawList.push({ geom: a.G, stroke: a.S, fill: a.F, width: a.W });
+    return { G: a.G };
+  }
+});
+
+defNode('disp/text', {
+  title: 'Text', cat: 'Display', desc: 'Text geometry at point P — wire into Draw',
+  inputs: [{ name: 'T', type: 'string', default: 'weft', label: 'text' }, { name: 'P', type: 'point', default: { x: 0, y: 0 } }, { name: 'S', type: 'number', default: 24, label: 'size' }],
+  outputs: [{ name: 'G', type: 'geometry' }],
+  compute: a => ({ G: { kind: 'text', text: a.T, x: a.P.x, y: a.P.y, size: a.S } })
+});
+
+defNode('disp/hsl', {
+  title: 'Colour HSL', cat: 'Display', desc: 'Colour from hue, saturation, lightness (all 0..1; hue wraps)',
+  inputs: [{ name: 'H', type: 'number', default: 0.5 }, { name: 'S', type: 'number', default: 0.7 }, { name: 'L', type: 'number', default: 0.6 }, { name: 'A', type: 'number', default: 1 }],
+  outputs: [{ name: 'C', type: 'color' }],
+  compute: a => ({ C: LM.hslToColor(a.H, a.S, a.L, LM.clamp(a.A, 0, 1)) })
+});
+
+defNode('disp/gradient', {
+  title: 'Gradient', cat: 'Display', desc: 'Blend colour A → B by T (0..1)',
+  inputs: [
+    { name: 'T', type: 'number', default: 0.5 },
+    { name: 'A', type: 'color', default: { r: 94, g: 234, b: 212, a: 1 } },
+    { name: 'B', type: 'color', default: { r: 244, g: 114, b: 182, a: 1 } }],
+  outputs: [{ name: 'C', type: 'color' }],
+  compute: a => ({ C: LM.mixColor(a.A, a.B, LM.clamp(a.T, 0, 1)) })
+});
+
+defNode('disp/bg', {
+  title: 'Background', cat: 'Display', desc: 'Set the canvas background colour',
+  inputs: [{ name: 'C', type: 'color', default: { r: 11, g: 14, b: 20, a: 1 } }],
+  outputs: [],
+  compute: (a, ctx) => { ctx.bg = a.C; return {}; }
+});

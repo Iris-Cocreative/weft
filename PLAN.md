@@ -1,0 +1,136 @@
+# Weft master plan
+
+Ordered phases. Each phase is roughly 1–3 sessions, ends with smoke + browser
+verification, and leaves the app releasable. `ROADMAP.md` holds per-track detail;
+this file holds the *order* and the *why*. Research compiles continuously into
+`2nd Brain/50-Research/Weft — Node Tool Precedents.md`.
+
+**Ordering logic:** (1) make iteration safe, (2) define the language before
+building on it, (3) build the identity feature (events/state), (4) open the
+LLM co-creation door early because it multiplies everything after it,
+(5) media/type/depth expand the palette, (6) brand and release when there's
+something worth naming, (7) explore new domains from a stable core.
+
+---
+
+## Phase 1 — Bedrock (safety + the language spec)
+
+The "establish and visualize the language up front" phase.
+
+1. `git init` in `weft/` + `.gitignore`; commit v0.1 as the root. (GitHub repo
+   + license = James's call at release time; MIT suggested.)
+2. **Graph format v1**: `format: 1` field in saves/autosave/examples + migration
+   hook on load. Prerequisite for everything (assets, packs, sharing).
+3. **Undo/redo** — JSON snapshot stack, Ctrl+Z/Ctrl+Shift+Z.
+4. **Copy/paste + marquee select** — clipboard carries graph-JSON fragments.
+   ⚠ This doubles as the **LLM import path**: any agent (or chat) can hand you
+   a patch as JSON and you paste it onto the canvas. Cheapest possible AI bridge.
+5. **`docs/NODE-SPEC.md`** — the formal contract: def shape, type system,
+   list-matching semantics, geometry kinds, graph JSON schema. This document
+   *is* the language. Written for two audiences at once: contributors and LLMs.
+
+Exit: an agent can be handed NODE-SPEC.md and produce a valid patch blind.
+
+## Phase 2 — The interaction engine (events + state)
+
+Weft's identity feature; what makes it an instrument for *experiences* rather
+than a graphics toy.
+
+1. `docs/EVENTS-AND-STATE.md` design note first: triggers as frame-latched
+   booleans in normal wires; state lives on `node._state`; export-safe.
+   (Study Origami Studio's "pulse" before finalizing — see research note.)
+2. State nodes: **Spring/Smooth** (build first — instant feel-good), Counter,
+   Toggle/Latch, Sample & Hold, Timer, Previous Value.
+3. **Hotspot** — any geometry → hover/pressed/clicked (point-in-geometry test
+   in LM). Every drawn shape becomes an interface element.
+4. **Button** node (a real overlaid element) + Keyboard + **Scroll** (page
+   scroll as parameter — the Webflow storytelling unlock).
+5. Two new examples: a clickable toy interface; a scroll-driven scene.
+
+Exit: build a working menu/toy-app patch with zero code; exports keep full interactivity.
+
+## Phase 3 — LLM co-creation
+
+The graph is a *shared artifact* human and model both edit. Parameters mean
+iteration without re-prompting; precedent validated by ComfyBench/ComfyUI-R1.
+
+1. `docs/LLM-AUTHORING.md` — prompt-ready spec + layout conventions + few-shot
+   patch examples (distilled from NODE-SPEC).
+2. A `/weft-patch` skill (or CLAUDE.md section): "describe an experience →
+   receive graph JSON → paste into Weft."
+3. **Custom JS node** — a code-block node: James's "not every function needs to
+   become a node." An LLM (or human) wraps arbitrary logic and *promotes
+   parameters* to ports (the Houdini pattern). Document the trust boundary
+   (same as Expression: graphs run code; share accordingly).
+4. **Share links** — graph compressed into URL hash; zero-backend sharing.
+5. Demo of the thesis: take an existing hand-coded animation from the IRIS
+   library, re-express it as a patch, tweak it by slider. Measure the feel.
+
+Exit: a non-coder can ask an AI for an experience and then *play* it into shape.
+
+## Phase 4 — Media & typography (the web's unfair advantages)
+
+1. Image node + **Image Sample** (brightness/color at points → drives geometry:
+   halftones, image-driven fields) — the killer node of the phase.
+2. Asset strategy = graph format v2 (asset manifest; data-URI embed vs URL).
+3. Video + **Webcam** sources; feedback buffer (previous frame → trails).
+4. **Deconstruct Text** (string → char list; kinetic type via list matching),
+   Text on Curve, Measure Text, Font/variable-font nodes (number → weight!).
+5. Examples: photo halftone; type that leans toward the cursor.
+
+## Phase 5 — Identity & open-source release
+
+Brand *after* the tool has proven its shape, *before* the community arrives.
+
+1. Name decision (Weft / Heddle / Thrum / …) — then domain, repo name.
+2. Design language: category glyphs, port shapes per type, `docs/DESIGN.md`
+   tokens; icon pass over the editor.
+3. README with animated GIFs, CONTRIBUTING, LICENSE; GitHub repo + Actions
+   running smoke; gallery page of examples (GitHub Pages — lab.iriscocreative
+   muscle applies).
+4. **Node pack mechanism** shipped (one-file packs + manifest; loadable via
+   script tag or paste). ComfyUI's manager is the ecosystem reference.
+
+## Phase 6 — Depth & scale
+
+1. 2.5D: z as a number → parallax/scale/draw-order nodes.
+2. Renderer abstraction; **SVG render target** (crisp, exportable, nearly free).
+3. Perf pass only if needed (dirty flags, OffscreenCanvas).
+4. three.js target + Vector3/Mesh/Camera pack — only when 2D saturates.
+
+## Phase 7 — Other domains (exploratory, may run parallel from Phase 5)
+
+The engine is domain-agnostic: lists + pure computes + render items. A *pack*
+defines a domain. Graphics is just the first pack.
+
+1. **System-dynamics pack** — stocks, flows, converters, delays, feedback
+   (Machinations/Loopy precedent) with chart/indicator render nodes.
+   This is the honest technical path to "plan projects, businesses, villages":
+   same canvas, same wires — quantities over time instead of shapes over time.
+2. **DPL companion practice** — pattern-shaped node documentation (context /
+   forces / resolution); a Weft patch as the *diagram of forces* for a design.
+   Keep as inquiry, not product, until it earns its keep.
+3. Didactic interfaces: DOM output nodes (drive real elements' styles/
+   transforms) → Weft orchestrates actual pages; explorable-explanation authoring.
+
+---
+
+## Continuous workstreams
+
+- **Research** → 2nd Brain note; open questions listed there (ComfyUI pack
+  manager mechanics, Rive data-binding API, Origami pulse semantics, Noodl
+  post-mortem, Yahoo Pipes post-mortem).
+- **Examples as tests** — every phase adds examples; smoke keeps them honest.
+- **Docs stay true** — CLAUDE.md invariants amended *deliberately* when the
+  engine grows (events/state will add invariant #8).
+
+## Standing answer: "can Weft explain existing code?"
+
+Feasible in the right order: (1) *knob extraction* — wrap working code in a
+Custom JS node and promote its magic numbers to ports (LLM does this well;
+ships in Phase 3); (2) *partial decompilation* — LLM re-expresses the
+dataflow-shaped parts (math, timing, mapping) as native nodes around the
+irreducible code core; (3) full script→graph translation is research-grade and
+only worth it for code that is secretly dataflow anyway. The near-term win is
+(1)+(2): the creator gets sliders and visible causality in minutes, and
+iteration stops costing tokens.
