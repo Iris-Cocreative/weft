@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>weft · ghx import</title>
+<style>
+  :root {
+    --bg: #0b0e14; --panel: #121722; --line: #232b3d; --ink: #e6edfa;
+    --dim: #8b9ebf; --accent: #5eead4; --warn: #fbbf24; --bad: #f87171;
+    --mono: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); padding: 24px;
+    font: 14px/1.55 Inter, system-ui, sans-serif;
+  }
+  .wrap { max-width: 1500px; margin: 0 auto; }
+  header { margin-bottom: 18px; }
+  h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.2px; }
+  h1 .accent { color: var(--accent); }
+  .sub { color: var(--dim); font-size: 13px; margin-top: 2px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 12px; color: var(--dim);
+  }
+  .panel-head .actions { display: flex; gap: 6px; }
+  textarea {
+    display: block; width: 100%; height: 430px; padding: 12px; border: none; resize: vertical;
+    background: transparent; color: var(--ink); font: 12px/1.5 var(--mono);
+  }
+  textarea:focus { outline: none; }
+  button {
+    background: #1b2333; color: var(--ink); border: 1px solid var(--line); border-radius: 7px;
+    padding: 5px 12px; font: 12px Inter, system-ui, sans-serif; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #06251f; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.1); color: #06251f; }
+  .bar { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+  .bar .msg { color: var(--dim); font-size: 13px; }
+  .bar .msg.ok { color: var(--accent); }
+  .bar .msg.err { color: var(--bad); }
+  #report { margin-top: 14px; display: none; }
+  #report.show { display: block; }
+  .report-body { padding: 12px 14px; font-size: 13px; }
+  .report-body h3 { font-size: 12px; color: var(--dim); font-weight: 600; margin: 10px 0 4px; text-transform: lowercase; }
+  .report-body h3:first-child { margin-top: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    background: #1b2333; border: 1px solid var(--line); border-radius: 20px;
+    padding: 2px 10px; font: 12px var(--mono);
+  }
+  .chip.gap { border-color: rgba(251, 191, 36, 0.4); color: var(--warn); }
+  .chip.ok { border-color: rgba(94, 234, 212, 0.35); color: var(--accent); }
+  .small { color: var(--dim); font-size: 12px; }
+  ul.notes { list-style: none; }
+  ul.notes li { padding: 1px 0; color: var(--dim); font: 12px var(--mono); }
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="accent">weft</span> · ghx import</h1>
+    <div class="sub">paste a Grasshopper .ghx (it's XML — open the file in a text editor, or pick it below) and get a Weft patch to paste on the loom. unmapped Grasshopper types become ? placeholder nodes — every import doubles as a gap report.</div>
+  </header>
+
+  <div class="cols">
+    <div class="panel">
+      <div class="panel-head">
+        <span>grasshopper .ghx</span>
+        <span class="actions">
+          <button id="pickBtn">open file…</button>
+          <button id="clearBtn">clear</button>
+        </span>
+      </div>
+      <textarea id="src" placeholder="paste .ghx XML here…" spellcheck="false"></textarea>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <span>weft patch (paste into the loom with ctrl+v)</span>
+        <span class="actions">
+          <button id="copyBtn">copy patch</button>
+          <button id="dlBtn">download</button>
+        </span>
+      </div>
+      <textarea id="out" readonly placeholder="the converted patch appears here…" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="bar">
+    <button class="primary" id="convertBtn">convert</button>
+    <span class="msg" id="msg"></span>
+  </div>
+
+  <div class="panel" id="report">
+    <div class="panel-head"><span>import report</span></div>
+    <div class="report-body" id="reportBody"></div>
+  </div>
+  <input type="file" id="file" accept=".ghx,.xml">
+</div>
+
+<script>
+'use strict';
+/*
+ * GHX → Weft importer v1. Maps Grasshopper components 1:1 onto Weft nodes
+ * where an equivalent exists; everything else becomes a 'gh/<Name>'
+ * placeholder (Weft renders unknown types as ? nodes and keeps their wires —
+ * see NODE-SPEC §2). Handles both GHX param styles (param_input/param_output
+ * chunks AND ParameterData > InputParam/OutputParam) and floating params
+ * (Number/Point/Colour/Panel…), whose Source wires live directly on the
+ * Container — the bug that bit the old IRIS GHX Parser. Relays are spliced
+ * out; Groups are skipped.
+ */
+
+/* ---------- the mapping table: GH component Name → Weft node ----------
+ * ins/outs match GH param *Names* first, NickNames second. selfIn/selfOut
+ * are for floating params whose container is itself the port.
+ * values(info) builds node.values from the parsed component. */
+const GH_MAP = {
+  'Number Slider': { w: 'params/slider', selfOut: 'N', values: c => c.slider ? { min: c.slider.min, max: c.slider.max, value: c.slider.value } : {} },
+  'Boolean Toggle': { w: 'params/toggle', selfOut: 'B', values: c => ({ on: c.toggleValue === true }) },
+  'Colour Swatch': { w: 'params/swatch', selfOut: 'C', values: c => c.swatch ? { hex: c.swatch.hex, a: c.swatch.a } : {} },
+  'Panel': { w: 'params/panel', selfIn: 'V', selfOut: 'V', values: c => ({ text: c.userText || '' }) },
+  'Number': { w: 'params/number', selfIn: 'N', selfOut: 'N' },
+  'Integer': { w: 'params/number', selfIn: 'N', selfOut: 'N' },
+  'Point': { w: 'params/point', selfIn: 'P', selfOut: 'P' },
+  'Vector': { w: 'params/vector', selfIn: 'V', selfOut: 'V' },
+  'Curve': { w: 'params/curve', selfIn: 'C', selfOut: 'C' },
+  'Button': { w: 'input/button', selfOut: 'D' },
+
+  'Addition': { w: 'math/add', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Subtraction': { w: 'math/sub', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Multiplication': { w: 'math/mul', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Division': { w: 'math/div', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Modulus': { w: 'math/mod', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Power': { w: 'math/pow', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Minimum': { w: 'math/min', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Maximum': { w: 'math/max', ins: { A: 'A', B: 'B' }, outs: { Result: 'R' } },
+  'Negative': { w: 'math/neg', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Absolute': { w: 'math/abs', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Round': { w: 'math/round', ins: { Value: 'V' }, outs: { Nearest: 'R' } },
+  'Floor': { w: 'math/floor', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Square Root': { w: 'math/sqrt', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Sine': { w: 'math/sin', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Cosine': { w: 'math/cos', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Tangent': { w: 'math/tan', ins: { Value: 'V' }, outs: { Result: 'R' } },
+  'Radians': { w: 'math/rad', ins: { Degrees: 'V' }, outs: { Radians: 'R' } },
+  'Degrees': { w: 'math/deg', ins: { Radians: 'V' }, outs: { Degrees: 'R' } },
+  'Pi': { w: 'math/pi', ins: { Factor: 'F' }, outs: { Output: 'P' } },
+  'Remap Numbers': { w: 'math/remap', ins: { Value: 'V' }, outs: { 'Mapped value': 'R', Mapped: 'R' } },
+  'Smaller Than': null, /* explicit gaps read better than accidental ones */
+
+  'Series': { w: 'sets/series', ins: { Start: 'S', Step: 'N', Count: 'C' }, outs: { Series: 'S' } },
+  'Range': { w: 'sets/range', ins: { Steps: 'N' }, outs: { Range: 'R' } },
+  'Random': { w: 'sets/random', ins: { Number: 'N', Seed: 'S' }, outs: { Random: 'R' } },
+  'List Item': { w: 'sets/item', ins: { List: 'L', Index: 'i' }, outs: { Item: 'E' } },
+  'List Length': { w: 'sets/length', ins: { List: 'L' }, outs: { Length: 'N' } },
+  'Merge': { w: 'sets/merge', ins: { 'Data 1': 'A', 'Data 2': 'B' }, outs: { Result: 'M' } },
+  'Reverse List': { w: 'sets/reverse', ins: { List: 'L' }, outs: { List: 'R' } },
+  'Cull Pattern': { w: 'sets/cullpat', ins: { List: 'L', 'Cull Pattern': 'P' }, outs: { List: 'L' } },
+  'Shift List': { w: 'sets/shift', ins: { List: 'L', 'Shift Offset': 'S', Wrap: 'W' }, outs: { List: 'L' } },
+  'Dispatch': { w: 'sets/dispatch', ins: { List: 'L', 'Dispatch pattern': 'P' }, outs: { 'List A': 'A', 'List B': 'B' } },
+  'Set Union': { w: 'sets/union', ins: { 'Set A': 'A', 'Set B': 'B' }, outs: { Union: 'U' } },
+  'Set Intersection': { w: 'sets/intersection', ins: { 'Set A': 'A', 'Set B': 'B' }, outs: { Intersection: 'I' } },
+  'Set Difference': { w: 'sets/difference', ins: { 'Set A': 'A', 'Set B': 'B' }, outs: { Union: 'D', Difference: 'D' } },
+
+  'Construct Point': { w: 'vec/construct', ins: { 'X coordinate': 'X', 'Y coordinate': 'Y' }, outs: { Point: 'P' } },
+  'Deconstruct': { w: 'vec/deconstruct', ins: { Point: 'P' }, outs: { 'X component': 'X', 'Y component': 'Y' } },
+  'Vector XY': { w: 'vec/vecxy', ins: { 'X component': 'X', 'Y component': 'Y' }, outs: { Vector: 'V' } },
+  'Vector 2Pt': { w: 'vec/vec2pt', ins: { 'Point A': 'A', 'Point B': 'B', Unitize: 'U' }, outs: { Vector: 'V', Length: 'L' } },
+  'Unit Vector': { w: 'vec/unit', ins: { Vector: 'V' }, outs: { Vector: 'V' } },
+  'Amplitude': { w: 'vec/amp', ins: { Vector: 'V', Amplitude: 'A' }, outs: { Vector: 'V' } },
+  'Distance': { w: 'vec/distance', ins: { 'Point A': 'A', 'Point B': 'B' }, outs: { Distance: 'D' } },
+  'Point Polar': { w: 'vec/polar', ins: { 'Base plane': 'O', 'XY angle': 'A', Offset: 'R' }, outs: { Point: 'P' } },
+
+  'Circle': { w: 'crv/circle', ins: { Plane: 'P', Radius: 'R' }, outs: { Circle: 'C' } },
+  'Ellipse': { w: 'crv/ellipse', ins: { Plane: 'P', 'Radius 1': 'RX', 'Radius 2': 'RY' }, outs: { Ellipse: 'C' } },
+  'Rectangle': { w: 'crv/rect', ins: { Plane: 'P' }, outs: { Rectangle: 'C' } },
+  'Polygon': { w: 'crv/polygon', ins: { Plane: 'P', Radius: 'R', Segments: 'N' }, outs: { Polygon: 'C' } },
+  'Arc': { w: 'crv/arc', ins: { Plane: 'P', Radius: 'R' }, outs: { Arc: 'C' } },
+  'Line': { w: 'crv/line', ins: { 'Start Point': 'A', 'End Point': 'B' }, outs: { Line: 'C' } },
+  'PolyLine': { w: 'crv/polyline', ins: { Vertices: 'V', Closed: 'C' }, outs: { Polyline: 'C' } },
+  'Interpolate': { w: 'crv/interp', ins: { Vertices: 'V', Periodic: 'C' }, outs: { Curve: 'C' } },
+  'Divide Curve': { w: 'crv/divide', ins: { Curve: 'C', Count: 'N' }, outs: { Points: 'P', Parameters: 'T' } },
+  'Evaluate Curve': { w: 'crv/eval', ins: { Curve: 'C', Parameter: 'T' }, outs: { Point: 'P' } },
+
+  'Move': { w: 'xf/move', ins: { Geometry: 'G', Motion: 'T' }, outs: { Geometry: 'G' } },
+  'Rotate': { w: 'xf/rotate', ins: { Geometry: 'G', Angle: 'A', Plane: 'C' }, outs: { Geometry: 'G' } },
+  'Scale': { w: 'xf/scale', ins: { Geometry: 'G', Factor: 'F', Center: 'C' }, outs: { Geometry: 'G' } },
+
+  'Custom Preview': { w: 'disp/draw', ins: { Geometry: 'G', Material: 'F' }, outs: {} },
+  'Gradient': { w: 'disp/gradient', ins: { Parameter: 'T' }, outs: { Gradient: 'C' } },
+  'Text Tag 3D': { w: 'disp/text', ins: { Location: 'P', Text: 'T', Size: 'S' }, outs: {} },
+  'Text Tag': { w: 'disp/text', ins: { Location: 'P', Text: 'T' }, outs: {} }
+};
+
+const SKIP_TYPES = { Group: 'canvas chrome', Scribble: 'canvas chrome', Sketch: 'canvas chrome' };
+const GH_SCALE = 1.6; /* GH pivots are denser than loom columns */
+
+/* expression translation: GH's VB-ish syntax → Weft's JS-with-Math expr */
+const EXPR_FNS = { Sqrt: 'sqrt', Sin: 'sin', Cos: 'cos', Tan: 'tan', Abs: 'abs', Exp: 'exp', Log: 'log', Round: 'round', Floor: 'floor', Ceiling: 'ceil', Min: 'min', Max: 'max', Pow: 'pow', Atan: 'atan', Asin: 'asin', Acos: 'acos' };
+function translateExpr(src, varMap) {
+  let s = String(src);
+  s = s.replace(/²/g, '**2').replace(/³/g, '**3').replace(/π/g, 'PI').replace(/\^/g, '**');
+  for (const fn in EXPR_FNS) s = s.replace(new RegExp('\\b' + fn + '\\s*\\(', 'g'), EXPR_FNS[fn] + '(');
+  if (varMap) for (const v in varMap) s = s.replace(new RegExp('\\b' + v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), varMap[v]);
+  return s;
+}
+
+/* ---------- GHX chunk-tree helpers (DOMParser document) ---------- */
+const kidChunks = (el, name) => el ? Array.from(el.children).filter(c => c.tagName === 'chunks').flatMap(cs => Array.from(cs.children).filter(c => c.tagName === 'chunk' && (!name || c.getAttribute('name') === name))) : [];
+const kidItems = (el, name) => el ? Array.from(el.children).filter(c => c.tagName === 'items').flatMap(is => Array.from(is.children).filter(i => i.tagName === 'item' && (!name || i.getAttribute('name') === name))) : [];
+const itemText = (el, name, dflt) => { const i = kidItems(el, name)[0]; return i ? i.textContent : (dflt === undefined ? '' : dflt); };
+const itemNum = (el, name, dflt) => { const v = parseFloat(itemText(el, name)); return isNaN(v) ? dflt : v; };
+
+function parseARGB(itemEl) {
+  const t = itemEl && itemEl.getElementsByTagName('ARGB')[0];
+  if (!t) return null;
+  const p = t.textContent.split(';').map(Number);
+  if (p.length !== 4) return null;
+  const hex = '#' + p.slice(1).map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+  return { hex, a: Math.round(p[0] / 255 * 1000) / 1000, r: p[1], g: p[2], b: p[3] };
+}
+
+/* first usable literal inside a PersistentData chunk — the value lives in
+ * Branch > Item chunks; Count/Path items alongside them are tree structure */
+function parsePersistent(pd) {
+  if (!pd) return undefined;
+  for (const itChunk of pd.getElementsByTagName('chunk')) {
+    if (itChunk.getAttribute('name') !== 'Item') continue;
+    for (const it of kidItems(itChunk)) {
+      const tn = it.getAttribute('type_name');
+      if (tn === 'gh_double' || tn === 'gh_int32' || tn === 'gh_single') { const v = parseFloat(it.textContent); if (!isNaN(v)) return v; }
+      if (tn === 'gh_bool') return it.textContent === 'true';
+      if (tn === 'gh_point3d') { const X = it.getElementsByTagName('X')[0], Y = it.getElementsByTagName('Y')[0]; if (X && Y) return { x: +X.textContent, y: +Y.textContent }; }
+      if (tn === 'gh_string') return it.textContent;
+      if (tn === 'gh_drawing_color' || tn === 'gh_colour') { const c = parseARGB(it); if (c) return { r: c.r, g: c.g, b: c.b, a: c.a }; }
+    }
+  }
+  return undefined;
+}
+
+function parseParam(p) {
+  return {
+    id: itemText(p, 'InstanceGuid'),
+    name: itemText(p, 'Name'),
+    nick: itemText(p, 'NickName'),
+    sources: kidItems(p, 'Source').map(i => i.textContent).filter(Boolean),
+    expr: itemText(p, 'Expression', null),
+    persistent: parsePersistent(kidChunks(p, 'PersistentData')[0])
+  };
+}
+
+/* ---------- parse the archive into plain component records ---------- */
+function parseGHXDoc(doc) {
+  const objects = [];
+  const defObjects = Array.from(doc.getElementsByTagName('chunk')).find(c => c.getAttribute('name') === 'DefinitionObjects');
+  if (!defObjects) throw new Error('no DefinitionObjects chunk — is this a .ghx file?');
+  for (const obj of kidChunks(defObjects, 'Object')) {
+    const ghName = itemText(obj, 'Name');
+    const container = kidChunks(obj, 'Container')[0];
+    if (!container) continue;
+    const attrs = kidChunks(container, 'Attributes')[0];
+    const pivotItem = attrs && kidItems(attrs, 'Pivot')[0];
+    const boundsItem = attrs && kidItems(attrs, 'Bounds')[0];
+    const posEl = pivotItem || boundsItem;
+    const X = posEl && posEl.getElementsByTagName('X')[0], Y = posEl && posEl.getElementsByTagName('Y')[0];
+
+    const inputs = kidChunks(container, 'param_input').map(parseParam);
+    const outputs = kidChunks(container, 'param_output').map(parseParam);
+    const pdata = kidChunks(container, 'ParameterData')[0];
+    if (pdata) {
+      for (const p of kidChunks(pdata, 'InputParam')) inputs.push(parseParam(p));
+      for (const p of kidChunks(pdata, 'OutputParam')) outputs.push(parseParam(p));
+    }
+
+    const slider = kidChunks(container, 'Slider')[0];
+    const swatchItem = kidItems(container, 'SwatchColor')[0];
+    objects.push({
+      ghName,
+      guid: itemText(container, 'InstanceGuid'),
+      nick: itemText(container, 'NickName'),
+      px: X ? parseFloat(X.textContent) : undefined,
+      py: Y ? parseFloat(Y.textContent) : undefined,
+      inputs, outputs,
+      selfSources: kidItems(container, 'Source').map(i => i.textContent).filter(Boolean),
+      slider: slider ? { min: itemNum(slider, 'Min', 0), max: itemNum(slider, 'Max', 10), value: itemNum(slider, 'Value', 0) } : null,
+      toggleValue: itemText(container, 'ToggleValue', null) === null ? null : itemText(container, 'ToggleValue') === 'true',
+      swatch: swatchItem ? parseARGB(swatchItem) : null,
+      userText: itemText(container, 'UserText', null),
+      exprText: itemText(container, 'Expression', null),
+      persistent: parsePersistent(kidChunks(container, 'PersistentData')[0])
+    });
+  }
+  return objects;
+}
+
+/* ---------- convert component records → Weft patch + report ---------- */
+function convert(objects) {
+  const report = { total: objects.length, skipped: {}, mapped: 0, placeholders: {}, relays: 0, wires: 0, droppedWires: [], notes: [] };
+
+  /* relay splice: a Relay's output guid resolves to its own sources */
+  const relaySources = {};
+  for (const o of objects) if (o.ghName === 'Relay') { relaySources[o.guid] = o.selfSources.concat(o.inputs.flatMap(p => p.sources)); report.relays++; }
+  const resolveSource = (guid, depth) => {
+    if (!(guid in relaySources) || depth > 12) return [guid];
+    return relaySources[guid].flatMap(g => resolveSource(g, (depth || 0) + 1));
+  };
+
+  const nodes = [], pendingWires = [], outPorts = {}; /* GH output guid → [weftNodeId, port] */
+  let idc = 1;
+
+  for (const o of objects) {
+    if (o.ghName === 'Relay') continue;
+    if (SKIP_TYPES[o.ghName]) { report.skipped[o.ghName] = (report.skipped[o.ghName] || 0) + 1; continue; }
+
+    let spec = GH_MAP[o.ghName] || null;
+    let dynamicIns = null, values = {};
+
+    /* Expression: map onto math/expr when its variables fit X,Y,Z */
+    if (o.ghName === 'Expression' && o.exprText) {
+      if (o.inputs.length <= 3) {
+        const letters = ['X', 'Y', 'Z'], varMap = {}, ins = {};
+        o.inputs.forEach((p, i) => { varMap[p.name || p.nick] = letters[i]; ins[p.name] = letters[i]; if (p.nick) ins[p.nick] = letters[i]; });
+        spec = { w: 'math/expr', ins, outs: { Result: 'R', R: 'R' } };
+        dynamicIns = ins;
+        values.expr = translateExpr(o.exprText, varMap);
+        report.notes.push('Expression "' + o.exprText + '" → ' + values.expr);
+      } else {
+        spec = null;
+        report.notes.push('Expression "' + o.exprText + '" has ' + o.inputs.length + ' inputs — Weft expr stops at X,Y,Z (kept as placeholder)');
+      }
+    }
+
+    const id = 'n' + (idc++);
+    const node = { id, type: spec ? spec.w : 'gh/' + o.ghName, values };
+    if (o.px !== undefined) { node.x = Math.round(o.px * GH_SCALE); node.y = Math.round(o.py * GH_SCALE); }
+
+    if (spec) {
+      report.mapped++;
+      if (spec.values) Object.assign(values, spec.values(o));
+      /* literals: persistent values on unwired mapped inputs */
+      const ins = dynamicIns || spec.ins || {};
+      for (const p of o.inputs) {
+        const port = ins[p.name] !== undefined ? ins[p.name] : ins[p.nick];
+        if (port !== undefined && !p.sources.length && p.persistent !== undefined && typeof p.persistent !== 'string') values[port] = p.persistent;
+        if (p.expr) { (values.ghNotes = values.ghNotes || []).push((p.nick || p.name) + ' ← ' + p.expr); }
+      }
+      if (o.persistent !== undefined && spec.selfIn && !o.selfSources.length && typeof o.persistent !== 'string') values[spec.selfIn] = o.persistent;
+      /* register outputs */
+      const outs = spec.outs || {};
+      for (const p of o.outputs) {
+        const port = outs[p.name] !== undefined ? outs[p.name] : outs[p.nick];
+        if (port !== undefined) outPorts[p.id] = [id, port];
+        else if (p.sources || true) { /* unmapped output — downstream wires will report */ }
+      }
+      if (spec.selfOut) outPorts[o.guid] = [id, spec.selfOut];
+      /* queue input wires */
+      for (const p of o.inputs) {
+        const port = ins[p.name] !== undefined ? ins[p.name] : ins[p.nick];
+        for (const s of p.sources) pendingWires.push({ src: s, to: [id, port], ghPort: o.ghName + '.' + (p.nick || p.name) });
+      }
+      if (spec.selfIn) for (const s of o.selfSources) pendingWires.push({ src: s, to: [id, spec.selfIn], ghPort: o.ghName + ' (param)' });
+    } else {
+      /* placeholder: keep GH port nicknames so wires survive in the JSON */
+      report.placeholders[o.ghName] = (report.placeholders[o.ghName] || 0) + 1;
+      values.gh = o.ghName;
+      if (o.nick && o.nick !== o.ghName) values.nick = o.nick;
+      if (o.exprText) (values.ghNotes = values.ghNotes || []).push('expression: ' + o.exprText);
+      for (const p of o.inputs) {
+        if (p.expr) (values.ghNotes = values.ghNotes || []).push((p.nick || p.name) + ' ← ' + p.expr);
+        for (const s of p.sources) pendingWires.push({ src: s, to: [id, p.nick || p.name], ghPort: o.ghName + '.' + (p.nick || p.name) });
+      }
+      for (const s of o.selfSources) pendingWires.push({ src: s, to: [id, 'V'], ghPort: o.ghName + ' (param)' });
+      for (const p of o.outputs) outPorts[p.id] = [id, p.nick || p.name];
+      if (!o.outputs.length) outPorts[o.guid] = [id, 'V'];
+    }
+    nodes.push(node);
+  }
+
+  /* wires: resolve sources through relays, then to registered output ports */
+  const wires = [], seen = new Set();
+  for (const pw of pendingWires) {
+    if (pw.to[1] === undefined) { report.droppedWires.push('into ' + pw.ghPort + ' (no Weft port for it)'); continue; }
+    for (const src of resolveSource(pw.src, 0)) {
+      const from = outPorts[src];
+      if (!from) { report.droppedWires.push('into ' + pw.ghPort + ' (source not found — skipped or unmapped output)'); continue; }
+      const key = from.join(':') + '>' + pw.to.join(':');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      wires.push({ from: from.slice(), to: pw.to.slice() });
+    }
+  }
+  report.wires = wires.length;
+
+  /* normalize positions to start near the loom origin */
+  const placed = nodes.filter(n => typeof n.x === 'number');
+  if (placed.length) {
+    const mx = Math.min(...placed.map(n => n.x)), my = Math.min(...placed.map(n => n.y));
+    for (const n of placed) { n.x = n.x - mx + 60; n.y = n.y - my + 60; }
+  }
+  for (const n of nodes) if (n.values && !Object.keys(n.values).length) delete n.values;
+
+  return { patch: { weft: 'patch', format: 1, nodes, wires }, report };
+}
+
+function parseGHX(xml) {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML would not parse — paste the whole .ghx file');
+  return convert(parseGHXDoc(doc));
+}
+window.parseGHX = parseGHX; /* console/test access */
+
+/* ---------- page glue ---------- */
+const $ = id => document.getElementById(id);
+const setMsg = (t, cls) => { const m = $('msg'); m.textContent = t; m.className = 'msg ' + (cls || ''); };
+
+function renderReport(r) {
+  const el = $('reportBody');
+  const chips = obj => Object.entries(obj).sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => '<span class="chip gap">' + k + (v > 1 ? ' ×' + v : '') + '</span>').join('') || '<span class="small">none</span>';
+  let h = '<h3>coverage</h3><div class="chips">' +
+    '<span class="chip ok">' + r.mapped + ' mapped</span>' +
+    '<span class="chip">' + r.wires + ' wires</span>' +
+    (r.relays ? '<span class="chip">' + r.relays + ' relay(s) spliced</span>' : '') +
+    Object.entries(r.skipped).map(([k, v]) => '<span class="chip">' + v + ' ' + k.toLowerCase() + '(s) skipped</span>').join('') +
+    '</div>';
+  h += '<h3>gaps — grasshopper types with no Weft node yet (imported as ? placeholders)</h3><div class="chips">' + chips(r.placeholders) + '</div>';
+  if (r.droppedWires.length) {
+    const counts = {};
+    for (const d of r.droppedWires) counts[d] = (counts[d] || 0) + 1;
+    h += '<h3>dropped wires (' + r.droppedWires.length + ')</h3><ul class="notes">' +
+      Object.entries(counts).map(([k, v]) => '<li>' + (v > 1 ? v + '× ' : '') + k + '</li>').join('') + '</ul>';
+  }
+  if (r.notes.length) h += '<h3>notes</h3><ul class="notes">' + r.notes.map(n => '<li>' + n.replace(/</g, '&lt;') + '</li>').join('') + '</ul>';
+  el.innerHTML = h;
+  $('report').classList.add('show');
+}
+
+$('convertBtn').addEventListener('click', () => {
+  const xml = $('src').value;
+  if (!xml.trim()) { setMsg('paste a .ghx first', 'err'); return; }
+  try {
+    const { patch, report } = parseGHX(xml);
+    $('out').value = JSON.stringify(patch, null, 1);
+    renderReport(report);
+    setMsg(patch.nodes.length + ' nodes · ' + patch.wires.length + ' wires — copy the patch and ctrl+v it onto the loom', 'ok');
+  } catch (e) {
+    setMsg(e.message, 'err');
+    $('report').classList.remove('show');
+  }
+});
+$('pickBtn').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { $('src').value = rd.result; setMsg('loaded ' + f.name + ' — hit convert', ''); };
+  rd.readAsText(f);
+});
+$('clearBtn').addEventListener('click', () => { $('src').value = ''; $('out').value = ''; setMsg('', ''); $('report').classList.remove('show'); });
+$('copyBtn').addEventListener('click', async () => {
+  if (!$('out').value) { setMsg('nothing to copy yet', 'err'); return; }
+  try { await navigator.clipboard.writeText($('out').value); setMsg('patch copied — paste it onto the loom', 'ok'); }
+  catch (e) { $('out').select(); document.execCommand('copy'); setMsg('patch copied', 'ok'); }
+});
+$('dlBtn').addEventListener('click', () => {
+  if (!$('out').value) { setMsg('nothing to download yet', 'err'); return; }
+  const blob = new Blob([$('out').value], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ghx-import.weft.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>

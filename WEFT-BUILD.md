@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.4 — the interaction engine.** v0.1 (2026-07-12): editor,
+**Status: v0.5 — sets & the Grasshopper bridge.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -18,7 +18,16 @@ Hotspot (any geometry → interface element via `LM.pointInGeom`), real-DOM
 Button via `domList`/`domState`, Keyboard, Scroll (real page in exports,
 simulated on the cloth), 88 nodes, 6 examples (Click toy, Scroll scene),
 design note `docs/EVENTS-AND-STATE.md`, invariant #8 — editor and exports
-verified interactive in Chrome.
+verified interactive in Chrome. v0.5 (2026-07-13, Phase 2.5 of PLAN.md):
+**sets & the Grasshopper bridge** — `docs/NODE-LIBRARY.md` (the articulated
+library map), six new Sets nodes (Set Union / Intersection / Difference on a
+shared `LM.setEq` equality predicate, plus Cull Pattern, Shift List, Dispatch),
+Checker dispatch example, **GHX importer v1** (`tools/ghx-import.html`: paste a
+Grasshopper .ghx → Weft patch; both GHX param styles, floating-param Source
+wires, relay splicing, slider/swatch/panel values, pivot positions; unmapped GH
+types import as `?` placeholders so every import doubles as a gap report —
+verified against all 7 official GH demos), and the D1 silhouette option board
+(`design/D1-silhouette.html`) awaiting its lite session.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -50,8 +59,11 @@ weft/
     editor.js       node canvas: pan/zoom, drag, wires, quick-add, context menu
     viewport.js     live preview: evaluates graph every rAF, renders drawList
     export.js       WeftExport — compiles graph → standalone JS via fn.toString()
-    examples.js     EXAMPLES — Orbit study, Phyllotaxis, Mouse field, Noise blob
+    examples.js     EXAMPLES — 7 graphs, doubling as the test corpus
     app.js          shell: palette, toolbar, autosave, export modal, splitter
+  tools/
+    ghx-import.html standalone GHX → Weft patch converter (+ gap report)
+  design/           option boards for the visual-language lite sessions (D1…)
 ```
 
 ### Key design decisions
@@ -72,7 +84,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (88) — Grasshopper-matched names
+### Node library (94) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
@@ -82,7 +94,9 @@ weft/
   ArcTangent 2, Negative, Absolute, Round, Floor, Ceiling, Square Root, Sine, Cosine,
   Tangent, Radians, Degrees, Pi, Remap Numbers, Clamp, Lerp, Smooth Step,
   Expression (X,Y,Z,T + Math), Noise
-- **Sets**: Series, Range, Random, List Item, List Length, Merge, Reverse List
+- **Sets**: Series, Range, Random, List Item, List Length, Merge, Reverse List,
+  Cull Pattern, Shift List, Dispatch, Set Union, Set Intersection, Set Difference
+  (set ops share the `LM.setEq` equality predicate)
 - **Vector**: Construct Point, Deconstruct, Distance, Point Polar, Angle
 - **Curve**: Line, Circle, Ellipse, Rectangle, Polygon, PolyLine, Interpolate (spline),
   Divide Curve, Evaluate Curve
@@ -116,7 +130,7 @@ where you want it.
 ## Ideas for v2 (not built)
 
 - Data trees (true graft/flatten/simplify) + per-wire list-matching modes
-- More GH nodes: Graph Mapper, Cull Pattern, Shift List, Dispatch, Offset, Fillet
+- More GH nodes: Graph Mapper, Sort List, Weave, Offset, Fillet (backlog: docs/NODE-LIBRARY.md)
 - Input nodes: Scroll position, element hover/click targets, live data streams (fetch/WebSocket), audio
 - Timeline/easing nodes; spring physics; trails/feedback buffers
 - SVG/WebGL render targets; DOM output (drive element transforms, not just canvas)

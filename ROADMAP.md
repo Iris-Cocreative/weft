@@ -6,9 +6,10 @@ browser verification, update status here and in PLAN.
 Status: `idea → next → in progress → shipped`.
 
 **Node backlog lives in `docs/NODE-LIBRARY.md`** (planned nodes + descriptions
-+ library principles) — new node ideas go there, not here. Next up (James
-2026-07-13): **Set Union / Set Intersection / Set Difference** (Sets category,
-shared `LM.setEq` equality predicate).
++ library principles) — new node ideas go there, not here. Set Union /
+Intersection / Difference + Cull Pattern / Shift List / Dispatch shipped v0.5
+(2026-07-13); next candidates per NODE-LIBRARY: **Colour param + Split Colour**
+(GH demos lean on them), **Format**, **Sort List**.
 
 ## 0. Foundation hardening — do these before the tracks below get heavy
 
@@ -18,12 +19,11 @@ shared `LM.setEq` equality predicate).
   graph-JSON fragments with id-remap + auto-layout for coordinate-less patches.
 - [idea] Share links: graph JSON compressed into the URL hash → anyone with the
   file/URL opens the exact patch. Zero-backend sharing. (Phase 3)
-- [next] **GHX importer** (`tools/ghx-import.html`) — .ghx → Weft patch JSON;
-  unmapped GH types become `?` placeholder nodes so imports double as gap
-  reports. Spec in PLAN Phase 2.5 item 6. The GH demo corpus
-  (`Grasshopper Demos/` + notes in `2nd Brain/70-Ideas/Weft/GH Inspo Backlog/`)
-  is the test set; "Weft opens Grasshopper's own demos" is a Phase 5 gallery
-  headline.
+- [shipped v0.5] **GHX importer** (`tools/ghx-import.html`) — .ghx → Weft patch
+  JSON; unmapped GH types become `?` placeholder nodes so imports double as gap
+  reports (verified against all 7 demos in `Grasshopper Demos/`). "Weft opens
+  Grasshopper's own demos" is a Phase 5 gallery headline; growing the GH_MAP
+  table as nodes ship keeps the importer honest.
 - [idea] Dirty-flag evaluation (skip re-eval when no animated inputs and
   nothing changed) — only when someone hits a perf wall; measure first.
 
@@ -113,7 +113,8 @@ is now in, so any of these can be picked up in a workshop pass):
 - [next] **Visual language via lite sessions** — plan and decision list live in
   `docs/DESIGN-PLAN.md` (D1 silhouette → D2 category color → D3 ports → D4 icon
   style → glyphs). Option boards in `design/`, locked decisions accrete into
-  `docs/DESIGN.md`, icons into `assets/icons.svg`.
+  `docs/DESIGN.md`, icons into `assets/icons.svg`. **D1 board is ready**
+  (`design/D1-silhouette.html`) — open it in a browser and pick/mix/adjust.
 - Working title stays **Weft** until the better name proves itself. Criteria:
   weaving/thread metaphor honest to the mechanics, one syllable-ish, ownable
   domain, no collision (Loom is taken by loom.com). Candidates to sit with:

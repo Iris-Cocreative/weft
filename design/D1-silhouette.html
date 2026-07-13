@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>weft · D1 — node silhouette & role shapes</title>
+<style>
+/* ============================================================
+   D1 option board — node silhouette & role shapes
+   The question: do sources, params, operators, state and sinks
+   get distinct silhouettes? Header bar or headerless?
+   Same reference patch in every variant, at 100% and 50%.
+   Each variant's tokens live in a commented block — the winner's
+   block pastes into style.css.
+   ============================================================ */
+:root {
+  --bg: #0b0e14; --panel: #10151f; --node: #161c2a; --node2: #121826;
+  --line: #232b3c; --line2: #2c3550; --text: #dbe2ee; --dim: #828da3;
+  --accent: #5eead4; --danger: #f87171;
+  /* category hues (today's CATS) */
+  --c-input: #4ade80; --c-params: #2dd4bf; --c-state: #f87171;
+  --c-maths: #60a5fa; --c-curve: #e879f9; --c-display: #facc15;
+  /* type colors (today's TYPE_COLORS) */
+  --t-number: #7ab8ff; --t-bool: #f87171; --t-point: #ffa94d;
+  --t-color: #f0abfc; --t-geometry: #c4b5fd; --t-any: #9aa4b2;
+}
+* { box-sizing: border-box; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 13px/1.5 Inter, "Segoe UI", system-ui, sans-serif; padding: 28px 34px 80px; }
+h1 { font-size: 17px; font-weight: 600; }
+h1 span { color: var(--accent); }
+.sub { color: var(--dim); font-size: 13px; margin: 4px 0 8px; max-width: 860px; }
+.protocol { color: var(--dim); font-size: 12px; margin-bottom: 26px; }
+.protocol b { color: var(--text); font-weight: 600; }
+
+.variant { margin-bottom: 44px; }
+.variant > h2 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.variant > h2 .tag { color: var(--accent); margin-right: 8px; }
+.variant > .note { color: var(--dim); font-size: 12px; margin-bottom: 10px; max-width: 860px; }
+.boards { display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; }
+.board-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.board-wrap .zoom { color: var(--dim); font-size: 11px; margin-bottom: 6px; }
+.board { position: relative; width: 770px; height: 345px; overflow: hidden;
+  background: radial-gradient(circle, #1a2233 1px, transparent 1px); background-size: 22px 22px; border-radius: 8px; }
+.half { width: 385px; height: 172px; }
+.half .board { transform: scale(0.5); transform-origin: 0 0; }
+.board svg.wires { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+
+/* ---------------- shared node anatomy (all variants) ---------------- */
+.node { position: absolute; min-width: 110px; font-size: 12px; user-select: none; z-index: 2;
+  background: linear-gradient(180deg, var(--node), var(--node2));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4); border: 1px solid var(--line2); }
+.node-head { display: flex; align-items: center; gap: 7px; padding: 6px 11px; font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--cat, #999); }
+.node-rows { padding: 5px 0 7px; }
+.row { position: relative; display: flex; align-items: center; gap: 7px; padding: 2px 12px; min-height: 21px; }
+.row .label { color: var(--dim); font-size: 11px; }
+.row.out { justify-content: flex-end; }
+.port { position: absolute; top: 50%; transform: translateY(-50%); width: 11px; height: 11px;
+  border-radius: 50%; background: var(--t, #999); border: 2px solid var(--bg); z-index: 2; }
+.row.in .port { left: -6px; }
+.row.out .port { right: -6px; }
+
+/* ============================================================
+   VARIANT A — uniform rounded rect (today)
+   tokens: --n-radius: 10px; header bar with underline; one shape
+   for every role; category shows only in the head dot.
+   ============================================================ */
+.va .node { border-radius: 10px; }
+.va .node-head { border-bottom: 1px solid var(--line); }
+
+/* ============================================================
+   VARIANT B — role-shaped
+   tokens: sources round INTO the patch (soft left, square right),
+   sinks round OUT of it (square left, soft right), params are
+   pills, state gets a notched corner (memory has a latch),
+   operators stay quiet rectangles. Category tints the head edge.
+   --n-radius-op: 8px; --n-radius-role: 18px; --n-notch: 12px;
+   ============================================================ */
+.vb .node { border-radius: 8px; }
+.vb .node-head { border-bottom: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--cat, transparent); }
+.vb .r-source { border-radius: 18px 6px 6px 18px; }
+.vb .r-sink { border-radius: 6px 18px 18px 6px; }
+.vb .r-param { border-radius: 999px; }
+.vb .r-param .node-head { border-bottom: none; padding-bottom: 2px; }
+.vb .r-param .node-rows { padding-top: 0; }
+.vb .r-state { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%); }
+
+/* ============================================================
+   VARIANT C — GH-style capsule
+   tokens: headerless; the title stands as a vertical spine in the
+   middle of the capsule, category colours the spine; ports flank
+   left/right like Grasshopper. --n-radius: 16px; no head row.
+   ============================================================ */
+.vc .node { border-radius: 16px; display: flex; align-items: stretch; }
+.vc .node-head { border-bottom: none; padding: 6px 4px; order: 2;
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  justify-content: center; background: rgba(0, 0, 0, 0.25);
+  border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+  box-shadow: inset -2px 0 0 var(--cat, transparent); }
+.vc .node-head .dot { display: none; }
+.vc .cols { display: flex; flex: 1; }
+.vc .ins { order: 1; } .vc .outs { order: 3; }
+.vc .node-rows { display: flex; flex-direction: column; justify-content: center; padding: 5px 0; flex: 1; }
+.vc .node-rows.outs { align-items: flex-end; }
+</style>
+</head>
+<body>
+<h1><span>weft</span> · D1 — node silhouette &amp; role shapes</h1>
+<p class="sub">The same reference patch three ways: <b>world &amp; intent → numbers → geometry → pixels</b>, with one trigger wire
+(Hotspot <i>clicked</i> → Latch). The test is the 50% board: can a stranger tell input / param / operator / state / display
+nodes apart at arm's length, without reading a label?</p>
+<p class="protocol"><b>session protocol:</b> pick one · mix ("B's params, C's capsule") · or adjust numbers live.
+The locked choice + rationale goes to <code>docs/DESIGN.md</code>, its tokens go to <code>style.css</code>.</p>
+
+<template id="patch">
+  <div class="board">
+    <svg class="wires"></svg>
+    <div class="node r-source" style="left:12px; top:28px; width:120px; --cat:var(--c-input)">
+      <div class="node-head"><span class="dot"></span><span class="title">Time</span></div>
+      <div class="cols"><div class="node-rows outs">
+        <div class="row out"><span class="label">T</span><span class="port" data-p="time.T" style="--t:var(--t-number)"></span></div>
+        <div class="row out"><span class="label">F</span><span class="port" style="--t:var(--t-number)"></span></div>
+      </div></div>
+    </div>
+    <div class="node r-param" style="left:12px; top:170px; width:150px; --cat:var(--c-params)">
+      <div class="node-head"><span class="dot"></span><span class="title">Number Slider</span></div>
+      <div class="cols"><div class="node-rows outs">
+        <div class="row out"><span class="label">N</span><span class="port" data-p="slider.N" style="--t:var(--t-number)"></span></div>
+      </div></div>
+    </div>
+    <div class="node r-op" style="left:215px; top:78px; width:120px; --cat:var(--c-maths)">
+      <div class="node-head"><span class="dot"></span><span class="title">Sine</span></div>
+      <div class="cols">
+        <div class="node-rows ins"><div class="row in"><span class="port" data-p="sine.V" style="--t:var(--t-number)"></span><span class="label">V</span></div></div>
+        <div class="node-rows outs"><div class="row out"><span class="label">R</span><span class="port" data-p="sine.R" style="--t:var(--t-number)"></span></div></div>
+      </div>
+    </div>
+    <div class="node r-op" style="left:408px; top:40px; width:132px; --cat:var(--c-curve)">
+      <div class="node-head"><span class="dot"></span><span class="title">Circle</span></div>
+      <div class="cols">
+        <div class="node-rows ins">
+          <div class="row in"><span class="port" style="--t:var(--t-point)"></span><span class="label">P</span></div>
+          <div class="row in"><span class="port" data-p="circle.R" style="--t:var(--t-number)"></span><span class="label">R</span></div>
+        </div>
+        <div class="node-rows outs"><div class="row out"><span class="label">C</span><span class="port" data-p="circle.C" style="--t:var(--t-geometry)"></span></div></div>
+      </div>
+    </div>
+    <div class="node r-source" style="left:408px; top:192px; width:140px; --cat:var(--c-input)">
+      <div class="node-head"><span class="dot"></span><span class="title">Hotspot</span></div>
+      <div class="cols">
+        <div class="node-rows ins">
+          <div class="row in"><span class="port" data-p="hot.G" style="--t:var(--t-geometry)"></span><span class="label">G</span></div>
+          <div class="row in"><span class="port" style="--t:var(--t-number)"></span><span class="label">R</span></div>
+        </div>
+        <div class="node-rows outs">
+          <div class="row out"><span class="label">H</span><span class="port" style="--t:var(--t-bool)"></span></div>
+          <div class="row out"><span class="label">C</span><span class="port" data-p="hot.C" style="--t:var(--t-bool)"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="node r-state" style="left:622px; top:210px; width:118px; --cat:var(--c-state)">
+      <div class="node-head"><span class="dot"></span><span class="title">Latch</span></div>
+      <div class="cols">
+        <div class="node-rows ins">
+          <div class="row in"><span class="port" data-p="latch.T" style="--t:var(--t-bool)"></span><span class="label">T</span></div>
+          <div class="row in"><span class="port" style="--t:var(--t-bool)"></span><span class="label">R</span></div>
+        </div>
+        <div class="node-rows outs"><div class="row out"><span class="label">B</span><span class="port" style="--t:var(--t-bool)"></span></div></div>
+      </div>
+    </div>
+    <div class="node r-sink" style="left:622px; top:40px; width:118px; --cat:var(--c-display)">
+      <div class="node-head"><span class="dot"></span><span class="title">Draw</span></div>
+      <div class="cols">
+        <div class="node-rows ins">
+          <div class="row in"><span class="port" data-p="draw.G" style="--t:var(--t-geometry)"></span><span class="label">G</span></div>
+          <div class="row in"><span class="port" style="--t:var(--t-color)"></span><span class="label">S</span></div>
+          <div class="row in"><span class="port" style="--t:var(--t-color)"></span><span class="label">F</span></div>
+        </div>
+        <div class="node-rows outs"><div class="row out"><span class="label">G</span><span class="port" style="--t:var(--t-geometry)"></span></div></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div id="variants"></div>
+
+<script>
+'use strict';
+const WIRES = [
+  ['time.T', 'sine.V', 'var(--t-number)', false],
+  ['slider.N', 'sine.V', 'var(--t-number)', false],
+  ['sine.R', 'circle.R', 'var(--t-number)', false],
+  ['circle.C', 'draw.G', 'var(--t-geometry)', false],
+  ['circle.C', 'hot.G', 'var(--t-geometry)', false],
+  ['hot.C', 'latch.T', 'var(--t-bool)', true] /* the trigger wire */
+];
+const VARIANTS = [
+  ['va', 'A — uniform rounded rect (today)', 'One shape for every role. Calm and quiet; category lives only in the head dot; readability leans entirely on labels and wire colours.'],
+  ['vb', 'B — role-shaped', 'Sources round INTO the patch, sinks round OUT of it, params are pills, state carries a notched corner, operators stay plain. Category tints the header edge. The silhouette answers "what kind of thing is this" before the label does.'],
+  ['vc', 'C — GH-style capsule', 'Headerless. The title stands as a vertical spine through the middle — Grasshopper\'s anatomy. Densest of the three and reads well at small sizes, but titles are slower to scan and custom bodies (sliders, panels) need a different answer.']
+];
+
+function drawWires(board) {
+  const svg = board.querySelector('svg.wires');
+  const br = board.getBoundingClientRect();
+  svg.setAttribute('viewBox', '0 0 770 345');
+  let h = '';
+  for (const [a, b, color, trig] of WIRES) {
+    const pa = board.querySelector('[data-p="' + a + '"]'), pb = board.querySelector('[data-p="' + b + '"]');
+    if (!pa || !pb) continue;
+    const ra = pa.getBoundingClientRect(), rb = pb.getBoundingClientRect();
+    const x1 = ra.left + ra.width / 2 - br.left, y1 = ra.top + ra.height / 2 - br.top;
+    const x2 = rb.left + rb.width / 2 - br.left, y2 = rb.top + rb.height / 2 - br.top;
+    const dx = Math.max(30, Math.abs(x2 - x1) * 0.5);
+    h += '<path d="M ' + x1 + ' ' + y1 + ' C ' + (x1 + dx) + ' ' + y1 + ', ' + (x2 - dx) + ' ' + y2 + ', ' + x2 + ' ' + y2 +
+      '" fill="none" stroke="' + color + '" stroke-width="2" opacity="0.85"' + (trig ? ' stroke-dasharray="6 4"' : '') + '/>';
+  }
+  svg.innerHTML = h;
+}
+
+const holder = document.getElementById('variants');
+for (const [cls, title, note] of VARIANTS) {
+  const sec = document.createElement('section');
+  sec.className = 'variant ' + cls;
+  sec.innerHTML = '<h2><span class="tag">' + title.split(' — ')[0] + '</span>' + title.split(' — ')[1] + '</h2>' +
+    '<p class="note">' + note + '</p>';
+  const boards = document.createElement('div');
+  boards.className = 'boards';
+  const full = document.createElement('div');
+  full.className = 'board-wrap';
+  full.innerHTML = '<div class="zoom">100%</div>';
+  full.appendChild(document.getElementById('patch').content.cloneNode(true));
+  boards.appendChild(full);
+  sec.appendChild(boards);
+  holder.appendChild(sec);
+  drawWires(full.querySelector('.board'));
+  /* 50% copy: clone AFTER wires are drawn so the svg comes along */
+  const half = document.createElement('div');
+  half.className = 'board-wrap';
+  half.innerHTML = '<div class="zoom">50% — the arm\'s-length test</div><div class="half">' + full.querySelector('.board').outerHTML + '</div>';
+  boards.appendChild(half);
+}
+</script>
+</body>
+</html>

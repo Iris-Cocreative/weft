@@ -140,6 +140,25 @@ for (const name of Object.keys(EXAMPLES)) {
   if (!(f4.out.sm.R[0] > 10 && f4.out.sm.R[0] < 20)) failures.push('smooth: expected between 10 and 20, got ' + f4.out.sm.R[0]);
 }
 
+/* 7 — set operations & list surgery (computes are pure — call them directly) */
+{
+  const eq = (name, got, want) => {
+    const a = JSON.stringify(got), b = JSON.stringify(want);
+    if (a !== b) failures.push('sets ' + name + ': expected ' + b + ' got ' + a);
+  };
+  eq('setEq number epsilon', LM.setEq(0.1 + 0.2, 0.3), true);
+  eq('setEq points', LM.setEq({ x: 1, y: 2 }, { x: 1, y: 2 }), true);
+  eq('setEq geometry', LM.setEq({ kind: 'circle', cx: 0, cy: 0, r: 5 }, { kind: 'circle', cx: 0, cy: 0, r: 5 }), true);
+  eq('setEq mismatch', LM.setEq(1, '1'), false);
+  eq('union', NODE_DEFS['sets/union'].compute({ A: [1, 2, 2, 3], B: [3, 4] }).U, [1, 2, 3, 4]);
+  eq('intersection', NODE_DEFS['sets/intersection'].compute({ A: [1, 2, 2, 3], B: [2, 3, 5] }).I, [2, 3]);
+  eq('difference', NODE_DEFS['sets/difference'].compute({ A: [1, 2, 2, 3], B: [2] }).D, [1, 3]);
+  eq('cull pattern', NODE_DEFS['sets/cullpat'].compute({ L: [1, 2, 3, 4, 5], P: [true, false] }).L, [1, 3, 5]);
+  eq('shift wrap', NODE_DEFS['sets/shift'].compute({ L: [1, 2, 3, 4], S: 1, W: true }).L, [2, 3, 4, 1]);
+  eq('shift negative no-wrap', NODE_DEFS['sets/shift'].compute({ L: [1, 2, 3, 4], S: -1, W: false }).L, [1, 2, 3]);
+  eq('dispatch', NODE_DEFS['sets/dispatch'].compute({ L: [1, 2, 3, 4], P: [true, false] }), { A: [1, 3], B: [2, 4] });
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

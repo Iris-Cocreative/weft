@@ -129,6 +129,50 @@ const EXAMPLES = {
     ['n9', 'C', 'n10', 'G']
   ]),
 
+  /* one grid of points split into two families by a checkerboard pattern
+   * through Dispatch (the list-level if/else) — the families breathe in
+   * opposite phase */
+  'Checker dispatch': _EX([
+    ['c1', 'params/slider', 30, 40, { min: 2, max: 24, value: 12 }],
+    ['c2', 'params/slider', 30, 200, { min: 2, max: 24, value: 7 }],
+    ['c3', 'params/slider', 30, 360, { min: 12, max: 100, value: 52 }],
+    ['c4', 'input/time', 30, 520],
+    ['c5', 'math/mul', 250, 100],
+    ['c6', 'math/sin', 250, 520],
+    ['c7', 'sets/series', 460, 100],
+    ['c8', 'math/remap', 460, 480, { S0: -1, S1: 1, T0: 6, T1: 19 }],
+    ['c9', 'math/remap', 460, 640, { S0: -1, S1: 1, T0: 19, T1: 6 }],
+    ['c10', 'math/mod', 680, 40],
+    ['c11', 'math/div', 680, 200],
+    ['c12', 'math/floor', 880, 200],
+    ['c13', 'math/expr', 1080, 40, { expr: '(X - (Y - 1) / 2) * Z' }],
+    ['c14', 'math/expr', 1080, 200, { expr: '(X - (Y - 1) / 2) * Z' }],
+    ['c15', 'math/expr', 1080, 380, { expr: '(X + Y) % 2' }],
+    ['c16', 'vec/construct', 1300, 100],
+    ['c17', 'sets/dispatch', 1500, 200],
+    ['c18', 'crv/circle', 1720, 80],
+    ['c19', 'crv/circle', 1720, 320],
+    ['c20', 'disp/draw', 1940, 80, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 94, g: 234, b: 212, a: 0.9 } }],
+    ['c21', 'disp/draw', 1940, 320, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 244, g: 114, b: 182, a: 0.9 } }]
+  ], [
+    ['c1', 'N', 'c5', 'A'], ['c2', 'N', 'c5', 'B'],
+    ['c5', 'R', 'c7', 'C'],
+    ['c7', 'S', 'c10', 'A'], ['c1', 'N', 'c10', 'B'],
+    ['c7', 'S', 'c11', 'A'], ['c1', 'N', 'c11', 'B'],
+    ['c11', 'R', 'c12', 'V'],
+    ['c10', 'R', 'c13', 'X'], ['c1', 'N', 'c13', 'Y'], ['c3', 'N', 'c13', 'Z'],
+    ['c12', 'R', 'c14', 'X'], ['c2', 'N', 'c14', 'Y'], ['c3', 'N', 'c14', 'Z'],
+    ['c10', 'R', 'c15', 'X'], ['c12', 'R', 'c15', 'Y'],
+    ['c13', 'R', 'c16', 'X'], ['c14', 'R', 'c16', 'Y'],
+    ['c16', 'P', 'c17', 'L'], ['c15', 'R', 'c17', 'P'],
+    ['c4', 'T', 'c6', 'V'],
+    ['c6', 'R', 'c8', 'V'], ['c6', 'R', 'c9', 'V'],
+    ['c17', 'A', 'c18', 'P'], ['c8', 'R', 'c18', 'R'],
+    ['c17', 'B', 'c19', 'P'], ['c9', 'R', 'c19', 'R'],
+    ['c18', 'C', 'c20', 'G'],
+    ['c19', 'C', 'c21', 'G']
+  ]),
+
   /* three circles = three independent toggle buttons from ONE node chain
    * (hotspot/latch/counter are per-list-item state machines); a real DOM
    * Button node resets everything */

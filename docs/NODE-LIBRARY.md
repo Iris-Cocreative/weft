@@ -19,7 +19,7 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | **Params** | `params/` | Values a human sets — sliders, toggles, swatches, containers, panels | 9 |
 | **State** | `state/` | Cross-frame memory — smoothing, springs, counters, latches | 8 |
 | **Maths** | `math/` | Numbers in, numbers out — pure, per-item | 28 |
-| **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 7 |
+| **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 13 |
 | **Vector** | `vec/` | Points and vectors — position as data | 11 |
 | **Curve** | `crv/` | Geometry construction and interrogation | 10 |
 | **Transform** | `xf/` | Moving geometry — affine maps | 3 |
@@ -31,18 +31,6 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
 ---
 
 ## Planned nodes
-
-### Sets — set operations *(planned — next node work, James 2026-07-13)*
-
-Grasshopper's Sets tab operations, over Weft lists. All three are `listInputs`
-(receive whole lists) and return arrays (flatten into the output list). Design
-note: they need an equality predicate across loose types — propose: numbers
-within epsilon 1e-9, points/vectors by coordinates, strings/bools exact,
-geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
-
-- **Set Union** `sets/union` — every distinct item that appears in A or B.
-- **Set Intersection** `sets/intersection` — distinct items that appear in both A and B.
-- **Set Difference** `sets/difference` — items in A that are not in B (order preserved from A).
 
 ### Colour — harvested from the GH demo corpus, James 2026-07-13 *(planned — high)*
 
@@ -58,9 +46,6 @@ geometry by JSON identity. Keep one shared `LM.setEq` so the three agree.
 
 ### Sets — list surgery *(planned)*
 
-- **Cull Pattern** `sets/cullpat` — keep items of L where the (repeating) bool pattern P is true. The other half of Series: Series makes rhythm, Cull edits it.
-- **Shift List** `sets/shift` — rotate L by N (wrap toggle). Offsets phase in any repeating structure.
-- **Dispatch** `sets/dispatch` — route items of L into outputs A/B by bool pattern P. The list-level if/else.
 - **Sort List** `sets/sort` — sort keys K (numbers), optionally dragging a values list L along with them.
 - **Weave** `sets/weave` — interleave lists by a pattern (GH name; too on-brand to skip).
 - **Interpolate Data** `sets/interpdata` — resample a list at parameter t

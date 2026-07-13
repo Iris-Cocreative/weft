@@ -444,6 +444,82 @@ defNode('sets/reverse', {
   compute: a => ({ R: (a.L || []).slice().reverse() })
 });
 
+/* -- list surgery -- */
+
+defNode('sets/cullpat', {
+  title: 'Cull Pattern', cat: 'Sets', desc: 'Keep items of L where the repeating bool pattern P is true',
+  inputs: [{ name: 'L', type: 'any' }, { name: 'P', type: 'bool', default: true, label: 'pattern' }],
+  outputs: [{ name: 'L', type: 'any' }],
+  listInputs: ['L', 'P'],
+  compute: a => {
+    const p = a.P && a.P.length ? a.P : [true];
+    return { L: (a.L || []).filter((v, i) => p[i % p.length]) };
+  }
+});
+
+defNode('sets/shift', {
+  title: 'Shift List', cat: 'Sets', desc: 'Offset all items in L by S places — W wraps shifted items round, off drops them',
+  inputs: [{ name: 'L', type: 'any' }, { name: 'S', type: 'number', default: 1, label: 'shift offset' }, { name: 'W', type: 'bool', default: true, label: 'wrap' }],
+  outputs: [{ name: 'L', type: 'any' }],
+  listInputs: ['L'],
+  compute: a => {
+    const L = a.L || [], n = L.length, k = Math.round(a.S) || 0;
+    if (!n) return { L: [] };
+    if (a.W) { const s = ((k % n) + n) % n; return { L: L.slice(s).concat(L.slice(0, s)) }; }
+    return { L: k >= 0 ? L.slice(Math.min(k, n)) : L.slice(0, Math.max(0, n + k)) };
+  }
+});
+
+defNode('sets/dispatch', {
+  title: 'Dispatch', cat: 'Sets', desc: 'Route items of L into A or B by the repeating bool pattern P — the list-level if/else',
+  inputs: [{ name: 'L', type: 'any' }, { name: 'P', type: 'bool', default: true, label: 'pattern' }],
+  outputs: [{ name: 'A', type: 'any', label: 'pattern true' }, { name: 'B', type: 'any', label: 'pattern false' }],
+  listInputs: ['L', 'P'],
+  compute: a => {
+    const p = a.P && a.P.length ? a.P : [true], A = [], B = [];
+    for (let i = 0; i < (a.L || []).length; i++) (p[i % p.length] ? A : B).push(a.L[i]);
+    return { A, B };
+  }
+});
+
+/* -- set operations (shared equality predicate: LM.setEq) -- */
+
+defNode('sets/union', {
+  title: 'Set Union', cat: 'Sets', desc: 'Every distinct item that appears in A or B',
+  inputs: [{ name: 'A', type: 'any' }, { name: 'B', type: 'any' }],
+  outputs: [{ name: 'U', type: 'any' }],
+  listInputs: ['A', 'B'],
+  compute: a => {
+    const out = [];
+    for (const v of (a.A || []).concat(a.B || [])) if (!out.some(u => LM.setEq(u, v))) out.push(v);
+    return { U: out };
+  }
+});
+
+defNode('sets/intersection', {
+  title: 'Set Intersection', cat: 'Sets', desc: 'Distinct items that appear in both A and B',
+  inputs: [{ name: 'A', type: 'any' }, { name: 'B', type: 'any' }],
+  outputs: [{ name: 'I', type: 'any' }],
+  listInputs: ['A', 'B'],
+  compute: a => {
+    const out = [];
+    for (const v of (a.A || [])) if ((a.B || []).some(b => LM.setEq(b, v)) && !out.some(u => LM.setEq(u, v))) out.push(v);
+    return { I: out };
+  }
+});
+
+defNode('sets/difference', {
+  title: 'Set Difference', cat: 'Sets', desc: 'Distinct items of A that do not appear in B (order kept from A)',
+  inputs: [{ name: 'A', type: 'any' }, { name: 'B', type: 'any' }],
+  outputs: [{ name: 'D', type: 'any' }],
+  listInputs: ['A', 'B'],
+  compute: a => {
+    const out = [];
+    for (const v of (a.A || [])) if (!(a.B || []).some(b => LM.setEq(b, v)) && !out.some(u => LM.setEq(u, v))) out.push(v);
+    return { D: out };
+  }
+});
+
 /* ============================== VECTOR ============================== */
 
 defNode('vec/construct', {
@@ -851,6 +927,11 @@ defNode('state/edge', {
     'params/slider': 1, 'params/toggle': 1, 'params/swatch': 1,
     'params/anchor': 2,
     'params/panel': 3,
+    /* Sets: 1 generators · 2 access · 3 list surgery · 4 set operations */
+    'sets/series': 1, 'sets/range': 1, 'sets/random': 1,
+    'sets/item': 2, 'sets/length': 2,
+    'sets/merge': 3, 'sets/reverse': 3, 'sets/cullpat': 3, 'sets/shift': 3, 'sets/dispatch': 3,
+    'sets/union': 4, 'sets/intersection': 4, 'sets/difference': 4,
     /* Vector: 1 points · 2 vectors · 3 measures */
     'vec/construct': 1, 'vec/deconstruct': 1, 'vec/polar': 1,
     'vec/vecxy': 2, 'vec/pt2vec': 2, 'vec/vec2pt': 2, 'vec/amp': 2, 'vec/unit': 2, 'vec/reverse': 2,

@@ -81,6 +81,18 @@ const LM = {
     }
   },
 
+  /* set-equality across loose port types (shared by the sets/* nodes):
+   * numbers within 1e-9, points/vectors by coordinates, strings/bools exact,
+   * geometry & colors by JSON identity */
+  setEq: (a, b) => {
+    if (a === b) return true;
+    if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) <= 1e-9;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+    if (a.kind === undefined && b.kind === undefined && a.x !== undefined && b.x !== undefined)
+      return Math.abs(a.x - b.x) <= 1e-9 && Math.abs(a.y - b.y) <= 1e-9;
+    return JSON.stringify(a) === JSON.stringify(b);
+  },
+
   fmt: v => {
     if (v === null || v === undefined) return '∅';
     if (typeof v === 'number') return String(Math.round(v * 1000) / 1000);

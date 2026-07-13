@@ -558,6 +558,33 @@ Tangent (radians)
 
 ## Sets
 
+### `sets/cullpat` — Cull Pattern
+
+Keep items of L where the repeating bool pattern P is true
+
+| in | type | default | note |
+|---|---|---|---|
+| L | any |  | receives whole list |
+| P | bool | `true` | pattern · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| L | any |  |
+
+### `sets/dispatch` — Dispatch
+
+Route items of L into A or B by the repeating bool pattern P — the list-level if/else
+
+| in | type | default | note |
+|---|---|---|---|
+| L | any |  | receives whole list |
+| P | bool | `true` | pattern · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| A | any | pattern true |
+| B | any | pattern false |
+
 ### `sets/item` — List Item
 
 Pick item i from list L (index wraps)
@@ -650,6 +677,59 @@ Arithmetic series: S, S+N, S+2N, … (C values)
 | out | type | note |
 |---|---|---|
 | S | number |  |
+
+### `sets/difference` — Set Difference
+
+Distinct items of A that do not appear in B (order kept from A)
+
+| in | type | default | note |
+|---|---|---|---|
+| A | any |  | receives whole list |
+| B | any |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| D | any |  |
+
+### `sets/intersection` — Set Intersection
+
+Distinct items that appear in both A and B
+
+| in | type | default | note |
+|---|---|---|---|
+| A | any |  | receives whole list |
+| B | any |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| I | any |  |
+
+### `sets/union` — Set Union
+
+Every distinct item that appears in A or B
+
+| in | type | default | note |
+|---|---|---|---|
+| A | any |  | receives whole list |
+| B | any |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| U | any |  |
+
+### `sets/shift` — Shift List
+
+Offset all items in L by S places — W wraps shifted items round, off drops them
+
+| in | type | default | note |
+|---|---|---|---|
+| L | any |  | receives whole list |
+| S | number | `1` | shift offset |
+| W | bool | `true` | wrap |
+
+| out | type | note |
+|---|---|---|
+| L | any |  |
 
 ## Vector
 

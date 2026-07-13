@@ -92,14 +92,22 @@ decision list (D1–D8), board method, and icon pipeline.
 
 1. ✅ `docs/NODE-LIBRARY.md` — the articulated library: category roles, planned
    nodes with descriptions, library principles. (2026-07-13)
-2. Set nodes ship as the warm-up build: **Set Union / Intersection / Difference**
-   (+ `LM.setEq`), then Cull Pattern / Shift List / Dispatch as appetite allows.
+2. ✅ Set nodes shipped as the warm-up build (v0.5, 2026-07-13): **Set Union /
+   Intersection / Difference** on a shared `LM.setEq`, plus Cull Pattern /
+   Shift List / Dispatch, Checker dispatch example, smoke section 7.
 3. Lite sessions D1–D4 (silhouette, category color, ports, icon style) →
-   locked tokens in `docs/DESIGN.md`.
+   locked tokens in `docs/DESIGN.md`. **D1 board is prepared**
+   (`design/D1-silhouette.html`: uniform rect · role-shaped · GH capsule, at
+   100% + 50%) — awaiting James's first sitting.
 4. Category glyphs (9) shipped in `assets/icons.svg`; palette + quick-add use them.
 5. Per-node glyph batches continue in the background through later phases;
    gen-catalog reports coverage.
-6. **GHX importer v1** (`tools/ghx-import.html`) — paste a Grasshopper .ghx →
+6. ✅ **GHX importer v1** shipped (v0.5, 2026-07-13) — converts all 7 demo
+   .ghx files; both GHX param styles (param_input chunks AND ParameterData >
+   InputParam), floating-param Source wires (the old parser's bug), relay
+   splicing, slider min/max/value, swatch ARGB, panel text, pivot positions
+   ×1.6, inline expressions as `ghNotes`; unmapped types → `?` placeholders +
+   on-page gap report. Original spec: paste a Grasshopper .ghx →
    Weft patch JSON. Successor to the IRIS GHX Parser (which targeted bespoke
    LLM-generated HTML); this targets the loom directly. 1:1 name mapping where
    Weft has the node; unmapped types emit placeholder nodes that render as `?`
