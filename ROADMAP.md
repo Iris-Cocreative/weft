@@ -18,20 +18,21 @@ Status: `idea → next → in progress → shipped`.
 
 ## 1. Interaction & app-building nodes (events + state)
 
-The web is stateful; Grasshopper isn't. This is Weft's biggest semantic
-addition and deserves a design note before code (`docs/EVENTS-AND-STATE.md`):
+The web is stateful; Grasshopper isn't. Weft's biggest semantic addition;
+design rationale lives in `docs/EVENTS-AND-STATE.md`.
 
-- **Triggers as frame-latched booleans** flowing through normal wires
-  (true for the frame the event fired). Keeps the pure-dataflow model.
-- **State nodes** own memory on `node._state`: Counter, Toggle/Latch,
-  Sample & Hold, Timer (seconds since trigger), Smooth/Spring (eased follower —
-  instant polish for everything), Previous Frame Value.
-- **Generated UI**: Button node (renders a real styled button over the canvas),
-  and — more Weft-native — **Hotspot**: takes *any geometry* and outputs
-  hover/pressed/clicked. Every drawn shape becomes an interface element.
-  Needs point-in-geometry hit testing in LM (easy with toPoly).
-- Later: Keyboard, Scroll (page scroll as a parameter is huge for Webflow
-  storytelling), element-visibility (IntersectionObserver), URL params,
+- [shipped v0.4] **Triggers as frame-latched booleans** in normal wires;
+  events collected between frames, latched into ctx (invariant #8).
+- [shipped v0.4] **State nodes** on `node._state` keyed by `ctx.i` (per list
+  item): Smooth, Spring, Counter, Latch, Sample & Hold, Timer, Previous Value,
+  Edge (bool → rise/fall triggers).
+- [shipped v0.4] **Hotspot** (any geometry → hover/pressed/clicked via
+  `LM.pointInGeom`) and **Button** (real overlaid element via the
+  `domList`/`domState` declare-reconcile-report cycle — reusable for future
+  DOM output nodes).
+- [shipped v0.4] **Keyboard** + **Scroll** (real page scroll in exports;
+  wheel-scrubbed simulator on the cloth). Examples: Click toy, Scroll scene.
+- [idea] Later inputs: element-visibility (IntersectionObserver), URL params,
   Fetch/data-stream nodes (n8n webhooks → live data experiences!).
 
 ## 2. Documentation & open source
@@ -72,7 +73,8 @@ Prompts for James (per the slow-cook rule, these are questions, not answers):
 Direction: nodes should *look like what they do* — a language of node shapes,
 not uniform boxes. Shipped so far: compact styling for small unary/constant
 nodes, live value readouts, preview toggles, ghost previews, disable/bypass.
-Queued ideas (build alongside Phase 2 events, since most are interaction nodes):
+Queued ideas (not part of Phase 2's core — the event/state plumbing they need
+is now in, so any of these can be picked up in a workshop pass):
 
 - **Flow Gate** — a trigger switches a data flow between paths, cycles through
   options, or randomizes the route. (Phase 2 natural fit.)

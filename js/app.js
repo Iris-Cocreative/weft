@@ -181,7 +181,7 @@ const App = {
   buildPalette() {
     const list = document.getElementById('paletteList');
     const search = document.getElementById('paletteSearch');
-    const order = ['Params', 'Input', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
+    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
 
     const render = q => {
       q = (q || '').toLowerCase();
@@ -348,7 +348,7 @@ const App = {
       App.download('weft-experience.js', code.value, 'text/javascript');
     });
     document.getElementById('exportDlHtml').addEventListener('click', () => {
-      App.download('weft-demo.html', WeftExport.buildDemoHTML(code.value), 'text/html');
+      App.download('weft-demo.html', WeftExport.buildDemoHTML(code.value, App.graph), 'text/html');
     });
   },
 

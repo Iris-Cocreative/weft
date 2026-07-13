@@ -52,15 +52,73 @@ const LM = ${serializeLM()};
 
 function mount(canvas) {
   const g2 = canvas.getContext('2d');
-  const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false };
+  const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false };
   let mx = null, my = null, frame = 0;
+  let pressedBuf = false, releasedBuf = false;
   window.addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; });
-  window.addEventListener('pointerdown', () => { mouse.down = true; });
-  window.addEventListener('pointerup', () => { mouse.down = false; });
+  window.addEventListener('pointerdown', e => { mx = e.clientX; my = e.clientY; mouse.down = true; pressedBuf = true; });
+  window.addEventListener('pointerup', () => { if (mouse.down) releasedBuf = true; mouse.down = false; });
+
+  const kDown = {};
+  let kPressed = {}, kReleased = {};
+  const keyName = e => e.key === ' ' ? 'space' : e.key.toLowerCase();
+  window.addEventListener('keydown', e => {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    const k = keyName(e);
+    if (!kDown[k]) kPressed[k] = true;
+    kDown[k] = true;
+  });
+  window.addEventListener('keyup', e => { const k = keyName(e); if (kDown[k]) kReleased[k] = true; delete kDown[k]; });
+  window.addEventListener('blur', () => { for (const k in kDown) delete kDown[k]; });
+
+  const scroll = { y: 0, max: 0, v: 0 };
+  let scrollLastY = window.scrollY || 0;
+
+  /* real DOM elements declared by nodes (Button) — reconciled every frame */
+  const domState = {}, domEls = {};
+  const domLayer = document.createElement('div');
+  domLayer.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:visible;z-index:10;';
+  document.body.appendChild(domLayer);
+  const style = document.createElement('style');
+  style.textContent = '.weft-btn{position:absolute;transform:translate(-50%,-50%);background:rgba(16,21,31,0.88);color:#e6edfa;border:1px solid rgba(94,234,212,0.55);border-radius:999px;padding:7px 16px;font:500 13px Inter,system-ui,sans-serif;cursor:pointer;user-select:none;}.weft-btn:hover{border-color:#5eead4;}.weft-btn:active{transform:translate(-50%,-50%) scale(0.96);background:rgba(94,234,212,0.18);}';
+  document.head.appendChild(style);
+  function syncDom(list, rect) {
+    domLayer.style.left = (rect.left + rect.width / 2) + 'px';
+    domLayer.style.top = (rect.top + rect.height / 2) + 'px';
+    const seen = {};
+    for (const d of list) {
+      if (!d || d.kind !== 'button') continue;
+      seen[d.id] = true;
+      let el = domEls[d.id];
+      if (!el) {
+        el = document.createElement('button');
+        el.type = 'button'; el.className = 'weft-btn';
+        const st = domState[d.id] = domState[d.id] || { down: false, clicks: 0 };
+        el.addEventListener('pointerdown', () => { st.down = true; });
+        el.addEventListener('pointerup', () => { st.down = false; });
+        el.addEventListener('pointerleave', () => { st.down = false; });
+        el.addEventListener('click', () => { st.clicks++; });
+        domLayer.appendChild(el);
+        domEls[d.id] = el;
+      }
+      const label = String(d.label === undefined ? '' : d.label);
+      if (el.textContent !== label) el.textContent = label;
+      el.style.left = (d.x || 0) + 'px';
+      el.style.top = (d.y || 0) + 'px';
+    }
+    for (const id in domEls) {
+      if (!seen[id]) { domEls[id].remove(); delete domEls[id]; delete domState[id]; }
+    }
+  }
+
   const t0 = performance.now();
+  let last = t0;
 
   function loop(now) {
     requestAnimationFrame(loop);
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const dpr = window.devicePixelRatio || 1;
@@ -72,8 +130,29 @@ function mount(canvas) {
       mouse.nx = (mx - rect.left) / rect.width;
       mouse.ny = (my - rect.top) / rect.height;
     }
-    const ctx = { t: (now - t0) / 1000, frame: frame++, mouse, W: rect.width, H: rect.height, drawList: [], bg: null, errors: {}, out: {} };
+    mouse.pressed = pressedBuf; mouse.released = releasedBuf;
+    pressedBuf = releasedBuf = false;
+    const keys = { down: kDown, pressed: kPressed, released: kReleased };
+    kPressed = {}; kReleased = {};
+    scroll.y = window.scrollY || document.documentElement.scrollTop || 0;
+    scroll.max = Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight);
+    scroll.v = scroll.v * 0.8 + ((scroll.y - scrollLastY) / Math.max(dt, 1e-3)) * 0.2;
+    scrollLastY = scroll.y;
+
+    const ctx = {
+      t: (now - t0) / 1000, dt, frame: frame++, mouse, keys, scroll,
+      W: rect.width, H: rect.height,
+      drawList: [], domList: [], domState, bg: null, errors: {}, out: {}
+    };
     LM.evaluateGraph(GRAPH, DEFS, ctx);
+    syncDom(ctx.domList, rect);
+    let overHotspot = false;
+    for (const n of GRAPH.nodes) {
+      if (n.type !== 'input/hotspot' || n.enabled === false) continue;
+      const o = ctx.out[n.id];
+      if (o && (o.H || []).some(Boolean)) { overHotspot = true; break; }
+    }
+    canvas.style.cursor = overHotspot ? 'pointer' : '';
     g2.setTransform(dpr, 0, 0, dpr, 0, 0);
     g2.clearRect(0, 0, rect.width, rect.height);
     if (ctx.bg && ctx.bg.a > 0) { g2.fillStyle = LM.colorCss(ctx.bg); g2.fillRect(0, 0, rect.width, rect.height); }
@@ -103,7 +182,9 @@ else init();
 `;
   }
 
-  function buildDemoHTML(js) {
+  function buildDemoHTML(js, graph) {
+    // a scroll-driven patch needs a page that actually scrolls
+    const scrolls = graph && graph.nodes.some(n => n.type === 'input/scroll');
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,7 +192,7 @@ else init();
 <title>Weft experience</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  html, body { margin: 0; height: 100%; background: #0b0e14; }
+  html, body { margin: 0; ${scrolls ? 'min-height: 400vh;' : 'height: 100%;'} background: #0b0e14; }
   canvas[data-weft] { position: fixed; inset: 0; width: 100%; height: 100%; }
 </style>
 </head>

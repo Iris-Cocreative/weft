@@ -37,7 +37,7 @@ Definition of done for any change:
 | `js/engine.js` | `LM` — evaluator, geometry, color, transforms, canvas render | **NO** |
 | `js/nodes.js` | `NODE_DEFS` — node library | only in `buildBody`/`postEval` |
 | `js/editor.js` | node canvas UI (pan/zoom, wires, quick-add) | yes |
-| `js/viewport.js` | live preview loop | yes |
+| `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim) | yes |
 | `js/export.js` | graph → standalone JS compiler | no |
 | `js/examples.js` | `EXAMPLES` — doubles as test fixtures | no |
 | `js/app.js` | shell: palette, toolbar, persistence, modal | yes |
@@ -72,6 +72,15 @@ Load order (classic scripts, shared globals): engine → nodes → editor → vi
    def are never exported; that's the only place node UI may live.
 7. **No dependencies, no build step.** Vanilla JS, classic scripts. Vendoring a
    library (e.g. three.js someday) is a deliberate ROADMAP decision, not a convenience.
+8. **Events & state stay dataflow** (see docs/EVENTS-AND-STATE.md). Triggers are
+   frame-latched bools in ordinary wires — never callbacks or event subscriptions.
+   Cross-frame memory lives on `node._state` keyed by `ctx.i` (per list item) and
+   resets on graph load. The ctx input contract (`dt`, `mouse.pressed/released`,
+   `keys`, `scroll`, `domList`/`domState`) is supplied **identically** by
+   `viewport.js` and the export mount — change one, change both, and update the
+   ctx table in NODE-SPEC §6 and smoke's `mkCtx`. Nodes needing real DOM elements
+   declare them via `ctx.domList` and read back `ctx.domState`; only the hosts
+   touch the DOM.
 
 ## Recipe: adding a node
 

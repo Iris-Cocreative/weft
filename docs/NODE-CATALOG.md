@@ -5,6 +5,50 @@
 
 ## Input
 
+### `input/button` — Button
+
+A real button overlaid on the canvas at P — clicked trigger, held state, click count
+
+| in | type | default | note |
+|---|---|---|---|
+| L | string | `"press"` | label |
+| P | point | `{"x":0,"y":130}` |  |
+
+| out | type | note |
+|---|---|---|
+| C | bool | clicked (trigger) |
+| D | bool | held down |
+| N | number | click count |
+
+### `input/hotspot` — Hotspot
+
+Turn any geometry into an interface element: hover / pressed / clicked (per list item)
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  |  |
+| R | number | `8` | reach px (open curves) |
+
+| out | type | note |
+|---|---|---|
+| H | bool | hovering |
+| D | bool | pressed on it, still over it |
+| C | bool | clicked (trigger) |
+
+### `input/keyboard` — Keyboard
+
+State of one key: held / pressed / released (key names like a, space, arrowleft, enter)
+
+| in | type | default | note |
+|---|---|---|---|
+| K | string | `"space"` | key |
+
+| out | type | note |
+|---|---|---|
+| D | bool | held down |
+| P | bool | pressed (trigger) |
+| R | bool | released (trigger) |
+
 ### `input/mouse` — Mouse
 
 Pointer position (canvas-centered px + normalized 0..1) and button state
@@ -16,6 +60,16 @@ Pointer position (canvas-centered px + normalized 0..1) and button state
 | NX | number | x normalized 0..1 |
 | NY | number | y normalized 0..1 |
 | D | bool | pointer down |
+
+### `input/scroll` — Scroll
+
+Page scroll as a parameter — px, normalized 0..1, velocity (the editor simulates a page: wheel over the cloth)
+
+| out | type | note |
+|---|---|---|
+| Y | number | scrolled px |
+| N | number | normalized 0..1 |
+| V | number | velocity px/s |
 
 ### `input/time` — Time
 

@@ -6,7 +6,7 @@
  * editor-only and never exported.
  */
 const CATS = {
-  Input: '#4ade80', Params: '#2dd4bf', Maths: '#60a5fa', Sets: '#a78bfa',
+  Input: '#4ade80', Params: '#2dd4bf', State: '#f87171', Maths: '#60a5fa', Sets: '#a78bfa',
   Vector: '#fb923c', Curve: '#e879f9', Transform: '#f472b6', Display: '#facc15'
 };
 const TYPE_COLORS = {
@@ -51,6 +51,75 @@ defNode('input/viewport', {
   title: 'Viewport', cat: 'Input', desc: 'Canvas size in px (origin is the center)',
   inputs: [], outputs: [{ name: 'W', type: 'number', label: 'width' }, { name: 'H', type: 'number', label: 'height' }],
   compute: (a, ctx) => ({ W: ctx.W, H: ctx.H })
+});
+
+/* -- interaction inputs (events & state, see docs/EVENTS-AND-STATE.md) -- */
+
+defNode('input/hotspot', {
+  title: 'Hotspot', cat: 'Input', desc: 'Turn any geometry into an interface element: hover / pressed / clicked (per list item)',
+  inputs: [{ name: 'G', type: 'geometry' }, { name: 'R', type: 'number', default: 8, label: 'reach px (open curves)' }],
+  outputs: [
+    { name: 'H', type: 'bool', label: 'hovering' },
+    { name: 'D', type: 'bool', label: 'pressed on it, still over it' },
+    { name: 'C', type: 'bool', label: 'clicked (trigger)' }],
+  compute: (a, ctx, node) => {
+    if (!a.G) return { H: false, D: false, C: false };
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { armed: false };
+    const m = ctx.mouse || {};
+    const over = LM.pointInGeom(a.G, m, a.R);
+    if (m.pressed && over) s.armed = true;
+    let C = false;
+    if (m.released) { if (s.armed && over) C = true; s.armed = false; }
+    return { H: over, D: s.armed && over, C };
+  }
+});
+
+defNode('input/button', {
+  title: 'Button', cat: 'Input', desc: 'A real button overlaid on the canvas at P — clicked trigger, held state, click count',
+  inputs: [
+    { name: 'L', type: 'string', default: 'press', label: 'label' },
+    { name: 'P', type: 'point', default: { x: 0, y: 130 } }],
+  outputs: [
+    { name: 'C', type: 'bool', label: 'clicked (trigger)' },
+    { name: 'D', type: 'bool', label: 'held down' },
+    { name: 'N', type: 'number', label: 'click count' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.domList) ctx.domList.push({ id, kind: 'button', label: a.L, x: a.P.x, y: a.P.y });
+    const st = (ctx.domState && ctx.domState[id]) || {};
+    const seen = node._seen = node._seen || {};
+    const c = st.clicks || 0;
+    const prev = (id in seen) ? seen[id] : c;
+    seen[id] = c;
+    return { C: c > prev, D: !!st.down, N: c };
+  }
+});
+
+defNode('input/keyboard', {
+  title: 'Keyboard', cat: 'Input', desc: 'State of one key: held / pressed / released (key names like a, space, arrowleft, enter)',
+  inputs: [{ name: 'K', type: 'string', default: 'space', label: 'key' }],
+  outputs: [
+    { name: 'D', type: 'bool', label: 'held down' },
+    { name: 'P', type: 'bool', label: 'pressed (trigger)' },
+    { name: 'R', type: 'bool', label: 'released (trigger)' }],
+  compute: (a, ctx) => {
+    const k = String(a.K || '').trim().toLowerCase();
+    const kb = ctx.keys || {};
+    return { D: !!(kb.down || {})[k], P: !!(kb.pressed || {})[k], R: !!(kb.released || {})[k] };
+  }
+});
+
+defNode('input/scroll', {
+  title: 'Scroll', cat: 'Input', desc: 'Page scroll as a parameter — px, normalized 0..1, velocity (the editor simulates a page: wheel over the cloth)',
+  inputs: [], outputs: [
+    { name: 'Y', type: 'number', label: 'scrolled px' },
+    { name: 'N', type: 'number', label: 'normalized 0..1' },
+    { name: 'V', type: 'number', label: 'velocity px/s' }],
+  compute: (a, ctx) => {
+    const s = ctx.scroll || {};
+    return { Y: s.y || 0, N: s.max > 0 ? LM.clamp((s.y || 0) / s.max, 0, 1) : 0, V: s.v || 0 };
+  }
 });
 
 /* ============================== PARAMS ============================== */
@@ -631,9 +700,146 @@ defNode('disp/bg', {
   compute: (a, ctx) => { ctx.bg = a.C; return {}; }
 });
 
+/* ============================== STATE ==============================
+ * Nodes that remember. Memory lives on node._state keyed by ctx.i (the
+ * list-match index) so a list-fed state node is N independent machines.
+ * State resets when a graph loads; triggers are frame-latched bools.
+ * Design rationale: docs/EVENTS-AND-STATE.md
+ */
+
+defNode('state/smooth', {
+  title: 'Smooth', cat: 'State', desc: 'Eased follower — glides toward V at speed S (bigger = snappier)',
+  inputs: [{ name: 'V', type: 'number', default: 0 }, { name: 'S', type: 'number', default: 8, label: 'speed per s' }],
+  outputs: [{ name: 'R', type: 'number' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { has: false, x: 0 };
+    if (!s.has) { s.has = true; s.x = a.V; }
+    s.x += (a.V - s.x) * (1 - Math.exp(-Math.max(0, a.S) * (ctx.dt || 0)));
+    return { R: s.x };
+  }
+});
+
+defNode('state/spring', {
+  title: 'Spring', cat: 'State', desc: 'Springy follower — overshoots toward V; frequency F (Hz), damping D (1 = no bounce)',
+  inputs: [
+    { name: 'V', type: 'number', default: 0, label: 'target' },
+    { name: 'F', type: 'number', default: 2, label: 'frequency Hz' },
+    { name: 'D', type: 'number', default: 0.5, label: 'damping 0..1' }],
+  outputs: [{ name: 'R', type: 'number' }, { name: 'V', type: 'number', label: 'velocity' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { has: false, x: 0, v: 0 };
+    if (!s.has) { s.has = true; s.x = a.V; }
+    const w = LM.TAU * LM.clamp(a.F, 0.01, 60);
+    const dt = ctx.dt || 0;
+    const n = Math.max(1, Math.min(16, Math.ceil(dt * w / 0.4)));
+    const h = dt / n;
+    for (let i = 0; i < n; i++) {
+      s.v += (w * w * (a.V - s.x) - 2 * Math.max(0, a.D) * w * s.v) * h;
+      s.x += s.v * h;
+    }
+    return { R: s.x, V: s.v };
+  }
+});
+
+defNode('state/counter', {
+  title: 'Counter', cat: 'State', desc: 'Counts triggers: up on U, down on D, back to zero on R',
+  inputs: [
+    { name: 'U', type: 'bool', default: false, label: 'increment (trigger)' },
+    { name: 'D', type: 'bool', default: false, label: 'decrement (trigger)' },
+    { name: 'R', type: 'bool', default: false, label: 'reset (trigger)' },
+    { name: 'S', type: 'number', default: 1, label: 'step' }],
+  outputs: [{ name: 'N', type: 'number' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { n: 0 };
+    if (a.R) s.n = 0;
+    else { if (a.U) s.n += a.S; if (a.D) s.n -= a.S; }
+    return { N: s.n };
+  }
+});
+
+defNode('state/latch', {
+  title: 'Latch', cat: 'State', desc: 'A switch with memory: each T trigger flips it, R forces it off',
+  inputs: [
+    { name: 'T', type: 'bool', default: false, label: 'toggle (trigger)' },
+    { name: 'R', type: 'bool', default: false, label: 'reset (trigger)' }],
+  outputs: [{ name: 'B', type: 'bool' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { on: false };
+    if (a.T) s.on = !s.on;
+    if (a.R) s.on = false;
+    return { B: s.on };
+  }
+});
+
+defNode('state/sample', {
+  title: 'Sample & Hold', cat: 'State', desc: 'Freezes V: holds the value it had when T last fired (initial value until then)',
+  inputs: [{ name: 'V', type: 'any' }, { name: 'T', type: 'bool', default: false, label: 'sample (trigger)' }],
+  outputs: [{ name: 'R', type: 'any' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { has: false, v: undefined };
+    if (!s.has || a.T) { s.has = true; s.v = a.V; }
+    return { R: s.v };
+  }
+});
+
+defNode('state/timer', {
+  title: 'Timer', cat: 'State', desc: 'Seconds since T last fired — T (re)starts from zero, P stops it',
+  inputs: [
+    { name: 'T', type: 'bool', default: false, label: 'start / restart (trigger)' },
+    { name: 'P', type: 'bool', default: false, label: 'stop (trigger)' }],
+  outputs: [{ name: 'S', type: 'number', label: 'seconds' }, { name: 'A', type: 'bool', label: 'running' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { on: false, el: 0 };
+    if (a.T) { s.on = true; s.el = 0; }
+    if (a.P) s.on = false;
+    if (s.on) s.el += (ctx.dt || 0);
+    return { S: s.el, A: s.on };
+  }
+});
+
+defNode('state/prev', {
+  title: 'Previous Value', cat: 'State', desc: 'V from the previous frame (passes V through on the first frame)',
+  inputs: [{ name: 'V', type: 'any' }],
+  outputs: [{ name: 'P', type: 'any' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { has: false, v: undefined };
+    const out = s.has ? s.v : a.V;
+    s.v = a.V; s.has = true;
+    return { P: out };
+  }
+});
+
+defNode('state/edge', {
+  title: 'Edge', cat: 'State', desc: 'Turns a continuous bool into triggers: R fires when B rises, F when it falls',
+  inputs: [{ name: 'B', type: 'bool', default: false }],
+  outputs: [{ name: 'R', type: 'bool', label: 'rose (trigger)' }, { name: 'F', type: 'bool', label: 'fell (trigger)' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { has: false, b: false };
+    const rose = s.has && a.B && !s.b;
+    const fell = s.has && !a.B && s.b;
+    s.b = a.B; s.has = true;
+    return { R: rose, F: fell };
+  }
+});
+
 /* ---- palette grouping (cluster related nodes) + compact styling ---- */
 (function () {
   const groups = {
+    /* Input: 1 ambient (time/mouse/viewport) · 2 interaction */
+    'input/time': 1, 'input/mouse': 1, 'input/viewport': 1,
+    'input/hotspot': 2, 'input/button': 2, 'input/keyboard': 2, 'input/scroll': 2,
+    /* State: 1 motion (followers) · 2 memory · 3 time/triggers */
+    'state/smooth': 1, 'state/spring': 1,
+    'state/counter': 2, 'state/latch': 2, 'state/sample': 2, 'state/prev': 2,
+    'state/timer': 3, 'state/edge': 3,
     /* Maths: 1 arithmetic · 2 trig · 3 rounding/limits · 4 mapping · 5 constants */
     'math/add': 1, 'math/sub': 1, 'math/mul': 1, 'math/div': 1, 'math/mod': 1, 'math/pow': 1, 'math/sqrt': 1,
     'math/sin': 2, 'math/cos': 2, 'math/tan': 2, 'math/atan2': 2, 'math/rad': 2, 'math/deg': 2,

@@ -47,7 +47,7 @@ const LM = {
     const f = n => { const k = (n + h * 12) % 12; return l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
     return { r: f(0) * 255, g: f(8) * 255, b: f(4) * 255, a: a === undefined ? 1 : a };
   },
-  colorCss: c => c ? 'rgba(' + Math.round(c.r || 0) + ',' + Math.round(c.g || 0) + ',' + Math.round(c.b || 0) + ',' + (c.a === undefined ? 1 : c.a) + ')' : 'rgba(0,0,0,0)',
+  colorCss: c => c ? 'rgba(' + Math.round(c.r || 0) + ',' + Math.round(c.g || 0) + ',' + Math.round(c.b || 0) + ',' + (c.a === undefined ? 1 : Math.round(c.a * 1000) / 1000) + ')' : 'rgba(0,0,0,0)',
   mixColor: (a, b, t) => ({
     r: LM.lerp(a.r, b.r, t), g: LM.lerp(a.g, b.g, t), b: LM.lerp(a.b, b.b, t),
     a: LM.lerp(a.a === undefined ? 1 : a.a, b.a === undefined ? 1 : b.a, t)
@@ -162,6 +162,36 @@ const LM = {
     }
   },
 
+  /* hit test: inside a closed shape, or within pad px of an open curve/point */
+  pointInGeom: (g, p, pad) => {
+    if (!g || !p) return false;
+    pad = pad === undefined ? 6 : pad;
+    if (g.kind === undefined && g.x !== undefined) return Math.hypot(g.x - p.x, g.y - p.y) <= Math.max(pad, 4);
+    if (g.kind === 'circle') return Math.hypot(g.cx - p.x, g.cy - p.y) <= Math.abs(g.r);
+    if (g.kind === 'text') {
+      const s = g.size || 24, w = String(g.text === undefined ? '' : g.text).length * s * 0.6;
+      return Math.abs(p.x - (g.x || 0)) <= w / 2 + pad && Math.abs(p.y - (g.y || 0)) <= s * 0.7;
+    }
+    const P = LM.toPoly(g, 48), pts = P.pts;
+    if (!pts.length) return false;
+    if (P.closed && pts.length > 2) {
+      let inside = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        if ((pts[i].y > p.y) !== (pts[j].y > p.y) &&
+          p.x < (pts[j].x - pts[i].x) * (p.y - pts[i].y) / (pts[j].y - pts[i].y) + pts[i].x) inside = !inside;
+      }
+      if (inside) return true;
+    }
+    const nSeg = P.closed ? pts.length : pts.length - 1;
+    for (let i = 0; i < nSeg; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+      const t = L2 ? LM.clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, 0, 1) : 0;
+      if (Math.hypot(a.x + dx * t - p.x, a.y + dy * t - p.y) <= pad) return true;
+    }
+    return false;
+  },
+
   curvePoint: (g, t) => {
     if (!g) return { x: 0, y: 0 };
     switch (g.kind) {
@@ -265,6 +295,7 @@ const LM = {
    */
   evaluateGraph: (graph, defs, ctx) => {
     ctx.drawList = ctx.drawList || [];
+    ctx.domList = ctx.domList || [];
     ctx.errors = ctx.errors || {};
     ctx.out = ctx.out || {};
     const byId = {};
@@ -335,6 +366,7 @@ const LM = {
             const L = resolved[inp.name];
             args[inp.name] = listIns.indexOf(inp.name) >= 0 ? L : (L.length ? L[Math.min(i, L.length - 1)] : undefined);
           }
+          ctx.i = i; // list-match index — state nodes key node._state by it
           const r = def.compute(args, ctx, n) || {};
           for (const o of def.outputs || []) {
             const v = r[o.name];

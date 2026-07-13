@@ -127,5 +127,89 @@ const EXAMPLES = {
     ['n3', 'R', 'n8', 'A'], ['n7', 'R', 'n8', 'R'],
     ['n8', 'P', 'n9', 'V'],
     ['n9', 'C', 'n10', 'G']
+  ]),
+
+  /* three circles = three independent toggle buttons from ONE node chain
+   * (hotspot/latch/counter are per-list-item state machines); a real DOM
+   * Button node resets everything */
+  'Click toy': _EX([
+    ['n1', 'sets/series', 30, 40, { S: -160, N: 160, C: 3 }],
+    ['n2', 'vec/construct', 240, 40],
+    ['n3', 'crv/circle', 460, 40, { R: 46 }],
+    ['n4', 'input/hotspot', 680, 60],
+    ['b1', 'input/button', 680, 420, { L: 'reset', P: { x: 0, y: 150 } }],
+    ['n5', 'state/latch', 900, 40],
+    ['n8', 'state/smooth', 900, 200, { S: 14 }],
+    ['n12', 'state/counter', 900, 360],
+    ['n6', 'state/smooth', 1120, 40, { S: 10 }],
+    ['n9', 'math/remap', 1120, 200, { S0: 0, S1: 1, T0: 46, T1: 54 }],
+    ['n13', 'disp/text', 1120, 460, { S: 15 }],
+    ['n14', 'vec/construct', 240, 360, { Y: 80 }],
+    ['n7', 'disp/gradient', 1340, 40, { A: { r: 42, g: 52, b: 70, a: 1 }, B: { r: 94, g: 234, b: 212, a: 1 } }],
+    ['n10', 'crv/circle', 1340, 220],
+    ['n11', 'disp/draw', 1560, 120, { S: { r: 94, g: 234, b: 212, a: 0.4 }, W: 1.5 }],
+    ['n15', 'disp/draw', 1560, 320],
+    ['n16', 'disp/text', 1340, 480, { T: 'click the dots', P: { x: 0, y: -120 }, S: 16 }],
+    ['n17', 'disp/draw', 1560, 480, { S: { r: 139, g: 158, b: 191, a: 0.85 } }],
+    ['n18', 'disp/bg', 1560, 640]
+  ], [
+    ['n1', 'S', 'n2', 'X'],
+    ['n2', 'P', 'n3', 'P'],
+    ['n3', 'C', 'n4', 'G'],
+    ['n4', 'C', 'n5', 'T'], ['b1', 'C', 'n5', 'R'],
+    ['n5', 'B', 'n6', 'V'],
+    ['n6', 'R', 'n7', 'T'],
+    ['n4', 'H', 'n8', 'V'],
+    ['n8', 'R', 'n9', 'V'],
+    ['n2', 'P', 'n10', 'P'], ['n9', 'R', 'n10', 'R'],
+    ['n10', 'C', 'n11', 'G'], ['n7', 'C', 'n11', 'F'],
+    ['n4', 'C', 'n12', 'U'], ['b1', 'C', 'n12', 'R'],
+    ['n12', 'N', 'n13', 'T'],
+    ['n1', 'S', 'n14', 'X'], ['n14', 'P', 'n13', 'P'],
+    ['n13', 'G', 'n15', 'G'],
+    ['n16', 'G', 'n17', 'G']
+  ]),
+
+  /* page scroll as the master parameter: the sun climbs, the sky warms,
+   * a windmill spins with scrolled distance, the hint fades out
+   * (wheel over the cloth to scrub the editor's simulated page) */
+  'Scroll scene': _EX([
+    ['s1', 'input/scroll', 30, 60],
+    ['s2', 'math/remap', 250, 40, { S0: 0, S1: 1, T0: 180, T1: -140 }],
+    ['s4', 'math/remap', 250, 200, { S0: 0, S1: 1, T0: -220, T1: 220 }],
+    ['s13', 'math/mul', 250, 380, { B: 0.012 }],
+    ['s20', 'math/expr', 250, 540, { expr: '1 - X' }],
+    ['s5', 'vec/construct', 470, 40],
+    ['s14', 'math/add', 470, 380, { B: 1.5708 }],
+    ['s21', 'disp/hsl', 470, 540, { H: 0.55, S: 0.2, L: 0.88 }],
+    ['s9', 'disp/gradient', 250, 760, { A: { r: 11, g: 14, b: 20, a: 1 }, B: { r: 42, g: 74, b: 115, a: 1 } }],
+    ['s6', 'crv/circle', 690, 40, { R: 40 }],
+    ['s7', 'disp/gradient', 690, 200, { A: { r: 251, g: 146, b: 60, a: 1 }, B: { r: 250, g: 204, b: 21, a: 1 } }],
+    ['s15', 'crv/rect', 690, 380, { P: { x: 140, y: 80 }, W: 140, H: 7 }],
+    ['s22', 'disp/text', 690, 540, { T: 'scroll ↓', P: { x: 0, y: 10 }, S: 18 }],
+    ['s10', 'disp/bg', 690, 700],
+    ['s8', 'disp/draw', 910, 40, { S: { r: 0, g: 0, b: 0, a: 0 } }],
+    ['s11', 'crv/line', 910, 200, { A: { x: -2000, y: 120 }, B: { x: 2000, y: 120 } }],
+    ['s18', 'crv/line', 910, 300, { A: { x: 140, y: 80 }, B: { x: 140, y: 120 } }],
+    ['s16', 'xf/rotate', 910, 420, { C: { x: 140, y: 80 } }],
+    ['s12', 'disp/draw', 1130, 200, { S: { r: 139, g: 158, b: 191, a: 0.55 }, W: 1.5 }],
+    ['s17', 'disp/draw', 1130, 380, { S: { r: 230, g: 237, b: 250, a: 0.9 }, W: 2.5 }],
+    ['s23', 'disp/draw', 1130, 540, { S: { r: 0, g: 0, b: 0, a: 0 } }]
+  ], [
+    ['s1', 'N', 's2', 'V'], ['s1', 'N', 's4', 'V'],
+    ['s1', 'Y', 's13', 'A'],
+    ['s1', 'N', 's20', 'X'],
+    ['s1', 'N', 's7', 'T'], ['s1', 'N', 's9', 'T'],
+    ['s4', 'R', 's5', 'X'], ['s2', 'R', 's5', 'Y'],
+    ['s5', 'P', 's6', 'P'],
+    ['s6', 'C', 's8', 'G'], ['s7', 'C', 's8', 'F'],
+    ['s9', 'C', 's10', 'C'],
+    ['s11', 'C', 's12', 'G'], ['s18', 'C', 's12', 'G'],
+    ['s13', 'R', 's14', 'A'],
+    ['s13', 'R', 's16', 'A'], ['s14', 'R', 's16', 'A'],
+    ['s15', 'C', 's16', 'G'],
+    ['s16', 'G', 's17', 'G'],
+    ['s20', 'R', 's21', 'A'],
+    ['s22', 'G', 's23', 'G'], ['s21', 'C', 's23', 'F']
   ])
 };

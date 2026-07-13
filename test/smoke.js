@@ -24,7 +24,13 @@ const src = ['js/engine.js', 'js/nodes.js', 'js/examples.js', 'js/export.js']
 
 const HARNESS = `
 const failures = [];
-const mkCtx = () => ({ t: 0.5, frame: 30, mouse: { x: 12, y: -8, nx: 0.55, ny: 0.45, down: false }, W: 800, H: 600, drawList: [], bg: null, errors: {}, out: {} });
+const mkCtx = () => ({
+  t: 0.5, dt: 0.016, frame: 30,
+  mouse: { x: 12, y: -8, nx: 0.55, ny: 0.45, down: false, pressed: false, released: false },
+  keys: { down: {}, pressed: {}, released: {} },
+  scroll: { y: 0, max: 0, v: 0 },
+  W: 800, H: 600, drawList: [], domList: [], domState: {}, bg: null, errors: {}, out: {}
+});
 
 /* 1 — every node def evaluates standalone with defaults */
 for (const id of Object.keys(NODE_DEFS)) {
@@ -69,6 +75,69 @@ for (const name of Object.keys(EXAMPLES)) {
   LM.evaluateGraph(g, NODE_DEFS, c2);
   const r2 = (c2.out.ng || {}).R || [];
   if (r2.join(',') !== '1,2') failures.push('disabled bypass: expected 1,2 got [' + r2.join(',') + ']');
+}
+
+/* 5 — hit testing */
+{
+  const t = (name, got, want) => { if (got !== want) failures.push('pointInGeom ' + name + ': expected ' + want + ' got ' + got); };
+  t('circle inside', LM.pointInGeom({ kind: 'circle', cx: 0, cy: 0, r: 50 }, { x: 10, y: 10 }), true);
+  t('circle outside', LM.pointInGeom({ kind: 'circle', cx: 0, cy: 0, r: 50 }, { x: 60, y: 0 }), false);
+  t('line near', LM.pointInGeom({ kind: 'line', a: { x: 0, y: 0 }, b: { x: 100, y: 0 } }, { x: 50, y: 4 }), true);
+  t('line far', LM.pointInGeom({ kind: 'line', a: { x: 0, y: 0 }, b: { x: 100, y: 0 } }, { x: 50, y: 20 }), false);
+  t('rect inside', LM.pointInGeom({ kind: 'rect', cx: 0, cy: 0, w: 100, h: 60, rot: 0 }, { x: 30, y: 20 }), true);
+  t('rect outside', LM.pointInGeom({ kind: 'rect', cx: 0, cy: 0, w: 100, h: 60, rot: 0 }, { x: 80, y: 0 }), false);
+  t('text box', LM.pointInGeom({ kind: 'text', text: 'hello', x: 0, y: 0, size: 24 }, { x: 20, y: 5 }), true);
+}
+
+/* 6 — events & state across frames (same node objects, fresh ctx per frame) */
+{
+  // hotspot armed→click cycle + per-list-index latch independence (3 circles, click the middle)
+  const g = { nodes: [
+      { id: 'sr', type: 'sets/series', values: { S: -160, N: 160, C: 3 } },
+      { id: 'pt', type: 'vec/construct', values: {} },
+      { id: 'ci', type: 'crv/circle', values: { R: 46 } },
+      { id: 'hs', type: 'input/hotspot', values: {} },
+      { id: 'la', type: 'state/latch', values: {} } ],
+    wires: [ { from: ['sr', 'S'], to: ['pt', 'X'] }, { from: ['pt', 'P'], to: ['ci', 'P'] },
+      { from: ['ci', 'C'], to: ['hs', 'G'] }, { from: ['hs', 'C'], to: ['la', 'T'] } ] };
+  const frame = mod => { const c = mkCtx(); c.mouse.x = 0; c.mouse.y = 0; if (mod) mod(c); LM.evaluateGraph(g, NODE_DEFS, c); return c; };
+  const f1 = frame(c => { c.mouse.down = true; c.mouse.pressed = true; });
+  if ((f1.out.hs.H || []).join(',') !== 'false,true,false') failures.push('hotspot hover: expected false,true,false got [' + (f1.out.hs.H || []).join(',') + ']');
+  if (f1.out.hs.C.some(Boolean)) failures.push('hotspot: click fired on press frame');
+  const f2 = frame(c => { c.mouse.released = true; });
+  if ((f2.out.hs.C || []).join(',') !== 'false,true,false') failures.push('hotspot click: expected false,true,false got [' + (f2.out.hs.C || []).join(',') + ']');
+  const f3 = frame();
+  if (f3.out.hs.C.some(Boolean)) failures.push('hotspot: click is not frame-latched');
+  if ((f3.out.la.B || []).join(',') !== 'false,true,false') failures.push('per-index latch: expected false,true,false got [' + (f3.out.la.B || []).join(',') + ']');
+}
+{
+  // keyboard trigger → counter/latch; edge; prev; smooth snap; timer
+  const g = { nodes: [
+      { id: 'kb', type: 'input/keyboard', values: { K: 'space' } },
+      { id: 'ct', type: 'state/counter', values: {} },
+      { id: 'ed', type: 'state/edge', values: {} },
+      { id: 'tm', type: 'input/time', values: {} },
+      { id: 'pv', type: 'state/prev', values: {} },
+      { id: 'sm', type: 'state/smooth', values: { V: 10, S: 8 } },
+      { id: 'ti', type: 'state/timer', values: {} } ],
+    wires: [ { from: ['kb', 'P'], to: ['ct', 'U'] }, { from: ['kb', 'D'], to: ['ed', 'B'] },
+      { from: ['tm', 'T'], to: ['pv', 'V'] }, { from: ['kb', 'P'], to: ['ti', 'T'] } ] };
+  const frame = mod => { const c = mkCtx(); c.dt = 0.5; if (mod) mod(c); LM.evaluateGraph(g, NODE_DEFS, c); return c; };
+  const f1 = frame(c => { c.t = 1; c.keys.pressed.space = true; c.keys.down.space = true; });
+  const f2 = frame(c => { c.t = 2; c.keys.down.space = true; });
+  const f3 = frame(c => { c.t = 3; c.keys.pressed.space = true; c.keys.down.space = true; });
+  if (f3.out.ct.N[0] !== 2) failures.push('counter: expected 2 got ' + f3.out.ct.N[0]);
+  if (f1.out.ed.R[0] !== false) failures.push('edge: fired on first frame');
+  if (f2.out.ed.R[0] !== false) failures.push('edge: fired without a rise');
+  if (f1.out.pv.P[0] !== 1) failures.push('prev: first frame should pass through, got ' + f1.out.pv.P[0]);
+  if (f2.out.pv.P[0] !== 1 || f3.out.pv.P[0] !== 2) failures.push('prev: expected 1 then 2, got ' + f2.out.pv.P[0] + ',' + f3.out.pv.P[0]);
+  if (f1.out.sm.R[0] !== 10) failures.push('smooth: should snap to target on first frame, got ' + f1.out.sm.R[0]);
+  if (!(f3.out.ti.S[0] > 0 && f3.out.ti.S[0] <= 0.5 + 1e-9)) failures.push('timer: restart on trigger broken, got ' + f3.out.ti.S[0]);
+  if (f3.out.ti.A[0] !== true) failures.push('timer: not running after trigger');
+  // smooth follows a moved target without overshooting
+  g.nodes[5].values.V = 20;
+  const f4 = frame();
+  if (!(f4.out.sm.R[0] > 10 && f4.out.sm.R[0] < 20)) failures.push('smooth: expected between 10 and 20, got ' + f4.out.sm.R[0]);
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

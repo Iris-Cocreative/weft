@@ -19,9 +19,71 @@ const Viewport = {
     const SEL = { r: 74, g: 222, b: 128, a: 0.95 };
     const SEL_FILL = { r: 74, g: 222, b: 128, a: 0.10 };
 
-    const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false };
+    const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false };
     let mx = null, my = null;
     let anchorDrag = null, anchorHot = null;
+    let pressedBuf = false, releasedBuf = false;
+
+    /* keyboard — continuous down map + frame-latched pressed/released buffers */
+    const kDown = {};
+    let kPressed = {}, kReleased = {};
+    const keyName = e => e.key === ' ' ? 'space' : e.key.toLowerCase();
+    window.addEventListener('keydown', e => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      const k = keyName(e);
+      if (!kDown[k]) kPressed[k] = true;
+      kDown[k] = true;
+    });
+    window.addEventListener('keyup', e => {
+      const k = keyName(e); // no typing guard: a key must never stay stuck down
+      if (kDown[k]) kReleased[k] = true;
+      delete kDown[k];
+    });
+    window.addEventListener('blur', () => { for (const k in kDown) delete kDown[k]; });
+
+    /* scroll simulator — the cloth pretends to be a 3000px page (wheel to scrub) */
+    const scroll = { y: 0, max: 3000, v: 0 };
+    let scrollShow = 0, scrollLastY = 0;
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      scroll.y = LM.clamp(scroll.y + e.deltaY, 0, scroll.max);
+      scrollShow = performance.now();
+    }, { passive: false });
+
+    /* DOM overlay — real elements (Button node) reconciled from ctx.domList */
+    const domState = {};
+    const domLayer = document.createElement('div');
+    domLayer.id = 'domLayer';
+    canvas.parentElement.appendChild(domLayer);
+    const domEls = {};
+    const syncDom = list => {
+      const seen = {};
+      for (const d of list) {
+        if (!d || d.kind !== 'button') continue;
+        seen[d.id] = true;
+        let el = domEls[d.id];
+        if (!el) {
+          el = document.createElement('button');
+          el.type = 'button';
+          el.className = 'weft-btn';
+          const st = domState[d.id] = domState[d.id] || { down: false, clicks: 0 };
+          el.addEventListener('pointerdown', () => { st.down = true; });
+          el.addEventListener('pointerup', () => { st.down = false; });
+          el.addEventListener('pointerleave', () => { st.down = false; });
+          el.addEventListener('click', () => { st.clicks++; });
+          domLayer.appendChild(el);
+          domEls[d.id] = el;
+        }
+        const label = String(d.label === undefined ? '' : d.label);
+        if (el.textContent !== label) el.textContent = label;
+        el.style.left = 'calc(50% + ' + (d.x || 0) + 'px)';
+        el.style.top = 'calc(50% + ' + (d.y || 0) + 'px)';
+      }
+      for (const id in domEls) {
+        if (!seen[id]) { domEls[id].remove(); delete domEls[id]; delete domState[id]; }
+      }
+    };
 
     const centered = (clientX, clientY, rect) => ({
       x: clientX - rect.left - rect.width / 2,
@@ -42,6 +104,7 @@ const Viewport = {
         }
       }
       mouse.down = true;
+      pressedBuf = true;
     });
     canvas.addEventListener('pointermove', e => {
       const rect = canvas.getBoundingClientRect();
@@ -55,10 +118,10 @@ const Viewport = {
       for (const n of anchors()) {
         if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) { anchorHot = n; break; }
       }
-      canvas.style.cursor = anchorHot ? 'grab' : '';
     });
     window.addEventListener('pointerup', () => {
       if (anchorDrag) { anchorDrag = null; App.onGraphChanged(); }
+      if (mouse.down) releasedBuf = true;
       mouse.down = false;
     });
 
@@ -140,8 +203,29 @@ const Viewport = {
         mouse.ny = (my - rect.top) / rect.height;
       }
 
-      const ctx = { t, frame: frame++, mouse, W: rect.width, H: rect.height, drawList: [], bg: null, errors: {}, out: {} };
+      // latch buffered events into this frame, then reset the buffers
+      mouse.pressed = pressedBuf; mouse.released = releasedBuf;
+      pressedBuf = releasedBuf = false;
+      const keys = { down: kDown, pressed: kPressed, released: kReleased };
+      kPressed = {}; kReleased = {};
+      scroll.v = scroll.v * 0.8 + ((scroll.y - scrollLastY) / Math.max(dt, 1e-3)) * 0.2;
+      scrollLastY = scroll.y;
+
+      const ctx = {
+        t, dt: Viewport.playing ? dt : 0, frame: frame++, mouse, keys, scroll,
+        W: rect.width, H: rect.height,
+        drawList: [], domList: [], domState, bg: null, errors: {}, out: {}
+      };
       try { LM.evaluateGraph(App.graph, NODE_DEFS, ctx); } catch (e) { /* keep rendering */ }
+      syncDom(ctx.domList);
+
+      let overHotspot = false;
+      for (const n of App.graph.nodes) {
+        if (n.type !== 'input/hotspot' || n.enabled === false) continue;
+        const o = ctx.out[n.id];
+        if (o && (o.H || []).some(Boolean)) { overHotspot = true; break; }
+      }
+      canvas.style.cursor = (anchorDrag || anchorHot) ? 'grab' : overHotspot ? 'pointer' : '';
 
       g2.setTransform(dpr, 0, 0, dpr, 0, 0);
       g2.fillStyle = ctx.bg ? LM.colorCss(ctx.bg) : '#0b0e14';
@@ -155,6 +239,17 @@ const Viewport = {
       drawGhosts(ctx, true);
       drawAnchors();
       g2.restore();
+
+      // scroll-simulator indicator: a slim thumb on the right edge while scrubbing
+      const scrollAge = now - scrollShow;
+      if (scrollShow && scrollAge < 900) {
+        const alpha = scrollAge < 600 ? 0.55 : 0.55 * (1 - (scrollAge - 600) / 300);
+        const trackH = rect.height - 24;
+        const thumbH = Math.max(28, trackH * rect.height / (scroll.max + rect.height));
+        const y = 12 + (trackH - thumbH) * (scroll.y / scroll.max);
+        g2.fillStyle = 'rgba(94,234,212,' + alpha.toFixed(3) + ')';
+        g2.fillRect(rect.width - 5, y, 3, thumbH);
+      }
 
       Editor.postEval(ctx);
 

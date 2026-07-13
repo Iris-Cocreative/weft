@@ -54,23 +54,33 @@ Exit met: an agent handed NODE-SPEC + CATALOG can produce a valid patch blind
 - Specialty control nodes (Flow Gate, Blocker, Shift, joystick, dial, vector
   pad) recorded in ROADMAP §3.5 — most belong with Phase 2's event system.
 
-## Phase 2 — The interaction engine (events + state)
+## Phase 2 — The interaction engine (events + state) — ✅ SHIPPED 2026-07-12 (v0.4)
 
 Weft's identity feature; what makes it an instrument for *experiences* rather
 than a graphics toy.
 
-1. `docs/EVENTS-AND-STATE.md` design note first: triggers as frame-latched
-   booleans in normal wires; state lives on `node._state`; export-safe.
-   (Study Origami Studio's "pulse" before finalizing — see research note.)
-2. State nodes: **Spring/Smooth** (build first — instant feel-good), Counter,
-   Toggle/Latch, Sample & Hold, Timer, Previous Value.
-3. **Hotspot** — any geometry → hover/pressed/clicked (point-in-geometry test
-   in LM). Every drawn shape becomes an interface element.
-4. **Button** node (a real overlaid element) + Keyboard + **Scroll** (page
-   scroll as parameter — the Webflow storytelling unlock).
-5. Two new examples: a clickable toy interface; a scroll-driven scene.
+1. ✅ `docs/EVENTS-AND-STATE.md` design note: triggers as frame-latched booleans
+   (Origami's pulse) in normal wires; state on `node._state` keyed by `ctx.i`
+   (per list item — one Latch behind one Hotspot over 3 circles = 3 toggles);
+   host input contract supplied identically by editor and export (CLAUDE.md
+   invariant #8); real DOM via declare/reconcile/report (`domList`/`domState`).
+2. ✅ State nodes: Smooth, Spring (substepped, damped), Counter, Latch,
+   Sample & Hold, Timer, Previous Value, plus **Edge** (continuous bool →
+   rise/fall triggers — the adapter the design note demanded).
+3. ✅ **Hotspot** — any geometry → hover/pressed/clicked via `LM.pointInGeom`
+   (polygon test through toPoly, pad for open curves, box for text); armed
+   press/release click cycle; pointer cursor feedback in both hosts.
+4. ✅ **Button** (a real overlaid `<button>`, styled, host-reconciled),
+   **Keyboard** (held/pressed/released per key), **Scroll** (px + normalized +
+   velocity; real page in exports, wheel-scrubbed 3000px simulator on the cloth).
+5. ✅ Examples: **Click toy** (3 circles = 3 independent toggle machines from
+   one node chain + DOM reset button) and **Scroll scene** (sun/sky/windmill/
+   fading hint from one Scroll node); demo HTML grows a 400vh page for
+   scroll patches.
 
-Exit: build a working menu/toy-app patch with zero code; exports keep full interactivity.
+Exit met: the Click toy is a zero-code toy interface; both examples verified
+interactive in the editor **and** as exported standalone JS in a real browser
+(smoke now also covers hit testing + cross-frame state semantics).
 
 ## Phase 3 — LLM co-creation
 

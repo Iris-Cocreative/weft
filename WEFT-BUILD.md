@@ -4,11 +4,21 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.2 — bedrock.** v0.1 (2026-07-12): editor, evaluator, 63 nodes,
-4 examples, JS export, all verified in Chrome. v0.2 (same day, Phase 1 of
-PLAN.md): git repo, graph format versioning + migration, undo/redo, marquee
-select, copy/paste of graph-JSON fragments with auto-layout for LLM-authored
-patches, `docs/NODE-SPEC.md` language contract + generated `docs/NODE-CATALOG.md`.
+**Status: v0.4 — the interaction engine.** v0.1 (2026-07-12): editor,
+evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
+(same day, Phase 1 of PLAN.md): git repo, graph format versioning +
+migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
+auto-layout for LLM-authored patches, `docs/NODE-SPEC.md` language contract +
+generated `docs/NODE-CATALOG.md`. v0.3 (same day, workshop pass): ghost
+previews, disable/bypass, multi-wire inputs, readouts, anchors, palette
+clustering. v0.4 (same day, Phase 2 of PLAN.md): **events + state** —
+frame-latched triggers (Origami-pulse style), per-list-item state nodes
+(Smooth, Spring, Counter, Latch, Sample & Hold, Timer, Previous Value, Edge),
+Hotspot (any geometry → interface element via `LM.pointInGeom`), real-DOM
+Button via `domList`/`domState`, Keyboard, Scroll (real page in exports,
+simulated on the cloth), 88 nodes, 6 examples (Click toy, Scroll scene),
+design note `docs/EVENTS-AND-STATE.md`, invariant #8 — editor and exports
+verified interactive in Chrome.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -62,9 +72,11 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (53) — Grasshopper-matched names
+### Node library (88) — Grasshopper-matched names
 
-- **Input**: Time, Mouse, Viewport
+- **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
+- **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
+  Latch, Sample & Hold, Timer, Previous Value, Edge
 - **Params**: Number Slider, Boolean Toggle, Colour Swatch, Panel (inspect or type values)
 - **Maths**: Addition, Subtraction, Multiplication, Division, Modulus, Power, Min, Max,
   ArcTangent 2, Negative, Absolute, Round, Floor, Ceiling, Square Root, Sine, Cosine,

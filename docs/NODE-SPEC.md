@@ -13,7 +13,8 @@ inventory lives in `NODE-CATALOG.md` (auto-generated — regenerate with
 - **Node** — an instance of a node *definition* (`type` refers to a def id like
   `"math/add"`). Holds position and literal `values`.
 - **Wire** — connects one node's *output port* to another node's *input port*.
-  An input accepts at most one wire; an output fans out to any number.
+  An input accepts any number of wires (lists concatenate, §4); an output fans
+  out to any number.
 - **Port** — named, typed endpoint. Inputs without a wire fall back to
   `values[name]`, then to the def's `default`.
 
@@ -137,16 +138,38 @@ The evaluation context `ctx` provides:
 | field | meaning |
 |---|---|
 | `t` | seconds since start |
+| `dt` | seconds since the previous frame (clamped ≤ 0.1; 0 while the editor is paused) |
 | `frame` | frame counter |
-| `mouse` | `{x, y}` centered px · `{nx, ny}` normalized 0–1 · `down` |
+| `i` | current list-match index (see §4; state nodes key their memory by it) |
+| `mouse` | `{x, y}` centered px · `{nx, ny}` normalized 0–1 · `down` · frame-latched `pressed` / `released` |
+| `keys` | `{down, pressed, released}` — maps keyed by lowercase `event.key` (`' '` → `'space'`); `down` is continuous, the others frame-latched |
+| `scroll` | `{y, max, v}` — scroll offset px, max scrollable px, velocity px/s (real page in exports; the editor simulates a 3000px page — wheel over the cloth) |
 | `W`, `H` | canvas size in px |
 | `drawList` | render items pushed by Draw nodes: `{geom, stroke, fill, width}` |
+| `domList` | real-DOM-element requests pushed by nodes (Button): `{id, kind, label, x, y}` — the host reconciles actual elements |
+| `domState` | host-owned persistent map: element id → `{down, clicks}` |
 | `bg` | background color set by a Background node |
 | `errors` | nodeId → message (cycle, thrown compute, unknown type) |
 
 Rendering: `drawList` paints in graph topological order (later = on top).
 A fill with `a: 0` is skipped; likewise strokes. Text uses fill, falling back
 to stroke.
+
+### Triggers & state (events)
+
+A **trigger** is an ordinary `bool` that is `true` for exactly one frame — the
+frame after its event fired (Origami's "pulse"). Ports whose label says
+*(trigger)* emit or expect this shape; `state/edge` converts a continuous bool
+(hover, key held) into rise/fall triggers. Multiple occurrences of one event
+between frames collapse into a single latched `true`.
+
+**State nodes** (Smooth, Spring, Counter, Latch, Sample & Hold, Timer,
+Previous Value, Edge) remember across frames on `node._state`, keyed by
+`ctx.i` — so a state node fed an N-item list is N independent machines
+(three circles through one Hotspot and one Latch = three independent
+toggles). State is never serialized: loading a graph resets it.
+
+Full design rationale: `EVENTS-AND-STATE.md`.
 
 ## 7. Node definition contract (for node authors)
 
@@ -174,6 +197,10 @@ Compute rules (they make export-to-JS possible — the tool's reason to exist):
    return an array to emit multiple items (flattened, §4).
 6. Guard undefined geometry inputs (`if (a.G === undefined) return {}`).
 7. Clamp unbounded counts (see Series: 10 000 cap).
+8. Cross-frame memory goes on `node._state` keyed by `ctx.i` (per list item),
+   initialized lazily — a state node must behave sensibly from a cold start.
+   Real DOM elements are *declared* via `ctx.domList` and read back via
+   `ctx.domState`; computes never touch the DOM directly.
 
 ## 8. Authoring patches (human or LLM)
 
