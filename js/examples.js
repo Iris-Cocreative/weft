@@ -2,6 +2,7 @@
 /* Weft example graphs — each is a plain graph JSON, deep-cloned before loading. */
 function _EX(nodes, wires) {
   return {
+    format: 1,
     nodes: nodes.map(a => ({ id: a[0], type: a[1], x: a[2], y: a[3], values: a[4] || {} })),
     wires: wires.map(a => ({ from: [a[0], a[1]], to: [a[2], a[3]] }))
   };

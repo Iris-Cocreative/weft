@@ -4,8 +4,11 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.1 — working.** Editor, evaluator, 63 nodes, 4 examples, and JS export
-all verified in Chrome (2026-07-12).
+**Status: v0.2 — bedrock.** v0.1 (2026-07-12): editor, evaluator, 63 nodes,
+4 examples, JS export, all verified in Chrome. v0.2 (same day, Phase 1 of
+PLAN.md): git repo, graph format versioning + migration, undo/redo, marquee
+select, copy/paste of graph-JSON fragments with auto-layout for LLM-authored
+patches, `docs/NODE-SPEC.md` language contract + generated `docs/NODE-CATALOG.md`.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

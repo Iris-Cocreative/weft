@@ -1,40 +1,113 @@
 'use strict';
-/* Weft app shell — palette, toolbar, persistence, export modal, splitter. */
-const App = {
-  graph: { nodes: [], wires: [] },
+/* Weft app shell — palette, toolbar, persistence, history (undo/redo), export modal, splitter. */
 
-  setGraph(g) {
-    App.graph = g;
-    Editor.setGraph(g);
-    App.updateCounts();
-    App.save();
+const GRAPH_FORMAT = 1;
+
+const App = {
+  graph: { format: GRAPH_FORMAT, nodes: [], wires: [] },
+
+  /* ------------------------------ graph format ------------------------------ */
+
+  migrate(g) {
+    if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.wires)) throw new Error('not a weft graph');
+    if (!g.format) g.format = 1; // pre-versioning graphs are structurally v1
+    if (g.format > GRAPH_FORMAT) throw new Error('made in a newer Weft (format ' + g.format + ')');
+    // future stepwise migrations go here: if (g.format === 1) { ...; g.format = 2; }
+    return g;
   },
 
-  /* ------------------------------ persistence ------------------------------ */
+  serialize() {
+    return {
+      format: GRAPH_FORMAT,
+      nodes: App.graph.nodes.map(n => ({ id: n.id, type: n.type, x: n.x, y: n.y, values: n.values })),
+      wires: App.graph.wires.map(w => ({ id: w.id, from: w.from, to: w.to }))
+    };
+  },
 
-  _saveTimer: null,
-  save() {
-    clearTimeout(App._saveTimer);
-    App._saveTimer = setTimeout(() => {
-      try {
-        localStorage.setItem('weft:autosave', JSON.stringify({
-          nodes: App.graph.nodes.map(n => ({ id: n.id, type: n.type, x: n.x, y: n.y, values: n.values })),
-          wires: App.graph.wires.map(w => ({ id: w.id, from: w.from, to: w.to }))
-        }));
-      } catch (e) { /* storage unavailable */ }
+  setGraph(g) {
+    App.graph = App.migrate(g);
+    Editor.setGraph(App.graph);
+    App.updateCounts();
+    App.resetHistory();
+    App.writeStorage();
+  },
+
+  /* ------------------------------ change pipeline ------------------------------
+   * Editor.onChange → debounce 400ms → storage + one history snapshot.
+   * Continuous gestures (slider drags) coalesce into a single undo step. */
+
+  _changeTimer: null,
+  onGraphChanged() {
+    clearTimeout(App._changeTimer);
+    App._changeTimer = setTimeout(() => {
+      App._changeTimer = null;
+      App.writeStorage();
+      App.pushHistory();
       App.updateCounts();
     }, 400);
+  },
+
+  writeStorage() {
+    try { localStorage.setItem('weft:autosave', JSON.stringify(App.serialize())); } catch (e) { /* storage unavailable */ }
   },
 
   restore() {
     try {
       const raw = localStorage.getItem('weft:autosave');
       if (raw) {
-        const g = JSON.parse(raw);
-        if (g && Array.isArray(g.nodes) && g.nodes.length) return g;
+        const g = App.migrate(JSON.parse(raw));
+        if (g.nodes.length) return g;
       }
     } catch (e) { /* fall through */ }
     return null;
+  },
+
+  /* ------------------------------ undo / redo ------------------------------ */
+
+  _hist: [], _histIdx: -1,
+
+  resetHistory() {
+    App._hist = [JSON.stringify(App.serialize())];
+    App._histIdx = 0;
+  },
+
+  pushHistory() {
+    const snap = JSON.stringify(App.serialize());
+    if (snap === App._hist[App._histIdx]) return;
+    App._hist.length = App._histIdx + 1; // drop redo tail
+    App._hist.push(snap);
+    if (App._hist.length > 100) App._hist.shift();
+    App._histIdx = App._hist.length - 1;
+  },
+
+  _flushPending() {
+    if (App._changeTimer) {
+      clearTimeout(App._changeTimer);
+      App._changeTimer = null;
+      App.writeStorage();
+      App.pushHistory();
+    }
+  },
+
+  undo() {
+    App._flushPending();
+    if (App._histIdx <= 0) { App.flash('nothing to undo'); return; }
+    App._histIdx--;
+    App.applySnapshot();
+  },
+
+  redo() {
+    App._flushPending();
+    if (App._histIdx >= App._hist.length - 1) { App.flash('nothing to redo'); return; }
+    App._histIdx++;
+    App.applySnapshot();
+  },
+
+  applySnapshot() {
+    App.graph = JSON.parse(App._hist[App._histIdx]);
+    Editor.setGraph(App.graph);
+    App.writeStorage();
+    App.updateCounts();
   },
 
   /* ------------------------------ status bar ------------------------------ */
@@ -61,15 +134,28 @@ const App = {
   /* ------------------------------ init ------------------------------ */
 
   init() {
-    Editor.init(() => App.save());
+    Editor.init(() => App.onGraphChanged());
     Viewport.init();
     App.buildPalette();
     App.bindToolbar();
+    App.bindKeys();
     App.bindSplitter();
     App.bindExport();
 
-    const g = App.restore() || JSON.parse(JSON.stringify(EXAMPLES['Phyllotaxis']));
+    const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Phyllotaxis'])));
     App.setGraph(g);
+  },
+
+  bindKeys() {
+    window.addEventListener('keydown', e => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); App.undo(); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); App.redo(); }
+      else if (k === 'a') { e.preventDefault(); Editor.selectAll(); }
+    });
   },
 
   /* ------------------------------ palette ------------------------------ */
@@ -121,13 +207,13 @@ const App = {
     });
 
     document.getElementById('btnNew').addEventListener('click', () => {
-      try { localStorage.setItem('weft:backup', JSON.stringify(App.graph)); } catch (e) {}
-      App.setGraph({ nodes: [], wires: [] });
+      try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
+      App.setGraph({ format: GRAPH_FORMAT, nodes: [], wires: [] });
       App.flash('canvas cleared — previous graph backed up');
     });
 
     document.getElementById('btnSave').addEventListener('click', () => {
-      App.download('weft-graph.json', JSON.stringify(App.graph, null, 2), 'application/json');
+      App.download('weft-graph.json', JSON.stringify(App.serialize(), null, 2), 'application/json');
     });
 
     const fileInput = document.getElementById('fileInput');
@@ -138,9 +224,7 @@ const App = {
       const r = new FileReader();
       r.onload = () => {
         try {
-          const g = JSON.parse(r.result);
-          if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.wires)) throw new Error('not a weft graph');
-          App.setGraph(g);
+          App.setGraph(JSON.parse(r.result));
           App.flash('opened ' + f.name);
         } catch (e) {
           App.flash('could not open file: ' + e.message);

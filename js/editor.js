@@ -14,7 +14,7 @@ const Editor = (() => {
     wireRaf: false
   };
 
-  let editorEl, worldEl, nodesEl, svgEl, qaEl, qaInput, qaList, ctxEl;
+  let editorEl, worldEl, nodesEl, svgEl, qaEl, qaInput, qaList, ctxEl, marqueeEl = null;
 
   /* ------------------------------ helpers ------------------------------ */
 
@@ -406,8 +406,17 @@ const Editor = (() => {
       return;
     }
     if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu')) return;
-    // background: pan
     closeQA();
+    if (e.shiftKey) {
+      // background + shift: marquee select
+      const wp = worldPos(e);
+      S.drag = { kind: 'marquee', x0: wp.x, y0: wp.y };
+      marqueeEl = document.createElement('div');
+      marqueeEl.id = 'marquee';
+      editorEl.appendChild(marqueeEl);
+      return;
+    }
+    // background: pan
     S.drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, ox: S.pan.x, oy: S.pan.y, moved: false };
     editorEl.classList.add('panning');
   }
@@ -430,6 +439,21 @@ const Editor = (() => {
         if (el) position(el, m.n);
       }
       drawWires();
+    } else if (d.kind === 'marquee') {
+      const wp = worldPos(e);
+      const x = Math.min(d.x0, wp.x), y = Math.min(d.y0, wp.y);
+      const w = Math.abs(wp.x - d.x0), h = Math.abs(wp.y - d.y0);
+      marqueeEl.style.left = (x * S.zoom + S.pan.x) + 'px';
+      marqueeEl.style.top = (y * S.zoom + S.pan.y) + 'px';
+      marqueeEl.style.width = (w * S.zoom) + 'px';
+      marqueeEl.style.height = (h * S.zoom) + 'px';
+      S.sel.clear(); S.selWire = null;
+      for (const n of S.graph.nodes) {
+        const el = S.els.get(n.id);
+        if (!el) continue;
+        if (n.x < x + w && n.x + el.offsetWidth > x && n.y < y + h && n.y + el.offsetHeight > y) S.sel.add(n.id);
+      }
+      updateSelection();
     } else if (d.kind === 'wire') {
       const wp = worldPos(e);
       d.mx = wp.x; d.my = wp.y;
@@ -448,6 +472,11 @@ const Editor = (() => {
     if (!S.drag) return;
     const d = S.drag;
     if (d.kind === 'wire') { completeWire(e); return; }
+    if (d.kind === 'marquee') {
+      if (marqueeEl) { marqueeEl.remove(); marqueeEl = null; }
+      S.drag = null;
+      return;
+    }
     S.drag = null;
     editorEl.classList.remove('panning');
     if (d.kind === 'node' && d.moved) changed();
@@ -532,6 +561,132 @@ const Editor = (() => {
     });
   }
 
+  /* ------------------------------ clipboard: patch fragments ------------------------------ */
+
+  function copySelection() {
+    if (!S.sel.size) return null;
+    const nodes = S.graph.nodes.filter(n => S.sel.has(n.id)).map(n =>
+      ({ id: n.id, type: n.type, x: n.x, y: n.y, values: JSON.parse(JSON.stringify(n.values || {})) }));
+    const wires = S.graph.wires
+      .filter(w => S.sel.has(w.from[0]) && S.sel.has(w.to[0]))
+      .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
+    return { weft: 'patch', format: 1, nodes, wires };
+  }
+
+  /* nodes without x/y (e.g. LLM-authored patches) get laid out in topological columns */
+  function autoLayout(nodes, wires) {
+    if (nodes.every(n => typeof n.x === 'number' && typeof n.y === 'number')) return false;
+    const incoming = {};
+    for (const n of nodes) incoming[n.id] = [];
+    for (const w of wires) {
+      if (w && Array.isArray(w.from) && Array.isArray(w.to) && incoming[w.to[0]] && incoming[w.from[0]] !== undefined)
+        incoming[w.to[0]].push(w.from[0]);
+    }
+    const depth = {};
+    const calc = (id, seen) => {
+      if (depth[id] !== undefined) return depth[id];
+      if (seen.has(id)) return 0;
+      seen.add(id);
+      let d = 0;
+      for (const p of incoming[id]) d = Math.max(d, calc(p, seen) + 1);
+      depth[id] = d;
+      return d;
+    };
+    for (const n of nodes) calc(n.id, new Set());
+    const colY = {};
+    for (const n of nodes) {
+      const d = depth[n.id] || 0;
+      n.x = 60 + d * 250;
+      n.y = 60 + (colY[d] || 0);
+      colY[d] = (colY[d] || 0) + 140;
+    }
+    return true;
+  }
+
+  function pasteFragment(data) {
+    if (!data || !Array.isArray(data.nodes) || !data.nodes.length) return false;
+    const wires = Array.isArray(data.wires) ? data.wires : [];
+    const nodes = data.nodes.map(n => ({ ...n, values: n.values ? JSON.parse(JSON.stringify(n.values)) : undefined }));
+    const laidOut = autoLayout(nodes, wires);
+    // auto-laid patches land below existing content instead of overlapping it
+    let yShift = 0;
+    if (laidOut && S.graph.nodes.length) {
+      let maxY = -Infinity;
+      for (const n of S.graph.nodes) {
+        const el = S.els.get(n.id);
+        maxY = Math.max(maxY, n.y + (el ? el.offsetHeight : 100));
+      }
+      yShift = maxY + 80 - 60;
+    }
+
+    const idMap = {}, newIds = [];
+    for (const src of nodes) {
+      if (!src || !src.type) continue;
+      const def = NODE_DEFS[src.type];
+      const values = src.values !== undefined ? src.values
+        : (def && def.defaults ? JSON.parse(JSON.stringify(def.defaults)) : {});
+      const n = {
+        id: nextId(), type: src.type,
+        x: Math.round((+src.x || 0) + 26), y: Math.round((+src.y || 0) + 26 + yShift),
+        values
+      };
+      idMap[src.id] = n.id;
+      S.graph.nodes.push(n);
+      buildNode(n);
+      newIds.push(n.id);
+    }
+    let dropped = 0;
+    const seenInputs = new Set();
+    for (const w of wires) {
+      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) { dropped++; continue; }
+      const f = idMap[w.from[0]], t = idMap[w.to[0]];
+      const key = t + ':' + w.to[1];
+      if (!f || !t || seenInputs.has(key)) { dropped++; continue; }
+      seenInputs.add(key);
+      S.graph.wires.push({ id: 'w' + (S.widc++), from: [f, w.from[1]], to: [t, w.to[1]] });
+    }
+    S.sel = new Set(newIds); S.selWire = null;
+    updateSelection();
+    refreshAllLiterals();
+    drawWires();
+    changed();
+    const unknown = nodes.filter(n => n && n.type && !NODE_DEFS[n.type]).length;
+    App.flash('pasted ' + newIds.length + ' node(s)' +
+      (dropped ? ' · ' + dropped + ' wire(s) dropped' : '') +
+      (unknown ? ' · ' + unknown + ' unknown type(s)' : ''));
+    return true;
+  }
+
+  function isTypingTarget(t) {
+    return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  }
+
+  function bindClipboard() {
+    document.addEventListener('copy', e => {
+      if (isTypingTarget(e.target) || String(window.getSelection())) return;
+      const frag = copySelection();
+      if (!frag) return;
+      e.clipboardData.setData('text/plain', JSON.stringify(frag, null, 1));
+      e.preventDefault();
+      App.flash(frag.nodes.length + ' node(s) copied — paste here or into any chat');
+    });
+    document.addEventListener('cut', e => {
+      if (isTypingTarget(e.target) || String(window.getSelection())) return;
+      const frag = copySelection();
+      if (!frag) return;
+      e.clipboardData.setData('text/plain', JSON.stringify(frag, null, 1));
+      e.preventDefault();
+      deleteSelection();
+    });
+    document.addEventListener('paste', e => {
+      if (isTypingTarget(e.target)) return;
+      const text = e.clipboardData.getData('text/plain');
+      let data = null;
+      try { data = JSON.parse(text); } catch (err) { return; }
+      if (pasteFragment(data)) e.preventDefault();
+    });
+  }
+
   /* ------------------------------ context menu ------------------------------ */
 
   function openCtx(e, nodeId) {
@@ -584,6 +739,7 @@ const Editor = (() => {
         else openQA(e);
       });
       bindQA();
+      bindClipboard();
       applyTransform();
     },
 
@@ -612,6 +768,15 @@ const Editor = (() => {
       const n = addNode(type, c.x - 80 + Math.random() * 40, c.y - 40 + Math.random() * 40);
       if (n) selectOnly(n.id);
     },
+
+    selectAll() {
+      S.sel = new Set(S.graph.nodes.map(n => n.id));
+      S.selWire = null;
+      updateSelection();
+    },
+
+    pasteFragment,
+    copySelection,
 
     postEval(ctx) {
       for (const n of S.graph.nodes) {

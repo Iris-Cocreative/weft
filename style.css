@@ -262,6 +262,13 @@ main { display: flex; flex: 1; min-height: 0; }
 .qa-item:hover, .qa-item.active { background: #223049; color: var(--text); }
 .qa-cat { margin-left: auto; font-size: 10px; color: var(--faint); }
 
+#marquee {
+  position: absolute; z-index: 15; pointer-events: none;
+  border: 1px solid var(--accent-dim);
+  background: rgba(94, 234, 212, 0.07);
+  border-radius: 2px;
+}
+
 #ctxMenu {
   position: absolute; z-index: 30; min-width: 130px;
   background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;

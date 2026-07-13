@@ -13,23 +13,27 @@ something worth naming, (7) explore new domains from a stable core.
 
 ---
 
-## Phase 1 — Bedrock (safety + the language spec)
+## Phase 1 — Bedrock (safety + the language spec) — ✅ SHIPPED 2026-07-12 (v0.2)
 
 The "establish and visualize the language up front" phase.
 
-1. `git init` in `weft/` + `.gitignore`; commit v0.1 as the root. (GitHub repo
+1. ✅ `git init` in `weft/` + `.gitignore`; v0.1 committed as root. (GitHub repo
    + license = James's call at release time; MIT suggested.)
-2. **Graph format v1**: `format: 1` field in saves/autosave/examples + migration
-   hook on load. Prerequisite for everything (assets, packs, sharing).
-3. **Undo/redo** — JSON snapshot stack, Ctrl+Z/Ctrl+Shift+Z.
-4. **Copy/paste + marquee select** — clipboard carries graph-JSON fragments.
-   ⚠ This doubles as the **LLM import path**: any agent (or chat) can hand you
-   a patch as JSON and you paste it onto the canvas. Cheapest possible AI bridge.
-5. **`docs/NODE-SPEC.md`** — the formal contract: def shape, type system,
-   list-matching semantics, geometry kinds, graph JSON schema. This document
-   *is* the language. Written for two audiences at once: contributors and LLMs.
+2. ✅ **Graph format v1**: `format: 1` in saves/autosave/examples; `App.migrate()`
+   hook; newer formats refused.
+3. ✅ **Undo/redo** — JSON snapshot stack (100 deep), 400ms coalescing so slider
+   drags are one step; Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y; Ctrl+A select-all.
+4. ✅ **Copy/paste + marquee select** — shift-drag box-select; clipboard carries
+   graph-JSON fragments (`{weft:'patch',…}`); paste remaps ids; coordinate-less
+   patches (LLM-authored) get automatic topological layout below existing
+   content. Verified: fragment round-trip, paste-event handler, undo of paste.
+   (Native Ctrl+C/V key→event dispatch is browser-guaranteed but untestable by
+   automation — confirm once by hand.)
+5. ✅ **`docs/NODE-SPEC.md`** — the language contract, plus auto-generated
+   `docs/NODE-CATALOG.md` (`test/gen-catalog.js`) so the inventory can't drift.
 
-Exit: an agent can be handed NODE-SPEC.md and produce a valid patch blind.
+Exit met: an agent handed NODE-SPEC + CATALOG can produce a valid patch blind
+(the spec's own example patch pastes and runs).
 
 ## Phase 2 — The interaction engine (events + state)
 

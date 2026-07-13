@@ -13,9 +13,16 @@ There is no system Node — use the workspace portable Node:
 # smoke test (REQUIRED before finishing any change)
 & "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\smoke.js
 
+# regenerate docs/NODE-CATALOG.md (REQUIRED after changing js/nodes.js)
+& "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\gen-catalog.js
+
 # serve for browser verification (Chrome extension can't open file://)
 python -m http.server 8137   # from the workspace root, then /weft/index.html
 ```
+
+The language contract (graph JSON, types, list semantics, node-def rules for
+*users and LLMs*) lives in `docs/NODE-SPEC.md`; the node inventory in
+`docs/NODE-CATALOG.md` (generated — never edit by hand).
 
 Definition of done for any change:
 1. `test/smoke.js` passes (all node defs evaluate, all examples run + draw, exports compile).
@@ -54,10 +61,13 @@ Load order (classic scripts, shared globals): engine → nodes → editor → vi
 4. **Geometry is plain JSON objects** (`{kind:'circle',...}` etc. — see engine.js
    header comment). New kinds must be handled in `toPoly`, `pathGeom`,
    `curvePoint` (or degrade via `toPoly`), `xformGeom`, and `drawItem`.
-5. **Graphs are plain JSON**: `{nodes:[{id,type,x,y,values}], wires:[{id,from:[nid,port],to:[nid,port]}]}`.
+5. **Graphs are plain JSON**: `{format:1, nodes:[{id,type,x,y,values}], wires:[{id,from:[nid,port],to:[nid,port]}]}`.
    Never make loading strict — unknown node types must degrade gracefully
    (they already render as `?` nodes and mark an eval error, not a crash).
-   If you change the format, add/bump a `format` field and write a migration.
+   Format changes go through `GRAPH_FORMAT` + a stepwise migration in
+   `App.migrate()` (js/app.js); newer-format graphs are refused, never guessed.
+   Renaming a node's `id` or its port names is a breaking change (see
+   docs/NODE-SPEC.md §9).
 6. **Editor-only code stays out of the runtime.** `buildBody`/`postEval` on a
    def are never exported; that's the only place node UI may live.
 7. **No dependencies, no build step.** Vanilla JS, classic scripts. Vendoring a

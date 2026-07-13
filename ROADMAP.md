@@ -7,15 +7,12 @@ Status: `idea → next → in progress → shipped`.
 
 ## 0. Foundation hardening — do these before the tracks below get heavy
 
-- [next] **Graph format version** — add `format: 1` to saved/autosaved/example
-  graphs + a migration hook in load. Cheap now, priceless later.
-- [next] **Undo/redo** — snapshot stack of graph JSON (graphs are small);
-  push on every `onChange`, cap ~100, Ctrl+Z / Ctrl+Shift+Z.
-- [idea] Marquee (box) select; copy/paste of subgraphs (serialize selected
-  nodes + internal wires to clipboard as JSON, paste with id-remap + offset —
-  this also gives cross-graph and chat-pasteable sharing for free).
+- [shipped v0.2] **Graph format version** — `format: 1` + `App.migrate()`.
+- [shipped v0.2] **Undo/redo** — coalescing snapshot stack, Ctrl+Z/Shift+Ctrl+Z/Ctrl+Y.
+- [shipped v0.2] Marquee (shift-drag) select; copy/paste of subgraphs as
+  graph-JSON fragments with id-remap + auto-layout for coordinate-less patches.
 - [idea] Share links: graph JSON compressed into the URL hash → anyone with the
-  file/URL opens the exact patch. Zero-backend sharing.
+  file/URL opens the exact patch. Zero-backend sharing. (Phase 3)
 - [idea] Dirty-flag evaluation (skip re-eval when no animated inputs and
   nothing changed) — only when someone hits a perf wall; measure first.
 
