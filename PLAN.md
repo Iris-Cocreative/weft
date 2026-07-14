@@ -95,13 +95,18 @@ decision list (D1–D8), board method, and icon pipeline.
 2. ✅ Set nodes shipped as the warm-up build (v0.5, 2026-07-13): **Set Union /
    Intersection / Difference** on a shared `LM.setEq`, plus Cull Pattern /
    Shift List / Dispatch, Checker dispatch example, smoke section 7.
-3. Lite sessions D1–D4 (silhouette, category color, ports, icon style) →
-   locked tokens in `docs/DESIGN.md`. **D1 board is prepared**
-   (`design/D1-silhouette.html`: uniform rect · role-shaped · GH capsule, at
-   100% + 50%) — awaiting James's first sitting.
-4. Category glyphs (9) shipped in `assets/icons.svg`; palette + quick-add use them.
-5. Per-node glyph batches continue in the background through later phases;
-   gen-catalog reports coverage.
+3. ✅ D1–D4 + D6 locked 2026-07-13 — James designed the card component, colour
+   systems, icons, and chromeless custom nodes **directly in Figma** (the Weft
+   Figma file), superseding the lite-session boards. Implemented in v0.6:
+   card design, category gradient wash, new type/category palettes, icon
+   header slot, preview eye, inline readouts, chromeless Toggle/Slider/
+   Swatch/Note Pad. Decision log + tokens: `docs/DESIGN.md`.
+4. ✅ Node glyphs live in `js/icons.js` (12 drawn so far; category-dot
+   fallback keeps partial coverage looking intentional). Palette/quick-add
+   glyphs = small follow-up.
+5. Per-node glyph batches continue in the background through later phases
+   (James draws in Figma → export → icons.js); gen-catalog reports coverage
+   at the bottom of NODE-CATALOG.md.
 6. ✅ **GHX importer v1** shipped (v0.5, 2026-07-13) — converts all 7 demo
    .ghx files; both GHX param styles (param_input chunks AND ParameterData >
    InputParam), floating-param Source wires (the old parser's bug), relay

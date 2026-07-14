@@ -1,2 +1,4 @@
 Thumbs.db
 .DS_Store
+# Illustrator autosave/temp files (Node Icons/ working folder)
+~ai-*.tmp

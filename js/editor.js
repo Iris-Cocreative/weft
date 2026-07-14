@@ -138,35 +138,36 @@ const Editor = (() => {
       return el;
     }
 
-    const head = document.createElement('div');
-    head.className = 'node-head';
-    head.innerHTML = `<span class="dot" style="background:${CATS[def.cat] || '#888'}"></span><span class="title">${def.title}</span>`;
-    head.title = def.desc || '';
-    if (previewCapable(def)) {
-      const pt = document.createElement('span');
-      pt.className = 'prev-toggle';
-      pt.title = 'toggle geometry preview';
-      pt.addEventListener('pointerdown', e => e.stopPropagation());
-      pt.addEventListener('click', e => {
-        e.stopPropagation();
-        n.preview = n.preview === false ? true : false;
-        el.classList.toggle('no-prev', n.preview === false);
-        changed();
-      });
-      head.appendChild(pt);
+    el.style.setProperty('--cat', CATS[def.cat] || '#888');
+    if (def.bare) el.classList.add('bare');
+
+    if (!def.bare) {
+      const head = document.createElement('div');
+      head.className = 'node-head';
+      const icon = weftIconSVG(def.id, def.cat);
+      head.innerHTML = `<span class="icon">${icon || '<span class="dot"></span>'}</span><span class="title">${def.title}</span><span class="head-gap"></span>`;
+      head.title = def.desc || '';
+      if (previewCapable(def)) {
+        const pt = document.createElement('span');
+        pt.className = 'prev-toggle';
+        pt.title = 'toggle geometry preview';
+        pt.innerHTML = weftEyeSVG(n.preview === false ? 'hidden' : 'shown');
+        pt.addEventListener('pointerdown', e => e.stopPropagation());
+        pt.addEventListener('click', e => {
+          e.stopPropagation();
+          n.preview = n.preview === false ? true : false;
+          el.classList.toggle('no-prev', n.preview === false);
+          pt.innerHTML = weftEyeSVG(n.preview === false ? 'hidden' : 'shown');
+          changed();
+        });
+        head.appendChild(pt);
+      }
+      el.appendChild(head);
     }
-    el.appendChild(head);
 
     const rows = document.createElement('div');
     rows.className = 'node-rows';
     el.appendChild(rows);
-
-    for (const o of def.outputs || []) {
-      const row = document.createElement('div');
-      row.className = 'row out';
-      row.innerHTML = `<span class="label">${o.name}</span><span class="port" data-node="${n.id}" data-dir="out" data-port="${o.name}" style="--t:${TYPE_COLORS[o.type] || '#999'}" title="${(o.label || o.name)} · ${o.type}"></span>`;
-      rows.appendChild(row);
-    }
 
     if (def.buildBody) {
       const body = document.createElement('div');
@@ -175,6 +176,14 @@ const Editor = (() => {
       def.buildBody(n, body, changed);
     }
 
+    /* inputs stack left, outputs stack right and settle to the bottom —
+     * the Figma card's two-column band */
+    const cols = document.createElement('div');
+    cols.className = 'node-cols';
+    rows.appendChild(cols);
+
+    const insCol = document.createElement('div');
+    insCol.className = 'col-ins';
     for (const inp of def.inputs || []) {
       const row = document.createElement('div');
       row.className = 'row in';
@@ -184,14 +193,19 @@ const Editor = (() => {
       lit.className = 'lit';
       row.appendChild(lit);
       buildLiteral(n, inp, lit);
-      rows.appendChild(row);
+      insCol.appendChild(row);
     }
+    cols.appendChild(insCol);
 
-    if ((def.outputs || []).length) {
-      const dd = document.createElement('div');
-      dd.className = 'node-data';
-      el.appendChild(dd);
+    const outsCol = document.createElement('div');
+    outsCol.className = 'col-outs';
+    for (const o of def.outputs || []) {
+      const row = document.createElement('div');
+      row.className = 'row out';
+      row.innerHTML = `<span class="rd" data-port="${o.name}"></span><span class="label">${o.name}</span><span class="port" data-node="${n.id}" data-dir="out" data-port="${o.name}" style="--t:${TYPE_COLORS[o.type] || '#999'}" title="${(o.label || o.name)} · ${o.type}"></span>`;
+      outsCol.appendChild(row);
     }
+    cols.appendChild(outsCol);
 
     nodesEl.appendChild(el);
     S.els.set(n.id, el);
@@ -887,17 +901,12 @@ const Editor = (() => {
         const def = defOf(n);
         if (def && def.postEval) def.postEval(n, el, ctx);
         if (readouts && def) {
-          const dd = el.lastElementChild;
-          if (dd && dd.classList.contains('node-data')) {
-            const outs = ctx.out[n.id] || {};
-            let s = '';
-            for (const o of def.outputs || []) {
-              const L = outs[o.name] || [];
-              s += (s ? '\n' : '') + o.name + '  ' +
-                (L.length ? LM.fmt(L[0]) : '—') + (L.length > 1 ? '  ×' + L.length : '');
-            }
-            if (dd._s !== s) { dd._s = s; dd.textContent = s; }
-          }
+          const outs = ctx.out[n.id] || {};
+          el.querySelectorAll('.row.out .rd').forEach(rd => {
+            const L = outs[rd.dataset.port] || [];
+            const s = L.length ? LM.fmt(L[0]) + (L.length > 1 ? ' ×' + L.length : '') : '';
+            if (rd._s !== s) { rd._s = s; rd.textContent = s; rd.title = s; }
+          });
         }
       }
     },

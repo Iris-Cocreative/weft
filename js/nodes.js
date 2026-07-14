@@ -5,13 +5,14 @@
  * — it gets serialized into exported experiences. buildBody/postEval are
  * editor-only and never exported.
  */
+/* palette + wire colors — locked in Figma 2026-07-13, see docs/DESIGN.md */
 const CATS = {
-  Input: '#4ade80', Params: '#2dd4bf', State: '#f87171', Maths: '#60a5fa', Sets: '#a78bfa',
-  Vector: '#fb923c', Curve: '#e879f9', Transform: '#f472b6', Display: '#facc15'
+  Input: '#03a514', Params: '#2dd4bf', State: '#c1362e', Maths: '#3b5dba', Sets: '#7831be',
+  Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc'
 };
 const TYPE_COLORS = {
-  number: '#7ab8ff', bool: '#f87171', string: '#fbbf24', point: '#ffa94d',
-  vector: '#a9e34b', color: '#f0abfc', geometry: '#c4b5fd', any: '#9aa4b2'
+  number: '#3e9aff', bool: '#ff3b41', string: '#fbbb00', point: '#fb6c09',
+  vector: '#8cff14', color: '#d730f8', geometry: '#7057ff', any: '#8ea4c3'
 };
 
 const NODE_DEFS = {};
@@ -154,52 +155,81 @@ defNode('params/curve', {
   compute: a => ({ C: a.C })
 });
 
+/* small helper: bare widgets both drag (as nodes) and click (as controls) —
+ * only treat a press+release with no movement as a click */
+function _cleanClick(el, fn) {
+  let px = 0, py = 0;
+  el.addEventListener('pointerdown', e => { px = e.clientX; py = e.clientY; });
+  el.addEventListener('click', e => {
+    if (Math.hypot(e.clientX - px, e.clientY - py) > 4) return;
+    fn(e);
+  });
+}
+
 defNode('params/slider', {
-  title: 'Number Slider', cat: 'Params', desc: 'Draggable number', width: 220,
+  title: 'Number Slider', cat: 'Params', desc: 'Draggable number', width: 200, bare: true,
   inputs: [], outputs: [{ name: 'N', type: 'number' }],
   defaults: { min: 0, max: 10, value: 5 },
   compute: (a, c, node) => ({ N: node.values.value === undefined ? 0 : node.values.value }),
   buildBody: (node, body, changed) => {
     const v = node.values;
-    const top = _mk('div', 'slider-row', body);
-    const range = _mk('input', 's-range', top);
+    const sl = _mk('div', 'sl', body);
+    const mm = _mk('div', 'sl-minmax', sl);
+    const mn = _numInput('sl-min', v.min, mm); mn.title = 'min';
+    const mx = _numInput('sl-max', v.max, mm); mx.title = 'max';
+    const track = _mk('div', 'sl-track', sl);
+    const range = _mk('input', 'sl-range', track);
     range.type = 'range'; range.step = 'any'; range.min = v.min; range.max = v.max; range.value = v.value;
-    const num = _numInput('s-val', v.value, top);
-    const dom = _mk('div', 'slider-dom', body);
-    const mn = _numInput('s-dom', v.min, dom);
-    _mk('span', 's-sep', dom).textContent = '…';
-    const mx = _numInput('s-dom', v.max, dom);
-    range.addEventListener('input', () => { v.value = parseFloat(range.value); num.value = Math.round(v.value * 1000) / 1000; changed(); });
-    num.addEventListener('change', () => { v.value = parseFloat(num.value) || 0; range.value = v.value; changed(); });
-    mn.addEventListener('change', () => { v.min = parseFloat(mn.value) || 0; range.min = v.min; changed(); });
-    mx.addEventListener('change', () => { v.max = parseFloat(mx.value) || 0; range.max = v.max; changed(); });
+    const num = _numInput('sl-val', v.value, sl);
+    const fill = () => {
+      const span = (v.max - v.min) || 1;
+      range.style.setProperty('--p', (LM.clamp((v.value - v.min) / span, 0, 1) * 100) + '%');
+    };
+    fill();
+    range.addEventListener('input', () => { v.value = parseFloat(range.value); num.value = Math.round(v.value * 1000) / 1000; fill(); changed(); });
+    num.addEventListener('change', () => { v.value = parseFloat(num.value) || 0; range.value = v.value; fill(); changed(); });
+    mn.addEventListener('change', () => { v.min = parseFloat(mn.value) || 0; range.min = v.min; fill(); changed(); });
+    mx.addEventListener('change', () => { v.max = parseFloat(mx.value) || 0; range.max = v.max; fill(); changed(); });
   }
 });
 
 defNode('params/toggle', {
-  title: 'Boolean Toggle', cat: 'Params', desc: 'True / false switch',
+  title: 'Boolean Toggle', cat: 'Params', desc: 'True / false switch', bare: true,
   inputs: [], outputs: [{ name: 'B', type: 'bool' }],
   defaults: { on: true },
   compute: (a, c, node) => ({ B: !!node.values.on }),
   buildBody: (node, body, changed) => {
-    const row = _mk('label', 'toggle-row', body);
-    const cb = _mk('input', '', row); cb.type = 'checkbox'; cb.checked = !!node.values.on;
-    _mk('span', '', row).textContent = 'on';
-    cb.addEventListener('change', () => { node.values.on = cb.checked; changed(); });
+    const tg = _mk('div', 'tg' + (node.values.on ? ' on' : ''), body);
+    tg.title = 'Boolean Toggle';
+    _mk('div', 'tg-knob', tg);
+    _cleanClick(tg, () => {
+      node.values.on = !node.values.on;
+      tg.classList.toggle('on', !!node.values.on);
+      changed();
+    });
   }
 });
 
 defNode('params/swatch', {
-  title: 'Colour Swatch', cat: 'Params', desc: 'Pick a colour',
+  title: 'Colour Swatch', cat: 'Params', desc: 'Pick a colour', bare: true,
   inputs: [], outputs: [{ name: 'C', type: 'color' }],
   defaults: { hex: '#5eead4', a: 1 },
   compute: (a, c, node) => ({ C: LM.hexToColor(node.values.hex, node.values.a) }),
   buildBody: (node, body, changed) => {
-    const row = _mk('div', 'swatch-row', body);
-    const col = _mk('input', '', row); col.type = 'color'; col.value = node.values.hex;
-    const al = _numInput('s-alpha', node.values.a, row); al.min = 0; al.max = 1; al.title = 'alpha';
-    col.addEventListener('input', () => { node.values.hex = col.value; changed(); });
-    al.addEventListener('change', () => { node.values.a = LM.clamp(parseFloat(al.value) || 0, 0, 1); changed(); });
+    const sw = _mk('div', 'sw', body);
+    const circle = _mk('div', 'sw-circle', sw);
+    circle.title = 'Colour Swatch';
+    const col = _mk('input', '', sw); col.type = 'color'; col.value = node.values.hex;
+    const al = _numInput('sw-alpha', node.values.a, sw); al.min = 0; al.max = 1; al.title = 'alpha';
+    const paint = () => {
+      const a = node.values.a === undefined ? 1 : node.values.a;
+      circle.style.background = node.values.hex;
+      circle.style.opacity = 0.25 + 0.75 * a;
+    };
+    paint();
+    _cleanClick(circle, () => col.click());
+    col.addEventListener('input', () => { node.values.hex = col.value; paint(); changed(); });
+    al.addEventListener('change', () => { node.values.a = LM.clamp(parseFloat(al.value) || 0, 0, 1); paint(); changed(); });
   }
 });
 
@@ -223,16 +253,17 @@ defNode('params/anchor', {
 });
 
 defNode('params/panel', {
-  title: 'Panel', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200,
+  title: 'Note Pad', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200, bare: true,
   inputs: [{ name: 'V', type: 'any' }], outputs: [{ name: 'V', type: 'any' }],
   listInputs: ['V'],
   defaults: { text: 'hello weft' },
   compute: (a, c, node) => ({ V: a.V && a.V.length ? a.V : [node.values.text] }),
   buildBody: (node, body) => {
-    const ta = _mk('textarea', 'panel-src', body);
+    const np = _mk('div', 'np', body);
+    const ta = _mk('textarea', 'panel-src', np);
     ta.value = node.values.text; ta.rows = 1; ta.spellcheck = false;
     ta.addEventListener('input', () => { node.values.text = ta.value; });
-    _mk('pre', 'panel-out', body);
+    _mk('pre', 'panel-out', np);
   },
   postEval: (node, el) => {
     const out = el.querySelector('.panel-out');

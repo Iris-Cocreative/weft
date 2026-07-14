@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.5 — sets & the Grasshopper bridge.** v0.1 (2026-07-12): editor,
+**Status: v0.6 — the Figma design system.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -27,7 +27,14 @@ Grasshopper .ghx → Weft patch; both GHX param styles, floating-param Source
 wires, relay splicing, slider/swatch/panel values, pivot positions; unmapped GH
 types import as `?` placeholders so every import doubles as a gap report —
 verified against all 7 official GH demos), and the D1 silhouette option board
-(`design/D1-silhouette.html`) awaiting its lite session.
+(`design/D1-silhouette.html`). v0.6 (2026-07-13): **the Figma design system**
+— James designed the node card + colour systems + icons + custom nodes in
+Figma; implemented as the new card (category gradient wash, icon + title +
+preview-eye header, inputs-left/outputs-right band, inline dim readouts,
+13px typed ports, 42px value fields), new category/type palettes, node glyphs
+in `js/icons.js` (27×27, currentColor, category-dot fallback), and chromeless
+Boolean Toggle / Number Slider / Colour Swatch / Note Pad (the control IS the
+node). Decision log + tokens: `docs/DESIGN.md`.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -61,6 +68,8 @@ weft/
     export.js       WeftExport — compiles graph → standalone JS via fn.toString()
     examples.js     EXAMPLES — 7 graphs, doubling as the test corpus
     app.js          shell: palette, toolbar, autosave, export modal, splitter
+    icons.js        node glyphs from Figma (editor-only, never exported)
+  docs/DESIGN.md    design system: decision log + tokens (Figma = drawing source)
   tools/
     ghx-import.html standalone GHX → Weft patch converter (+ gap report)
   design/           option boards for the visual-language lite sessions (D1…)

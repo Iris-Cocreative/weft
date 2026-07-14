@@ -1,5 +1,14 @@
 # Weft design plan — visual language, icons, and how we decide
 
+> **2026-07-13 — largely superseded.** James took the design into Figma
+> directly (the Weft Figma file) and designed the node card, colour systems,
+> icons, and chromeless custom nodes there. D1–D4 + D6 are locked and
+> implemented — see `DESIGN.md` (now the live document). This plan's
+> option-board method remains available for the still-open decisions
+> (D5 wires, D7 atmosphere, D8 brand) and the icon **pipeline** below still
+> applies: James draws in Figma → export → `js/icons.js` → gen-catalog
+> reports coverage.
+
 The plan for evolving Weft's design system, sized for **lite sessions**: short,
 low-token working sessions where James reacts to prepared visual options and
 locks decisions one at a time. Heavy sessions build; lite sessions choose.

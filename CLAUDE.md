@@ -110,3 +110,6 @@ of the tool. Lay nodes out left→right, ~200px column spacing.
   literal does, single quotes, no semicolon golf.
 - UI text is lowercase-calm ("double-click the canvas to add a node").
 - Visual tokens live in `:root` CSS vars in `style.css` — extend, don't fork.
+  The design system (tokens, card anatomy, decision log) is `docs/DESIGN.md`;
+  James draws in the Weft Figma file, code mirrors DESIGN.md. Node glyphs go
+  through `js/icons.js` (editor-only — never exported).

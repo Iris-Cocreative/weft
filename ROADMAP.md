@@ -110,11 +110,13 @@ is now in, so any of these can be picked up in a workshop pass):
 
 ## 4. Branding & design language
 
-- [next] **Visual language via lite sessions** — plan and decision list live in
-  `docs/DESIGN-PLAN.md` (D1 silhouette → D2 category color → D3 ports → D4 icon
-  style → glyphs). Option boards in `design/`, locked decisions accrete into
-  `docs/DESIGN.md`, icons into `assets/icons.svg`. **D1 board is ready**
-  (`design/D1-silhouette.html`) — open it in a browser and pick/mix/adjust.
+- [shipped v0.6] **Visual language** — James designed the node card, colour
+  systems, icons, and chromeless custom nodes directly in Figma (2026-07-13),
+  superseding the lite-session boards; implemented across style.css /
+  editor.js / nodes.js / js/icons.js. `docs/DESIGN.md` = decision log +
+  tokens. Still open: D5 wire language, D7 atmosphere, D8 brand mark
+  (`docs/DESIGN-PLAN.md` method still applies to those), palette/quick-add
+  glyphs, remaining icon batches (James draws in Figma → export → icons.js).
 - Working title stays **Weft** until the better name proves itself. Criteria:
   weaving/thread metaphor honest to the mechanics, one syllable-ish, ownable
   domain, no collision (Loom is taken by loom.com). Candidates to sit with:

@@ -9,11 +9,12 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const src = ['js/engine.js', 'js/nodes.js']
+const src = ['js/engine.js', 'js/nodes.js', 'js/icons.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
-const defs = new Function(src + '\nreturn NODE_DEFS;')();
+const { defs, icons, catIcons } = new Function(src +
+  '\nreturn { defs: NODE_DEFS, icons: WEFT_ICONS, catIcons: WEFT_CAT_ICONS };')();
 
 const fmtDefault = v => {
   if (v === undefined) return '';
@@ -21,7 +22,7 @@ const fmtDefault = v => {
   return '`' + JSON.stringify(v) + '`';
 };
 
-const order = ['Input', 'Params', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
+const order = ['Input', 'Params', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
 let md = `# Weft node catalog
 
 *Auto-generated from \`js/nodes.js\` by \`test/gen-catalog.js\` — do not edit by hand.*
@@ -53,7 +54,17 @@ for (const cat of order) {
   }
 }
 
+/* icon coverage — glyphs are drawn in Figma and land in js/icons.js;
+ * partial coverage is expected, silent staleness is not */
+const noIcon = Object.values(defs)
+  .filter(d => !icons[d.id] && !catIcons[d.cat] && d.id !== 'params/swatch')
+  .map(d => '`' + d.id + '`');
+md += `## Icon coverage\n\n${Object.keys(icons).length + 1} node glyphs + ` +
+  `${Object.keys(catIcons).length} category fallback(s) in \`js/icons.js\`. ` +
+  (noIcon.length ? `Nodes still using the category-dot fallback (${noIcon.length}): ${noIcon.join(', ')}\n` : 'Full coverage.\n');
+
 const out = path.join(root, 'docs', 'NODE-CATALOG.md');
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, md);
-console.log('wrote docs/NODE-CATALOG.md — ' + Object.keys(defs).length + ' nodes');
+console.log('wrote docs/NODE-CATALOG.md — ' + Object.keys(defs).length + ' nodes, ' +
+  noIcon.length + ' without a glyph');

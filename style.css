@@ -1,19 +1,32 @@
 /* ================= Weft — dark, sleek, parametric ================= */
 
 :root {
-  --bg: #0b0e14;
+  /* design tokens — locked in Figma 2026-07-13 (docs/DESIGN.md) */
+  --dark-100: #0a0d13;
+  --dark-150: #121724;
+  --dark-200: #151b29;
+  --dark-300: #1e2533;
+  --dark-400: #232b3c;
+  --white-100: #ffffff;
+  --white-80: rgba(255, 255, 255, 0.8);
+  --white-40: rgba(255, 255, 255, 0.4);
+  --primary: #2dd4bf;
+  --eye-on: #14c50e;
+  --font-ui: "Neue Kabel", Inter, "Segoe UI", system-ui, sans-serif;
+  --font-val: Consolas, ui-monospace, "Cascadia Mono", monospace;
+
+  /* app chrome (pre-design tokens, mapped where the design reaches) */
+  --bg: var(--dark-100);
   --panel: #10151f;
   --panel2: #151b28;
-  --node: #161c2a;
-  --node2: #121826;
-  --line: #232b3c;
+  --line: var(--dark-400);
   --line2: #2c3550;
   --text: #dbe2ee;
   --dim: #828da3;
   --faint: #5a6478;
-  --accent: #5eead4;
-  --accent-dim: #2dd4bf;
-  --danger: #f87171;
+  --accent: var(--primary);
+  --accent-dim: var(--primary);
+  --danger: #ff3b41;
 }
 
 * { box-sizing: border-box; }
@@ -21,7 +34,7 @@
 html, body {
   margin: 0; height: 100%;
   background: var(--bg); color: var(--text);
-  font: 13px/1.45 Inter, "Segoe UI", system-ui, sans-serif;
+  font: 13px/1.45 var(--font-ui);
   overflow: hidden;
 }
 
@@ -129,62 +142,103 @@ main { display: flex; flex: 1; min-height: 0; }
 
 #nodes { position: absolute; left: 0; top: 0; }
 
-/* ---------------- nodes ---------------- */
+/* ---------------- nodes (card design: Figma, 2026-07-13) ---------------- */
 
 .node {
   position: absolute; left: 0; top: 0; min-width: 150px;
-  background: linear-gradient(180deg, var(--node), var(--node2));
-  border: 1px solid var(--line2); border-radius: 10px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--cat, #6b7891) 40%, transparent) 0%, rgba(20, 26, 40, 0) 50%),
+    var(--dark-200);
+  border: 1px solid var(--dark-300); border-radius: 13px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
   font-size: 12px; user-select: none;
 }
-.node.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 10px 26px rgba(0, 0, 0, 0.5); }
-.node.error { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger), 0 10px 26px rgba(0, 0, 0, 0.5); }
+.node.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 7.5px rgba(94, 234, 212, 0.33), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+.node.error {
+  border-color: var(--danger);
+  box-shadow: 0 0 7.5px rgba(255, 59, 65, 0.4), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
 
 .node-head {
-  display: flex; align-items: center; gap: 7px;
-  padding: 7px 11px; font-weight: 600; letter-spacing: 0.01em;
-  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 9px 5px 5px; font-weight: 500; letter-spacing: 0.01em;
+  border-bottom: 1px solid var(--dark-300);
+  border-radius: 12px 12px 0 0;
   cursor: grab;
 }
 .node-head:active { cursor: grabbing; }
-.node-head .title { white-space: nowrap; }
+.node-head .title { white-space: nowrap; font-size: 15px; color: var(--white-100); }
+.node-head .head-gap { flex: 1; min-width: 4px; }
 
-.node-rows { padding: 5px 0 7px; }
+.node-head .icon {
+  width: 27px; height: 27px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cat, var(--dim));
+}
+.node-head .icon svg { width: 100%; height: 100%; display: block; }
+.node-head .icon .dot { background: var(--cat, var(--dim)); }
+
+.node-rows {
+  padding: 8px 0 5px;
+  background: rgba(21, 27, 41, 0.7);
+  border-radius: 0 0 12px 12px;
+}
+.node.bare .node-rows { background: none; }
+
+/* inputs left, outputs right — outputs settle to the card's bottom edge */
+.node-cols { display: flex; align-items: stretch; }
+.col-ins { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.col-outs {
+  display: flex; flex-direction: column; gap: 4px;
+  justify-content: flex-end; align-items: flex-end;
+  margin-left: auto;
+}
 
 .row {
-  position: relative; display: flex; align-items: center; gap: 7px;
-  padding: 2px 12px; min-height: 21px;
+  position: relative; display: flex; align-items: center; gap: 4px;
+  min-height: 19px;
 }
-.row .label { color: var(--dim); font-size: 11px; }
-.row.out { justify-content: flex-end; }
-.row.out .label { color: #a9b4c9; }
+.row.in { padding: 0 8px 0 11px; }
+.row.out { padding: 0 11px 0 8px; justify-content: flex-end; }
+.row .label { color: var(--white-100); font-size: 12px; min-width: 14px; }
+.row.out .label { text-align: right; }
+
+/* dim live readout beside each output */
+.row.out .rd {
+  color: var(--white-40); font: 11px var(--font-val);
+  max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-align: right;
+}
 
 .port {
   position: absolute; top: 50%; transform: translateY(-50%);
-  width: 11px; height: 11px; border-radius: 50%;
+  width: 13px; height: 13px; border-radius: 50%;
   background: var(--t, #999); border: 2px solid var(--bg);
   cursor: crosshair; z-index: 2;
 }
-.row.in .port { left: -6px; }
-.row.out .port { right: -6px; }
+.row.in .port { left: -7px; }
+.row.out .port { right: -7px; }
 .port:hover, .port.hot { box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.35), 0 0 10px var(--t); }
 
-/* literal editors */
+/* literal editors — 42px value fields */
 .lit { display: flex; gap: 4px; align-items: center; margin-left: auto; }
 .row.connected .lit { display: none; }
 
 .lit input[type="number"], .lit input[type="text"] {
-  width: 58px; padding: 1px 5px;
-  background: #0c111c; border: 1px solid #26304a; border-radius: 5px;
-  color: #c8d2e4; font-size: 11px; outline: none;
+  width: 42px; padding: 1px 4px;
+  background: var(--dark-150); border: 1px solid var(--dark-400); border-radius: 3px;
+  color: var(--white-80); font: 11px var(--font-val); outline: none;
 }
-.lit input.pt { width: 44px; }
-.lit input.alpha { width: 38px; }
+.lit input[type="text"] { width: 56px; }
+.lit input.pt { width: 42px; }
+.lit input.alpha { width: 36px; }
 .lit input:focus { border-color: var(--accent-dim); }
 .lit input[type="color"] {
-  width: 26px; height: 18px; padding: 0; border: 1px solid #26304a;
-  border-radius: 4px; background: none; cursor: pointer;
+  width: 26px; height: 17px; padding: 0; border: 1px solid var(--dark-400);
+  border-radius: 3px; background: none; cursor: pointer;
 }
 .lit input[type="checkbox"] { accent-color: var(--accent-dim); }
 
@@ -195,46 +249,88 @@ main { display: flex; flex: 1; min-height: 0; }
 /* custom bodies */
 .node-body { padding: 4px 12px 2px; }
 
-.slider-row { display: flex; align-items: center; gap: 7px; }
-.s-range { flex: 1; accent-color: var(--accent-dim); height: 14px; cursor: ew-resize; }
-.s-val {
-  width: 56px; padding: 1px 5px;
-  background: #0c111c; border: 1px solid #26304a; border-radius: 5px;
-  color: var(--accent); font-size: 11px; outline: none;
+/* --- Number Slider: ruler track, teal fill-to-thumb, value below (Figma) --- */
+.sl { width: 100%; padding: 2px 0; }
+.sl-minmax { display: flex; justify-content: space-between; padding: 0 2px; }
+.sl-minmax input {
+  width: 44px; padding: 0 2px; background: transparent; border: 1px solid transparent;
+  border-radius: 3px; color: var(--white-80); font: 10px var(--font-ui); outline: none;
 }
-.slider-dom { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
-.s-dom {
-  width: 52px; padding: 0 5px;
-  background: transparent; border: 1px solid transparent; border-radius: 5px;
-  color: var(--faint); font-size: 10px; outline: none;
+.sl-minmax input:last-child { text-align: right; }
+.sl-minmax input:hover, .sl-minmax input:focus { border-color: var(--dark-400); background: var(--dark-150); }
+.sl-track { position: relative; margin-top: 1px; }
+.sl-range {
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 100%; height: 20px; margin: 0; cursor: ew-resize;
+  border: 1px solid var(--white-40); border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(45, 212, 191, 0.45) var(--p, 50%), transparent var(--p, 50%)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 1px, transparent 1px 9px) 6px 50% / calc(100% - 12px) 8px no-repeat,
+    var(--dark-200);
+  outline: none;
 }
-.s-dom:hover, .s-dom:focus { border-color: #26304a; background: #0c111c; color: var(--dim); }
-.s-sep { color: var(--faint); font-size: 10px; }
+.sl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--primary); border: none;
+  box-shadow: 0 0 6px rgba(45, 212, 191, 0.6);
+}
+.sl-val {
+  display: block; margin: 1px auto 0; width: 72px; text-align: center;
+  background: transparent; border: 1px solid transparent; border-radius: 3px;
+  color: var(--primary); font: 11px var(--font-ui); outline: none;
+}
+.sl-val:hover, .sl-val:focus { border-color: var(--dark-400); background: var(--dark-150); }
 
-.toggle-row { display: flex; align-items: center; gap: 7px; color: var(--dim); cursor: pointer; }
-.toggle-row input { accent-color: var(--accent-dim); }
-
-.swatch-row { display: flex; align-items: center; gap: 7px; }
-.swatch-row input[type="color"] {
-  width: 46px; height: 22px; padding: 0; border: 1px solid #26304a;
-  border-radius: 5px; background: none; cursor: pointer;
+/* --- Boolean Toggle: vertical pill, knob slides down when on (Figma) --- */
+.tg {
+  width: 31px; height: 52px; position: relative; cursor: pointer;
+  border: 1px solid var(--primary); border-radius: 999px;
+  background: var(--dark-200);
 }
-.s-alpha {
-  width: 44px; padding: 1px 5px;
-  background: #0c111c; border: 1px solid #26304a; border-radius: 5px;
-  color: #c8d2e4; font-size: 11px; outline: none;
+.tg-knob {
+  position: absolute; left: 3px; top: 3px; width: 23px; height: 23px;
+  border-radius: 50%; background: var(--primary); opacity: 0.45;
+  transition: top 0.15s ease, opacity 0.15s ease;
 }
+.tg.on .tg-knob { top: 24px; opacity: 1; box-shadow: 0 0 8px rgba(45, 212, 191, 0.6); }
 
+/* --- Colour Swatch: the chosen colour as a circle (Figma) --- */
+.sw { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px; }
+.sw-circle {
+  width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.sw input[type="color"] { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+.sw-alpha {
+  width: 34px; text-align: center; padding: 0;
+  background: transparent; border: 1px solid transparent; border-radius: 3px;
+  color: var(--white-40); font: 10px var(--font-val); outline: none;
+}
+.sw-alpha:hover, .sw-alpha:focus { border-color: var(--dark-400); background: var(--dark-150); color: var(--white-80); }
+
+/* --- Note Pad (params/panel): quiet dark sheet --- */
+.np {
+  width: 100%; min-height: 44px;
+  background: var(--dark-100); border: 1px solid var(--dark-300); border-radius: 8px;
+  padding: 6px 9px;
+}
 .panel-src {
   width: 100%; resize: vertical; min-height: 24px;
-  background: #0c111c; border: 1px solid #26304a; border-radius: 6px;
-  color: #c8d2e4; font-size: 11px; padding: 4px 7px; outline: none;
+  background: transparent; border: none;
+  color: var(--white-80); font: 11px/1.5 var(--font-val); outline: none;
 }
 .panel-out {
-  margin: 2px 0 4px; padding: 6px 8px; max-height: 150px; overflow: auto;
-  background: #0c111c; border: 1px solid #1d2536; border-radius: 6px;
-  font: 11px/1.5 ui-monospace, Consolas, monospace; color: #9fe8d0;
+  max-height: 150px; overflow: auto;
+  font: 11px/1.5 var(--font-val); color: var(--white-80);
   white-space: pre; user-select: text;
+}
+
+/* palette glyph for the swatch (its icon is a colour wheel, CSS-drawn) */
+.icon-swatch {
+  width: 15px; height: 15px; border-radius: 50%; flex: none;
+  background: conic-gradient(from 90deg, #f00, #f5710c, #fdd41f, #15e134, #38dfe1, #390dea, #ff00fa, #f00);
 }
 
 .expr-src {
@@ -302,14 +398,15 @@ main { display: flex; flex: 1; min-height: 0; }
 .tk-line { width: 16px; height: 2px; border-radius: 1px; flex: none; }
 .tk-note { margin-top: 5px; color: var(--faint); font-size: 9px; max-width: 120px; }
 
-/* preview toggle (head, geometry-producing nodes) */
+/* preview toggle — the header eye (geometry-producing nodes) */
 .prev-toggle {
-  margin-left: auto; width: 9px; height: 9px; border-radius: 50%;
-  border: 1.5px solid #6ee7c8; background: #6ee7c8; cursor: pointer;
-  flex: none; opacity: 0.8;
+  width: 13px; height: 13px; flex: none; cursor: pointer;
+  color: var(--eye-on); opacity: 0.9;
 }
-.prev-toggle:hover { opacity: 1; box-shadow: 0 0 6px rgba(94, 234, 212, 0.7); }
-.node.no-prev .prev-toggle { background: transparent; opacity: 0.5; }
+.prev-toggle svg { width: 100%; height: 100%; display: block; }
+.prev-toggle:hover { opacity: 1; filter: drop-shadow(0 0 4px rgba(20, 197, 14, 0.6)); }
+.node.no-prev .prev-toggle { color: var(--white-40); opacity: 0.7; }
+.node.no-prev .prev-toggle:hover { filter: none; }
 
 /* disabled node: data passes through untouched */
 .node.disabled { opacity: 0.45; }
@@ -317,16 +414,34 @@ main { display: flex; flex: 1; min-height: 0; }
 
 /* compact nodes (small unary ops, constants) */
 .node.compact { min-width: 96px; }
-.node.compact .node-head { padding: 4px 9px; font-size: 11px; }
-.node.compact .row { min-height: 18px; padding: 1px 10px; }
-.node.compact .node-data { display: none; }
+.node.compact .node-head { padding: 3px 8px 3px 4px; gap: 5px; }
+.node.compact .node-head .title { font-size: 12.5px; }
+.node.compact .node-head .icon { width: 18px; height: 18px; }
+.node.compact .row { min-height: 17px; }
+.node.compact .node-rows { padding: 5px 0 4px; }
+.node.compact .row.out .rd { max-width: 56px; }
 
-/* live value readout */
-.node-data {
-  padding: 3px 11px 5px; border-top: 1px dashed #1f2637;
-  font: 10px/1.5 ui-monospace, Consolas, monospace; color: #6f7d96;
-  white-space: pre; overflow: hidden; text-overflow: ellipsis; max-width: 260px;
+/* bare nodes — the control IS the node (Toggle, Slider, Swatch, Note Pad);
+ * ports overlay the widget's left/right edges, labels and readouts hide */
+.node.bare {
+  min-width: 0; background: none; border: none; border-radius: 0; box-shadow: none;
 }
+.node.bare.selected, .node.bare.error { box-shadow: none; }
+.node.bare.selected .node-body > * { outline: 1px solid var(--primary); outline-offset: 3px; border-radius: 6px; }
+.node.bare .node-rows { padding: 0; }
+.node.bare .node-cols { position: absolute; inset: 0; pointer-events: none; }
+.node.bare .col-ins, .node.bare .col-outs {
+  position: absolute; top: 0; bottom: 0; margin: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 12px;
+}
+.node.bare .col-ins { left: 0; }
+.node.bare .col-outs { right: 0; align-items: center; }
+.node.bare .row { padding: 0; min-height: 0; }
+.node.bare .row .label, .node.bare .rd, .node.bare .lit { display: none; }
+.node.bare .port { pointer-events: auto; position: static; transform: none; }
+.node.bare .col-ins .port { margin-left: -7px; }
+.node.bare .col-outs .port { margin-right: -7px; }
+.node.bare .node-body { padding: 0; }
 
 .anchor-row { display: flex; gap: 5px; }
 .anchor-row input { width: 56px; }
@@ -340,10 +455,17 @@ main { display: flex; flex: 1; min-height: 0; }
 .node-body input[type="number"]:focus, .node-body input[type="text"]:focus {
   border-color: var(--accent-dim);
 }
-/* keep the slider's deliberate styling despite the generic rule above */
-.node-body input.s-val { color: var(--accent); }
-.node-body input.s-dom { background: transparent; border-color: transparent; color: var(--faint); font-size: 10px; }
-.node-body input.s-dom:hover, .node-body input.s-dom:focus { border-color: #26304a; background: #0c111c; color: var(--dim); }
+/* keep the deliberate ghost styling of bare-widget text fields despite the
+   generic rule above (the slider's range track keeps its own layered bg) */
+.node-body .sl-minmax input, .node-body input.sl-val, .node-body input.sw-alpha {
+  background: transparent; border-color: transparent;
+}
+.node-body .sl-minmax input:hover, .node-body .sl-minmax input:focus,
+.node-body input.sl-val:hover, .node-body input.sl-val:focus,
+.node-body input.sw-alpha:hover, .node-body input.sw-alpha:focus {
+  border-color: var(--dark-400); background: var(--dark-150);
+}
+.node-body input.sl-val { color: var(--primary); }
 
 #ctxMenu {
   position: absolute; z-index: 30; min-width: 130px;

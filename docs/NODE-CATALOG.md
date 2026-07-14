@@ -133,6 +133,20 @@ Pass-through container — wire a source through it, or set it directly; swap th
 |---|---|---|
 | C | geometry |  |
 
+### `params/panel` — Note Pad
+
+Inspect data flowing through, or type a value
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| V | any |  |
+
+Node values (`values` keys, not ports): `{"text":"hello weft"}`
+
 ### `params/number` — Number
 
 Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
@@ -154,20 +168,6 @@ Draggable number
 | N | number |  |
 
 Node values (`values` keys, not ports): `{"min":0,"max":10,"value":5}`
-
-### `params/panel` — Panel
-
-Inspect data flowing through, or type a value
-
-| in | type | default | note |
-|---|---|---|---|
-| V | any |  | receives whole list |
-
-| out | type | note |
-|---|---|---|
-| V | any |  |
-
-Node values (`values` keys, not ports): `{"text":"hello weft"}`
 
 ### `params/point` — Point
 
@@ -192,6 +192,116 @@ Pass-through container — wire a source through it, or set it directly; swap th
 | out | type | note |
 |---|---|---|
 | V | vector |  |
+
+## State
+
+### `state/counter` — Counter
+
+Counts triggers: up on U, down on D, back to zero on R
+
+| in | type | default | note |
+|---|---|---|---|
+| U | bool | `false` | increment (trigger) |
+| D | bool | `false` | decrement (trigger) |
+| R | bool | `false` | reset (trigger) |
+| S | number | `1` | step |
+
+| out | type | note |
+|---|---|---|
+| N | number |  |
+
+### `state/edge` — Edge
+
+Turns a continuous bool into triggers: R fires when B rises, F when it falls
+
+| in | type | default | note |
+|---|---|---|---|
+| B | bool | `false` |  |
+
+| out | type | note |
+|---|---|---|
+| R | bool | rose (trigger) |
+| F | bool | fell (trigger) |
+
+### `state/latch` — Latch
+
+A switch with memory: each T trigger flips it, R forces it off
+
+| in | type | default | note |
+|---|---|---|---|
+| T | bool | `false` | toggle (trigger) |
+| R | bool | `false` | reset (trigger) |
+
+| out | type | note |
+|---|---|---|
+| B | bool |  |
+
+### `state/prev` — Previous Value
+
+V from the previous frame (passes V through on the first frame)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  |  |
+
+| out | type | note |
+|---|---|---|
+| P | any |  |
+
+### `state/sample` — Sample & Hold
+
+Freezes V: holds the value it had when T last fired (initial value until then)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  |  |
+| T | bool | `false` | sample (trigger) |
+
+| out | type | note |
+|---|---|---|
+| R | any |  |
+
+### `state/smooth` — Smooth
+
+Eased follower — glides toward V at speed S (bigger = snappier)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | number | `0` |  |
+| S | number | `8` | speed per s |
+
+| out | type | note |
+|---|---|---|
+| R | number |  |
+
+### `state/spring` — Spring
+
+Springy follower — overshoots toward V; frequency F (Hz), damping D (1 = no bounce)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | number | `0` | target |
+| F | number | `2` | frequency Hz |
+| D | number | `0.5` | damping 0..1 |
+
+| out | type | note |
+|---|---|---|
+| R | number |  |
+| V | number | velocity |
+
+### `state/timer` — Timer
+
+Seconds since T last fired — T (re)starts from zero, P stops it
+
+| in | type | default | note |
+|---|---|---|---|
+| T | bool | `false` | start / restart (trigger) |
+| P | bool | `false` | stop (trigger) |
+
+| out | type | note |
+|---|---|---|
+| S | number | seconds |
+| A | bool | running |
 
 ## Maths
 
@@ -1128,3 +1238,6 @@ Text geometry at point P — wire into Draw
 |---|---|---|
 | G | geometry |  |
 
+## Icon coverage
+
+11 node glyphs + 1 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (80): `input/viewport`, `input/hotspot`, `input/button`, `input/keyboard`, `input/scroll`, `params/curve`, `math/add`, `math/sub`, `math/mul`, `math/div`, `math/mod`, `math/pow`, `math/min`, `math/max`, `math/atan2`, `math/neg`, `math/abs`, `math/round`, `math/floor`, `math/ceil`, `math/sqrt`, `math/sin`, `math/cos`, `math/tan`, `math/rad`, `math/deg`, `math/pi`, `math/phi`, `math/remap`, `math/clamp`, `math/lerp`, `math/smooth`, `math/expr`, `math/noise`, `sets/series`, `sets/range`, `sets/random`, `sets/item`, `sets/length`, `sets/merge`, `sets/reverse`, `sets/cullpat`, `sets/shift`, `sets/dispatch`, `sets/union`, `sets/intersection`, `sets/difference`, `vec/construct`, `vec/deconstruct`, `vec/vecxy`, `vec/pt2vec`, `vec/vec2pt`, `vec/amp`, `vec/unit`, `vec/reverse`, `vec/distance`, `vec/polar`, `vec/angle`, `crv/line`, `crv/circle`, `crv/ellipse`, `crv/rect`, `crv/arc`, `crv/polyline`, `crv/interp`, `crv/divide`, `crv/eval`, `disp/draw`, `disp/text`, `disp/hsl`, `disp/gradient`, `disp/bg`, `state/smooth`, `state/spring`, `state/counter`, `state/latch`, `state/sample`, `state/timer`, `state/prev`, `state/edge`
