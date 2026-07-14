@@ -42,7 +42,7 @@ decisions constrain later ones — silhouette before icons, icons before polish.
 | D5 | **Wire language** | Curvature, width, color = source type (today). Do triggers/state wires look alive? | as-is · trigger wires pulse on fire · list-thickness (thicker = longer list). GH precedent (demo corpus): single wire = one value, double wire = a list, dashed = a tree — cardinality drawn on the wire itself, worth boarding. |
 | D6 | **Typography & density** | Node title case, mono vs sans for values, compact vs airy. | current lowercase-calm + mono readouts · tighter GH-density pass |
 | D7 | **Cloth & atmosphere** | Canvas background, grid, selection green, ghost previews — the room the nodes live in. | current dark · refined dark (subtle vignette, dot grid options) · light theme (later?) |
-| D8 | **Brand mark** | Wordmark + favicon for Weft (or successor name). | deferred to Phase 5 naming decision — do last |
+| D8 | **Brand mark** | Wordmark + favicon for Weft (or successor name). | deferred to Phase 6 naming decision — do last |
 
 Decision rule: each session ends with a **locked choice written to
 `docs/DESIGN.md`** (tokens + one-paragraph rationale) or an explicit "carry
@@ -90,5 +90,5 @@ verdict reliably because the choice space is pre-enumerated.
 
 1. D1 silhouette → 2. D2 category color + D3 ports (pair well) → 3. D4 icon
 style → 4. category glyphs → 5. per-node batches interleaved with D5–D7 →
-6. D8 with Phase 5 naming. `docs/DESIGN.md` accretes the whole way; when D1–D7
+6. D8 with Phase 6 naming. `docs/DESIGN.md` accretes the whole way; when D1–D7
 are locked it *is* the design system and this plan file becomes historical.

@@ -173,6 +173,68 @@ const EXAMPLES = {
     ['c19', 'C', 'c21', 'G']
   ]),
 
+  /* The same idea as Checker dispatch, done right — and the reason Grid exists.
+   * Three phases of pulse across an isometric lattice, no branching at all:
+   * the grid hands out a colour class K (0/1/2) per point, K becomes a phase
+   * offset inside the Expression, and list matching turns ONE Circle node into
+   * a whole field. Viewport drives the extents, so it fills any canvas.
+   * 8 nodes vs 21 — the difference between the two lives entirely in K. */
+  'Iso field': _EX([
+    ['n1', 'input/viewport', 30, 40],
+    ['n2', 'params/slider', 30, 200, { min: 16, max: 120, value: 44 }],
+    ['n3', 'vec/grid', 260, 60, { iso: true }],
+    ['n4', 'math/expr', 500, 60, { expr: 'T + X * PI * 2 / 3' }],
+    ['n5', 'math/sin', 700, 60],
+    ['n6', 'math/remap', 880, 60, { S0: -1, S1: 1, T0: 3, T1: 16 }],
+    ['n7', 'crv/circle', 1100, 60],
+    ['n8', 'disp/draw', 1300, 60, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 94, g: 234, b: 212, a: 0.9 } }]
+  ], [
+    ['n1', 'W', 'n3', 'W'], ['n1', 'H', 'n3', 'H'], ['n2', 'N', 'n3', 'S'],
+    ['n3', 'K', 'n4', 'X'],
+    ['n4', 'R', 'n5', 'V'],
+    ['n5', 'R', 'n6', 'V'],
+    ['n3', 'P', 'n7', 'P'], ['n6', 'R', 'n7', 'R'],
+    ['n7', 'C', 'n8', 'G']
+  ]),
+
+  /* Iso field + the pointer. Distance-to-cursor is just another parallel list,
+   * so it can drive BOTH halves of the radius at once:
+   *   phase     = T*speed + K*2π/3 − distance*wavelength   → rings radiate from
+   *               the cursor, still cycling in time, still 3-phase per lattice
+   *   amplitude = remap(distance) → the T1 of the radius remap, so the field is
+   *               quiet far away and blooms under the pointer
+   * The Expression earns all four of its variables: T (time), X = K (lattice
+   * class), Y = distance, Z = speed. Still one Circle, still one Draw. */
+  'Cursor wave': _EX([
+    ['n1', 'input/viewport', 30, 40],
+    ['n2', 'params/slider', 30, 190, { min: 16, max: 120, value: 44 }],
+    ['n3', 'vec/grid', 250, 60, { iso: true }],
+    ['n4', 'input/mouse', 30, 420],
+    ['n5', 'vec/construct', 250, 440],
+    ['n6', 'vec/distance', 470, 380],
+    ['n7', 'params/slider', 250, 620, { min: 0, max: 0.06, value: 0.024 }],
+    ['n8', 'math/mul', 700, 560],
+    ['n9', 'params/slider', 700, 700, { min: 0, max: 4, value: 1.4 }],
+    ['n10', 'math/expr', 940, 60, { expr: 'T * Z + X * PI * 2 / 3 - Y' }],
+    ['n11', 'math/sin', 1160, 60],
+    ['n12', 'params/slider', 940, 420, { min: 60, max: 700, value: 340 }],
+    ['n13', 'math/remap', 1160, 300, { S0: 0, S1: 340, T0: 26, T1: 3, C: true }],
+    ['n14', 'math/remap', 1400, 60, { S0: -1, S1: 1, T0: 2, T1: 26, C: true }],
+    ['n15', 'crv/circle', 1640, 60],
+    ['n16', 'disp/draw', 1860, 60, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 94, g: 234, b: 212, a: 0.9 } }]
+  ], [
+    ['n1', 'W', 'n3', 'W'], ['n1', 'H', 'n3', 'H'], ['n2', 'N', 'n3', 'S'],
+    ['n4', 'X', 'n5', 'X'], ['n4', 'Y', 'n5', 'Y'],
+    ['n3', 'P', 'n6', 'A'], ['n5', 'P', 'n6', 'B'],
+    ['n6', 'D', 'n8', 'A'], ['n7', 'N', 'n8', 'B'],
+    ['n3', 'K', 'n10', 'X'], ['n8', 'R', 'n10', 'Y'], ['n9', 'N', 'n10', 'Z'],
+    ['n10', 'R', 'n11', 'V'],
+    ['n6', 'D', 'n13', 'V'], ['n12', 'N', 'n13', 'S1'],
+    ['n11', 'R', 'n14', 'V'], ['n13', 'R', 'n14', 'T1'],
+    ['n3', 'P', 'n15', 'P'], ['n14', 'R', 'n15', 'R'],
+    ['n15', 'C', 'n16', 'G']
+  ]),
+
   /* three circles = three independent toggle buttons from ONE node chain
    * (hotspot/latch/counter are per-list-item state machines); a real DOM
    * Button node resets everything */

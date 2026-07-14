@@ -333,6 +333,19 @@ main { display: flex; flex: 1; min-height: 0; }
   background: conic-gradient(from 90deg, #f00, #f5710c, #fdd41f, #15e134, #38dfe1, #390dea, #ff00fa, #f00);
 }
 
+/* --- segmented mode switch (vec/grid; reusable for any mode-toggle def) --- */
+.seg {
+  display: flex; gap: 2px; padding: 2px; width: 100%;
+  background: var(--dark-100); border: 1px solid var(--dark-300); border-radius: 7px;
+}
+.seg-b {
+  flex: 1; text-align: center; padding: 3px 6px; border-radius: 5px; cursor: pointer;
+  color: var(--white-40); font: 10px var(--font-ui); user-select: none;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.seg-b:hover { color: var(--white-80); }
+.seg-b.on { background: var(--dark-300); color: var(--primary); }
+
 .expr-src {
   width: 100%; padding: 3px 7px;
   background: #0c111c; border: 1px solid #26304a; border-radius: 6px;

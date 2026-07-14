@@ -17,7 +17,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | D6 | **Typography** — UI: Neue Kabel (Book for titles at 15–16px, Regular for port labels at 12px), falling back to Inter. Values & readouts: Consolas 11px. Output readouts inline in the out-row at `white/40`. | 2026-07-13 | Figma |
 | D5 | Wire language — carried over unchanged (colour = source type, 2px). Trigger/list ideas still open. | — | pending |
 | D7 | Cloth & atmosphere — current dark canvas kept. | — | pending |
-| D8 | Brand mark — deferred to the Phase 5 naming decision. | — | pending |
+| D8 | Brand mark — deferred to the Phase 6 naming decision. | — | pending |
 
 ## Tokens
 

@@ -908,6 +908,26 @@ Distance between points A and B
 |---|---|---|
 | D | number |  |
 
+### `vec/grid` — Grid
+
+Point lattice filling a W×H region, square or isometric — wire Viewport into W/H for a grid that always fills the canvas
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point | `{"x":0,"y":0}` | centre |
+| S | number | `40` | spacing |
+| W | number | `800` | region width |
+| H | number | `600` | region height |
+
+| out | type | note |
+|---|---|---|
+| P | point |  |
+| C | number | column |
+| R | number | row |
+| K | number | colour class — 2 square · 3 iso |
+
+Node values (`values` keys, not ports): `{"iso":true}`
+
 ### `vec/polar` — Point Polar
 
 Point at angle A (radians) and radius R from origin O
@@ -1240,4 +1260,4 @@ Text geometry at point P — wire into Draw
 
 ## Icon coverage
 
-11 node glyphs + 1 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (80): `input/viewport`, `input/hotspot`, `input/button`, `input/keyboard`, `input/scroll`, `params/curve`, `math/add`, `math/sub`, `math/mul`, `math/div`, `math/mod`, `math/pow`, `math/min`, `math/max`, `math/atan2`, `math/neg`, `math/abs`, `math/round`, `math/floor`, `math/ceil`, `math/sqrt`, `math/sin`, `math/cos`, `math/tan`, `math/rad`, `math/deg`, `math/pi`, `math/phi`, `math/remap`, `math/clamp`, `math/lerp`, `math/smooth`, `math/expr`, `math/noise`, `sets/series`, `sets/range`, `sets/random`, `sets/item`, `sets/length`, `sets/merge`, `sets/reverse`, `sets/cullpat`, `sets/shift`, `sets/dispatch`, `sets/union`, `sets/intersection`, `sets/difference`, `vec/construct`, `vec/deconstruct`, `vec/vecxy`, `vec/pt2vec`, `vec/vec2pt`, `vec/amp`, `vec/unit`, `vec/reverse`, `vec/distance`, `vec/polar`, `vec/angle`, `crv/line`, `crv/circle`, `crv/ellipse`, `crv/rect`, `crv/arc`, `crv/polyline`, `crv/interp`, `crv/divide`, `crv/eval`, `disp/draw`, `disp/text`, `disp/hsl`, `disp/gradient`, `disp/bg`, `state/smooth`, `state/spring`, `state/counter`, `state/latch`, `state/sample`, `state/timer`, `state/prev`, `state/edge`
+11 node glyphs + 1 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (81): `input/viewport`, `input/hotspot`, `input/button`, `input/keyboard`, `input/scroll`, `params/curve`, `math/add`, `math/sub`, `math/mul`, `math/div`, `math/mod`, `math/pow`, `math/min`, `math/max`, `math/atan2`, `math/neg`, `math/abs`, `math/round`, `math/floor`, `math/ceil`, `math/sqrt`, `math/sin`, `math/cos`, `math/tan`, `math/rad`, `math/deg`, `math/pi`, `math/phi`, `math/remap`, `math/clamp`, `math/lerp`, `math/smooth`, `math/expr`, `math/noise`, `sets/series`, `sets/range`, `sets/random`, `sets/item`, `sets/length`, `sets/merge`, `sets/reverse`, `sets/cullpat`, `sets/shift`, `sets/dispatch`, `sets/union`, `sets/intersection`, `sets/difference`, `vec/construct`, `vec/deconstruct`, `vec/vecxy`, `vec/pt2vec`, `vec/vec2pt`, `vec/amp`, `vec/unit`, `vec/reverse`, `vec/distance`, `vec/polar`, `vec/angle`, `vec/grid`, `crv/line`, `crv/circle`, `crv/ellipse`, `crv/rect`, `crv/arc`, `crv/polyline`, `crv/interp`, `crv/divide`, `crv/eval`, `disp/draw`, `disp/text`, `disp/hsl`, `disp/gradient`, `disp/bg`, `state/smooth`, `state/spring`, `state/counter`, `state/latch`, `state/sample`, `state/timer`, `state/prev`, `state/edge`

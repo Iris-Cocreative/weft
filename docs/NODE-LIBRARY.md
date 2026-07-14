@@ -20,7 +20,7 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | **State** | `state/` | Cross-frame memory — smoothing, springs, counters, latches | 8 |
 | **Maths** | `math/` | Numbers in, numbers out — pure, per-item | 28 |
 | **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 13 |
-| **Vector** | `vec/` | Points and vectors — position as data | 11 |
+| **Vector** | `vec/` | Points and vectors — position as data | 12 |
 | **Curve** | `crv/` | Geometry construction and interrogation | 10 |
 | **Transform** | `xf/` | Moving geometry — affine maps | 3 |
 | **Display** | `disp/` | Pixels out — draw, text, color, background | 5 |
@@ -31,6 +31,40 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
 ---
 
 ## Planned nodes
+
+### Altitude — harvested from the organic-nav case study, 2026-07-14 *(planned — highest; PLAN phase 3)*
+
+The nav took 92 nodes. ~20 were `Expression` standing in for logic that should be
+nodes, 6 were Note Pads standing in for a list literal, 6 were sliders standing in
+for text Weft cannot measure. Principle 6 says a bloated patch names a missing
+node — these are the ones it named. See `patches/organic-nav.md`.
+
+- **Comparison** `math/cmp` — A vs B → bool, with a **mode toggle**
+  (`= ≠ < ≤ > ≥`) rather than six nodes (principle 5). Weft has *no* comparison
+  node at all today; every conditional is smuggled through `Expression`.
+- **Boolean logic** `math/logic` — AND / OR / NOT / XOR, mode-toggled. Same story.
+- **Select** `sets/select` — the list-level ternary: pick from A or B per item by
+  a bool pattern. Dispatch's inverse (Dispatch *splits* a list; Select *merges*
+  two). The nav fakes it with `disp/gradient` as a colour mixer, which is a smell.
+- **Mass Addition** `math/masadd` — sum of a list, **with a partial-results
+  output** (cumulative sum). GH ships both. Cumsum is how you turn a list of gaps
+  into a list of positions — i.e. how you lay anything out in a row. The nav
+  dodged it only because exponential smoothing happens to be linear, so
+  `cumsum(smooth(x)) == smooth(cumsum(x))`; that trick will not always be there.
+- **Text List** `params/textlist` — a literal list of strings, one per line, in
+  one node. (Six Note Pads wired into one port is not a language.)
+- **Measure Text** `disp/measure` — string + size → width/height (and a bounding
+  rect). *Pulled forward from the media phase: it blocks all UI work.* No new
+  invariant needed — the **host** supplies `ctx.measureText`, identically in
+  `viewport.js` and the export mount, exactly as `domList`/`domState` already do
+  (invariant #8: only the hosts touch the DOM). Without it every pill in the nav
+  is the same width and long labels overflow.
+- **Delay** `state/delay` — last frame's value; **the node the topological sort is
+  allowed to cut**, making feedback edges legal. Not a convenience: interaction is
+  a feedback loop (layout → hover → layout) and Weft currently refuses cycles
+  outright. `state/prev` cannot substitute — it still contributes an edge.
+- **Bezier** `crv/bezier` and **Join Curves** `crv/join` — needed once the `path`
+  kind lands (phase 5). Until then the nav's necks are circular fillets.
 
 ### Colour — harvested from the GH demo corpus, James 2026-07-13 *(planned — high)*
 
@@ -64,12 +98,12 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
   the formula (a,b,c,d,x…); Weft's is fixed X,Y,Z,T. Port-count-follows-
   expression is the upgrade (Demo 4's polynomial needs 5 inputs).
 
-### Curve *(planned / phase 6 for the hard ones)*
+### Curve *(planned / phase 7 for the hard ones)*
 
 - **Length** `crv/length` — arc length of C. *(planned — trivial via toPoly)*
 - **Offset** `crv/offset` — polyline offset of C by distance D. *(planned — polygon-offset math, no dependencies)*
-- **Region Union / Intersection / Difference** — 2D boolean ops on closed regions. The geometric cousins of the set nodes; need real polygon clipping (Greiner–Hormann or vendored lib = deliberate decision, invariant #7). *(phase 6)*
-- **Fillet** `crv/fillet` — round polyline corners by radius R. *(phase 6)*
+- **Region Union / Intersection / Difference** — 2D boolean ops on closed regions. The geometric cousins of the set nodes; need real polygon clipping (Greiner–Hormann or vendored lib = deliberate decision, invariant #7). *(phase 7)*
+- **Fillet** `crv/fillet` — round polyline corners by radius R. *(phase 7)*
 
 ### Curve / Vector — harvested from the GH demo corpus *(planned)*
 
@@ -79,10 +113,6 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
   `LM.pointInGeom` already exists for Hotspot — this just exposes it as data.
 - **Bounding Box** `crv/bbox` — rect bounds of geometry (whole-list mode via
   listInput). Demo 6: measure shape → size grid to fit.
-- **Grids** — **Square Grid** / **Hex Grid** `vec/gridsq` `vec/gridhex` —
-  point lattices with extents + spacing. The generative workhorse GH puts
-  behind every pattern demo; Weft has nothing like it yet and it's pure list
-  fun (grid → cull → attractor = the classic trio).
 - **Join Curves** `crv/join` — merge touching curves into one polyline.
 
 ### Text *(pull Format forward)*
@@ -94,6 +124,20 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
 ### Transform *(planned)*
 
 - **Mirror** `xf/mirror` — reflect geometry across a line. Completes the affine family; symmetry is half of ornament.
+- **Array / Tile** `xf/tile` — replicate geometry across a region on two basis
+  vectors (GH's Linear/Rectangular Array). *Not* the way to build a repeating
+  background of *varying* cells — that's Grid + list matching (principle 6).
+  Tile is for genuinely identical copies, and it's the honest node for it. Keep
+  the two distinct in the docs or people will reach for the wrong one.
+
+> **Do not build a "Pattern" node** that renders a tile to an offscreen canvas
+> and `createPattern`s it across the background (James's idea, 2026-07-14). It is
+> the right *optimisation* and the wrong *abstraction*: draw nodes are sinks into
+> one flat `drawList`, so a tile-to-texture node would need a second render target
+> and a notion of "which draws belong to the tile" — the first crack in invariant 4.
+> Canvas2D does not blink at the ~900 circles a full-screen Grid produces. Revisit
+> only when a measured 4K background hits a frame budget, and then do it as a
+> *renderer* feature, not a node.
 
 ### Control surfaces — ROADMAP §3.5 *(planned — custom bodies, no engine work)*
 
@@ -110,7 +154,7 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
   (see also the 3D colour picker note in the vault — design study for a richer
   swatch/picker body).
 
-### Input — later inputs *(phase 3+)*
+### Input — later inputs *(phase 4+)*
 
 - **Element Visibility** — IntersectionObserver: is a page element on screen (0..1). Scrollytelling's missing half.
 - **URL Params** — read query-string values; patches configurable per-page.
@@ -118,21 +162,21 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
 - **Audio In** — mic amplitude/FFT bands. *(horizon)*
 - **MIDI / Gamepad** — live-performance patching. *(horizon)*
 
-### Media *(phase 4)*
+### Media *(phase 5)*
 
 - **Image** — URL/file → drawable `image` geometry kind.
 - **Image Sample** — brightness/color at points → numbers. The killer node: halftones, image-driven fields.
 - **Video** / **Webcam** — animated image sources (getUserMedia — nothing like it in GH).
 - **Feedback Buffer** — previous frame as an image → trails, decay, flow.
 
-### Text *(phase 4)*
+### Text *(phase 5)*
 
 - **Deconstruct Text** — string → character list; kinetic type via list matching.
 - **Text on Curve** — glyphs along a curve with tangent angles.
 - **Measure Text** — text → bounding geometry.
 - **Font** — FontFace loading; variable-font axes as number inputs (wire data into weight).
 
-### Meta *(phase 3)*
+### Meta *(phase 4)*
 
 - **Custom JS** — code-block node with promoted parameters (the Houdini pattern). The escape hatch that keeps the core library small.
 
@@ -142,8 +186,8 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
 - **Mesh/Field pack** — Mesh Spray-style colour fields: points + colours →
   smooth 2D gradient field (Demo 3's output). In web terms: colour-field
   interpolation on canvas; gorgeous, later.
-- **System-dynamics pack** — Stock, Flow, Converter, Delay (Machinations/Loopy precedent) — phase 7.
-- **3D pack** — Vector3, Mesh, Camera — phase 6, three.js target.
+- **System-dynamics pack** — Stock, Flow, Converter, Delay (Machinations/Loopy precedent) — phase 8.
+- **3D pack** — Vector3, Mesh, Camera — phase 7, three.js target.
 
 ---
 
@@ -161,3 +205,43 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
    Where GH ships three siblings (Split AHSL/AHSV/ASRGB), Weft ships one node
    with a mode toggle. GH itself half-does this (Interpolate's scheme lives in
    its context menu). Keeps the library small and the palette learnable.
+   Grid (square/iso) is the first: GH ships four grid components, and once you
+   only emit *points*, its Triangular and Hexagonal grids are the same lattice.
+   Two modes, one node, and swapping a pattern square↔iso becomes one click.
+6. **Variation is data, not topology** (James's iso-pattern study, 2026-07-14).
+   The tell that a node is missing: the user *branches the graph* to make N
+   variants of one thing. A 108-node patch that pulsed circles in three phases
+   used three Dispatch branches → three Circles → three Draws, because nothing
+   handed it a per-point phase. The fix wasn't a bigger Dispatch, it was Grid's
+   **K** output: a class number per point. `T + K * PI * 2 / 3` in one Expression,
+   and list matching turns *one* Circle node into the whole field — 8 nodes, and
+   changing 3 phases to 5 is now editing a number instead of rewiring.
+   So: **when a generator can hand out a per-item key (index, class, coordinate),
+   it should.** Those outputs are what keep the graph flat. A node that emits only
+   geometry forces its user into topology. This is why Grid emits P *and* C, R, K.
+   K especially earns its place because it cannot be derived downstream by eye:
+   the iso 3-colouring is `(C - floor(R/2) + 2R) mod 3` (an axial-coordinate
+   transform — the naive `C % 3` puts same-phase circles next to each other), and
+   it is *canonical*, not arbitrary — 2 and 3 are the chromatic numbers of the
+   square and triangular lattices. Emit the canonical thing; leave the rest to
+   Expression on C/R.
+7. **Node count is a diagnostic — read it before adding nodes** (organic-nav case
+   study, 2026-07-14). Principle 6 found *one* cause of bloat. There are three,
+   they look identical from inside a fat patch, and they have different cures.
+   When a patch is too big, ask in this order:
+   - **Wrong altitude?** The patch is doing arithmetic the library should own
+     (the nav smuggled every `if` through `Expression`; the iso field branched
+     because Grid withheld `K`). Cure: a *node*. Cheap, and principle 6 tells you
+     where to look.
+   - **No encapsulation?** The patch is right-sized for what it does, but you
+     cannot name it and reuse it. Cure: a *cluster*. This is not a node problem
+     and no number of new nodes will fix it — resist the urge to paper over it
+     with an ever-more-specific node ("Organic Nav" must not become a def).
+   - **Wrong boundary?** The patch is re-implementing something the browser
+     already does — text layout, focus, semantics, hit-testing. Cure: *let the
+     page do it* (`docs/OUTPUT-MODES.md`). The deepest of the three and the
+     easiest to miss, because the patch works.
+
+   The failure mode this guards against is answering all three with (a): the
+   library grows, patches stay huge, and every new node is narrower than the last.
+   A library gets its power from **composition**, not from coverage.

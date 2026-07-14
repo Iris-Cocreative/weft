@@ -8,8 +8,10 @@ Status: `idea → next → in progress → shipped`.
 **Node backlog lives in `docs/NODE-LIBRARY.md`** (planned nodes + descriptions
 + library principles) — new node ideas go there, not here. Set Union /
 Intersection / Difference + Cull Pattern / Shift List / Dispatch shipped v0.5
-(2026-07-13); next candidates per NODE-LIBRARY: **Colour param + Split Colour**
-(GH demos lean on them), **Format**, **Sort List**.
+(2026-07-13); **Grid** (square/iso lattice + colour class, first mode-toggle
+node) shipped v0.7 (2026-07-14) with the *Iso field* example; next candidates
+per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
+**Format**, **Sort List**, **Array/Tile**.
 
 ## 0. Foundation hardening — do these before the tracks below get heavy
 
@@ -18,14 +20,45 @@ Intersection / Difference + Cull Pattern / Shift List / Dispatch shipped v0.5
 - [shipped v0.2] Marquee (shift-drag) select; copy/paste of subgraphs as
   graph-JSON fragments with id-remap + auto-layout for coordinate-less patches.
 - [idea] Share links: graph JSON compressed into the URL hash → anyone with the
-  file/URL opens the exact patch. Zero-backend sharing. (Phase 3)
+  file/URL opens the exact patch. Zero-backend sharing. (Phase 4)
 - [shipped v0.5] **GHX importer** (`tools/ghx-import.html`) — .ghx → Weft patch
   JSON; unmapped GH types become `?` placeholder nodes so imports double as gap
   reports (verified against all 7 demos in `Grasshopper Demos/`). "Weft opens
-  Grasshopper's own demos" is a Phase 5 gallery headline; growing the GH_MAP
+  Grasshopper's own demos" is a Phase 6 gallery headline; growing the GH_MAP
   table as nodes ship keeps the importer honest.
 - [idea] Dirty-flag evaluation (skip re-eval when no animated inputs and
   nothing changed) — only when someone hits a perf wall; measure first.
+
+## 0.5. Composition — making patches practical (PLAN Phase 3)
+
+Opened by the organic-nav case study (2026-07-14): a real nav took **92 nodes**.
+It works, but nobody would reach for it. Diagnosis, gap list and the exact
+workarounds are in `patches/organic-nav.md`; the boundary argument is
+`docs/OUTPUT-MODES.md`. Everything here blocks Phase 4 (LLM co-creation) —
+generating unreadable patches faster is not progress.
+
+- [next] **Clusters / user-defined nodes** — collapse a subgraph into one node
+  with promoted ports; saved in-graph, exportable, nestable. The headline. Was
+  buried in WEFT-BUILD's "Ideas for v2" as *groups/subgraphs*; promoted to
+  blocker. Design against the Custom JS node (clusters compose **nodes**, Custom
+  JS wraps **code** — they must not fight).
+- [next] **Delay node → legal feedback edges.** `evaluateGraph` hard-errors on
+  cycles and the editor refuses them at connect time, but interaction *is* a
+  feedback loop (layout → hover → layout). `state/prev` doesn't help: a delayed
+  edge is still an edge to the topological sort. Needs a node the sort may cut —
+  reads last frame off `node._state`, contributes no edge. Smallest change,
+  widest blast radius; amends invariant #8.
+- [next] **Altitude nodes** (specs → NODE-LIBRARY): comparison + boolean logic,
+  Select/If, Mass Addition (partial sums), Text List, **Measure Text** (pulled
+  forward from the media phase — host supplies `ctx.measureText`, same pattern as
+  `domList`).
+- [next] **DOM output nodes** — generalise `input/button`'s
+  declare-reconcile-report from `kind:'button'` to `{tag, attrs, rect}`. Real
+  `<a>`, focus, `aria-current`. OUTPUT-MODES mode 2.
+- [idea] **Legibility at scale** — group/comment frames, **zoom-to-fit**, relay
+  pins. organic-nav is ~5,300px wide; the loom has no way to show it.
+
+Exit: organic-nav rebuilds in <30 nodes, on one screen, as a reusable cluster.
 
 ## 1. Interaction & app-building nodes (events + state)
 
@@ -45,6 +78,9 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   wheel-scrubbed simulator on the cloth). Examples: Click toy, Scroll scene.
 - [idea] Later inputs: element-visibility (IntersectionObserver), URL params,
   Fetch/data-stream nodes (n8n webhooks → live data experiences!).
+- [next] **Feedback edges** — see track 0.5. Every interaction where the thing
+  you point at *moves in response* is a cycle, and cycles are currently refused.
+  This is the ceiling on the whole track.
 
 ## 2. Documentation & open source
 
@@ -67,7 +103,7 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   Two surfaces: a `weft-guide` subagent in `.claude/agents/` for dev sessions,
   and later an in-app "?" panel via an n8n proxy webhook. Division of labor:
   small model answers *how-to* (the answer exists verbatim in the docs);
-  patch *authoring* stays with big models (Phase 3).
+  patch *authoring* stays with big models (Phase 4).
 
 ## 3. Digital Pattern Language
 
@@ -85,6 +121,31 @@ Prompts for James (per the slow-cook rule, these are questions, not answers):
   bureaucracy? Watch for it while patching.
 - Action harmony: the phyllotaxis example took ~18 nodes. Where did the tool
   fight the intention?
+- The iso-pattern study (2026-07-14) is the sharpest specimen so far: James built
+  a correct triangular lattice *by eye* — row height within 0.08% of √3/2, and a
+  3-colouring that worked for a reason he hadn't derived — in 108 nodes, where 8
+  would do. The tool never fought his *intention*; it fought his ability to **see
+  what he had already made**. Is that a distinct failure mode from action
+  disharmony — a tool that permits the right result while withholding the
+  understanding of it? (Candidate antipattern: **the correct answer you can't
+  read back.** Its remedy is the legibility pass in §5, and the fact that "add
+  labels" and "add a Grid node" turned out to be the *same* finding is itself the
+  point.)
+- The organic-nav study (2026-07-14) is the iso study's sibling, and the pair may
+  be more instructive than either alone. Iso: the tool permitted the right result
+  while withholding *understanding* of it. Nav: the tool permitted the right
+  result at an **impractical scale** — 92 nodes, every one correct, and James's
+  first reaction was still "not practical for such an application." Neither is a
+  correctness failure. Both are failures of the tool to let a maker *hold* what
+  they made — one in the head, one in the hand. Candidate pattern behind both:
+  **a language must let you name what you built, or you will build it again.**
+  (Alexander's patterns are, after all, *named* things. A cluster is a node you
+  get to name. That the fix for the nav is the same shape as the fix for the iso
+  field — give the maker the right unit — is the finding worth sitting with.)
+  Also note what did *not* fight: list matching, and one Smooth node springing
+  six pills independently. Where the tool was at the right altitude it was
+  invisible. That is the QWAN signal, and it's worth cataloguing which nodes
+  produced it.
 
 ## 3.5 Node visual language & control nodes (James, 2026-07-12)
 
@@ -135,6 +196,42 @@ is now in, so any of these can be picked up in a workshop pass):
 ## 5. Editor usability
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
+
+### Legibility pass — [next], James 2026-07-14
+
+All four came out of one autopsy: a 108-node patch of James's that had two dead
+branches, a float where a column count belonged, and a hand-tuned magic number
+duplicating a relationship already in the graph. **Every one of those bugs is a
+thing the editor could have shown him and didn't.** Read as a set, not a menu —
+they're all the same complaint (a graph can't currently say what it means), and
+they're cheap next to the tracks above.
+
+- **Labels, sticky notes, group frames.** Nodes are `c1`…`n129` with no
+  annotation; a 100-node patch is unreadable a month later, and *that* is why the
+  dead branches survived. Node `label` (optional, defaults to the def title) +
+  free sticky notes + a group frame that moves/collapses its children. Group
+  frames are also the prerequisite for the Blocker idea (§3.5) — do them first.
+  Format v2: `label` on nodes, plus top-level `notes[]` / `groups[]`. Keep loading
+  lax (invariant 5) so old patches open fine.
+- **Subgraph / cluster node.** The same 5-node "phase-shifted wave line" cluster
+  appeared *three times, copy-pasted*, in one patch: 15 nodes doing the work of 5
+  plus a phase input. Copy-paste of a cluster is the tool asking for an
+  abstraction. Design: select N nodes → collapse into one node whose ports are the
+  cluster's dangling wires; double-click to enter. The engine already evaluates a
+  flat node list, so the cheap version is *editor-only* (a cluster is a view over
+  a subset, expanded before eval) — that ships without touching the evaluator or
+  the export compiler. Do that before considering true nested graphs.
+- **Slider types** (GH parity, James's spec): a type per slider —
+  **integer · decimal · even · odd** — plus decimal defaulting to 3 places
+  (`0.000`) instead of today's full float. Shift while dragging snaps to integers.
+  Make shift a transient *snap modifier*, not a type change, so it never mutates
+  the patch. This single feature kills a whole bug class: the patch above had
+  `20.1508947939262` standing in for a column count.
+- **Dead-branch dimming.** An output wired to nothing should be visibly dim. Free
+  to compute (the evaluator already knows the wire graph) and it makes an entire
+  category of mistake self-evident.
+
+Then:
 - [idea] insert node onto an existing wire (drop-on-wire splices it in)
 - [idea] **inline expressions on inputs** (GH's port expressions — type `*2`
   or `x/360` on a port to modify values in-wire; James priority: mid). Design
@@ -147,8 +244,19 @@ is now in, so any of these can be picked up in a workshop pass):
 - [idea] keyboard palette (Tab, like GH), arrow-key nudge
 - [idea] touch support pass
 
-## 6. Images & video — where the web beats Grasshopper
+## 6. Images, video & vector — where the web beats Grasshopper
 
+- **`path` geometry kind** (line/cubic/arc segments = an SVG `d`). One addition,
+  three unlocks: real Béziers, **SVG import** (a pasted logo becomes geometry
+  every node can bend), and a nearly-free SVG render target (track 8.2). Handle
+  in `toPoly`/`pathGeom`/`curvePoint`/`xformGeom`/`drawItem` per invariant #4.
+  organic-nav's necks are circular fillets *only* because there is no way to say
+  "cubic".
+- **Paint & clip** — `drawList` fill widens from a colour to a paint
+  (solid | linear | radial); items gain an optional `clip` geom. organic-nav's
+  teal glow (radial gradient clipped inside the shape) is **inexpressible today**,
+  and its bg-coloured carve circles only work over an opaque background. A real
+  clip retires that trick.
 - Image node (URL or file → drawable geometry kind `image`), opacity/blend.
 - **Image Sample** — sample brightness/color at points → drive radius/rotation:
   instant halftones, image-driven fields. This is the killer node of the track.
@@ -165,8 +273,11 @@ is now in, so any of these can be picked up in a workshop pass):
 - Text on Curve (curvePoint + tangent angles), Measure Text → geometry.
 - Font node (FontFace loading); variable fonts: wire a number into weight/width
   — didactic interfaces where type responds to data/pointer.
-- Rich didactic layer later: DOM output nodes (drive real elements' transforms/
-  styles) so Weft can orchestrate an actual page, not just a canvas.
+- Rich didactic layer: **DOM output nodes** (drive real elements' transforms/
+  styles) so Weft orchestrates an actual page, not just a canvas. This is
+  OUTPUT-MODES **mode 3**, and it is no longer a "later" — it starts in track 0.5
+  and is the highest-leverage item on the plan for Webflow/Holos work, because it
+  makes the *foundation* stop being Weft's problem.
 
 ## 8. Third dimension
 

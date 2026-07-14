@@ -106,7 +106,9 @@ weft/
 - **Sets**: Series, Range, Random, List Item, List Length, Merge, Reverse List,
   Cull Pattern, Shift List, Dispatch, Set Union, Set Intersection, Set Difference
   (set ops share the `LM.setEq` equality predicate)
-- **Vector**: Construct Point, Deconstruct, Distance, Point Polar, Angle
+- **Vector**: Construct Point, Deconstruct, Distance, Point Polar, Angle,
+  Grid (square/iso point lattice; outputs column, row, and the lattice's
+  canonical colour class K — see NODE-LIBRARY principle 6)
 - **Curve**: Line, Circle, Ellipse, Rectangle, Polygon, PolyLine, Interpolate (spline),
   Divide Curve, Evaluate Curve
 - **Transform**: Move, Rotate, Scale
@@ -136,12 +138,32 @@ where you want it.
 - Scroll to zoom, drag background to pan; splitter resizes the preview
 - Panels show live data; error nodes get a red ring with the message on hover
 
+## Case studies (the tool measured against real work)
+
+- **organic-nav** (2026-07-14) — the Holos organic nav
+  (lab.iriscocreative.com/organic-nav) rebuilt as a patch with the v0.6 library
+  and **no new nodes**: `patches/organic-nav.json` (92 nodes, 141 wires),
+  write-up `patches/organic-nav.md`. It works — exact geometry, per-item springs,
+  hover/click/selection, zero eval errors, browser-verified. It is also far too
+  big, and that verdict reordered the plan: **PLAN Phase 3 (Composition & the
+  interface boundary)** exists because of it, and `docs/OUTPUT-MODES.md` was
+  written to answer the question it raised. Headline gaps it exposed: no
+  encapsulation (clusters), no feedback edge (interaction is a cycle; cycles are
+  refused), no text measurement, no `path` kind, no clip or gradient paint.
+  Where the tool *was* at the right altitude it vanished — one `state/smooth` on
+  a 6-item list replaced the original's entire hand-rolled tween rig, and sprang
+  each pill independently.
+
+  The practice generalises (see PLAN, Continuous workstreams): rebuild something
+  real, count the nodes, and let the workarounds write the roadmap.
+
 ## Ideas for v2 (not built)
 
 - Data trees (true graft/flatten/simplify) + per-wire list-matching modes
 - More GH nodes: Graph Mapper, Sort List, Weave, Offset, Fillet (backlog: docs/NODE-LIBRARY.md)
 - Input nodes: Scroll position, element hover/click targets, live data streams (fetch/WebSocket), audio
 - Timeline/easing nodes; spring physics; trails/feedback buffers
-- SVG/WebGL render targets; DOM output (drive element transforms, not just canvas)
-- Groups/subgraphs, undo/redo, wire reroute handles, minimap
+- SVG/WebGL render targets; DOM output → **promoted**: now PLAN Phase 3/7 (see OUTPUT-MODES)
+- ~~Groups/subgraphs~~ → **promoted to a blocker**: clusters are PLAN Phase 3.1
+- Wire reroute handles, minimap, zoom-to-fit (the 5,300px-wide nav patch wants all three)
 - Publish presets to lab.iriscocreative.com as embeddable scripts

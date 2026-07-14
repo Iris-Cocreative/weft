@@ -1,0 +1,2362 @@
+{
+  "format": 1,
+  "nodes": [
+    {
+      "id": "sl_H",
+      "type": "params/slider",
+      "x": 0,
+      "y": 0,
+      "values": {
+        "min": 24,
+        "max": 96,
+        "value": 40
+      }
+    },
+    {
+      "id": "sl_W",
+      "type": "params/slider",
+      "x": 0,
+      "y": 92,
+      "values": {
+        "min": 40,
+        "max": 200,
+        "value": 78
+      }
+    },
+    {
+      "id": "sl_GAP",
+      "type": "params/slider",
+      "x": 0,
+      "y": 184,
+      "values": {
+        "min": 30,
+        "max": 140,
+        "value": 34
+      }
+    },
+    {
+      "id": "sl_SPREAD",
+      "type": "params/slider",
+      "x": 0,
+      "y": 276,
+      "values": {
+        "min": 0,
+        "max": 90,
+        "value": 30
+      }
+    },
+    {
+      "id": "sl_SPEED",
+      "type": "params/slider",
+      "x": 0,
+      "y": 368,
+      "values": {
+        "min": 1,
+        "max": 30,
+        "value": 10
+      }
+    },
+    {
+      "id": "sl_TSIZE",
+      "type": "params/slider",
+      "x": 0,
+      "y": 460,
+      "values": {
+        "min": 8,
+        "max": 28,
+        "value": 12
+      }
+    },
+    {
+      "id": "sl_ULH",
+      "type": "params/slider",
+      "x": 0,
+      "y": 552,
+      "values": {
+        "min": 4,
+        "max": 60,
+        "value": 18
+      }
+    },
+    {
+      "id": "sw_BG",
+      "type": "params/swatch",
+      "x": 0,
+      "y": 681,
+      "values": {
+        "hex": "#011012",
+        "a": 1
+      }
+    },
+    {
+      "id": "sw_SHAPE",
+      "type": "params/swatch",
+      "x": 0,
+      "y": 736,
+      "values": {
+        "hex": "#031d22",
+        "a": 1
+      }
+    },
+    {
+      "id": "sw_TEAL",
+      "type": "params/swatch",
+      "x": 0,
+      "y": 791,
+      "values": {
+        "hex": "#279daf",
+        "a": 1
+      }
+    },
+    {
+      "id": "sw_NONE",
+      "type": "params/swatch",
+      "x": 0,
+      "y": 846,
+      "values": {
+        "hex": "#000000",
+        "a": 0
+      }
+    },
+    {
+      "id": "num_zero",
+      "type": "params/number",
+      "x": 0,
+      "y": 911,
+      "values": {
+        "N": 0
+      }
+    },
+    {
+      "id": "e_R",
+      "type": "math/expr",
+      "x": 190,
+      "y": 0,
+      "values": {
+        "expr": "X/2"
+      }
+    },
+    {
+      "id": "e_pitch",
+      "type": "math/expr",
+      "x": 190,
+      "y": 92,
+      "values": {
+        "expr": "X+Y"
+      }
+    },
+    {
+      "id": "n_i",
+      "type": "sets/series",
+      "x": 190,
+      "y": 276,
+      "values": {
+        "S": 0,
+        "N": 1,
+        "C": 6
+      }
+    },
+    {
+      "id": "len_n",
+      "type": "sets/length",
+      "x": 380,
+      "y": 276,
+      "values": {}
+    },
+    {
+      "id": "e_last",
+      "type": "math/expr",
+      "x": 570,
+      "y": 276,
+      "values": {
+        "expr": "X-1"
+      }
+    },
+    {
+      "id": "m_xrest",
+      "type": "math/mul",
+      "x": 380,
+      "y": 368,
+      "values": {}
+    },
+    {
+      "id": "e_restShift",
+      "type": "math/expr",
+      "x": 380,
+      "y": 460,
+      "values": {
+        "expr": "-((Z-1)*X+Y)/2"
+      }
+    },
+    {
+      "id": "m_xrestC",
+      "type": "math/add",
+      "x": 570,
+      "y": 368,
+      "values": {}
+    },
+    {
+      "id": "e_hitcx",
+      "type": "math/expr",
+      "x": 760,
+      "y": 368,
+      "values": {
+        "expr": "X+Y/2"
+      }
+    },
+    {
+      "id": "vc_hit",
+      "type": "vec/construct",
+      "x": 950,
+      "y": 368,
+      "values": {
+        "Y": 0
+      },
+      "preview": false
+    },
+    {
+      "id": "crv_hit",
+      "type": "crv/rect",
+      "x": 1140,
+      "y": 368,
+      "values": {
+        "A": 0
+      },
+      "preview": false
+    },
+    {
+      "id": "hot",
+      "type": "input/hotspot",
+      "x": 1330,
+      "y": 368,
+      "values": {
+        "R": 0
+      }
+    },
+    {
+      "id": "cull_C",
+      "type": "sets/cullpat",
+      "x": 1520,
+      "y": 460,
+      "values": {}
+    },
+    {
+      "id": "mrg_sel",
+      "type": "sets/merge",
+      "x": 1710,
+      "y": 460,
+      "values": {}
+    },
+    {
+      "id": "it_click",
+      "type": "sets/item",
+      "x": 1900,
+      "y": 460,
+      "values": {
+        "i": 0
+      }
+    },
+    {
+      "id": "len_C",
+      "type": "sets/length",
+      "x": 1710,
+      "y": 552,
+      "values": {}
+    },
+    {
+      "id": "e_anyC",
+      "type": "math/expr",
+      "x": 1900,
+      "y": 552,
+      "values": {
+        "expr": "X>0?1:0"
+      }
+    },
+    {
+      "id": "st_sel",
+      "type": "state/sample",
+      "x": 2090,
+      "y": 506,
+      "values": {}
+    },
+    {
+      "id": "cull_H",
+      "type": "sets/cullpat",
+      "x": 1520,
+      "y": 276,
+      "values": {}
+    },
+    {
+      "id": "mrg_p",
+      "type": "sets/merge",
+      "x": 2280,
+      "y": 322,
+      "values": {}
+    },
+    {
+      "id": "it_p",
+      "type": "sets/item",
+      "x": 2470,
+      "y": 322,
+      "values": {
+        "i": 0
+      }
+    },
+    {
+      "id": "e_cnt",
+      "type": "math/expr",
+      "x": 2660,
+      "y": 276,
+      "values": {
+        "expr": "((Y>=1&&X>=Y)?1:0)+((Y<=Z-2&&X>=Y+1)?1:0)"
+      }
+    },
+    {
+      "id": "m_off",
+      "type": "math/mul",
+      "x": 2850,
+      "y": 276,
+      "values": {}
+    },
+    {
+      "id": "m_xt",
+      "type": "math/add",
+      "x": 3040,
+      "y": 276,
+      "values": {}
+    },
+    {
+      "id": "st_x",
+      "type": "state/smooth",
+      "x": 3230,
+      "y": 276,
+      "values": {}
+    },
+    {
+      "id": "it_x0",
+      "type": "sets/item",
+      "x": 3420,
+      "y": 184,
+      "values": {
+        "i": 0
+      }
+    },
+    {
+      "id": "it_xl",
+      "type": "sets/item",
+      "x": 3420,
+      "y": 368,
+      "values": {}
+    },
+    {
+      "id": "e_shift",
+      "type": "math/expr",
+      "x": 3610,
+      "y": 276,
+      "values": {
+        "expr": "-(X+Y+Z)/2"
+      }
+    },
+    {
+      "id": "m_xc",
+      "type": "math/add",
+      "x": 3800,
+      "y": 276,
+      "values": {}
+    },
+    {
+      "id": "it_xc0",
+      "type": "sets/item",
+      "x": 3990,
+      "y": 0,
+      "values": {
+        "i": 0
+      }
+    },
+    {
+      "id": "it_xcl",
+      "type": "sets/item",
+      "x": 3990,
+      "y": 92,
+      "values": {}
+    },
+    {
+      "id": "e_barW",
+      "type": "math/expr",
+      "x": 4180,
+      "y": 46,
+      "values": {
+        "expr": "Y-X+Z"
+      }
+    },
+    {
+      "id": "crv_bar",
+      "type": "crv/rect",
+      "x": 4370,
+      "y": 46,
+      "values": {
+        "A": 0
+      },
+      "preview": false
+    },
+    {
+      "id": "vc_capL",
+      "type": "vec/construct",
+      "x": 4180,
+      "y": 147,
+      "values": {
+        "Y": 0
+      },
+      "preview": false
+    },
+    {
+      "id": "e_capRx",
+      "type": "math/expr",
+      "x": 4180,
+      "y": 212,
+      "values": {
+        "expr": "X+Y"
+      }
+    },
+    {
+      "id": "vc_capR",
+      "type": "vec/construct",
+      "x": 4370,
+      "y": 212,
+      "values": {
+        "Y": 0
+      },
+      "preview": false
+    },
+    {
+      "id": "crv_capL",
+      "type": "crv/circle",
+      "x": 4370,
+      "y": 147,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "crv_capR",
+      "type": "crv/circle",
+      "x": 4560,
+      "y": 212,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "mrg_caps",
+      "type": "sets/merge",
+      "x": 4750,
+      "y": 184,
+      "values": {}
+    },
+    {
+      "id": "mrg_shape",
+      "type": "sets/merge",
+      "x": 4940,
+      "y": 92,
+      "values": {}
+    },
+    {
+      "id": "sh_xa",
+      "type": "sets/shift",
+      "x": 3990,
+      "y": 460,
+      "values": {
+        "S": -1,
+        "W": false
+      }
+    },
+    {
+      "id": "sh_xb",
+      "type": "sets/shift",
+      "x": 3990,
+      "y": 552,
+      "values": {
+        "S": 1,
+        "W": false
+      }
+    },
+    {
+      "id": "e_s",
+      "type": "math/expr",
+      "x": 4180,
+      "y": 460,
+      "values": {
+        "expr": "(X-Y-Z)/2"
+      }
+    },
+    {
+      "id": "e_xm",
+      "type": "math/expr",
+      "x": 4180,
+      "y": 552,
+      "values": {
+        "expr": "(X+Z+Y)/2"
+      }
+    },
+    {
+      "id": "e_r",
+      "type": "math/expr",
+      "x": 4370,
+      "y": 460,
+      "values": {
+        "expr": "3*X*X/(4*Y)+Y/3"
+      }
+    },
+    {
+      "id": "e_cyT",
+      "type": "math/expr",
+      "x": 4560,
+      "y": 414,
+      "values": {
+        "expr": "-(Y/3)-X"
+      }
+    },
+    {
+      "id": "e_cyB",
+      "type": "math/expr",
+      "x": 4560,
+      "y": 506,
+      "values": {
+        "expr": "(Y/3)+X"
+      }
+    },
+    {
+      "id": "vc_nT",
+      "type": "vec/construct",
+      "x": 4750,
+      "y": 414,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "vc_nB",
+      "type": "vec/construct",
+      "x": 4750,
+      "y": 506,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "crv_nT",
+      "type": "crv/circle",
+      "x": 4940,
+      "y": 414,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "crv_nB",
+      "type": "crv/circle",
+      "x": 4940,
+      "y": 506,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "mrg_necks",
+      "type": "sets/merge",
+      "x": 5130,
+      "y": 460,
+      "values": {}
+    },
+    {
+      "id": "pn_0",
+      "type": "params/panel",
+      "x": 3990,
+      "y": 681,
+      "values": {
+        "text": "DIRECTORY"
+      }
+    },
+    {
+      "id": "pn_1",
+      "type": "params/panel",
+      "x": 3990,
+      "y": 738,
+      "values": {
+        "text": "MAP"
+      }
+    },
+    {
+      "id": "pn_2",
+      "type": "params/panel",
+      "x": 3990,
+      "y": 795,
+      "values": {
+        "text": "HOLONS"
+      }
+    },
+    {
+      "id": "pn_3",
+      "type": "params/panel",
+      "x": 3990,
+      "y": 852,
+      "values": {
+        "text": "CONNECTION"
+      }
+    },
+    {
+      "id": "pn_4",
+      "type": "params/panel",
+      "x": 3990,
+      "y": 909,
+      "values": {
+        "text": "WAVE"
+      }
+    },
+    {
+      "id": "pn_5",
+      "type": "params/panel",
+      "x": 3990,
+      "y": 966,
+      "values": {
+        "text": "COMMONS"
+      }
+    },
+    {
+      "id": "e_lcx",
+      "type": "math/expr",
+      "x": 3990,
+      "y": 239,
+      "values": {
+        "expr": "X+Y/2"
+      }
+    },
+    {
+      "id": "vc_lp",
+      "type": "vec/construct",
+      "x": 4180,
+      "y": 313,
+      "values": {
+        "Y": 0
+      },
+      "preview": false
+    },
+    {
+      "id": "txt",
+      "type": "disp/text",
+      "x": 4370,
+      "y": 736,
+      "values": {}
+    },
+    {
+      "id": "mou",
+      "type": "input/mouse",
+      "x": 3990,
+      "y": 975,
+      "values": {}
+    },
+    {
+      "id": "vc_m",
+      "type": "vec/construct",
+      "x": 4180,
+      "y": 975,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "v_d",
+      "type": "vec/distance",
+      "x": 4370,
+      "y": 938,
+      "values": {}
+    },
+    {
+      "id": "rm_op",
+      "type": "math/remap",
+      "x": 4560,
+      "y": 938,
+      "values": {
+        "S0": 60,
+        "S1": 200,
+        "T0": 1,
+        "T1": 0.72,
+        "C": true
+      }
+    },
+    {
+      "id": "hsl_ink",
+      "type": "disp/hsl",
+      "x": 4750,
+      "y": 938,
+      "values": {
+        "H": 0,
+        "S": 0,
+        "L": 1
+      }
+    },
+    {
+      "id": "e_issel",
+      "type": "math/expr",
+      "x": 4750,
+      "y": 828,
+      "values": {
+        "expr": "X==Y?1:0"
+      }
+    },
+    {
+      "id": "grad_lbl",
+      "type": "disp/gradient",
+      "x": 4940,
+      "y": 883,
+      "values": {}
+    },
+    {
+      "id": "it_ulx",
+      "type": "sets/item",
+      "x": 4180,
+      "y": 1104,
+      "values": {}
+    },
+    {
+      "id": "e_ulA",
+      "type": "math/expr",
+      "x": 4370,
+      "y": 1067,
+      "values": {
+        "expr": "X-Y"
+      }
+    },
+    {
+      "id": "e_ulB",
+      "type": "math/expr",
+      "x": 4370,
+      "y": 1141,
+      "values": {
+        "expr": "X+Y"
+      }
+    },
+    {
+      "id": "e_uly",
+      "type": "math/expr",
+      "x": 4370,
+      "y": 1205,
+      "values": {
+        "expr": "X*0.62"
+      }
+    },
+    {
+      "id": "vc_ulA",
+      "type": "vec/construct",
+      "x": 4560,
+      "y": 1067,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "vc_ulB",
+      "type": "vec/construct",
+      "x": 4560,
+      "y": 1159,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "crv_ul",
+      "type": "crv/line",
+      "x": 4750,
+      "y": 1113,
+      "values": {},
+      "preview": false
+    },
+    {
+      "id": "d_bg",
+      "type": "disp/bg",
+      "x": 5320,
+      "y": 0,
+      "values": {}
+    },
+    {
+      "id": "dr_shape",
+      "type": "disp/draw",
+      "x": 5320,
+      "y": 92,
+      "values": {
+        "W": 0
+      }
+    },
+    {
+      "id": "dr_necks",
+      "type": "disp/draw",
+      "x": 5320,
+      "y": 460,
+      "values": {
+        "W": 0
+      }
+    },
+    {
+      "id": "dr_ul",
+      "type": "disp/draw",
+      "x": 5320,
+      "y": 1104,
+      "values": {
+        "W": 1.5
+      }
+    },
+    {
+      "id": "dr_txt",
+      "type": "disp/draw",
+      "x": 5320,
+      "y": 828,
+      "values": {
+        "W": 0
+      }
+    }
+  ],
+  "wires": [
+    {
+      "id": "w1",
+      "from": [
+        "sl_H",
+        "N"
+      ],
+      "to": [
+        "e_R",
+        "X"
+      ]
+    },
+    {
+      "id": "w2",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_pitch",
+        "X"
+      ]
+    },
+    {
+      "id": "w3",
+      "from": [
+        "sl_GAP",
+        "N"
+      ],
+      "to": [
+        "e_pitch",
+        "Y"
+      ]
+    },
+    {
+      "id": "w4",
+      "from": [
+        "n_i",
+        "S"
+      ],
+      "to": [
+        "len_n",
+        "L"
+      ]
+    },
+    {
+      "id": "w5",
+      "from": [
+        "len_n",
+        "N"
+      ],
+      "to": [
+        "e_last",
+        "X"
+      ]
+    },
+    {
+      "id": "w6",
+      "from": [
+        "n_i",
+        "S"
+      ],
+      "to": [
+        "m_xrest",
+        "A"
+      ]
+    },
+    {
+      "id": "w7",
+      "from": [
+        "e_pitch",
+        "R"
+      ],
+      "to": [
+        "m_xrest",
+        "B"
+      ]
+    },
+    {
+      "id": "w8",
+      "from": [
+        "e_pitch",
+        "R"
+      ],
+      "to": [
+        "e_restShift",
+        "X"
+      ]
+    },
+    {
+      "id": "w9",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_restShift",
+        "Y"
+      ]
+    },
+    {
+      "id": "w10",
+      "from": [
+        "len_n",
+        "N"
+      ],
+      "to": [
+        "e_restShift",
+        "Z"
+      ]
+    },
+    {
+      "id": "w11",
+      "from": [
+        "m_xrest",
+        "R"
+      ],
+      "to": [
+        "m_xrestC",
+        "A"
+      ]
+    },
+    {
+      "id": "w12",
+      "from": [
+        "e_restShift",
+        "R"
+      ],
+      "to": [
+        "m_xrestC",
+        "B"
+      ]
+    },
+    {
+      "id": "w13",
+      "from": [
+        "m_xrestC",
+        "R"
+      ],
+      "to": [
+        "e_hitcx",
+        "X"
+      ]
+    },
+    {
+      "id": "w14",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_hitcx",
+        "Y"
+      ]
+    },
+    {
+      "id": "w15",
+      "from": [
+        "e_hitcx",
+        "R"
+      ],
+      "to": [
+        "vc_hit",
+        "X"
+      ]
+    },
+    {
+      "id": "w16",
+      "from": [
+        "vc_hit",
+        "P"
+      ],
+      "to": [
+        "crv_hit",
+        "P"
+      ]
+    },
+    {
+      "id": "w17",
+      "from": [
+        "e_pitch",
+        "R"
+      ],
+      "to": [
+        "crv_hit",
+        "W"
+      ]
+    },
+    {
+      "id": "w18",
+      "from": [
+        "sl_H",
+        "N"
+      ],
+      "to": [
+        "crv_hit",
+        "H"
+      ]
+    },
+    {
+      "id": "w19",
+      "from": [
+        "crv_hit",
+        "C"
+      ],
+      "to": [
+        "hot",
+        "G"
+      ]
+    },
+    {
+      "id": "w20",
+      "from": [
+        "n_i",
+        "S"
+      ],
+      "to": [
+        "cull_C",
+        "L"
+      ]
+    },
+    {
+      "id": "w21",
+      "from": [
+        "hot",
+        "C"
+      ],
+      "to": [
+        "cull_C",
+        "P"
+      ]
+    },
+    {
+      "id": "w22",
+      "from": [
+        "cull_C",
+        "L"
+      ],
+      "to": [
+        "mrg_sel",
+        "A"
+      ]
+    },
+    {
+      "id": "w23",
+      "from": [
+        "num_zero",
+        "N"
+      ],
+      "to": [
+        "mrg_sel",
+        "B"
+      ]
+    },
+    {
+      "id": "w24",
+      "from": [
+        "mrg_sel",
+        "M"
+      ],
+      "to": [
+        "it_click",
+        "L"
+      ]
+    },
+    {
+      "id": "w25",
+      "from": [
+        "cull_C",
+        "L"
+      ],
+      "to": [
+        "len_C",
+        "L"
+      ]
+    },
+    {
+      "id": "w26",
+      "from": [
+        "len_C",
+        "N"
+      ],
+      "to": [
+        "e_anyC",
+        "X"
+      ]
+    },
+    {
+      "id": "w27",
+      "from": [
+        "it_click",
+        "E"
+      ],
+      "to": [
+        "st_sel",
+        "V"
+      ]
+    },
+    {
+      "id": "w28",
+      "from": [
+        "e_anyC",
+        "R"
+      ],
+      "to": [
+        "st_sel",
+        "T"
+      ]
+    },
+    {
+      "id": "w29",
+      "from": [
+        "n_i",
+        "S"
+      ],
+      "to": [
+        "cull_H",
+        "L"
+      ]
+    },
+    {
+      "id": "w30",
+      "from": [
+        "hot",
+        "H"
+      ],
+      "to": [
+        "cull_H",
+        "P"
+      ]
+    },
+    {
+      "id": "w31",
+      "from": [
+        "cull_H",
+        "L"
+      ],
+      "to": [
+        "mrg_p",
+        "A"
+      ]
+    },
+    {
+      "id": "w32",
+      "from": [
+        "st_sel",
+        "R"
+      ],
+      "to": [
+        "mrg_p",
+        "B"
+      ]
+    },
+    {
+      "id": "w33",
+      "from": [
+        "mrg_p",
+        "M"
+      ],
+      "to": [
+        "it_p",
+        "L"
+      ]
+    },
+    {
+      "id": "w34",
+      "from": [
+        "n_i",
+        "S"
+      ],
+      "to": [
+        "e_cnt",
+        "X"
+      ]
+    },
+    {
+      "id": "w35",
+      "from": [
+        "it_p",
+        "E"
+      ],
+      "to": [
+        "e_cnt",
+        "Y"
+      ]
+    },
+    {
+      "id": "w36",
+      "from": [
+        "len_n",
+        "N"
+      ],
+      "to": [
+        "e_cnt",
+        "Z"
+      ]
+    },
+    {
+      "id": "w37",
+      "from": [
+        "e_cnt",
+        "R"
+      ],
+      "to": [
+        "m_off",
+        "A"
+      ]
+    },
+    {
+      "id": "w38",
+      "from": [
+        "sl_SPREAD",
+        "N"
+      ],
+      "to": [
+        "m_off",
+        "B"
+      ]
+    },
+    {
+      "id": "w39",
+      "from": [
+        "m_xrest",
+        "R"
+      ],
+      "to": [
+        "m_xt",
+        "A"
+      ]
+    },
+    {
+      "id": "w40",
+      "from": [
+        "m_off",
+        "R"
+      ],
+      "to": [
+        "m_xt",
+        "B"
+      ]
+    },
+    {
+      "id": "w41",
+      "from": [
+        "m_xt",
+        "R"
+      ],
+      "to": [
+        "st_x",
+        "V"
+      ]
+    },
+    {
+      "id": "w42",
+      "from": [
+        "sl_SPEED",
+        "N"
+      ],
+      "to": [
+        "st_x",
+        "S"
+      ]
+    },
+    {
+      "id": "w43",
+      "from": [
+        "st_x",
+        "R"
+      ],
+      "to": [
+        "it_x0",
+        "L"
+      ]
+    },
+    {
+      "id": "w44",
+      "from": [
+        "st_x",
+        "R"
+      ],
+      "to": [
+        "it_xl",
+        "L"
+      ]
+    },
+    {
+      "id": "w45",
+      "from": [
+        "e_last",
+        "R"
+      ],
+      "to": [
+        "it_xl",
+        "i"
+      ]
+    },
+    {
+      "id": "w46",
+      "from": [
+        "it_x0",
+        "E"
+      ],
+      "to": [
+        "e_shift",
+        "X"
+      ]
+    },
+    {
+      "id": "w47",
+      "from": [
+        "it_xl",
+        "E"
+      ],
+      "to": [
+        "e_shift",
+        "Y"
+      ]
+    },
+    {
+      "id": "w48",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_shift",
+        "Z"
+      ]
+    },
+    {
+      "id": "w49",
+      "from": [
+        "st_x",
+        "R"
+      ],
+      "to": [
+        "m_xc",
+        "A"
+      ]
+    },
+    {
+      "id": "w50",
+      "from": [
+        "e_shift",
+        "R"
+      ],
+      "to": [
+        "m_xc",
+        "B"
+      ]
+    },
+    {
+      "id": "w51",
+      "from": [
+        "m_xc",
+        "R"
+      ],
+      "to": [
+        "it_xc0",
+        "L"
+      ]
+    },
+    {
+      "id": "w52",
+      "from": [
+        "m_xc",
+        "R"
+      ],
+      "to": [
+        "it_xcl",
+        "L"
+      ]
+    },
+    {
+      "id": "w53",
+      "from": [
+        "e_last",
+        "R"
+      ],
+      "to": [
+        "it_xcl",
+        "i"
+      ]
+    },
+    {
+      "id": "w54",
+      "from": [
+        "it_xc0",
+        "E"
+      ],
+      "to": [
+        "e_barW",
+        "X"
+      ]
+    },
+    {
+      "id": "w55",
+      "from": [
+        "it_xcl",
+        "E"
+      ],
+      "to": [
+        "e_barW",
+        "Y"
+      ]
+    },
+    {
+      "id": "w56",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_barW",
+        "Z"
+      ]
+    },
+    {
+      "id": "w57",
+      "from": [
+        "e_barW",
+        "R"
+      ],
+      "to": [
+        "crv_bar",
+        "W"
+      ]
+    },
+    {
+      "id": "w58",
+      "from": [
+        "sl_H",
+        "N"
+      ],
+      "to": [
+        "crv_bar",
+        "H"
+      ]
+    },
+    {
+      "id": "w59",
+      "from": [
+        "it_xc0",
+        "E"
+      ],
+      "to": [
+        "vc_capL",
+        "X"
+      ]
+    },
+    {
+      "id": "w60",
+      "from": [
+        "it_xcl",
+        "E"
+      ],
+      "to": [
+        "e_capRx",
+        "X"
+      ]
+    },
+    {
+      "id": "w61",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_capRx",
+        "Y"
+      ]
+    },
+    {
+      "id": "w62",
+      "from": [
+        "e_capRx",
+        "R"
+      ],
+      "to": [
+        "vc_capR",
+        "X"
+      ]
+    },
+    {
+      "id": "w63",
+      "from": [
+        "vc_capL",
+        "P"
+      ],
+      "to": [
+        "crv_capL",
+        "P"
+      ]
+    },
+    {
+      "id": "w64",
+      "from": [
+        "e_R",
+        "R"
+      ],
+      "to": [
+        "crv_capL",
+        "R"
+      ]
+    },
+    {
+      "id": "w65",
+      "from": [
+        "vc_capR",
+        "P"
+      ],
+      "to": [
+        "crv_capR",
+        "P"
+      ]
+    },
+    {
+      "id": "w66",
+      "from": [
+        "e_R",
+        "R"
+      ],
+      "to": [
+        "crv_capR",
+        "R"
+      ]
+    },
+    {
+      "id": "w67",
+      "from": [
+        "crv_capL",
+        "C"
+      ],
+      "to": [
+        "mrg_caps",
+        "A"
+      ]
+    },
+    {
+      "id": "w68",
+      "from": [
+        "crv_capR",
+        "C"
+      ],
+      "to": [
+        "mrg_caps",
+        "B"
+      ]
+    },
+    {
+      "id": "w69",
+      "from": [
+        "crv_bar",
+        "C"
+      ],
+      "to": [
+        "mrg_shape",
+        "A"
+      ]
+    },
+    {
+      "id": "w70",
+      "from": [
+        "mrg_caps",
+        "M"
+      ],
+      "to": [
+        "mrg_shape",
+        "B"
+      ]
+    },
+    {
+      "id": "w71",
+      "from": [
+        "m_xc",
+        "R"
+      ],
+      "to": [
+        "sh_xa",
+        "L"
+      ]
+    },
+    {
+      "id": "w72",
+      "from": [
+        "m_xc",
+        "R"
+      ],
+      "to": [
+        "sh_xb",
+        "L"
+      ]
+    },
+    {
+      "id": "w73",
+      "from": [
+        "sh_xb",
+        "L"
+      ],
+      "to": [
+        "e_s",
+        "X"
+      ]
+    },
+    {
+      "id": "w74",
+      "from": [
+        "sh_xa",
+        "L"
+      ],
+      "to": [
+        "e_s",
+        "Y"
+      ]
+    },
+    {
+      "id": "w75",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_s",
+        "Z"
+      ]
+    },
+    {
+      "id": "w76",
+      "from": [
+        "sh_xa",
+        "L"
+      ],
+      "to": [
+        "e_xm",
+        "X"
+      ]
+    },
+    {
+      "id": "w77",
+      "from": [
+        "sh_xb",
+        "L"
+      ],
+      "to": [
+        "e_xm",
+        "Y"
+      ]
+    },
+    {
+      "id": "w78",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_xm",
+        "Z"
+      ]
+    },
+    {
+      "id": "w79",
+      "from": [
+        "e_s",
+        "R"
+      ],
+      "to": [
+        "e_r",
+        "X"
+      ]
+    },
+    {
+      "id": "w80",
+      "from": [
+        "e_R",
+        "R"
+      ],
+      "to": [
+        "e_r",
+        "Y"
+      ]
+    },
+    {
+      "id": "w81",
+      "from": [
+        "e_r",
+        "R"
+      ],
+      "to": [
+        "e_cyT",
+        "X"
+      ]
+    },
+    {
+      "id": "w82",
+      "from": [
+        "e_R",
+        "R"
+      ],
+      "to": [
+        "e_cyT",
+        "Y"
+      ]
+    },
+    {
+      "id": "w83",
+      "from": [
+        "e_r",
+        "R"
+      ],
+      "to": [
+        "e_cyB",
+        "X"
+      ]
+    },
+    {
+      "id": "w84",
+      "from": [
+        "e_R",
+        "R"
+      ],
+      "to": [
+        "e_cyB",
+        "Y"
+      ]
+    },
+    {
+      "id": "w85",
+      "from": [
+        "e_xm",
+        "R"
+      ],
+      "to": [
+        "vc_nT",
+        "X"
+      ]
+    },
+    {
+      "id": "w86",
+      "from": [
+        "e_cyT",
+        "R"
+      ],
+      "to": [
+        "vc_nT",
+        "Y"
+      ]
+    },
+    {
+      "id": "w87",
+      "from": [
+        "e_xm",
+        "R"
+      ],
+      "to": [
+        "vc_nB",
+        "X"
+      ]
+    },
+    {
+      "id": "w88",
+      "from": [
+        "e_cyB",
+        "R"
+      ],
+      "to": [
+        "vc_nB",
+        "Y"
+      ]
+    },
+    {
+      "id": "w89",
+      "from": [
+        "vc_nT",
+        "P"
+      ],
+      "to": [
+        "crv_nT",
+        "P"
+      ]
+    },
+    {
+      "id": "w90",
+      "from": [
+        "e_r",
+        "R"
+      ],
+      "to": [
+        "crv_nT",
+        "R"
+      ]
+    },
+    {
+      "id": "w91",
+      "from": [
+        "vc_nB",
+        "P"
+      ],
+      "to": [
+        "crv_nB",
+        "P"
+      ]
+    },
+    {
+      "id": "w92",
+      "from": [
+        "e_r",
+        "R"
+      ],
+      "to": [
+        "crv_nB",
+        "R"
+      ]
+    },
+    {
+      "id": "w93",
+      "from": [
+        "crv_nT",
+        "C"
+      ],
+      "to": [
+        "mrg_necks",
+        "A"
+      ]
+    },
+    {
+      "id": "w94",
+      "from": [
+        "crv_nB",
+        "C"
+      ],
+      "to": [
+        "mrg_necks",
+        "B"
+      ]
+    },
+    {
+      "id": "w95",
+      "from": [
+        "m_xc",
+        "R"
+      ],
+      "to": [
+        "e_lcx",
+        "X"
+      ]
+    },
+    {
+      "id": "w96",
+      "from": [
+        "sl_W",
+        "N"
+      ],
+      "to": [
+        "e_lcx",
+        "Y"
+      ]
+    },
+    {
+      "id": "w97",
+      "from": [
+        "e_lcx",
+        "R"
+      ],
+      "to": [
+        "vc_lp",
+        "X"
+      ]
+    },
+    {
+      "id": "w98",
+      "from": [
+        "pn_0",
+        "V"
+      ],
+      "to": [
+        "txt",
+        "T"
+      ]
+    },
+    {
+      "id": "w99",
+      "from": [
+        "pn_1",
+        "V"
+      ],
+      "to": [
+        "txt",
+        "T"
+      ]
+    },
+    {
+      "id": "w100",
+      "from": [
+        "pn_2",
+        "V"
+      ],
+      "to": [
+        "txt",
+        "T"
+      ]
+    },
+    {
+      "id": "w101",
+      "from": [
+        "pn_3",
+        "V"
+      ],
+      "to": [
+        "txt",
+        "T"
+      ]
+    },
+    {
+      "id": "w102",
+      "from": [
+        "pn_4",
+        "V"
+      ],
+      "to": [
+        "txt",
+        "T"
+      ]
+    },
+    {
+      "id": "w103",
+      "from": [
+        "pn_5",
+        "V"
+      ],
+      "to": [
+        "txt",
+        "T"
+      ]
+    },
+    {
+      "id": "w104",
+      "from": [
+        "vc_lp",
+        "P"
+      ],
+      "to": [
+        "txt",
+        "P"
+      ]
+    },
+    {
+      "id": "w105",
+      "from": [
+        "sl_TSIZE",
+        "N"
+      ],
+      "to": [
+        "txt",
+        "S"
+      ]
+    },
+    {
+      "id": "w106",
+      "from": [
+        "mou",
+        "X"
+      ],
+      "to": [
+        "vc_m",
+        "X"
+      ]
+    },
+    {
+      "id": "w107",
+      "from": [
+        "mou",
+        "Y"
+      ],
+      "to": [
+        "vc_m",
+        "Y"
+      ]
+    },
+    {
+      "id": "w108",
+      "from": [
+        "vc_lp",
+        "P"
+      ],
+      "to": [
+        "v_d",
+        "A"
+      ]
+    },
+    {
+      "id": "w109",
+      "from": [
+        "vc_m",
+        "P"
+      ],
+      "to": [
+        "v_d",
+        "B"
+      ]
+    },
+    {
+      "id": "w110",
+      "from": [
+        "v_d",
+        "D"
+      ],
+      "to": [
+        "rm_op",
+        "V"
+      ]
+    },
+    {
+      "id": "w111",
+      "from": [
+        "rm_op",
+        "R"
+      ],
+      "to": [
+        "hsl_ink",
+        "A"
+      ]
+    },
+    {
+      "id": "w112",
+      "from": [
+        "n_i",
+        "S"
+      ],
+      "to": [
+        "e_issel",
+        "X"
+      ]
+    },
+    {
+      "id": "w113",
+      "from": [
+        "st_sel",
+        "R"
+      ],
+      "to": [
+        "e_issel",
+        "Y"
+      ]
+    },
+    {
+      "id": "w114",
+      "from": [
+        "e_issel",
+        "R"
+      ],
+      "to": [
+        "grad_lbl",
+        "T"
+      ]
+    },
+    {
+      "id": "w115",
+      "from": [
+        "hsl_ink",
+        "C"
+      ],
+      "to": [
+        "grad_lbl",
+        "A"
+      ]
+    },
+    {
+      "id": "w116",
+      "from": [
+        "sw_TEAL",
+        "C"
+      ],
+      "to": [
+        "grad_lbl",
+        "B"
+      ]
+    },
+    {
+      "id": "w117",
+      "from": [
+        "e_lcx",
+        "R"
+      ],
+      "to": [
+        "it_ulx",
+        "L"
+      ]
+    },
+    {
+      "id": "w118",
+      "from": [
+        "st_sel",
+        "R"
+      ],
+      "to": [
+        "it_ulx",
+        "i"
+      ]
+    },
+    {
+      "id": "w119",
+      "from": [
+        "it_ulx",
+        "E"
+      ],
+      "to": [
+        "e_ulA",
+        "X"
+      ]
+    },
+    {
+      "id": "w120",
+      "from": [
+        "sl_ULH",
+        "N"
+      ],
+      "to": [
+        "e_ulA",
+        "Y"
+      ]
+    },
+    {
+      "id": "w121",
+      "from": [
+        "it_ulx",
+        "E"
+      ],
+      "to": [
+        "e_ulB",
+        "X"
+      ]
+    },
+    {
+      "id": "w122",
+      "from": [
+        "sl_ULH",
+        "N"
+      ],
+      "to": [
+        "e_ulB",
+        "Y"
+      ]
+    },
+    {
+      "id": "w123",
+      "from": [
+        "e_R",
+        "R"
+      ],
+      "to": [
+        "e_uly",
+        "X"
+      ]
+    },
+    {
+      "id": "w124",
+      "from": [
+        "e_ulA",
+        "R"
+      ],
+      "to": [
+        "vc_ulA",
+        "X"
+      ]
+    },
+    {
+      "id": "w125",
+      "from": [
+        "e_uly",
+        "R"
+      ],
+      "to": [
+        "vc_ulA",
+        "Y"
+      ]
+    },
+    {
+      "id": "w126",
+      "from": [
+        "e_ulB",
+        "R"
+      ],
+      "to": [
+        "vc_ulB",
+        "X"
+      ]
+    },
+    {
+      "id": "w127",
+      "from": [
+        "e_uly",
+        "R"
+      ],
+      "to": [
+        "vc_ulB",
+        "Y"
+      ]
+    },
+    {
+      "id": "w128",
+      "from": [
+        "vc_ulA",
+        "P"
+      ],
+      "to": [
+        "crv_ul",
+        "A"
+      ]
+    },
+    {
+      "id": "w129",
+      "from": [
+        "vc_ulB",
+        "P"
+      ],
+      "to": [
+        "crv_ul",
+        "B"
+      ]
+    },
+    {
+      "id": "w130",
+      "from": [
+        "sw_BG",
+        "C"
+      ],
+      "to": [
+        "d_bg",
+        "C"
+      ]
+    },
+    {
+      "id": "w131",
+      "from": [
+        "mrg_shape",
+        "M"
+      ],
+      "to": [
+        "dr_shape",
+        "G"
+      ]
+    },
+    {
+      "id": "w132",
+      "from": [
+        "sw_NONE",
+        "C"
+      ],
+      "to": [
+        "dr_shape",
+        "S"
+      ]
+    },
+    {
+      "id": "w133",
+      "from": [
+        "sw_SHAPE",
+        "C"
+      ],
+      "to": [
+        "dr_shape",
+        "F"
+      ]
+    },
+    {
+      "id": "w134",
+      "from": [
+        "mrg_necks",
+        "M"
+      ],
+      "to": [
+        "dr_necks",
+        "G"
+      ]
+    },
+    {
+      "id": "w135",
+      "from": [
+        "sw_NONE",
+        "C"
+      ],
+      "to": [
+        "dr_necks",
+        "S"
+      ]
+    },
+    {
+      "id": "w136",
+      "from": [
+        "sw_BG",
+        "C"
+      ],
+      "to": [
+        "dr_necks",
+        "F"
+      ]
+    },
+    {
+      "id": "w137",
+      "from": [
+        "crv_ul",
+        "C"
+      ],
+      "to": [
+        "dr_ul",
+        "G"
+      ]
+    },
+    {
+      "id": "w138",
+      "from": [
+        "sw_TEAL",
+        "C"
+      ],
+      "to": [
+        "dr_ul",
+        "S"
+      ]
+    },
+    {
+      "id": "w139",
+      "from": [
+        "txt",
+        "G"
+      ],
+      "to": [
+        "dr_txt",
+        "G"
+      ]
+    },
+    {
+      "id": "w140",
+      "from": [
+        "sw_NONE",
+        "C"
+      ],
+      "to": [
+        "dr_txt",
+        "S"
+      ]
+    },
+    {
+      "id": "w141",
+      "from": [
+        "grad_lbl",
+        "C"
+      ],
+      "to": [
+        "dr_txt",
+        "F"
+      ]
+    }
+  ]
+}

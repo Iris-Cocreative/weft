@@ -642,6 +642,62 @@ defNode('vec/angle', {
   compute: a => ({ R: Math.atan2(a.B.y - a.A.y, a.B.x - a.A.x) })
 });
 
+defNode('vec/grid', {
+  title: 'Grid', cat: 'Vector', width: 156,
+  desc: 'Point lattice filling a W×H region, square or isometric — wire Viewport into W/H for a grid that always fills the canvas',
+  inputs: [
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'S', type: 'number', default: 40, label: 'spacing' },
+    { name: 'W', type: 'number', default: 800, label: 'region width' },
+    { name: 'H', type: 'number', default: 600, label: 'region height' }
+  ],
+  outputs: [
+    { name: 'P', type: 'point' },
+    { name: 'C', type: 'number', label: 'column' },
+    { name: 'R', type: 'number', label: 'row' },
+    { name: 'K', type: 'number', label: 'colour class — 2 square · 3 iso' }
+  ],
+  defaults: { iso: true },
+  compute: (a, ctx, node) => {
+    const iso = node.values.iso !== false;
+    const s = Math.max(0.5, Math.abs(a.S));
+    const vs = iso ? s * 0.8660254037844386 : s;   /* √3/2 → equilateral rows */
+    const nx = LM.clamp(Math.floor(Math.abs(a.W) / s) + 2, 1, 1024);
+    const ny = LM.clamp(Math.floor(Math.abs(a.H) / vs) + 2, 1, 1024);
+    const x0 = a.P.x - (nx - 1) * s / 2, y0 = a.P.y - (ny - 1) * vs / 2;
+    const P = [], C = [], R = [], K = [];
+    for (let j = 0; j < ny && P.length < 20000; j++) {
+      /* iso rows half-stagger; ±s/4 keeps the lattice centred on P */
+      const dx = iso ? ((j & 1) ? s / 4 : -s / 4) : 0;
+      for (let i = 0; i < nx && P.length < 20000; i++) {
+        P.push({ x: x0 + i * s + dx, y: y0 + j * vs });
+        C.push(i); R.push(j);
+        /* K = the lattice's canonical colouring: the fewest classes such that no
+           two neighbours share one. Square needs 2 (checkerboard). Iso needs 3,
+           and it is NOT (i % 3) — the half-stagger means you must go through
+           axial coords: q = i - floor(j/2), r = j, k = (q + 2r) mod 3. Then each
+           point's six neighbours carry the other two classes. Wire K into a phase
+           offset and one Circle node gives you the whole three-phase field. */
+        K.push(iso ? ((((i - Math.floor(j / 2) + 2 * j) % 3) + 3) % 3) : (i + j) % 2);
+      }
+    }
+    return { P: P, C: C, R: R, K: K };
+  },
+  buildBody: (node, body, changed) => {
+    const seg = _mk('div', 'seg', body);
+    [['square', false], ['iso', true]].forEach(m => {
+      const b = _mk('div', 'seg-b' + ((node.values.iso !== false) === m[1] ? ' on' : ''), seg);
+      b.textContent = m[0];
+      _cleanClick(b, () => {
+        node.values.iso = m[1];
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
 /* ============================== CURVE ============================== */
 
 defNode('crv/line', {
