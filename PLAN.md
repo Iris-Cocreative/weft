@@ -131,7 +131,7 @@ decision list (D1–D8), board method, and icon pipeline.
 Exit: a stranger can tell input / math / geometry / display nodes apart at 50%
 zoom without reading labels.
 
-## Phase 3 — Composition & the interface boundary (James, 2026-07-14)
+## Phase 3 — Composition & the interface boundary — ✅ SHIPPED 2026-07-14 (v0.8)
 
 **Why this exists.** Rebuilding the Holos organic nav
 (lab.iriscocreative.com/organic-nav) as a patch took **92 nodes and 141 wires**
@@ -172,41 +172,36 @@ no frames, no zoom-to-fit. Legibility fails before correctness does.
 This phase deliberately precedes LLM co-creation: **a tool whose patches are
 unreadable at 92 nodes does not get better by generating them faster.**
 
-1. **Clusters (user-defined nodes)** — select a subgraph → collapse to one node
-   with promoted ports and a title; saved in the graph, exportable, nestable.
-   The headline. Design *against* the Custom JS node (now Phase 4.3): a cluster
-   composes **nodes**, Custom JS wraps **code**. Both answer "make one thing out
-   of many" and they must not fight.
-2. **A feedback edge — the smallest change with the widest blast radius.**
-   `LM.evaluateGraph` topologically sorts and hard-errors on cycles
-   (`'cycle detected'`); the editor refuses them at connect time. But
-   **interaction is a feedback loop** — layout depends on hover, hover depends on
-   layout — and `state/prev` cannot help, because a delayed edge is still an edge
-   to the sort. organic-nav only escapes by hit-testing a *resting* layout, which
-   works there by luck (a re-centred bar leaves the active pill exactly on its
-   rest band) and will not generalise. Needs an explicit **Delay** node the sort
-   is allowed to cut: it reads last frame's value off `node._state`, contributes
-   no edge, and makes cycles both legal and legible. Amend invariant #8 when it
-   lands.
-3. **Altitude nodes** (specs in NODE-LIBRARY): comparison + boolean logic,
-   **Select/If** (the list-level ternary), **Mass Addition** with partial results
-   (cumulative sum), **Text List** (literal list param), and **Measure Text**
-   *pulled forward from Phase 5* — it blocks all UI work and it is cheap. It
-   needs no new invariant: the host supplies `ctx.measureText`, identically in
-   `viewport.js` and the export mount, exactly as `domList`/`domState` already do
-   (CLAUDE.md invariant #8 — only the hosts touch the DOM).
-4. **DOM output nodes** — the other half of the boundary, and the start of
-   OUTPUT-MODES mode 2. Generalise `input/button`'s declare-reconcile-report
-   cycle from `kind:'button'` to `{tag, attrs, rect}`: real `<a>`, real focus,
-   real `aria-current`, positioned by geometry the patch computed. This is what
-   makes an *accessible* organic nav expressible at all — and accessibility stops
-   being something nodes must learn about.
-5. **Legibility**: group/comment frames, zoom-to-fit, relay pins on wires.
-   (92 nodes is where the loom started asking for all three.)
+1. ✅ **Clusters (user-defined nodes)** — collapse a selection to one node with
+   promoted ports and a rename-able title (Ctrl+G / context menu); expand
+   reverses; saved in-graph, exportable, **nestable**. Landed *stronger* than
+   the editor-only fallback ROADMAP allowed for: a cluster is a real def
+   (`meta/cluster`, `def.dynamic` — ports on the node) whose compute evaluates
+   its inner graph through `ctx.defs`, with Port In/Out nodes marking the
+   boundary. Invariant #9. Design-against-Custom-JS note stands for Phase 4.3.
+2. ✅ **The feedback edge** — `state/delay`, a `feedback: true` def the sort
+   cuts: no out-edges contributed, inputs captured post-frame on `node._fbIns`.
+   Editor's connect-time cycle check whitelists paths through it. Invariant #8
+   amended. The *Feedback chase* example (lerp→delay loop) locks the semantics
+   into the test corpus.
+3. ✅ **Altitude nodes** — Comparison (`= ≠ < ≤ > ≥` mode toggle), Logic
+   (and/or/xor/not), Select (list-level ternary), Mass Addition (+ partial
+   results), Text List, Measure Text via `ctx.measureText` from both hosts (no
+   new invariant, as predicted).
+4. ✅ **DOM output** — `disp/element`: `{tag, text, attrs, rect}` placed by
+   `LM.geomBounds` of any geometry; hover/focus/down/clicked read back;
+   `on*` attrs and `javascript:` values refused. OUTPUT-MODES mode 2 exists.
+5. ◐ **Legibility** — zoom-to-fit shipped (Fit / `F` / `Home`, zoom floor
+   0.08). Group frames + relay pins deliberately deferred to the ROADMAP §5
+   legibility pass — clusters absorbed the urgency.
 
-Exit: organic-nav rebuilds in **under 30 nodes**, reads on one screen, and ships
-as a single reusable **Organic Nav** cluster with ports for items, colours and
-spread.
+Exit **met**: `patches/organic-nav-v2.json` — the nav is a single reusable
+**Organic Nav** cluster (ports: items, gap, spread, height, text size, two
+colours; active-index output) of **28 working nodes**, with the fillet-circle
+shape folded into a nested **Capsule Bar** cluster (20 nodes). Top level: 3
+nodes. Labels are real `<a>` elements with `aria-current`; hover feedback runs
+through Delay instead of luck. Write-up: `patches/organic-nav-v2.md` (including
+what still costs too much — the active-index idiom, Format for attr strings).
 
 ## Phase 4 — LLM co-creation
 

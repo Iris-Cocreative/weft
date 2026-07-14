@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.6 — the Figma design system.** v0.1 (2026-07-12): editor,
+**Status: v0.8 — composition & the interface boundary.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -34,7 +34,23 @@ preview-eye header, inputs-left/outputs-right band, inline dim readouts,
 13px typed ports, 42px value fields), new category/type palettes, node glyphs
 in `js/icons.js` (27×27, currentColor, category-dot fallback), and chromeless
 Boolean Toggle / Number Slider / Colour Swatch / Note Pad (the control IS the
-node). Decision log + tokens: `docs/DESIGN.md`.
+node). Decision log + tokens: `docs/DESIGN.md`. v0.7 (2026-07-14): **Grid**
+(square/iso lattice + canonical colour class K, first mode-toggle node), Iso
+field example, the organic-nav case study (92 nodes — the finding that wrote
+Phase 3), `docs/OUTPUT-MODES.md`. v0.8 (2026-07-14, Phase 3 of PLAN.md):
+**composition & the interface boundary** — **Clusters** (collapse a selection
+into one named, nestable, exportable node; `meta/cluster` + `def.dynamic`,
+inner graph evaluated through `ctx.defs`, Port In/Out boundary markers,
+invariant #9), **Delay** (`feedback: true` defs cut from the topo sort — legal
+feedback loops; invariant #8 amended; *Feedback chase* example), altitude
+nodes (Comparison, Logic, Select, Mass Addition + partial sums, Text List,
+Measure Text via host `ctx.measureText`), **Element** (real DOM
+`{tag, text, attrs, rect}` over the canvas with hover/focus/click read back —
+OUTPUT-MODES mode 2), zoom-to-fit (Fit / F / Home), Meta category (provisional
+slate), 106 nodes. Proof: `patches/organic-nav-v2.json` — the 92-node nav is
+now one 28-node **Organic Nav** cluster (nested Capsule Bar inside, real
+`<a>` labels, `aria-current`), 3 nodes at top level; write-up
+`patches/organic-nav-v2.md`.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -93,26 +109,33 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (94) — Grasshopper-matched names
+### Node library (106) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
-  Latch, Sample & Hold, Timer, Previous Value, Edge
-- **Params**: Number Slider, Boolean Toggle, Colour Swatch, Panel (inspect or type values)
+  Latch, Sample & Hold, Timer, Previous Value, Edge, **Delay** (the legal
+  feedback edge — cycles through it are allowed)
+- **Params**: Number Slider, Boolean Toggle, Colour Swatch, Text List,
+  Panel (inspect or type values)
 - **Maths**: Addition, Subtraction, Multiplication, Division, Modulus, Power, Min, Max,
   ArcTangent 2, Negative, Absolute, Round, Floor, Ceiling, Square Root, Sine, Cosine,
   Tangent, Radians, Degrees, Pi, Remap Numbers, Clamp, Lerp, Smooth Step,
-  Expression (X,Y,Z,T + Math), Noise
+  Expression (X,Y,Z,T + Math), Noise, Comparison (`= ≠ < ≤ > ≥`),
+  Logic (and/or/xor/not), Mass Addition (sum + partial results)
 - **Sets**: Series, Range, Random, List Item, List Length, Merge, Reverse List,
-  Cull Pattern, Shift List, Dispatch, Set Union, Set Intersection, Set Difference
-  (set ops share the `LM.setEq` equality predicate)
+  Cull Pattern, Shift List, Dispatch, Select (the list-level ternary),
+  Set Union, Set Intersection, Set Difference (set ops share `LM.setEq`)
+- **Meta**: Cluster (+ hidden Port In / Port Out boundary markers) — subgraphs
+  folded into named, nestable, exportable nodes
 - **Vector**: Construct Point, Deconstruct, Distance, Point Polar, Angle,
   Grid (square/iso point lattice; outputs column, row, and the lattice's
   canonical colour class K — see NODE-LIBRARY principle 6)
 - **Curve**: Line, Circle, Ellipse, Rectangle, Polygon, PolyLine, Interpolate (spline),
   Divide Curve, Evaluate Curve
 - **Transform**: Move, Rotate, Scale
-- **Display**: Draw, Text, Colour HSL, Gradient, Background
+- **Display**: Draw, Text, Colour HSL, Gradient, Background, Measure Text
+  (host `ctx.measureText`), Element (a real DOM element — `<a>`, heading,
+  anything — placed by geometry bounds; hover/focus/click flow back as data)
 
 ### Geometry model (2D)
 
@@ -157,6 +180,12 @@ where you want it.
   The practice generalises (see PLAN, Continuous workstreams): rebuild something
   real, count the nodes, and let the workarounds write the roadmap.
 
+  **The after-picture (v0.8, same day):** with Phase 3 shipped, the nav
+  rebuilt as `patches/organic-nav-v2.json` — one reusable **Organic Nav**
+  cluster of 28 working nodes (Capsule Bar cluster nested inside), real `<a>`
+  labels with `aria-current`, hover feedback through Delay. 92 flat nodes → 3
+  top-level nodes. Write-up + remaining costs: `patches/organic-nav-v2.md`.
+
 ## Ideas for v2 (not built)
 
 - Data trees (true graft/flatten/simplify) + per-wire list-matching modes
@@ -164,6 +193,6 @@ where you want it.
 - Input nodes: Scroll position, element hover/click targets, live data streams (fetch/WebSocket), audio
 - Timeline/easing nodes; spring physics; trails/feedback buffers
 - SVG/WebGL render targets; DOM output → **promoted**: now PLAN Phase 3/7 (see OUTPUT-MODES)
-- ~~Groups/subgraphs~~ → **promoted to a blocker**: clusters are PLAN Phase 3.1
-- Wire reroute handles, minimap, zoom-to-fit (the 5,300px-wide nav patch wants all three)
+- ~~Groups/subgraphs~~ → **shipped v0.8 as Clusters** (PLAN Phase 3.1)
+- Wire reroute handles, minimap (~~zoom-to-fit~~ shipped v0.8)
 - Publish presets to lab.iriscocreative.com as embeddable scripts

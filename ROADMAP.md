@@ -29,36 +29,38 @@ per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
 - [idea] Dirty-flag evaluation (skip re-eval when no animated inputs and
   nothing changed) — only when someone hits a perf wall; measure first.
 
-## 0.5. Composition — making patches practical (PLAN Phase 3)
+## 0.5. Composition — making patches practical (PLAN Phase 3) — ✅ SHIPPED v0.8 (2026-07-14)
 
 Opened by the organic-nav case study (2026-07-14): a real nav took **92 nodes**.
-It works, but nobody would reach for it. Diagnosis, gap list and the exact
-workarounds are in `patches/organic-nav.md`; the boundary argument is
-`docs/OUTPUT-MODES.md`. Everything here blocks Phase 4 (LLM co-creation) —
-generating unreadable patches faster is not progress.
+Diagnosis in `patches/organic-nav.md`; boundary argument in
+`docs/OUTPUT-MODES.md`; the after-picture in `patches/organic-nav-v2.md`.
 
-- [next] **Clusters / user-defined nodes** — collapse a subgraph into one node
-  with promoted ports; saved in-graph, exportable, nestable. The headline. Was
-  buried in WEFT-BUILD's "Ideas for v2" as *groups/subgraphs*; promoted to
-  blocker. Design against the Custom JS node (clusters compose **nodes**, Custom
-  JS wraps **code** — they must not fight).
-- [next] **Delay node → legal feedback edges.** `evaluateGraph` hard-errors on
-  cycles and the editor refuses them at connect time, but interaction *is* a
-  feedback loop (layout → hover → layout). `state/prev` doesn't help: a delayed
-  edge is still an edge to the topological sort. Needs a node the sort may cut —
-  reads last frame off `node._state`, contributes no edge. Smallest change,
-  widest blast radius; amends invariant #8.
-- [next] **Altitude nodes** (specs → NODE-LIBRARY): comparison + boolean logic,
-  Select/If, Mass Addition (partial sums), Text List, **Measure Text** (pulled
-  forward from the media phase — host supplies `ctx.measureText`, same pattern as
-  `domList`).
-- [next] **DOM output nodes** — generalise `input/button`'s
-  declare-reconcile-report from `kind:'button'` to `{tag, attrs, rect}`. Real
-  `<a>`, focus, `aria-current`. OUTPUT-MODES mode 2.
-- [idea] **Legibility at scale** — group/comment frames, **zoom-to-fit**, relay
-  pins. organic-nav is ~5,300px wide; the loom has no way to show it.
+- [shipped v0.8] **Clusters** — select nodes → Collapse to cluster (Ctrl+G /
+  context menu); promoted ports from crossing wires, saved in-graph
+  (`values.graph` + `values.ins/outs`), exportable, **nestable**; Expand
+  reverses; double-click the name to rename. Runtime = one `meta/cluster` def
+  whose compute evaluates the inner graph via `ctx.defs` (engine only learned
+  `def.dynamic`). Invariant #9.
+- [shipped v0.8] **Delay** (`state/delay`) — feedback def: contributes no
+  edges to the topo sort, reads last frame off `node._fbIns`. Cycles through it
+  are legal at connect time and in the evaluator. Invariant #8 amended.
+  *Feedback chase* example locks it in the corpus.
+- [shipped v0.8] **Altitude nodes** — Comparison (mode-toggled), Logic,
+  Select, Mass Addition (+ partial results), Text List, Measure Text
+  (`ctx.measureText` from both hosts).
+- [shipped v0.8] **Element node** (`disp/element`) — declare-reconcile-report
+  generalised to `{tag, text, attrs, rect}` placed by geometry bounds; hover /
+  focus / down / clicked flow back. attrs strings skip `on*` and `javascript:`.
+  OUTPUT-MODES mode 2 exists.
+- [shipped v0.8] **Zoom-to-fit** — Fit button, `F` (fits selection if any),
+  `Home` (fits all); zoom floor dropped to 0.08.
+- [idea] Remaining legibility: group/comment frames, relay pins, node labels,
+  sticky notes (§5 legibility pass still lists them — clusters removed the
+  urgency but they're still wanted).
 
-Exit: organic-nav rebuilds in <30 nodes, on one screen, as a reusable cluster.
+Exit met: organic-nav v2 = **28 working nodes** in one reusable Organic Nav
+cluster (nested Capsule Bar cluster inside), 3 nodes at top level, real
+`<a>` labels with `aria-current`. Both browser- and headless-verified.
 
 ## 1. Interaction & app-building nodes (events + state)
 
@@ -78,9 +80,9 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   wheel-scrubbed simulator on the cloth). Examples: Click toy, Scroll scene.
 - [idea] Later inputs: element-visibility (IntersectionObserver), URL params,
   Fetch/data-stream nodes (n8n webhooks → live data experiences!).
-- [next] **Feedback edges** — see track 0.5. Every interaction where the thing
-  you point at *moves in response* is a cycle, and cycles are currently refused.
-  This is the ceiling on the whole track.
+- [shipped v0.8] **Feedback edges** — the Delay node (track 0.5). Interactions
+  where the thing you point at moves in response are now expressible; the
+  ceiling on this track is lifted.
 
 ## 2. Documentation & open source
 
@@ -213,14 +215,11 @@ they're cheap next to the tracks above.
   frames are also the prerequisite for the Blocker idea (§3.5) — do them first.
   Format v2: `label` on nodes, plus top-level `notes[]` / `groups[]`. Keep loading
   lax (invariant 5) so old patches open fine.
-- **Subgraph / cluster node.** The same 5-node "phase-shifted wave line" cluster
-  appeared *three times, copy-pasted*, in one patch: 15 nodes doing the work of 5
-  plus a phase input. Copy-paste of a cluster is the tool asking for an
-  abstraction. Design: select N nodes → collapse into one node whose ports are the
-  cluster's dangling wires; double-click to enter. The engine already evaluates a
-  flat node list, so the cheap version is *editor-only* (a cluster is a view over
-  a subset, expanded before eval) — that ships without touching the evaluator or
-  the export compiler. Do that before considering true nested graphs.
+- ~~**Subgraph / cluster node.**~~ → **shipped v0.8** (track 0.5) — and it went
+  further than the cheap editor-only version sketched here: clusters are real
+  nodes with real nested graphs, evaluated through `ctx.defs`, exportable and
+  nestable. The 5-node "phase-shifted wave line" ×3 case is now: collapse once,
+  duplicate the cluster.
 - **Slider types** (GH parity, James's spec): a type per slider —
   **integer · decimal · even · odd** — plus decimal defaulting to 3 places
   (`0.000`) instead of today's full float. Shift while dragging snaps to integers.

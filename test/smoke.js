@@ -29,7 +29,9 @@ const mkCtx = () => ({
   mouse: { x: 12, y: -8, nx: 0.55, ny: 0.45, down: false, pressed: false, released: false },
   keys: { down: {}, pressed: {}, released: {} },
   scroll: { y: 0, max: 0, v: 0 },
-  W: 800, H: 600, drawList: [], domList: [], domState: {}, bg: null, errors: {}, out: {}
+  W: 800, H: 600, defs: NODE_DEFS,
+  measureText: (t, s) => ({ w: String(t).length * s * 0.6, h: s * 1.2 }),
+  drawList: [], domList: [], domState: {}, bg: null, errors: {}, out: {}
 });
 
 /* 1 — every node def evaluates standalone with defaults */
@@ -157,6 +159,136 @@ for (const name of Object.keys(EXAMPLES)) {
   eq('shift wrap', NODE_DEFS['sets/shift'].compute({ L: [1, 2, 3, 4], S: 1, W: true }).L, [2, 3, 4, 1]);
   eq('shift negative no-wrap', NODE_DEFS['sets/shift'].compute({ L: [1, 2, 3, 4], S: -1, W: false }).L, [1, 2, 3]);
   eq('dispatch', NODE_DEFS['sets/dispatch'].compute({ L: [1, 2, 3, 4], P: [true, false] }), { A: [1, 3], B: [2, 4] });
+}
+
+/* 8 — altitude nodes: comparison, logic, select, mass addition, measure text */
+{
+  const eq = (name, got, want) => {
+    const a = JSON.stringify(got), b = JSON.stringify(want);
+    if (a !== b) failures.push('altitude ' + name + ': expected ' + b + ' got ' + a);
+  };
+  const cmp = (mode, A, B) => NODE_DEFS['math/cmp'].compute({ A, B }, mkCtx(), { values: { mode } }).R;
+  eq('cmp =', cmp('=', 0.1 + 0.2, 0.3), true);
+  eq('cmp <', cmp('<', 1, 2), true);
+  eq('cmp ≥', cmp('≥', 2, 2), true);
+  eq('cmp ≠', cmp('≠', 1, 2), true);
+  const lg = (mode, A, B) => NODE_DEFS['math/logic'].compute({ A, B }, mkCtx(), { values: { mode } }).R;
+  eq('logic and', lg('and', true, false), false);
+  eq('logic or', lg('or', true, false), true);
+  eq('logic xor', lg('xor', true, true), false);
+  eq('logic not', lg('not', false, true), true);
+  eq('select', NODE_DEFS['sets/select'].compute({ T: ['a'], F: ['b'], P: [true, false, true] }).L, ['a', 'b', 'a']);
+  eq('select data-length', NODE_DEFS['sets/select'].compute({ T: [1, 2, 3], F: [9], P: [false, true] }).L, [9, 2, 9]);
+  eq('masadd', NODE_DEFS['math/masadd'].compute({ L: [1, 2, 3] }), { R: 6, P: [1, 3, 6] });
+  eq('textlist', NODE_DEFS['params/textlist'].compute({}, mkCtx(), { values: { text: 'a\\nb\\n\\nc' } }).L, ['a', 'b', 'c']);
+  const m = NODE_DEFS['disp/measure'].compute({ T: 'hello', S: 20, P: { x: 5, y: 6 } }, mkCtx());
+  eq('measure W', m.W, 60);
+  eq('measure rect', m.G, { kind: 'rect', cx: 5, cy: 6, w: 60, h: 24, rot: 0 });
+  const bounds = LM.geomBounds({ kind: 'circle', cx: 10, cy: -5, r: 20 });
+  if (Math.abs(bounds.x + 10) > 0.5 || Math.abs(bounds.w - 40) > 0.5) failures.push('geomBounds circle: got ' + JSON.stringify(bounds));
+}
+
+/* 9 — delay: a legal feedback loop that integrates (add ← delay ← add) */
+{
+  const g = { nodes: [
+      { id: 'ad', type: 'math/add', values: { B: 1 } },
+      { id: 'dl', type: 'state/delay', values: {} } ],
+    wires: [ { from: ['dl', 'V'], to: ['ad', 'A'] }, { from: ['ad', 'R'], to: ['dl', 'V'] } ] };
+  const c1 = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c1);
+  if (Object.keys(c1.errors).length) failures.push('delay: feedback loop errored → ' + JSON.stringify(c1.errors));
+  if ((c1.out.ad.R || [])[0] !== 1) failures.push('delay frame1: expected add=1 got ' + (c1.out.ad.R || [])[0]);
+  const c2 = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c2);
+  if ((c2.out.ad.R || [])[0] !== 2) failures.push('delay frame2: expected add=2 got ' + (c2.out.ad.R || [])[0]);
+  const c3 = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c3);
+  if ((c3.out.dl.V || [])[0] !== 2) failures.push('delay frame3: expected delayed 2 got ' + (c3.out.dl.V || [])[0]);
+}
+
+/* 10 — clusters: inner graph evaluates through ports; nested clusters; export */
+{
+  // inner: portin X → math/neg → portout R, plus a series → portout S
+  const clusterNode = {
+    id: 'cl', type: 'meta/cluster', x: 0, y: 0,
+    values: {
+      title: 'test cluster',
+      ins: [{ name: 'X', type: 'number' }],
+      outs: [{ name: 'R', type: 'number' }, { name: 'S', type: 'number' }],
+      graph: { nodes: [
+          { id: 'a', type: 'meta/portin', values: { port: 'X' } },
+          { id: 'b', type: 'math/neg', values: {} },
+          { id: 'c', type: 'meta/portout', values: { port: 'R' } },
+          { id: 'd', type: 'sets/series', values: { S: 0, N: 10, C: 3 } },
+          { id: 'e', type: 'meta/portout', values: { port: 'S' } } ],
+        wires: [ { from: ['a', 'V'], to: ['b', 'V'] }, { from: ['b', 'R'], to: ['c', 'V'] },
+          { from: ['d', 'S'], to: ['e', 'V'] } ] }
+    }
+  };
+  const g = { nodes: [
+      { id: 'sr', type: 'sets/series', values: { S: 1, N: 1, C: 3 } },
+      clusterNode ],
+    wires: [ { from: ['sr', 'S'], to: ['cl', 'X'] } ] };
+  const c = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  if (Object.keys(c.errors).length) failures.push('cluster: errored → ' + JSON.stringify(c.errors));
+  if ((c.out.cl.R || []).join(',') !== '-1,-2,-3') failures.push('cluster ports: expected -1,-2,-3 got [' + (c.out.cl.R || []).join(',') + ']');
+  if ((c.out.cl.S || []).join(',') !== '0,10,20') failures.push('cluster generator out: expected 0,10,20 got [' + (c.out.cl.S || []).join(',') + ']');
+  // nested: a cluster whose inner graph contains the cluster above
+  const outer = {
+    id: 'cl2', type: 'meta/cluster', x: 0, y: 0,
+    values: {
+      title: 'outer', ins: [{ name: 'A', type: 'number' }], outs: [{ name: 'Z', type: 'number' }],
+      graph: { nodes: [
+          { id: 'p', type: 'meta/portin', values: { port: 'A' } },
+          JSON.parse(JSON.stringify(clusterNode)),
+          { id: 'q', type: 'meta/portout', values: { port: 'Z' } } ],
+        wires: [ { from: ['p', 'V'], to: ['cl', 'X'] }, { from: ['cl', 'R'], to: ['q', 'V'] } ] }
+    }
+  };
+  const g2 = { nodes: [outer], wires: [] };
+  const c2 = mkCtx();
+  LM.evaluateGraph(g2, NODE_DEFS, c2);
+  if (Object.keys(c2.errors).length) failures.push('nested cluster: errored → ' + JSON.stringify(c2.errors));
+  // unwired A falls back to nothing → R should be empty; wire a literal instead
+  g2.nodes[0].values.graph.nodes[0].values.port = 'A';
+  const g3 = { nodes: [ { id: 's', type: 'params/slider', values: { min: 0, max: 10, value: 4 } }, outer ],
+    wires: [ { from: ['s', 'N'], to: ['cl2', 'A'] } ] };
+  const c3 = mkCtx();
+  LM.evaluateGraph(g3, NODE_DEFS, c3);
+  if ((c3.out.cl2.Z || []).join(',') !== '-4') failures.push('nested cluster value: expected -4 got [' + (c3.out.cl2.Z || []).join(',') + ']');
+  // export: defs must be collected through cluster subgraphs
+  const js = WeftExport.buildJS({ nodes: [clusterNode], wires: [] });
+  try { new Function(js); } catch (e) { failures.push('cluster export does not compile → ' + e.message); }
+  if (js.indexOf('meta/portin') < 0 || js.indexOf('math/neg') < 0) failures.push('cluster export: inner defs not collected');
+}
+
+/* 11 — element node declares real DOM and reads state back */
+{
+  const g = { nodes: [
+      { id: 'r', type: 'crv/rect', values: { P: { x: 0, y: 0 }, W: 100, H: 40 } },
+      { id: 'el', type: 'disp/element', values: { T: 'a', C: 'home', A: 'href=/home\\naria-current=page' } } ],
+    wires: [ { from: ['r', 'C'], to: ['el', 'G'] } ] };
+  const c = mkCtx();
+  c.domState['el:0'] = { hover: true, focus: false, down: false, clicks: 2 };
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  const d = c.domList.find(x => x.kind === 'element');
+  if (!d) failures.push('element: nothing declared into domList');
+  else {
+    if (d.tag !== 'a' || d.text !== 'home') failures.push('element: bad tag/text ' + JSON.stringify(d));
+    if (!d.attrs || d.attrs.href !== '/home' || d.attrs['aria-current'] !== 'page') failures.push('element: attrs not parsed ' + JSON.stringify(d.attrs));
+    if (Math.abs(d.rect.x + 50) > 0.5 || Math.abs(d.rect.w - 100) > 0.5) failures.push('element: rect wrong ' + JSON.stringify(d.rect));
+  }
+  if ((c.out.el.H || [])[0] !== true) failures.push('element: hover state not read back');
+  // clicked trigger: second frame with same clicks must not fire
+  const c2 = mkCtx();
+  c2.domState['el:0'] = { hover: false, focus: false, down: false, clicks: 3 };
+  LM.evaluateGraph(g, NODE_DEFS, c2);
+  if ((c2.out.el.K || [])[0] !== true) failures.push('element: click trigger did not fire on new click');
+  const c3 = mkCtx();
+  c3.domState['el:0'] = { hover: false, focus: false, down: false, clicks: 3 };
+  LM.evaluateGraph(g, NODE_DEFS, c3);
+  if ((c3.out.el.K || [])[0] !== false) failures.push('element: click trigger is not frame-latched');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

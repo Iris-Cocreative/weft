@@ -51,34 +51,70 @@ const Viewport = {
       scrollShow = performance.now();
     }, { passive: false });
 
-    /* DOM overlay — real elements (Button node) reconciled from ctx.domList */
+    /* text measurement — supplied to computes as ctx.measureText (invariant #8:
+     * identical contract in the export mount; h is a deterministic line box) */
+    const mCanvas = document.createElement('canvas');
+    const mg = mCanvas.getContext('2d');
+    const measureText = (text, size) => {
+      mg.font = size + 'px Inter, system-ui, sans-serif';
+      return { w: mg.measureText(String(text)).width, h: size * 1.2 };
+    };
+
+    /* DOM overlay — real elements (Button / Element nodes) reconciled from ctx.domList */
     const domState = {};
     const domLayer = document.createElement('div');
     domLayer.id = 'domLayer';
     canvas.parentElement.appendChild(domLayer);
     const domEls = {};
+    const mkTracked = (tag, id) => {
+      const el = document.createElement(tag);
+      const st = domState[id] = domState[id] || { hover: false, focus: false, down: false, clicks: 0 };
+      el.addEventListener('pointerenter', () => { st.hover = true; });
+      el.addEventListener('pointerleave', () => { st.hover = false; st.down = false; });
+      el.addEventListener('pointerdown', () => { st.down = true; });
+      el.addEventListener('pointerup', () => { st.down = false; });
+      el.addEventListener('focus', () => { st.focus = true; });
+      el.addEventListener('blur', () => { st.focus = false; });
+      el.addEventListener('click', e => {
+        st.clicks++;
+        const href = el.getAttribute && el.getAttribute('href');
+        if (tag === 'a' && (!href || href === '#')) e.preventDefault();
+      });
+      domLayer.appendChild(el);
+      domEls[id] = el;
+      return el;
+    };
+    const safeTag = t => /^[a-z][a-z0-9]*$/.test(t) && t !== 'script' && t !== 'style' && t !== 'iframe' ? t : 'div';
     const syncDom = list => {
       const seen = {};
       for (const d of list) {
-        if (!d || d.kind !== 'button') continue;
-        seen[d.id] = true;
-        let el = domEls[d.id];
-        if (!el) {
-          el = document.createElement('button');
-          el.type = 'button';
-          el.className = 'weft-btn';
-          const st = domState[d.id] = domState[d.id] || { down: false, clicks: 0 };
-          el.addEventListener('pointerdown', () => { st.down = true; });
-          el.addEventListener('pointerup', () => { st.down = false; });
-          el.addEventListener('pointerleave', () => { st.down = false; });
-          el.addEventListener('click', () => { st.clicks++; });
-          domLayer.appendChild(el);
-          domEls[d.id] = el;
+        if (!d) continue;
+        if (d.kind === 'button') {
+          seen[d.id] = true;
+          let el = domEls[d.id];
+          if (!el) { el = mkTracked('button', d.id); el.type = 'button'; el.className = 'weft-btn'; }
+          const label = String(d.label === undefined ? '' : d.label);
+          if (el.textContent !== label) el.textContent = label;
+          el.style.left = 'calc(50% + ' + (d.x || 0) + 'px)';
+          el.style.top = 'calc(50% + ' + (d.y || 0) + 'px)';
+        } else if (d.kind === 'element') {
+          seen[d.id] = true;
+          const tag = safeTag(d.tag || 'div');
+          let el = domEls[d.id];
+          if (el && el._weftTag !== tag) { el.remove(); delete domEls[d.id]; el = null; }
+          if (!el) { el = mkTracked(tag, d.id); el._weftTag = tag; el.className = 'weft-el'; }
+          const text = d.text || '';
+          if (el.textContent !== text) el.textContent = text;
+          const want = d.attrs || {}, have = el._weftAttrs || {};
+          for (const k in want) if (have[k] !== want[k]) { try { el.setAttribute(k, want[k]); } catch (e) { /* bad attr name */ } }
+          for (const k in have) if (!(k in want)) el.removeAttribute(k);
+          el._weftAttrs = Object.assign({}, want);
+          const r = d.rect || { x: 0, y: 0, w: 10, h: 10 };
+          el.style.left = 'calc(50% + ' + r.x + 'px)';
+          el.style.top = 'calc(50% + ' + r.y + 'px)';
+          el.style.width = Math.max(0, r.w) + 'px';
+          el.style.height = Math.max(0, r.h) + 'px';
         }
-        const label = String(d.label === undefined ? '' : d.label);
-        if (el.textContent !== label) el.textContent = label;
-        el.style.left = 'calc(50% + ' + (d.x || 0) + 'px)';
-        el.style.top = 'calc(50% + ' + (d.y || 0) + 'px)';
       }
       for (const id in domEls) {
         if (!seen[id]) { domEls[id].remove(); delete domEls[id]; delete domState[id]; }
@@ -138,7 +174,7 @@ const Viewport = {
         if (selected !== wantSelected) continue;
         const outs = ctx.out[n.id];
         if (!outs) continue;
-        for (const o of def.outputs || []) {
+        for (const o of (def.dynamic ? (n.values && n.values.outs) : def.outputs) || []) {
           if (o.type !== 'geometry' && o.type !== 'point') continue;
           const L = outs[o.name] || [];
           for (const g of L) {
@@ -213,7 +249,7 @@ const Viewport = {
 
       const ctx = {
         t, dt: Viewport.playing ? dt : 0, frame: frame++, mouse, keys, scroll,
-        W: rect.width, H: rect.height,
+        W: rect.width, H: rect.height, measureText, defs: NODE_DEFS,
         drawList: [], domList: [], domState, bg: null, errors: {}, out: {}
       };
       try { LM.evaluateGraph(App.graph, NODE_DEFS, ctx); } catch (e) { /* keep rendering */ }

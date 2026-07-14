@@ -296,6 +296,24 @@ const LM = {
     }
   },
 
+  /* geometry → axis-aligned bounds {x, y, w, h} (top-left, centered coords).
+   * Text uses the same width estimate as pointInGeom. Null for empty geometry. */
+  geomBounds: g => {
+    if (!g) return null;
+    if (g.kind === 'text') {
+      const s = g.size || 24, w = String(g.text === undefined ? '' : g.text).length * s * 0.6;
+      return { x: (g.x || 0) - w / 2, y: (g.y || 0) - s * 0.7, w, h: s * 1.4 };
+    }
+    const pts = LM.toPoly(g, 48).pts;
+    if (!pts.length) return null;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of pts) {
+      if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+      if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
+    }
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  },
+
   /* ---------- the dataflow evaluator ----------
    * Every port value is a LIST. Longest-list matching (Grasshopper style):
    * the node's compute runs once per index, shorter lists repeat their last
@@ -304,6 +322,14 @@ const LM = {
    * An input may receive MULTIPLE wires — their lists concatenate in wire order.
    * A node with enabled === false is bypassed: each output passes through the
    * first same-type input (or the first input) untouched.
+   *
+   * def.dynamic — ports live on the NODE (node.values.ins / node.values.outs)
+   * instead of the def, and every input receives the whole list (clusters).
+   *
+   * def.feedback — the node contributes NO edges to the topological sort, so
+   * wiring through it makes a cycle legal (Delay). It evaluates before its
+   * sources; after the frame the engine resolves its inputs and stores them on
+   * node._fbIns, so next frame its compute reads last frame's values there.
    */
   evaluateGraph: (graph, defs, ctx) => {
     ctx.drawList = ctx.drawList || [];
@@ -319,13 +345,45 @@ const LM = {
       inWires[k].push(w.from);
     }
 
+    const insOf = n => {
+      const d = defs[n.type];
+      if (!d) return [];
+      return (d.dynamic && n.values && n.values.ins) || d.inputs || [];
+    };
+    const outsOf = n => {
+      const d = defs[n.type];
+      if (!d) return [];
+      return (d.dynamic && n.values && n.values.outs) || d.outputs || [];
+    };
+    const isListIn = (n, name) => {
+      const d = defs[n.type];
+      if (!d) return false;
+      if (d.dynamic) return true;
+      return (d.listInputs || []).indexOf(name) >= 0;
+    };
+    const resolveList = (n, inp) => {
+      const srcs = inWires[n.id + ':' + inp.name];
+      let list;
+      if (srcs && srcs.length) {
+        list = [];
+        for (const src of srcs) {
+          const o = ctx.out[src[0]];
+          if (o && o[src[1]]) for (const v of o[src[1]]) list.push(v);
+        }
+      } else {
+        const v = (n.values && n.values[inp.name] !== undefined) ? n.values[inp.name] : inp.default;
+        list = v === undefined ? [] : [v];
+      }
+      return list.map(v => LM.coerce(v, inp.type));
+    };
+
     const order = [], mark = {};
     const visit = n => {
       if (mark[n.id] === 2) return;
       if (mark[n.id] === 1) { ctx.errors[n.id] = 'cycle detected'; return; }
       mark[n.id] = 1;
       const def = defs[n.type];
-      if (def) for (const inp of def.inputs || []) {
+      if (def && !def.feedback) for (const inp of insOf(n)) {
         const srcs = inWires[n.id + ':' + inp.name];
         if (srcs) for (const src of srcs) if (byId[src[0]]) visit(byId[src[0]]);
       }
@@ -339,25 +397,12 @@ const LM = {
       if (!def) { ctx.errors[n.id] = 'unknown node type ' + n.type; continue; }
       try {
         const resolved = {};
-        for (const inp of def.inputs || []) {
-          const srcs = inWires[n.id + ':' + inp.name];
-          let list;
-          if (srcs && srcs.length) {
-            list = [];
-            for (const src of srcs) {
-              const o = ctx.out[src[0]];
-              if (o && o[src[1]]) for (const v of o[src[1]]) list.push(v);
-            }
-          } else {
-            const v = (n.values && n.values[inp.name] !== undefined) ? n.values[inp.name] : inp.default;
-            list = v === undefined ? [] : [v];
-          }
-          resolved[inp.name] = list.map(v => LM.coerce(v, inp.type));
-        }
+        for (const inp of insOf(n)) resolved[inp.name] = resolveList(n, inp);
         if (n.enabled === false) {
           const outs = {};
-          for (const o of def.outputs || []) {
-            const m = (def.inputs || []).find(i => i.type === o.type) || (def.inputs || [])[0];
+          const ins = insOf(n);
+          for (const o of outsOf(n)) {
+            const m = ins.find(i => i.type === o.type) || ins[0];
             outs[o.name] = m ? resolved[m.name] : [];
           }
           ctx.out[n.id] = outs;
@@ -365,22 +410,21 @@ const LM = {
           continue;
         }
         const outs = {};
-        for (const o of def.outputs || []) outs[o.name] = [];
-        const listIns = def.listInputs || [];
+        for (const o of outsOf(n)) outs[o.name] = [];
         let iter = 1;
-        for (const inp of def.inputs || []) {
-          if (listIns.indexOf(inp.name) < 0) iter = Math.max(iter, resolved[inp.name].length);
+        for (const inp of insOf(n)) {
+          if (!isListIn(n, inp.name)) iter = Math.max(iter, resolved[inp.name].length);
         }
         if (iter > 100000) iter = 100000;
         for (let i = 0; i < iter; i++) {
           const args = {};
-          for (const inp of def.inputs || []) {
+          for (const inp of insOf(n)) {
             const L = resolved[inp.name];
-            args[inp.name] = listIns.indexOf(inp.name) >= 0 ? L : (L.length ? L[Math.min(i, L.length - 1)] : undefined);
+            args[inp.name] = isListIn(n, inp.name) ? L : (L.length ? L[Math.min(i, L.length - 1)] : undefined);
           }
           ctx.i = i; // list-match index — state nodes key node._state by it
           const r = def.compute(args, ctx, n) || {};
-          for (const o of def.outputs || []) {
+          for (const o of outsOf(n)) {
             const v = r[o.name];
             if (v === undefined) continue;
             if (Array.isArray(v)) { for (const x of v) outs[o.name].push(x); }
@@ -393,6 +437,15 @@ const LM = {
         ctx.errors[n.id] = String(e && e.message || e);
         ctx.out[n.id] = {};
       }
+    }
+
+    // feedback nodes capture this frame's (now fully evaluated) inputs for next frame
+    for (const n of order) {
+      const def = defs[n.type];
+      if (!def || !def.feedback || n.enabled === false) continue;
+      const fb = {};
+      for (const inp of insOf(n)) fb[inp.name] = resolveList(n, inp);
+      n._fbIns = fb;
     }
   }
 };

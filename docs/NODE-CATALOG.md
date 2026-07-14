@@ -181,6 +181,16 @@ Pass-through container — wire a source through it, or set it directly; swap th
 |---|---|---|
 | P | point |  |
 
+### `params/textlist` — Text List
+
+A literal list of strings — one item per line
+
+| out | type | note |
+|---|---|---|
+| L | string |  |
+
+Node values (`values` keys, not ports): `{"text":"one\ntwo\nthree"}`
+
 ### `params/vector` — Vector
 
 Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
@@ -209,6 +219,19 @@ Counts triggers: up on U, down on D, back to zero on R
 | out | type | note |
 |---|---|---|
 | N | number |  |
+
+### `state/delay` — Delay
+
+V from the previous frame — contributes no edge to the evaluation order, so wiring through it makes a feedback loop legal (layout → hover → layout)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  | receives whole list |
+| I | any | `0` | initial value (first frame) · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| V | any | V last frame |
 
 ### `state/edge` — Edge
 
@@ -369,6 +392,21 @@ Constrain V to [A,B]
 |---|---|---|
 | R | number |  |
 
+### `math/cmp` — Comparison
+
+Compare A against B — pick the operator on the node (equality uses a tiny epsilon)
+
+| in | type | default | note |
+|---|---|---|---|
+| A | number | `0` |  |
+| B | number | `0` |  |
+
+| out | type | note |
+|---|---|---|
+| R | bool |  |
+
+Node values (`values` keys, not ports): `{"mode":"<"}`
+
 ### `math/cos` — Cosine
 
 Cosine (radians)
@@ -447,6 +485,34 @@ Linear interpolate A→B by T
 | out | type | note |
 |---|---|---|
 | R | number |  |
+
+### `math/logic` — Logic
+
+Boolean logic on A and B — pick the operator on the node (not ignores B)
+
+| in | type | default | note |
+|---|---|---|---|
+| A | bool | `false` |  |
+| B | bool | `false` |  |
+
+| out | type | note |
+|---|---|---|
+| R | bool |  |
+
+Node values (`values` keys, not ports): `{"mode":"and"}`
+
+### `math/masadd` — Mass Addition
+
+Sum of all numbers in L, plus the running total at each item — the cumulative sum that turns a list of gaps into a list of positions
+
+| in | type | default | note |
+|---|---|---|---|
+| L | number |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| R | number | sum |
+| P | number | partial results |
 
 ### `math/max` — Maximum
 
@@ -773,6 +839,20 @@ Reverse the order of L
 | out | type | note |
 |---|---|---|
 | R | any |  |
+
+### `sets/select` — Select
+
+Merge two lists item by item: where the repeating bool pattern P is true take from T, else from F — the list-level ternary (Dispatch’s inverse)
+
+| in | type | default | note |
+|---|---|---|---|
+| T | any |  | if true · receives whole list |
+| F | any |  | if false · receives whole list |
+| P | bool | `true` | pattern · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| L | any |  |
 
 ### `sets/series` — Series
 
@@ -1230,6 +1310,24 @@ Render geometry with stroke S, fill F, line width W
 |---|---|---|
 | G | geometry |  |
 
+### `disp/element` — Element
+
+A real DOM element (link, heading, button…) laid over the canvas filling G’s bounds — real focus and semantics; hover / focus / click flow back as data
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | placement (fills bounds of G) |
+| T | string | `"a"` | tag |
+| C | string | `""` | text content |
+| A | string | `""` | attributes — k=v, newline or ; separated |
+
+| out | type | note |
+|---|---|---|
+| H | bool | hovering |
+| F | bool | focused |
+| D | bool | held down |
+| K | bool | clicked (trigger) |
+
 ### `disp/gradient` — Gradient
 
 Blend colour A → B by T (0..1)
@@ -1243,6 +1341,22 @@ Blend colour A → B by T (0..1)
 | out | type | note |
 |---|---|---|
 | C | color |  |
+
+### `disp/measure` — Measure Text
+
+Width and height of text T at size S px, plus its bounding rect centred at P — measured by the host with the same font Draw uses
+
+| in | type | default | note |
+|---|---|---|---|
+| T | string | `"weft"` | text |
+| S | number | `24` | size px |
+| P | point | `{"x":0,"y":0}` | rect centre |
+
+| out | type | note |
+|---|---|---|
+| W | number | width |
+| H | number | height |
+| G | geometry | bounding rect |
 
 ### `disp/text` — Text
 
@@ -1260,4 +1374,4 @@ Text geometry at point P — wire into Draw
 
 ## Icon coverage
 
-11 node glyphs + 1 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (81): `input/viewport`, `input/hotspot`, `input/button`, `input/keyboard`, `input/scroll`, `params/curve`, `math/add`, `math/sub`, `math/mul`, `math/div`, `math/mod`, `math/pow`, `math/min`, `math/max`, `math/atan2`, `math/neg`, `math/abs`, `math/round`, `math/floor`, `math/ceil`, `math/sqrt`, `math/sin`, `math/cos`, `math/tan`, `math/rad`, `math/deg`, `math/pi`, `math/phi`, `math/remap`, `math/clamp`, `math/lerp`, `math/smooth`, `math/expr`, `math/noise`, `sets/series`, `sets/range`, `sets/random`, `sets/item`, `sets/length`, `sets/merge`, `sets/reverse`, `sets/cullpat`, `sets/shift`, `sets/dispatch`, `sets/union`, `sets/intersection`, `sets/difference`, `vec/construct`, `vec/deconstruct`, `vec/vecxy`, `vec/pt2vec`, `vec/vec2pt`, `vec/amp`, `vec/unit`, `vec/reverse`, `vec/distance`, `vec/polar`, `vec/angle`, `vec/grid`, `crv/line`, `crv/circle`, `crv/ellipse`, `crv/rect`, `crv/arc`, `crv/polyline`, `crv/interp`, `crv/divide`, `crv/eval`, `disp/draw`, `disp/text`, `disp/hsl`, `disp/gradient`, `disp/bg`, `state/smooth`, `state/spring`, `state/counter`, `state/latch`, `state/sample`, `state/timer`, `state/prev`, `state/edge`
+11 node glyphs + 1 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (92): `input/viewport`, `input/hotspot`, `input/button`, `input/keyboard`, `input/scroll`, `params/curve`, `params/textlist`, `math/add`, `math/sub`, `math/mul`, `math/div`, `math/mod`, `math/pow`, `math/min`, `math/max`, `math/atan2`, `math/neg`, `math/abs`, `math/round`, `math/floor`, `math/ceil`, `math/sqrt`, `math/sin`, `math/cos`, `math/tan`, `math/rad`, `math/deg`, `math/pi`, `math/phi`, `math/remap`, `math/clamp`, `math/lerp`, `math/smooth`, `math/expr`, `math/cmp`, `math/logic`, `math/masadd`, `math/noise`, `sets/series`, `sets/range`, `sets/random`, `sets/item`, `sets/length`, `sets/merge`, `sets/reverse`, `sets/cullpat`, `sets/shift`, `sets/dispatch`, `sets/select`, `sets/union`, `sets/intersection`, `sets/difference`, `vec/construct`, `vec/deconstruct`, `vec/vecxy`, `vec/pt2vec`, `vec/vec2pt`, `vec/amp`, `vec/unit`, `vec/reverse`, `vec/distance`, `vec/polar`, `vec/angle`, `vec/grid`, `crv/line`, `crv/circle`, `crv/ellipse`, `crv/rect`, `crv/arc`, `crv/polyline`, `crv/interp`, `crv/divide`, `crv/eval`, `disp/draw`, `disp/text`, `disp/hsl`, `disp/gradient`, `disp/bg`, `disp/measure`, `disp/element`, `state/smooth`, `state/spring`, `state/counter`, `state/latch`, `state/sample`, `state/timer`, `state/prev`, `state/delay`, `state/edge`, `meta/cluster`, `meta/portin`, `meta/portout`

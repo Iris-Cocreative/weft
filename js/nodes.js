@@ -5,10 +5,11 @@
  * — it gets serialized into exported experiences. buildBody/postEval are
  * editor-only and never exported.
  */
-/* palette + wire colors — locked in Figma 2026-07-13, see docs/DESIGN.md */
+/* palette + wire colors — locked in Figma 2026-07-13, see docs/DESIGN.md
+ * (Meta is provisional slate until the Figma pass reaches it) */
 const CATS = {
   Input: '#03a514', Params: '#2dd4bf', State: '#c1362e', Maths: '#3b5dba', Sets: '#7831be',
-  Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc'
+  Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc', Meta: '#8494ad'
 };
 const TYPE_COLORS = {
   number: '#3e9aff', bool: '#ff3b41', string: '#fbbb00', point: '#fb6c09',
@@ -280,6 +281,20 @@ defNode('params/panel', {
   }
 });
 
+defNode('params/textlist', {
+  title: 'Text List', cat: 'Params', desc: 'A literal list of strings — one item per line', width: 200, bare: true,
+  inputs: [], outputs: [{ name: 'L', type: 'string' }],
+  defaults: { text: 'one\ntwo\nthree' },
+  compute: (a, c, node) => ({ L: String(node.values.text === undefined ? '' : node.values.text).split('\n').filter(s => s.length) }),
+  buildBody: (node, body) => {
+    const tl = _mk('div', 'np tl', body);
+    const ta = _mk('textarea', 'panel-src', tl);
+    ta.value = node.values.text; ta.rows = 3; ta.spellcheck = false;
+    ta.addEventListener('input', () => { node.values.text = ta.value; ta.rows = Math.max(2, Math.min(12, ta.value.split('\n').length)); });
+    ta.rows = Math.max(2, Math.min(12, String(node.values.text || '').split('\n').length));
+  }
+});
+
 /* ============================== MATHS ============================== */
 
 function defBinary(id, title, fn, desc) {
@@ -384,7 +399,9 @@ defNode('math/expr', {
   defaults: { expr: 'sin(X) * Y' },
   compute: (a, ctx, node) => {
     const src = node.values.expr || '0';
-    if (node._exprSrc !== src) {
+    /* also guard _exprFn's type: a graph serialized mid-run can carry a stray
+     * _exprSrc string (functions never survive JSON) — rebuild in that case */
+    if (node._exprSrc !== src || typeof node._exprFn !== 'function') {
       node._exprSrc = src;
       node._exprFn = new Function('X', 'Y', 'Z', 'T', 'with(Math){return (' + src + ');}');
     }
@@ -395,6 +412,79 @@ defNode('math/expr', {
     const i = _mk('input', 'expr-src', body);
     i.type = 'text'; i.value = node.values.expr; i.spellcheck = false;
     i.addEventListener('change', () => { node.values.expr = i.value; changed(); });
+  }
+});
+
+defNode('math/cmp', {
+  title: 'Comparison', cat: 'Maths', width: 168,
+  desc: 'Compare A against B — pick the operator on the node (equality uses a tiny epsilon)',
+  inputs: [{ name: 'A', type: 'number', default: 0 }, { name: 'B', type: 'number', default: 0 }],
+  outputs: [{ name: 'R', type: 'bool' }],
+  defaults: { mode: '<' },
+  compute: (a, ctx, node) => {
+    const m = node.values.mode || '<', e = 1e-9;
+    let r;
+    if (m === '=') r = Math.abs(a.A - a.B) <= e;
+    else if (m === '≠') r = Math.abs(a.A - a.B) > e;
+    else if (m === '<') r = a.A < a.B;
+    else if (m === '≤') r = a.A <= a.B + e;
+    else if (m === '>') r = a.A > a.B;
+    else r = a.A >= a.B - e;
+    return { R: r };
+  },
+  buildBody: (node, body, changed) => {
+    const seg = _mk('div', 'seg', body);
+    ['=', '≠', '<', '≤', '>', '≥'].forEach(m => {
+      const b = _mk('div', 'seg-b' + ((node.values.mode || '<') === m ? ' on' : ''), seg);
+      b.textContent = m;
+      _cleanClick(b, () => {
+        node.values.mode = m;
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
+defNode('math/logic', {
+  title: 'Logic', cat: 'Maths', width: 168,
+  desc: 'Boolean logic on A and B — pick the operator on the node (not ignores B)',
+  inputs: [{ name: 'A', type: 'bool', default: false }, { name: 'B', type: 'bool', default: false }],
+  outputs: [{ name: 'R', type: 'bool' }],
+  defaults: { mode: 'and' },
+  compute: (a, ctx, node) => {
+    const m = node.values.mode || 'and';
+    if (m === 'not') return { R: !a.A };
+    if (m === 'and') return { R: !!(a.A && a.B) };
+    if (m === 'or') return { R: !!(a.A || a.B) };
+    return { R: !!a.A !== !!a.B };
+  },
+  buildBody: (node, body, changed) => {
+    const seg = _mk('div', 'seg', body);
+    ['and', 'or', 'xor', 'not'].forEach(m => {
+      const b = _mk('div', 'seg-b' + ((node.values.mode || 'and') === m ? ' on' : ''), seg);
+      b.textContent = m;
+      _cleanClick(b, () => {
+        node.values.mode = m;
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
+defNode('math/masadd', {
+  title: 'Mass Addition', cat: 'Maths',
+  desc: 'Sum of all numbers in L, plus the running total at each item — the cumulative sum that turns a list of gaps into a list of positions',
+  inputs: [{ name: 'L', type: 'number' }],
+  outputs: [{ name: 'R', type: 'number', label: 'sum' }, { name: 'P', type: 'number', label: 'partial results' }],
+  listInputs: ['L'],
+  compute: a => {
+    let s = 0; const P = [];
+    for (const v of (a.L || [])) { s += v; P.push(s); }
+    return { R: s, P };
   }
 });
 
@@ -510,6 +600,27 @@ defNode('sets/dispatch', {
     const p = a.P && a.P.length ? a.P : [true], A = [], B = [];
     for (let i = 0; i < (a.L || []).length; i++) (p[i % p.length] ? A : B).push(a.L[i]);
     return { A, B };
+  }
+});
+
+defNode('sets/select', {
+  title: 'Select', cat: 'Sets',
+  desc: 'Merge two lists item by item: where the repeating bool pattern P is true take from T, else from F — the list-level ternary (Dispatch’s inverse)',
+  inputs: [
+    { name: 'T', type: 'any', label: 'if true' },
+    { name: 'F', type: 'any', label: 'if false' },
+    { name: 'P', type: 'bool', default: true, label: 'pattern' }],
+  outputs: [{ name: 'L', type: 'any' }],
+  listInputs: ['T', 'F', 'P'],
+  compute: a => {
+    const T = a.T || [], F = a.F || [], P = (a.P && a.P.length) ? a.P : [true];
+    const n = Math.max(T.length, F.length, P.length);
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const src = P[i % P.length] ? T : F;
+      if (src.length) out.push(src[Math.min(i, src.length - 1)]);
+    }
+    return { L: out };
   }
 });
 
@@ -863,6 +974,61 @@ defNode('disp/bg', {
   compute: (a, ctx) => { ctx.bg = a.C; return {}; }
 });
 
+defNode('disp/measure', {
+  title: 'Measure Text', cat: 'Display',
+  desc: 'Width and height of text T at size S px, plus its bounding rect centred at P — measured by the host with the same font Draw uses',
+  inputs: [
+    { name: 'T', type: 'string', default: 'weft', label: 'text' },
+    { name: 'S', type: 'number', default: 24, label: 'size px' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'rect centre' }],
+  outputs: [
+    { name: 'W', type: 'number', label: 'width' },
+    { name: 'H', type: 'number', label: 'height' },
+    { name: 'G', type: 'geometry', label: 'bounding rect' }],
+  compute: (a, ctx) => {
+    const s = Math.max(0, a.S);
+    const t = String(a.T === undefined ? '' : a.T);
+    const m = ctx.measureText ? ctx.measureText(t, s) : { w: t.length * s * 0.6, h: s * 1.2 };
+    return { W: m.w, H: m.h, G: { kind: 'rect', cx: a.P.x, cy: a.P.y, w: m.w, h: m.h, rot: 0 } };
+  }
+});
+
+defNode('disp/element', {
+  title: 'Element', cat: 'Display', width: 190,
+  desc: 'A real DOM element (link, heading, button…) laid over the canvas filling G’s bounds — real focus and semantics; hover / focus / click flow back as data',
+  inputs: [
+    { name: 'G', type: 'geometry', label: 'placement (fills bounds of G)' },
+    { name: 'T', type: 'string', default: 'a', label: 'tag' },
+    { name: 'C', type: 'string', default: '', label: 'text content' },
+    { name: 'A', type: 'string', default: '', label: 'attributes — k=v, newline or ; separated' }],
+  outputs: [
+    { name: 'H', type: 'bool', label: 'hovering' },
+    { name: 'F', type: 'bool', label: 'focused' },
+    { name: 'D', type: 'bool', label: 'held down' },
+    { name: 'K', type: 'bool', label: 'clicked (trigger)' }],
+  compute: (a, ctx, node) => {
+    if (!a.G) return { H: false, F: false, D: false, K: false };
+    const b = LM.geomBounds(a.G);
+    if (!b) return { H: false, F: false, D: false, K: false };
+    const id = node.id + ':' + (ctx.i || 0);
+    const attrs = {};
+    for (const line of String(a.A || '').split(/[\n;]/)) {
+      const m = /^\s*([\w-]+)\s*=\s*(.*)$/.exec(line);
+      if (m && !/^on/i.test(m[1]) && !/^\s*javascript:/i.test(m[2])) attrs[m[1]] = m[2].trim();
+    }
+    if (ctx.domList) ctx.domList.push({
+      id, kind: 'element', tag: String(a.T || 'div').toLowerCase(),
+      text: String(a.C === undefined ? '' : a.C), attrs, rect: b
+    });
+    const st = (ctx.domState && ctx.domState[id]) || {};
+    const seen = node._seen = node._seen || {};
+    const c = st.clicks || 0;
+    const prev = (id in seen) ? seen[id] : c;
+    seen[id] = c;
+    return { H: !!st.hover, F: !!st.focus, D: !!st.down, K: c > prev };
+  }
+});
+
 /* ============================== STATE ==============================
  * Nodes that remember. Memory lives on node._state keyed by ctx.i (the
  * list-match index) so a list-fed state node is N independent machines.
@@ -979,6 +1145,21 @@ defNode('state/prev', {
   }
 });
 
+defNode('state/delay', {
+  title: 'Delay', cat: 'State', feedback: true,
+  desc: 'V from the previous frame — contributes no edge to the evaluation order, so wiring through it makes a feedback loop legal (layout → hover → layout)',
+  inputs: [
+    { name: 'V', type: 'any' },
+    { name: 'I', type: 'any', default: 0, label: 'initial value (first frame)' }],
+  outputs: [{ name: 'V', type: 'any', label: 'V last frame' }],
+  listInputs: ['V', 'I'],
+  compute: (a, ctx, node) => {
+    const p = node._fbIns;
+    if (p && p.V && p.V.length) return { V: p.V };
+    return { V: (a.I && a.I.length) ? a.I : [] };
+  }
+});
+
 defNode('state/edge', {
   title: 'Edge', cat: 'State', desc: 'Turns a continuous bool into triggers: R fires when B rises, F when it falls',
   inputs: [{ name: 'B', type: 'bool', default: false }],
@@ -993,6 +1174,55 @@ defNode('state/edge', {
   }
 });
 
+/* ============================== META ==============================
+ * Composition. A cluster is a subgraph folded into one node: its inner graph
+ * lives in values.graph, its ports in values.ins / values.outs (def.dynamic —
+ * the engine reads ports from the node). Port In / Port Out nodes mark the
+ * boundary inside; the cluster's compute evaluates the inner graph with the
+ * same LM through ctx.defs (supplied by both hosts). Nestable by construction.
+ */
+
+defNode('meta/cluster', {
+  title: 'Cluster', cat: 'Meta', dynamic: true, hidden: true,
+  desc: 'A subgraph folded into one node — select nodes and choose “Collapse to cluster”; its ports are the wires that crossed the selection edge',
+  inputs: [], outputs: [],
+  defaults: { title: 'cluster', ins: [], outs: [], graph: { nodes: [], wires: [] } },
+  compute: (a, ctx, node) => {
+    const v = node.values || {};
+    if (!node._sub) node._sub = JSON.parse(JSON.stringify(v.graph || { nodes: [], wires: [] }));
+    if (!ctx.defs) return {};
+    const c2 = {
+      t: ctx.t, dt: ctx.dt, frame: ctx.frame, mouse: ctx.mouse, keys: ctx.keys, scroll: ctx.scroll,
+      W: ctx.W, H: ctx.H, measureText: ctx.measureText, defs: ctx.defs,
+      drawList: ctx.drawList, domList: ctx.domList, domState: ctx.domState,
+      bg: null, errors: {}, out: {}, clusterIns: a, clusterOuts: {}
+    };
+    LM.evaluateGraph(node._sub, ctx.defs, c2);
+    if (c2.bg) ctx.bg = c2.bg;
+    for (const k in c2.errors) throw new Error('inside ' + k + ': ' + c2.errors[k]);
+    const r = {};
+    for (const o of v.outs || []) r[o.name] = c2.clusterOuts[o.name] || [];
+    return r;
+  }
+});
+
+defNode('meta/portin', {
+  title: 'Port In', cat: 'Meta', hidden: true,
+  desc: 'Inside a cluster: emits whatever list arrives at the cluster input port it is named after',
+  inputs: [], outputs: [{ name: 'V', type: 'any' }],
+  defaults: { port: 'A' },
+  compute: (a, ctx, node) => ({ V: (ctx.clusterIns && ctx.clusterIns[node.values.port]) || [] })
+});
+
+defNode('meta/portout', {
+  title: 'Port Out', cat: 'Meta', hidden: true,
+  desc: 'Inside a cluster: whatever arrives here leaves the cluster through the output port it is named after',
+  inputs: [{ name: 'V', type: 'any' }], outputs: [],
+  listInputs: ['V'],
+  defaults: { port: 'A' },
+  compute: (a, ctx, node) => { if (ctx.clusterOuts) ctx.clusterOuts[node.values.port] = a.V || []; return {}; }
+});
+
 /* ---- palette grouping (cluster related nodes) + compact styling ---- */
 (function () {
   const groups = {
@@ -1001,23 +1231,24 @@ defNode('state/edge', {
     'input/hotspot': 2, 'input/button': 2, 'input/keyboard': 2, 'input/scroll': 2,
     /* State: 1 motion (followers) · 2 memory · 3 time/triggers */
     'state/smooth': 1, 'state/spring': 1,
-    'state/counter': 2, 'state/latch': 2, 'state/sample': 2, 'state/prev': 2,
+    'state/counter': 2, 'state/latch': 2, 'state/sample': 2, 'state/prev': 2, 'state/delay': 2,
     'state/timer': 3, 'state/edge': 3,
-    /* Maths: 1 arithmetic · 2 trig · 3 rounding/limits · 4 mapping · 5 constants */
-    'math/add': 1, 'math/sub': 1, 'math/mul': 1, 'math/div': 1, 'math/mod': 1, 'math/pow': 1, 'math/sqrt': 1,
+    /* Maths: 1 arithmetic · 2 trig · 3 rounding/limits · 4 mapping · 5 constants · 6 logic */
+    'math/add': 1, 'math/sub': 1, 'math/mul': 1, 'math/div': 1, 'math/mod': 1, 'math/pow': 1, 'math/sqrt': 1, 'math/masadd': 1,
     'math/sin': 2, 'math/cos': 2, 'math/tan': 2, 'math/atan2': 2, 'math/rad': 2, 'math/deg': 2,
     'math/neg': 3, 'math/abs': 3, 'math/round': 3, 'math/floor': 3, 'math/ceil': 3, 'math/min': 3, 'math/max': 3,
     'math/remap': 4, 'math/clamp': 4, 'math/lerp': 4, 'math/smooth': 4, 'math/expr': 4, 'math/noise': 4,
     'math/pi': 5, 'math/phi': 5,
+    'math/cmp': 6, 'math/logic': 6,
     /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
     'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/curve': 0,
-    'params/slider': 1, 'params/toggle': 1, 'params/swatch': 1,
+    'params/slider': 1, 'params/toggle': 1, 'params/swatch': 1, 'params/textlist': 1,
     'params/anchor': 2,
     'params/panel': 3,
     /* Sets: 1 generators · 2 access · 3 list surgery · 4 set operations */
     'sets/series': 1, 'sets/range': 1, 'sets/random': 1,
     'sets/item': 2, 'sets/length': 2,
-    'sets/merge': 3, 'sets/reverse': 3, 'sets/cullpat': 3, 'sets/shift': 3, 'sets/dispatch': 3,
+    'sets/merge': 3, 'sets/reverse': 3, 'sets/cullpat': 3, 'sets/shift': 3, 'sets/dispatch': 3, 'sets/select': 3,
     'sets/union': 4, 'sets/intersection': 4, 'sets/difference': 4,
     /* Vector: 1 points · 2 vectors · 3 measures */
     'vec/construct': 1, 'vec/deconstruct': 1, 'vec/polar': 1,

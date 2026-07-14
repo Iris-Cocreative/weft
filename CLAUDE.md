@@ -76,11 +76,25 @@ Load order (classic scripts, shared globals): engine → nodes → editor → vi
    frame-latched bools in ordinary wires — never callbacks or event subscriptions.
    Cross-frame memory lives on `node._state` keyed by `ctx.i` (per list item) and
    resets on graph load. The ctx input contract (`dt`, `mouse.pressed/released`,
-   `keys`, `scroll`, `domList`/`domState`) is supplied **identically** by
-   `viewport.js` and the export mount — change one, change both, and update the
-   ctx table in NODE-SPEC §6 and smoke's `mkCtx`. Nodes needing real DOM elements
-   declare them via `ctx.domList` and read back `ctx.domState`; only the hosts
-   touch the DOM.
+   `keys`, `scroll`, `domList`/`domState`, `measureText`, `defs`) is supplied
+   **identically** by `viewport.js` and the export mount — change one, change
+   both, and update the ctx table in NODE-SPEC §6 and smoke's `mkCtx`. Nodes
+   needing real DOM elements declare them via `ctx.domList` and read back
+   `ctx.domState`; only the hosts touch the DOM.
+   **The one sanctioned exception to acyclicity** (amended for Phase 3): a def
+   with `feedback: true` (Delay) contributes **no edges** to the topological
+   sort — wiring through it makes a cycle legal. Its compute reads last frame's
+   inputs off `node._fbIns`, which the engine fills after each frame. Don't
+   invent other cycle mechanisms; route feedback through Delay.
+9. **Clusters are ordinary nodes** (`meta/cluster`, `def.dynamic`): ports live in
+   `node.values.ins/outs`, the subgraph in `values.graph`, and the compute runs
+   the inner graph through `ctx.defs` with `meta/portin`/`meta/portout` marking
+   the boundary. The engine, exporter and editor know about `dynamic` ports —
+   nothing else is cluster-aware. Port names share `values` with port literals,
+   so `title`, `ins`, `outs` and `graph` are reserved port names. Runtime state
+   lives on `node._sub` (a copy) — never let underscore fields leak into
+   `values.graph` (they survive JSON as stale strings; see the `_exprSrc` guard
+   in math/expr).
 
 ## Recipe: adding a node
 

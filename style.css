@@ -425,6 +425,21 @@ main { display: flex; flex: 1; min-height: 0; }
 .node.disabled { opacity: 0.45; }
 .node.disabled .node-head { text-decoration: line-through; text-decoration-color: var(--faint); }
 
+/* clusters — a folded subgraph; the stacked-card shadow says "there's more inside" */
+.node.cluster {
+  box-shadow: 3px 5px 0 -1px color-mix(in srgb, var(--dark-300) 75%, var(--cat, #8494ad)),
+    6px 10px 0 -2px color-mix(in srgb, var(--dark-300) 45%, transparent),
+    0 10px 26px rgba(0, 0, 0, 0.4);
+}
+.node.cluster.selected {
+  box-shadow: 3px 5px 0 -1px color-mix(in srgb, var(--dark-300) 75%, var(--cat, #8494ad)),
+    6px 10px 0 -2px color-mix(in srgb, var(--dark-300) 45%, transparent),
+    0 0 7.5px rgba(94, 234, 212, 0.33), 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+.node.cluster .node-head .title[contenteditable="true"] {
+  outline: 1px solid var(--primary); outline-offset: 2px; border-radius: 4px; cursor: text;
+}
+
 /* compact nodes (small unary ops, constants) */
 .node.compact { min-width: 96px; }
 .node.compact .node-head { padding: 3px 8px 3px 4px; gap: 5px; }
@@ -514,6 +529,16 @@ main { display: flex; flex: 1; min-height: 0; }
 }
 .weft-btn:hover { border-color: #5eead4; background: rgba(24, 32, 45, 0.92); }
 .weft-btn:active { transform: translate(-50%, -50%) scale(0.96); background: rgba(94, 234, 212, 0.18); }
+
+/* disp/element — real DOM laid over the cloth where its geometry sits */
+.weft-el {
+  position: absolute; box-sizing: border-box; pointer-events: auto;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0; color: var(--text); text-decoration: none;
+  background: transparent; border: 0; font: 500 14px Inter, system-ui, sans-serif;
+  user-select: none;
+}
+.weft-el:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; border-radius: 6px; }
 
 #viewHud {
   position: absolute; top: 10px; right: 12px; display: flex; gap: 8px; align-items: center;

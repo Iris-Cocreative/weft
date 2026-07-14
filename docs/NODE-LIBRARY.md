@@ -16,14 +16,15 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | Category | Prefix | Role in a patch | Count |
 |---|---|---|---|
 | **Input** | `input/` | The world flowing in — time, pointer, page, keys, interaction surfaces | 7 |
-| **Params** | `params/` | Values a human sets — sliders, toggles, swatches, containers, panels | 9 |
-| **State** | `state/` | Cross-frame memory — smoothing, springs, counters, latches | 8 |
-| **Maths** | `math/` | Numbers in, numbers out — pure, per-item | 28 |
-| **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 13 |
+| **Params** | `params/` | Values a human sets — sliders, toggles, swatches, containers, panels | 10 |
+| **State** | `state/` | Cross-frame memory — smoothing, springs, counters, latches, the Delay feedback edge | 9 |
+| **Maths** | `math/` | Numbers in, numbers out — pure, per-item; comparison & boolean logic | 31 |
+| **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 14 |
 | **Vector** | `vec/` | Points and vectors — position as data | 12 |
 | **Curve** | `crv/` | Geometry construction and interrogation | 10 |
 | **Transform** | `xf/` | Moving geometry — affine maps | 3 |
-| **Display** | `disp/` | Pixels out — draw, text, color, background | 5 |
+| **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM) | 7 |
+| **Meta** | `meta/` | Composition — Cluster and its Port In / Port Out boundary markers (hidden from the palette) | 3 |
 
 A patch reads left to right as: **world & intent → numbers → lists → geometry → pixels**.
 Icons should reinforce that flow (see `DESIGN-PLAN.md`).
@@ -32,39 +33,25 @@ Icons should reinforce that flow (see `DESIGN-PLAN.md`).
 
 ## Planned nodes
 
-### Altitude — harvested from the organic-nav case study, 2026-07-14 *(planned — highest; PLAN phase 3)*
+### Altitude — harvested from the organic-nav case study, 2026-07-14
 
-The nav took 92 nodes. ~20 were `Expression` standing in for logic that should be
-nodes, 6 were Note Pads standing in for a list literal, 6 were sliders standing in
-for text Weft cannot measure. Principle 6 says a bloated patch names a missing
-node — these are the ones it named. See `patches/organic-nav.md`.
+**Shipped in v0.8 (Phase 3):** Comparison `math/cmp` (mode-toggled `= ≠ < ≤ > ≥`),
+Logic `math/logic` (and/or/xor/not), Select `sets/select`, Mass Addition
+`math/masadd` (with partial results), Text List `params/textlist`, Measure Text
+`disp/measure` (host `ctx.measureText`), Delay `state/delay` (the feedback
+edge), plus Element `disp/element` (OUTPUT-MODES mode 2) and the Cluster system.
+The proof is `patches/organic-nav-v2.md`: 92 flat nodes → one 28-node cluster.
 
-- **Comparison** `math/cmp` — A vs B → bool, with a **mode toggle**
-  (`= ≠ < ≤ > ≥`) rather than six nodes (principle 5). Weft has *no* comparison
-  node at all today; every conditional is smuggled through `Expression`.
-- **Boolean logic** `math/logic` — AND / OR / NOT / XOR, mode-toggled. Same story.
-- **Select** `sets/select` — the list-level ternary: pick from A or B per item by
-  a bool pattern. Dispatch's inverse (Dispatch *splits* a list; Select *merges*
-  two). The nav fakes it with `disp/gradient` as a colour mixer, which is a smell.
-- **Mass Addition** `math/masadd` — sum of a list, **with a partial-results
-  output** (cumulative sum). GH ships both. Cumsum is how you turn a list of gaps
-  into a list of positions — i.e. how you lay anything out in a row. The nav
-  dodged it only because exponential smoothing happens to be linear, so
-  `cumsum(smooth(x)) == smooth(cumsum(x))`; that trick will not always be there.
-- **Text List** `params/textlist` — a literal list of strings, one per line, in
-  one node. (Six Note Pads wired into one port is not a language.)
-- **Measure Text** `disp/measure` — string + size → width/height (and a bounding
-  rect). *Pulled forward from the media phase: it blocks all UI work.* No new
-  invariant needed — the **host** supplies `ctx.measureText`, identically in
-  `viewport.js` and the export mount, exactly as `domList`/`domState` already do
-  (invariant #8: only the hosts touch the DOM). Without it every pill in the nav
-  is the same width and long labels overflow.
-- **Delay** `state/delay` — last frame's value; **the node the topological sort is
-  allowed to cut**, making feedback edges legal. Not a convenience: interaction is
-  a feedback loop (layout → hover → layout) and Weft currently refuses cycles
-  outright. `state/prev` cannot substitute — it still contributes an edge.
+Still open from that harvest:
+
 - **Bezier** `crv/bezier` and **Join Curves** `crv/join` — needed once the `path`
   kind lands (phase 5). Until then the nav's necks are circular fillets.
+- **Active-index idiom** — "index of the item whose trigger last fired" costs 6
+  nodes (clicks × indices → Mass Addition → Sample & Hold). Candidate node, but
+  per principle 7 wait for a second patch to pay the same cost before adding it.
+- **Format** `txt/format` (already below) — organic-nav v2 bakes styling into
+  attribute-string literals because there is no string composition; this is now
+  the sharpest missing altitude node.
 
 ### Colour — harvested from the GH demo corpus, James 2026-07-13 *(planned — high)*
 

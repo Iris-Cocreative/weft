@@ -20,8 +20,11 @@ const Editor = (() => {
 
   const nodeById = id => S.graph.nodes.find(n => n.id === id);
   const defOf = n => NODE_DEFS[n.type];
-  const previewCapable = def => !!def && def.cat !== 'Display' && def.id !== 'params/anchor' &&
-    (def.outputs || []).some(o => o.type === 'geometry' || o.type === 'point');
+  /* dynamic defs (clusters) keep their ports on the node, not the def */
+  const insOf = n => { const d = defOf(n); return d ? ((d.dynamic && n.values && n.values.ins) || d.inputs || []) : []; };
+  const outsOf = n => { const d = defOf(n); return d ? ((d.dynamic && n.values && n.values.outs) || d.outputs || []) : []; };
+  const previewCapable = (def, n) => !!def && def.cat !== 'Display' && def.id !== 'params/anchor' &&
+    ((def.dynamic && n ? (n.values.outs || []) : def.outputs) || []).some(o => o.type === 'geometry' || o.type === 'point');
 
   function worldPos(e) {
     const r = editorEl.getBoundingClientRect();
@@ -84,6 +87,10 @@ const Editor = (() => {
   }
 
   function wouldCycle(srcId, dstId) {
+    // wires into a feedback node (Delay) are cut from the evaluation order —
+    // they can never close a cycle, so routing through one legalises a loop
+    const cutsEdge = id => { const n = nodeById(id); const d = n && defOf(n); return !!(d && d.feedback); };
+    if (cutsEdge(dstId)) return false;
     if (srcId === dstId) return true;
     const stack = [dstId], seen = new Set();
     while (stack.length) {
@@ -91,7 +98,7 @@ const Editor = (() => {
       if (x === srcId) return true;
       if (seen.has(x)) continue;
       seen.add(x);
-      for (const w of S.graph.wires) if (w.from[0] === x) stack.push(w.to[0]);
+      for (const w of S.graph.wires) if (w.from[0] === x && !cutsEdge(w.to[0])) stack.push(w.to[0]);
     }
     return false;
   }
@@ -140,14 +147,36 @@ const Editor = (() => {
 
     el.style.setProperty('--cat', CATS[def.cat] || '#888');
     if (def.bare) el.classList.add('bare');
+    if (def.dynamic) el.classList.add('cluster');
 
     if (!def.bare) {
       const head = document.createElement('div');
       head.className = 'node-head';
       const icon = weftIconSVG(def.id, def.cat);
-      head.innerHTML = `<span class="icon">${icon || '<span class="dot"></span>'}</span><span class="title">${def.title}</span><span class="head-gap"></span>`;
-      head.title = def.desc || '';
-      if (previewCapable(def)) {
+      const title = (def.dynamic && n.values && n.values.title) || def.title;
+      head.innerHTML = `<span class="icon">${icon || '<span class="dot"></span>'}</span><span class="title">${title}</span><span class="head-gap"></span>`;
+      head.title = def.dynamic ? 'double-click the name to rename' : (def.desc || '');
+      if (def.dynamic) {
+        const tEl = head.querySelector('.title');
+        tEl.addEventListener('dblclick', e => {
+          e.stopPropagation();
+          tEl.contentEditable = 'true';
+          tEl.focus();
+          document.getSelection().selectAllChildren(tEl);
+          const commit = () => {
+            tEl.contentEditable = 'false';
+            const t = tEl.textContent.trim() || def.title;
+            tEl.textContent = t;
+            if (n.values.title !== t) { n.values.title = t; changed(); }
+          };
+          tEl.addEventListener('blur', commit, { once: true });
+          tEl.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter') { ev.preventDefault(); tEl.blur(); }
+            if (ev.key === 'Escape') { tEl.textContent = n.values.title || def.title; tEl.blur(); }
+          });
+        });
+      }
+      if (previewCapable(def, n)) {
         const pt = document.createElement('span');
         pt.className = 'prev-toggle';
         pt.title = 'toggle geometry preview';
@@ -184,7 +213,7 @@ const Editor = (() => {
 
     const insCol = document.createElement('div');
     insCol.className = 'col-ins';
-    for (const inp of def.inputs || []) {
+    for (const inp of insOf(n)) {
       const row = document.createElement('div');
       row.className = 'row in';
       row.dataset.input = inp.name;
@@ -199,7 +228,7 @@ const Editor = (() => {
 
     const outsCol = document.createElement('div');
     outsCol.className = 'col-outs';
-    for (const o of def.outputs || []) {
+    for (const o of outsOf(n)) {
       const row = document.createElement('div');
       row.className = 'row out';
       row.innerHTML = `<span class="rd" data-port="${o.name}"></span><span class="label">${o.name}</span><span class="port" data-node="${n.id}" data-dir="out" data-port="${o.name}" style="--t:${TYPE_COLORS[o.type] || '#999'}" title="${(o.label || o.name)} · ${o.type}"></span>`;
@@ -301,8 +330,7 @@ const Editor = (() => {
 
   function outputTypeColor(from) {
     const n = nodeById(from[0]);
-    const def = n && defOf(n);
-    const o = def && (def.outputs || []).find(o => o.name === from[1]);
+    const o = n && outsOf(n).find(o => o.name === from[1]);
     return o ? (TYPE_COLORS[o.type] || '#999') : '#999';
   }
 
@@ -555,7 +583,7 @@ const Editor = (() => {
     e.preventDefault();
     const r = editorEl.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
-    const z2 = LM.clamp(S.zoom * Math.exp(-e.deltaY * 0.0012), 0.25, 2.5);
+    const z2 = LM.clamp(S.zoom * Math.exp(-e.deltaY * 0.0012), 0.08, 2.5);
     S.pan.x = mx - (mx - S.pan.x) * (z2 / S.zoom);
     S.pan.y = my - (my - S.pan.y) * (z2 / S.zoom);
     S.zoom = z2;
@@ -570,6 +598,14 @@ const Editor = (() => {
     else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       duplicateSelection();
+    }
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      collapseSelection();
+    }
+    else if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'f' || e.key === 'F' || e.key === 'Home')) {
+      e.preventDefault();
+      zoomToFit(e.key !== 'Home' && S.sel.size > 0);
     }
   }
 
@@ -593,6 +629,7 @@ const Editor = (() => {
   function renderQA(q) {
     q = q.toLowerCase();
     qaItems = Object.values(NODE_DEFS)
+      .filter(d => !d.hidden)
       .filter(d => !q || d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q) || d.id.includes(q))
       .sort((a, b) => a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
       .slice(0, 60);
@@ -773,6 +810,184 @@ const Editor = (() => {
     });
   }
 
+  /* ------------------------------ clusters ------------------------------
+   * Collapse: the selected subgraph moves into one cluster node's values.graph;
+   * every wire that crossed the selection edge becomes a promoted port, marked
+   * inside by a Port In / Port Out node. Expand reverses it. The engine knows
+   * nothing about any of this — a cluster is just a node whose compute runs its
+   * inner graph (see meta/cluster in nodes.js). Nesting falls out for free.
+   */
+
+  function cleanNodeCopy(n) {
+    const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: JSON.parse(JSON.stringify(n.values || {})) };
+    if (n.enabled === false) o.enabled = false;
+    if (n.preview === false) o.preview = false;
+    return o;
+  }
+
+  function collapseSelection() {
+    if (S.sel.size < 2) { App.flash('select at least two nodes to collapse'); return; }
+    const ids = new Set(S.sel);
+    const inner = S.graph.nodes.filter(n => ids.has(n.id)).map(cleanNodeCopy);
+    const innerWires = S.graph.wires.filter(w => ids.has(w.from[0]) && ids.has(w.to[0]))
+      .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
+    const inWs = S.graph.wires.filter(w => !ids.has(w.from[0]) && ids.has(w.to[0]));
+    const outWs = S.graph.wires.filter(w => ids.has(w.from[0]) && !ids.has(w.to[0]));
+
+    const portTypeIn = (nid, port) => { const n = nodeById(nid); const p = n && insOf(n).find(i => i.name === port); return p ? p.type : 'any'; };
+    const portTypeOut = (nid, port) => { const n = nodeById(nid); const p = n && outsOf(n).find(o => o.name === port); return p ? p.type : 'any'; };
+    const mkNamer = () => { const used = new Set(); return base => { let nm = base, k = 2; while (used.has(nm)) nm = base + (k++); used.add(nm); return nm; }; };
+
+    // promoted inputs: one port per inner (node, input) that an outside wire reaches
+    const nameIn = mkNamer(), nameOut = mkNamer();
+    const insMap = new Map(), clusterIns = [], portNodes = [];
+    for (const w of inWs) {
+      const key = w.to[0] + ':' + w.to[1];
+      if (insMap.has(key)) continue;
+      const tn = nodeById(w.to[0]);
+      const name = nameIn(w.to[1]);
+      insMap.set(key, name);
+      clusterIns.push({ name, type: portTypeIn(w.to[0], w.to[1]) });
+      const pn = { id: 'pin_' + name, type: 'meta/portin', x: tn.x - 170, y: tn.y, values: { port: name } };
+      portNodes.push(pn);
+      innerWires.push({ from: [pn.id, 'V'], to: [w.to[0], w.to[1]] });
+    }
+    // promoted outputs: one port per inner (node, output) that feeds outside
+    const outsMap = new Map(), clusterOuts = [];
+    for (const w of outWs) {
+      const key = w.from[0] + ':' + w.from[1];
+      if (outsMap.has(key)) continue;
+      const fn = nodeById(w.from[0]);
+      const name = nameOut(w.from[1]);
+      outsMap.set(key, name);
+      clusterOuts.push({ name, type: portTypeOut(w.from[0], w.from[1]) });
+      const el = S.els.get(w.from[0]);
+      const pn = { id: 'pout_' + name, type: 'meta/portout', x: fn.x + (el ? el.offsetWidth : 140) + 60, y: fn.y, values: { port: name } };
+      portNodes.push(pn);
+      innerWires.push({ from: [w.from[0], w.from[1]], to: [pn.id, 'V'] });
+    }
+
+    // normalize inner coordinates
+    const allInner = inner.concat(portNodes);
+    let mx = Infinity, my = Infinity;
+    for (const n of allInner) { mx = Math.min(mx, n.x); my = Math.min(my, n.y); }
+    for (const n of allInner) { n.x = Math.round(n.x - mx + 60); n.y = Math.round(n.y - my + 60); }
+
+    // the cluster node sits where the selection's top-left was
+    const cn = {
+      id: nextId(), type: 'meta/cluster', x: Math.round(mx), y: Math.round(my),
+      values: {
+        title: 'cluster', ins: clusterIns, outs: clusterOuts,
+        graph: { nodes: allInner, wires: innerWires }
+      }
+    };
+
+    // swap: selection out, cluster in, crossing wires rerouted to its ports
+    S.graph.wires = S.graph.wires.filter(w => !ids.has(w.from[0]) && !ids.has(w.to[0]));
+    S.graph.nodes = S.graph.nodes.filter(n => !ids.has(n.id));
+    for (const id of ids) {
+      const el = S.els.get(id);
+      if (el) el.remove();
+      S.els.delete(id); S.lastErr.delete(id);
+    }
+    S.graph.nodes.push(cn);
+    buildNode(cn);
+    for (const w of inWs) S.graph.wires.push({ id: 'w' + (S.widc++), from: w.from.slice(), to: [cn.id, insMap.get(w.to[0] + ':' + w.to[1])] });
+    for (const w of outWs) S.graph.wires.push({ id: 'w' + (S.widc++), from: [cn.id, outsMap.get(w.from[0] + ':' + w.from[1])], to: w.to.slice() });
+
+    selectOnly(cn.id);
+    refreshAllLiterals();
+    drawWires();
+    changed();
+    App.flash('collapsed ' + inner.length + ' nodes into a cluster — double-click the name to rename');
+  }
+
+  function expandCluster(id) {
+    const cn = nodeById(id);
+    if (!cn || cn.type !== 'meta/cluster') return;
+    const v = cn.values || {};
+    const g = v.graph || { nodes: [], wires: [] };
+    const innerNodes = (g.nodes || []).filter(n => n.type !== 'meta/portin' && n.type !== 'meta/portout');
+    const portIn = {}, portOut = {};
+    for (const n of g.nodes || []) {
+      if (n.type === 'meta/portin') portIn[n.id] = n.values && n.values.port;
+      if (n.type === 'meta/portout') portOut[n.id] = n.values && n.values.port;
+    }
+
+    // re-base inner coords at the cluster's position
+    let mx = Infinity, my = Infinity;
+    for (const n of innerNodes) { mx = Math.min(mx, n.x || 0); my = Math.min(my, n.y || 0); }
+    if (!isFinite(mx)) { mx = 0; my = 0; }
+
+    const idMap = {}, newIds = [];
+    for (const src of innerNodes) {
+      const n = cleanNodeCopy(src);
+      n.id = nextId();
+      n.x = Math.round(cn.x + (src.x || 0) - mx);
+      n.y = Math.round(cn.y + (src.y || 0) - my);
+      idMap[src.id] = n.id;
+      S.graph.nodes.push(n);
+      buildNode(n);
+      newIds.push(n.id);
+    }
+    const insFan = {}, outSrc = {};
+    for (const w of g.wires || []) {
+      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) continue;
+      if (portIn[w.from[0]] !== undefined) {
+        const p = portIn[w.from[0]];
+        (insFan[p] = insFan[p] || []).push([idMap[w.to[0]], w.to[1]]);
+      } else if (portOut[w.to[0]] !== undefined) {
+        const p = portOut[w.to[0]];
+        (outSrc[p] = outSrc[p] || []).push([idMap[w.from[0]], w.from[1]]);
+      } else if (idMap[w.from[0]] && idMap[w.to[0]]) {
+        S.graph.wires.push({ id: 'w' + (S.widc++), from: [idMap[w.from[0]], w.from[1]], to: [idMap[w.to[0]], w.to[1]] });
+      }
+    }
+    // reroute the outside wires the cluster's ports carried
+    const outerIn = S.graph.wires.filter(w => w.to[0] === cn.id);
+    const outerOut = S.graph.wires.filter(w => w.from[0] === cn.id);
+    S.graph.wires = S.graph.wires.filter(w => w.from[0] !== cn.id && w.to[0] !== cn.id);
+    for (const w of outerIn) for (const t of insFan[w.to[1]] || []) {
+      if (t[0]) S.graph.wires.push({ id: 'w' + (S.widc++), from: w.from.slice(), to: t.slice() });
+    }
+    for (const w of outerOut) for (const s of outSrc[w.from[1]] || []) {
+      if (s[0]) S.graph.wires.push({ id: 'w' + (S.widc++), from: s.slice(), to: w.to.slice() });
+    }
+    const i = S.graph.nodes.findIndex(n => n.id === cn.id);
+    if (i >= 0) S.graph.nodes.splice(i, 1);
+    const el = S.els.get(cn.id);
+    if (el) el.remove();
+    S.els.delete(cn.id); S.lastErr.delete(cn.id);
+
+    S.sel = new Set(newIds); S.selWire = null;
+    updateSelection();
+    refreshAllLiterals();
+    drawWires();
+    changed();
+    App.flash('cluster expanded — ' + newIds.length + ' node(s)');
+  }
+
+  /* ------------------------------ zoom to fit ------------------------------ */
+
+  function zoomToFit(onlySelection) {
+    const nodes = S.graph.nodes.filter(n => !onlySelection || S.sel.has(n.id));
+    if (!nodes.length) return;
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const n of nodes) {
+      const el = S.els.get(n.id);
+      x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
+      x1 = Math.max(x1, n.x + (el ? el.offsetWidth : 140));
+      y1 = Math.max(y1, n.y + (el ? el.offsetHeight : 90));
+    }
+    const r = editorEl.getBoundingClientRect();
+    const m = 70;
+    S.zoom = LM.clamp(Math.min((r.width - m * 2) / Math.max(1, x1 - x0), (r.height - m * 2) / Math.max(1, y1 - y0), 1.1), 0.08, 2.5);
+    S.pan.x = r.width / 2 - (x0 + x1) / 2 * S.zoom;
+    S.pan.y = r.height / 2 - (y0 + y1) / 2 * S.zoom;
+    applyTransform();
+    drawWires();
+  }
+
   /* ------------------------------ context menu ------------------------------ */
 
   function openCtx(e, nodeId) {
@@ -786,8 +1001,10 @@ const Editor = (() => {
     const many = S.sel.has(nodeId) && S.sel.size > 1;
     ctxEl.innerHTML = `
       <div class="ctx-item" data-act="dup">Duplicate${many ? ' (' + S.sel.size + ')' : ''}</div>
+      ${many ? `<div class="ctx-item" data-act="collapse">Collapse to cluster (${S.sel.size})</div>` : ''}
+      ${n.type === 'meta/cluster' ? `<div class="ctx-item" data-act="expand">Expand cluster</div>` : ''}
       <div class="ctx-item" data-act="able">${n.enabled === false ? 'Enable' : 'Disable (pass through)'}</div>
-      ${previewCapable(def) ? `<div class="ctx-item" data-act="prev">${n.preview === false ? 'Preview on' : 'Preview off'}</div>` : ''}
+      ${previewCapable(def, n) ? `<div class="ctx-item" data-act="prev">${n.preview === false ? 'Preview on' : 'Preview off'}</div>` : ''}
       <div class="ctx-item danger" data-act="del">Delete${many ? ' (' + S.sel.size + ')' : ''}</div>`;
     ctxEl.onpointerdown = ev => {
       ev.stopPropagation();
@@ -796,6 +1013,8 @@ const Editor = (() => {
         if (!S.sel.has(nodeId)) selectOnly(nodeId);
         duplicateSelection();
       }
+      if (act === 'collapse') collapseSelection();
+      if (act === 'expand') expandCluster(nodeId);
       if (act === 'able') {
         n.enabled = n.enabled === false ? true : false;
         const el = S.els.get(nodeId);
@@ -922,6 +1141,8 @@ const Editor = (() => {
 
     deleteSelection,
     duplicateSelection,
+    collapseSelection,
+    zoomToFit,
 
     get graph() { return S.graph; }
   };

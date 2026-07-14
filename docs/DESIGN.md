@@ -49,6 +49,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | Curve | `#fbac00` |
 | Transform | `#ff6767` |
 | Display | `#f009fc` |
+| Meta | `#8494ad` *(provisional slate — not yet through Figma; clusters also stack a card-shadow to say "there's more inside")* |
 
 ### Type colours (`Line Types/*`, → `TYPE_COLORS` in nodes.js — ports AND wires)
 

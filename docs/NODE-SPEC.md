@@ -146,8 +146,11 @@ The evaluation context `ctx` provides:
 | `scroll` | `{y, max, v}` — scroll offset px, max scrollable px, velocity px/s (real page in exports; the editor simulates a 3000px page — wheel over the cloth) |
 | `W`, `H` | canvas size in px |
 | `drawList` | render items pushed by Draw nodes: `{geom, stroke, fill, width}` |
-| `domList` | real-DOM-element requests pushed by nodes (Button): `{id, kind, label, x, y}` — the host reconciles actual elements |
-| `domState` | host-owned persistent map: element id → `{down, clicks}` |
+| `domList` | real-DOM-element requests pushed by nodes: Button `{id, kind:'button', label, x, y}` · Element `{id, kind:'element', tag, text, attrs, rect}` — the host reconciles actual elements |
+| `domState` | host-owned persistent map: element id → `{hover, focus, down, clicks}` |
+| `measureText` | `(text, sizePx) → {w, h}` — host-measured with the same font Draw uses (`h` is a deterministic `size × 1.2` line box) |
+| `defs` | the node-definition table (used by clusters to evaluate their inner graph) |
+| `clusterIns` / `clusterOuts` | inside a cluster's inner graph only: the port lists flowing across the boundary (read by Port In, written by Port Out) |
 | `bg` | background color set by a Background node |
 | `errors` | nodeId → message (cycle, thrown compute, unknown type) |
 
@@ -169,6 +172,26 @@ Previous Value, Edge) remember across frames on `node._state`, keyed by
 (three circles through one Hotspot and one Latch = three independent
 toggles). State is never serialized: loading a graph resets it.
 
+### Feedback loops (Delay)
+
+Cycles are invalid **except through Delay** (`state/delay`). A feedback def
+contributes no edges to the evaluation order: it emits last frame's input list
+(the engine captures it after each frame), so `layout → hover → layout` is
+wired as `… → Delay → …` and costs exactly one frame of latency. Any cycle not
+passing through a Delay is still refused.
+
+### Clusters
+
+A cluster (`meta/cluster`) is a subgraph folded into one node. Its ports live
+on the node (`values.ins` / `values.outs`, arrays of `{name, type}`), its
+subgraph in `values.graph`, its display name in `values.title`; a literal for
+an unwired port is stored under the port's name — so `title`, `ins`, `outs`
+and `graph` are **reserved port names**. Inside the subgraph, `meta/portin` /
+`meta/portout` nodes (with `values.port` naming the port) mark the boundary.
+Clusters nest, export, and receive whole lists on every input. In the editor:
+select nodes → right-click → *Collapse to cluster* (or Ctrl+G); right-click a
+cluster → *Expand cluster*; double-click its name to rename.
+
 Full design rationale: `EVENTS-AND-STATE.md`.
 
 ## 7. Node definition contract (for node authors)
@@ -182,6 +205,9 @@ defNode('cat/name', {
   outputs: [{ name: 'R', type: 'number' }],
   listInputs: [],             // inputs that take the whole list
   defaults: {},               // initial node.values (non-port state)
+  feedback: false,            // true = contributes no eval-order edges; reads node._fbIns (Delay)
+  dynamic: false,             // true = ports live on node.values.ins/outs (clusters)
+  hidden: false,              // true = omitted from palette & quick-add (cluster machinery)
   compute: (a, ctx, node) => ({ R: a.A }),   // PURE — see rules
   buildBody: (node, el, changed) => {},      // editor-only, optional
   postEval:  (node, el, ctx) => {}           // editor-only, optional

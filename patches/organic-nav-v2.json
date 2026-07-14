@@ -1,0 +1,1604 @@
+{
+ "format": 1,
+ "nodes": [
+  {
+   "id": "n1",
+   "type": "params/textlist",
+   "x": 60,
+   "y": 80,
+   "values": {
+    "text": "HOME\nDISCOVER\nGATHER\nCOCREATE\nSTEWARD\nJOIN"
+   }
+  },
+  {
+   "id": "n2",
+   "type": "meta/cluster",
+   "x": 340,
+   "y": 60,
+   "values": {
+    "title": "Organic Nav",
+    "ins": [
+     {
+      "name": "IT",
+      "type": "string"
+     },
+     {
+      "name": "G",
+      "type": "number"
+     },
+     {
+      "name": "SP",
+      "type": "number"
+     },
+     {
+      "name": "H",
+      "type": "number"
+     },
+     {
+      "name": "TS",
+      "type": "number"
+     },
+     {
+      "name": "CS",
+      "type": "color"
+     },
+     {
+      "name": "BG",
+      "type": "color"
+     }
+    ],
+    "outs": [
+     {
+      "name": "A",
+      "type": "number"
+     }
+    ],
+    "graph": {
+     "nodes": [
+      {
+       "id": "p_IT",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 60,
+       "values": {
+        "port": "IT"
+       }
+      },
+      {
+       "id": "p_G",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 200,
+       "values": {
+        "port": "G"
+       }
+      },
+      {
+       "id": "p_SP",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 340,
+       "values": {
+        "port": "SP"
+       }
+      },
+      {
+       "id": "p_H",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 480,
+       "values": {
+        "port": "H"
+       }
+      },
+      {
+       "id": "p_TS",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 620,
+       "values": {
+        "port": "TS"
+       }
+      },
+      {
+       "id": "p_CS",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 760,
+       "values": {
+        "port": "CS"
+       }
+      },
+      {
+       "id": "p_BG",
+       "type": "meta/portin",
+       "x": 60,
+       "y": 900,
+       "values": {
+        "port": "BG"
+       }
+      },
+      {
+       "id": "len",
+       "type": "sets/length",
+       "x": 295,
+       "y": 60,
+       "values": {}
+      },
+      {
+       "id": "ser",
+       "type": "sets/series",
+       "x": 530,
+       "y": 60,
+       "values": {
+        "S": 0,
+        "N": 1
+       }
+      },
+      {
+       "id": "meas",
+       "type": "disp/measure",
+       "x": 295,
+       "y": 200,
+       "values": {}
+      },
+      {
+       "id": "wpad",
+       "type": "math/add",
+       "x": 530,
+       "y": 200,
+       "values": {}
+      },
+      {
+       "id": "gs",
+       "type": "math/add",
+       "x": 295,
+       "y": 340,
+       "values": {}
+      },
+      {
+       "id": "shift",
+       "type": "sets/shift",
+       "x": 530,
+       "y": 340,
+       "values": {
+        "S": -1,
+        "W": true
+       }
+      },
+      {
+       "id": "orH",
+       "type": "math/logic",
+       "x": 765,
+       "y": 60,
+       "values": {
+        "mode": "or"
+       }
+      },
+      {
+       "id": "gsel",
+       "type": "sets/select",
+       "x": 1000,
+       "y": 60,
+       "values": {}
+      },
+      {
+       "id": "mask",
+       "type": "math/cmp",
+       "x": 765,
+       "y": 200,
+       "values": {
+        "mode": ">",
+        "B": 0
+       }
+      },
+      {
+       "id": "gm",
+       "type": "math/mul",
+       "x": 1235,
+       "y": 60,
+       "values": {}
+      },
+      {
+       "id": "L",
+       "type": "math/add",
+       "x": 1470,
+       "y": 60,
+       "values": {}
+      },
+      {
+       "id": "mas",
+       "type": "math/masadd",
+       "x": 1705,
+       "y": 60,
+       "values": {}
+      },
+      {
+       "id": "E1",
+       "type": "math/expr",
+       "x": 1940,
+       "y": 60,
+       "values": {
+        "expr": "X - Y + Z"
+       }
+      },
+      {
+       "id": "E2",
+       "type": "math/expr",
+       "x": 2175,
+       "y": 60,
+       "values": {
+        "expr": "X + Y/2 - Z/2"
+       }
+      },
+      {
+       "id": "sm",
+       "type": "state/smooth",
+       "x": 2410,
+       "y": 60,
+       "values": {
+        "S": 10
+       }
+      },
+      {
+       "id": "pc",
+       "type": "vec/construct",
+       "x": 2645,
+       "y": 60,
+       "values": {
+        "Y": 0
+       }
+      },
+      {
+       "id": "hr",
+       "type": "crv/rect",
+       "x": 2880,
+       "y": 60,
+       "values": {
+        "A": 0
+       }
+      },
+      {
+       "id": "dl",
+       "type": "state/delay",
+       "x": 60,
+       "y": 1040,
+       "values": {}
+      },
+      {
+       "id": "el",
+       "type": "disp/element",
+       "x": 295,
+       "y": 480,
+       "values": {
+        "T": "a"
+       }
+      },
+      {
+       "id": "attrsel",
+       "type": "sets/select",
+       "x": 1705,
+       "y": 200,
+       "values": {
+        "T": "href=#;aria-current=page;style=color:#0d9488;font-weight:650;font-size:15px;letter-spacing:0.02em",
+        "F": "href=#;style=color:#3a4661;font-weight:500;font-size:15px;letter-spacing:0.02em"
+       }
+      },
+      {
+       "id": "dl2",
+       "type": "state/delay",
+       "x": 60,
+       "y": 1180,
+       "values": {
+        "I": "href=#;style=color:#3a4661;font-weight:500;font-size:15px;letter-spacing:0.02em"
+       }
+      },
+      {
+       "id": "idxmul",
+       "type": "math/mul",
+       "x": 765,
+       "y": 340,
+       "values": {}
+      },
+      {
+       "id": "masI",
+       "type": "math/masadd",
+       "x": 1000,
+       "y": 200,
+       "values": {}
+      },
+      {
+       "id": "masC",
+       "type": "math/masadd",
+       "x": 530,
+       "y": 480,
+       "values": {}
+      },
+      {
+       "id": "trig",
+       "type": "math/cmp",
+       "x": 765,
+       "y": 480,
+       "values": {
+        "mode": ">",
+        "B": 0
+       }
+      },
+      {
+       "id": "act",
+       "type": "state/sample",
+       "x": 1235,
+       "y": 200,
+       "values": {}
+      },
+      {
+       "id": "actcmp",
+       "type": "math/cmp",
+       "x": 1470,
+       "y": 200,
+       "values": {
+        "mode": "="
+       }
+      },
+      {
+       "id": "cap",
+       "type": "meta/cluster",
+       "x": 2175,
+       "y": 200,
+       "values": {
+        "title": "Capsule Bar",
+        "ins": [
+         {
+          "name": "S",
+          "type": "number"
+         },
+         {
+          "name": "G",
+          "type": "number"
+         },
+         {
+          "name": "W",
+          "type": "number"
+         },
+         {
+          "name": "T",
+          "type": "number"
+         },
+         {
+          "name": "H",
+          "type": "number"
+         },
+         {
+          "name": "C",
+          "type": "color"
+         },
+         {
+          "name": "B",
+          "type": "color"
+         }
+        ],
+        "outs": [],
+        "graph": {
+         "nodes": [
+          {
+           "id": "q_S",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 60,
+           "values": {
+            "port": "S"
+           }
+          },
+          {
+           "id": "q_G",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 190,
+           "values": {
+            "port": "G"
+           }
+          },
+          {
+           "id": "q_W",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 320,
+           "values": {
+            "port": "W"
+           }
+          },
+          {
+           "id": "q_T",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 450,
+           "values": {
+            "port": "T"
+           }
+          },
+          {
+           "id": "q_H",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 580,
+           "values": {
+            "port": "H"
+           }
+          },
+          {
+           "id": "q_C",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 710,
+           "values": {
+            "port": "C"
+           }
+          },
+          {
+           "id": "q_B",
+           "type": "meta/portin",
+           "x": 60,
+           "y": 840,
+           "values": {
+            "port": "B"
+           }
+          },
+          {
+           "id": "bgn",
+           "type": "disp/bg",
+           "x": 280,
+           "y": 60,
+           "values": {}
+          },
+          {
+           "id": "bsub",
+           "type": "math/sub",
+           "x": 280,
+           "y": 190,
+           "values": {}
+          },
+          {
+           "id": "brect",
+           "type": "crv/rect",
+           "x": 500,
+           "y": 60,
+           "values": {
+            "P": {
+             "x": 0,
+             "y": 0
+            },
+            "A": 0
+           }
+          },
+          {
+           "id": "capx",
+           "type": "math/expr",
+           "x": 280,
+           "y": 320,
+           "values": {
+            "expr": "(X - Y)/2"
+           }
+          },
+          {
+           "id": "capxn",
+           "type": "math/neg",
+           "x": 500,
+           "y": 190,
+           "values": {}
+          },
+          {
+           "id": "cappt",
+           "type": "vec/construct",
+           "x": 720,
+           "y": 60,
+           "values": {
+            "Y": 0
+           }
+          },
+          {
+           "id": "capr",
+           "type": "math/mul",
+           "x": 280,
+           "y": 450,
+           "values": {
+            "B": 0.5
+           }
+          },
+          {
+           "id": "capc",
+           "type": "crv/circle",
+           "x": 940,
+           "y": 60,
+           "values": {}
+          },
+          {
+           "id": "gmask",
+           "type": "math/cmp",
+           "x": 280,
+           "y": 580,
+           "values": {
+            "mode": ">",
+            "B": 0
+           }
+          },
+          {
+           "id": "gapcx",
+           "type": "math/expr",
+           "x": 280,
+           "y": 710,
+           "values": {
+            "expr": "X - Y/2"
+           }
+          },
+          {
+           "id": "rr",
+           "type": "math/expr",
+           "x": 280,
+           "y": 840,
+           "values": {
+            "expr": "3*pow(X/2,2)/(2*Y) + Y/6"
+           }
+          },
+          {
+           "id": "rm",
+           "type": "math/mul",
+           "x": 500,
+           "y": 320,
+           "values": {}
+          },
+          {
+           "id": "cy",
+           "type": "math/expr",
+           "x": 720,
+           "y": 190,
+           "values": {
+            "expr": "X + Y/6"
+           }
+          },
+          {
+           "id": "cyn",
+           "type": "math/neg",
+           "x": 940,
+           "y": 190,
+           "values": {}
+          },
+          {
+           "id": "ct",
+           "type": "vec/construct",
+           "x": 940,
+           "y": 320,
+           "values": {}
+          },
+          {
+           "id": "cb",
+           "type": "vec/construct",
+           "x": 1160,
+           "y": 60,
+           "values": {}
+          },
+          {
+           "id": "cct",
+           "type": "crv/circle",
+           "x": 1160,
+           "y": 190,
+           "values": {}
+          },
+          {
+           "id": "ccb",
+           "type": "crv/circle",
+           "x": 1380,
+           "y": 60,
+           "values": {}
+          },
+          {
+           "id": "dshape",
+           "type": "disp/draw",
+           "x": 1160,
+           "y": 320,
+           "values": {
+            "S": {
+             "r": 0,
+             "g": 0,
+             "b": 0,
+             "a": 0
+            },
+            "W": 0
+           }
+          },
+          {
+           "id": "dcarve",
+           "type": "disp/draw",
+           "x": 1600,
+           "y": 60,
+           "values": {
+            "S": {
+             "r": 0,
+             "g": 0,
+             "b": 0,
+             "a": 0
+            },
+            "W": 0
+           }
+          }
+         ],
+         "wires": [
+          {
+           "from": [
+            "q_B",
+            "V"
+           ],
+           "to": [
+            "bgn",
+            "C"
+           ]
+          },
+          {
+           "from": [
+            "q_T",
+            "V"
+           ],
+           "to": [
+            "bsub",
+            "A"
+           ]
+          },
+          {
+           "from": [
+            "q_H",
+            "V"
+           ],
+           "to": [
+            "bsub",
+            "B"
+           ]
+          },
+          {
+           "from": [
+            "bsub",
+            "R"
+           ],
+           "to": [
+            "brect",
+            "W"
+           ]
+          },
+          {
+           "from": [
+            "q_H",
+            "V"
+           ],
+           "to": [
+            "brect",
+            "H"
+           ]
+          },
+          {
+           "from": [
+            "q_T",
+            "V"
+           ],
+           "to": [
+            "capx",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "q_H",
+            "V"
+           ],
+           "to": [
+            "capx",
+            "Y"
+           ]
+          },
+          {
+           "from": [
+            "capx",
+            "R"
+           ],
+           "to": [
+            "capxn",
+            "V"
+           ]
+          },
+          {
+           "from": [
+            "capx",
+            "R"
+           ],
+           "to": [
+            "cappt",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "capxn",
+            "R"
+           ],
+           "to": [
+            "cappt",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "q_H",
+            "V"
+           ],
+           "to": [
+            "capr",
+            "A"
+           ]
+          },
+          {
+           "from": [
+            "cappt",
+            "P"
+           ],
+           "to": [
+            "capc",
+            "P"
+           ]
+          },
+          {
+           "from": [
+            "capr",
+            "R"
+           ],
+           "to": [
+            "capc",
+            "R"
+           ]
+          },
+          {
+           "from": [
+            "q_G",
+            "V"
+           ],
+           "to": [
+            "gmask",
+            "A"
+           ]
+          },
+          {
+           "from": [
+            "q_S",
+            "V"
+           ],
+           "to": [
+            "gapcx",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "q_G",
+            "V"
+           ],
+           "to": [
+            "gapcx",
+            "Y"
+           ]
+          },
+          {
+           "from": [
+            "q_G",
+            "V"
+           ],
+           "to": [
+            "rr",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "q_H",
+            "V"
+           ],
+           "to": [
+            "rr",
+            "Y"
+           ]
+          },
+          {
+           "from": [
+            "rr",
+            "R"
+           ],
+           "to": [
+            "rm",
+            "A"
+           ]
+          },
+          {
+           "from": [
+            "gmask",
+            "R"
+           ],
+           "to": [
+            "rm",
+            "B"
+           ]
+          },
+          {
+           "from": [
+            "rm",
+            "R"
+           ],
+           "to": [
+            "cy",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "q_H",
+            "V"
+           ],
+           "to": [
+            "cy",
+            "Y"
+           ]
+          },
+          {
+           "from": [
+            "cy",
+            "R"
+           ],
+           "to": [
+            "cyn",
+            "V"
+           ]
+          },
+          {
+           "from": [
+            "gapcx",
+            "R"
+           ],
+           "to": [
+            "ct",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "cy",
+            "R"
+           ],
+           "to": [
+            "ct",
+            "Y"
+           ]
+          },
+          {
+           "from": [
+            "gapcx",
+            "R"
+           ],
+           "to": [
+            "cb",
+            "X"
+           ]
+          },
+          {
+           "from": [
+            "cyn",
+            "R"
+           ],
+           "to": [
+            "cb",
+            "Y"
+           ]
+          },
+          {
+           "from": [
+            "ct",
+            "P"
+           ],
+           "to": [
+            "cct",
+            "P"
+           ]
+          },
+          {
+           "from": [
+            "rm",
+            "R"
+           ],
+           "to": [
+            "cct",
+            "R"
+           ]
+          },
+          {
+           "from": [
+            "cb",
+            "P"
+           ],
+           "to": [
+            "ccb",
+            "P"
+           ]
+          },
+          {
+           "from": [
+            "rm",
+            "R"
+           ],
+           "to": [
+            "ccb",
+            "R"
+           ]
+          },
+          {
+           "from": [
+            "brect",
+            "C"
+           ],
+           "to": [
+            "dshape",
+            "G"
+           ]
+          },
+          {
+           "from": [
+            "capc",
+            "C"
+           ],
+           "to": [
+            "dshape",
+            "G"
+           ]
+          },
+          {
+           "from": [
+            "q_C",
+            "V"
+           ],
+           "to": [
+            "dshape",
+            "F"
+           ]
+          },
+          {
+           "from": [
+            "cct",
+            "C"
+           ],
+           "to": [
+            "dcarve",
+            "G"
+           ]
+          },
+          {
+           "from": [
+            "ccb",
+            "C"
+           ],
+           "to": [
+            "dcarve",
+            "G"
+           ]
+          },
+          {
+           "from": [
+            "q_B",
+            "V"
+           ],
+           "to": [
+            "dcarve",
+            "F"
+           ]
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "p_A",
+       "type": "meta/portout",
+       "x": 1470,
+       "y": 340,
+       "values": {
+        "port": "A"
+       }
+      }
+     ],
+     "wires": [
+      {
+       "from": [
+        "p_IT",
+        "V"
+       ],
+       "to": [
+        "len",
+        "L"
+       ]
+      },
+      {
+       "from": [
+        "len",
+        "N"
+       ],
+       "to": [
+        "ser",
+        "C"
+       ]
+      },
+      {
+       "from": [
+        "p_IT",
+        "V"
+       ],
+       "to": [
+        "meas",
+        "T"
+       ]
+      },
+      {
+       "from": [
+        "p_TS",
+        "V"
+       ],
+       "to": [
+        "meas",
+        "S"
+       ]
+      },
+      {
+       "from": [
+        "meas",
+        "W"
+       ],
+       "to": [
+        "wpad",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "p_TS",
+        "V"
+       ],
+       "to": [
+        "wpad",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "p_G",
+        "V"
+       ],
+       "to": [
+        "gs",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "p_SP",
+        "V"
+       ],
+       "to": [
+        "gs",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "el",
+        "H"
+       ],
+       "to": [
+        "shift",
+        "L"
+       ]
+      },
+      {
+       "from": [
+        "el",
+        "H"
+       ],
+       "to": [
+        "orH",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "shift",
+        "L"
+       ],
+       "to": [
+        "orH",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "gs",
+        "R"
+       ],
+       "to": [
+        "gsel",
+        "T"
+       ]
+      },
+      {
+       "from": [
+        "p_G",
+        "V"
+       ],
+       "to": [
+        "gsel",
+        "F"
+       ]
+      },
+      {
+       "from": [
+        "orH",
+        "R"
+       ],
+       "to": [
+        "gsel",
+        "P"
+       ]
+      },
+      {
+       "from": [
+        "ser",
+        "S"
+       ],
+       "to": [
+        "mask",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "gsel",
+        "L"
+       ],
+       "to": [
+        "gm",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "mask",
+        "R"
+       ],
+       "to": [
+        "gm",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "wpad",
+        "R"
+       ],
+       "to": [
+        "L",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "gm",
+        "R"
+       ],
+       "to": [
+        "L",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "L",
+        "R"
+       ],
+       "to": [
+        "mas",
+        "L"
+       ]
+      },
+      {
+       "from": [
+        "mas",
+        "P"
+       ],
+       "to": [
+        "E1",
+        "X"
+       ]
+      },
+      {
+       "from": [
+        "L",
+        "R"
+       ],
+       "to": [
+        "E1",
+        "Y"
+       ]
+      },
+      {
+       "from": [
+        "gm",
+        "R"
+       ],
+       "to": [
+        "E1",
+        "Z"
+       ]
+      },
+      {
+       "from": [
+        "E1",
+        "R"
+       ],
+       "to": [
+        "E2",
+        "X"
+       ]
+      },
+      {
+       "from": [
+        "wpad",
+        "R"
+       ],
+       "to": [
+        "E2",
+        "Y"
+       ]
+      },
+      {
+       "from": [
+        "mas",
+        "R"
+       ],
+       "to": [
+        "E2",
+        "Z"
+       ]
+      },
+      {
+       "from": [
+        "E2",
+        "R"
+       ],
+       "to": [
+        "sm",
+        "V"
+       ]
+      },
+      {
+       "from": [
+        "sm",
+        "R"
+       ],
+       "to": [
+        "pc",
+        "X"
+       ]
+      },
+      {
+       "from": [
+        "pc",
+        "P"
+       ],
+       "to": [
+        "hr",
+        "P"
+       ]
+      },
+      {
+       "from": [
+        "L",
+        "R"
+       ],
+       "to": [
+        "hr",
+        "W"
+       ]
+      },
+      {
+       "from": [
+        "p_H",
+        "V"
+       ],
+       "to": [
+        "hr",
+        "H"
+       ]
+      },
+      {
+       "from": [
+        "hr",
+        "C"
+       ],
+       "to": [
+        "dl",
+        "V"
+       ]
+      },
+      {
+       "from": [
+        "dl",
+        "V"
+       ],
+       "to": [
+        "el",
+        "G"
+       ]
+      },
+      {
+       "from": [
+        "p_IT",
+        "V"
+       ],
+       "to": [
+        "el",
+        "C"
+       ]
+      },
+      {
+       "from": [
+        "dl2",
+        "V"
+       ],
+       "to": [
+        "el",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "actcmp",
+        "R"
+       ],
+       "to": [
+        "attrsel",
+        "P"
+       ]
+      },
+      {
+       "from": [
+        "attrsel",
+        "L"
+       ],
+       "to": [
+        "dl2",
+        "V"
+       ]
+      },
+      {
+       "from": [
+        "el",
+        "K"
+       ],
+       "to": [
+        "idxmul",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "ser",
+        "S"
+       ],
+       "to": [
+        "idxmul",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "idxmul",
+        "R"
+       ],
+       "to": [
+        "masI",
+        "L"
+       ]
+      },
+      {
+       "from": [
+        "el",
+        "K"
+       ],
+       "to": [
+        "masC",
+        "L"
+       ]
+      },
+      {
+       "from": [
+        "masC",
+        "R"
+       ],
+       "to": [
+        "trig",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "masI",
+        "R"
+       ],
+       "to": [
+        "act",
+        "V"
+       ]
+      },
+      {
+       "from": [
+        "trig",
+        "R"
+       ],
+       "to": [
+        "act",
+        "T"
+       ]
+      },
+      {
+       "from": [
+        "ser",
+        "S"
+       ],
+       "to": [
+        "actcmp",
+        "A"
+       ]
+      },
+      {
+       "from": [
+        "act",
+        "R"
+       ],
+       "to": [
+        "actcmp",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "E1",
+        "R"
+       ],
+       "to": [
+        "cap",
+        "S"
+       ]
+      },
+      {
+       "from": [
+        "gm",
+        "R"
+       ],
+       "to": [
+        "cap",
+        "G"
+       ]
+      },
+      {
+       "from": [
+        "wpad",
+        "R"
+       ],
+       "to": [
+        "cap",
+        "W"
+       ]
+      },
+      {
+       "from": [
+        "mas",
+        "R"
+       ],
+       "to": [
+        "cap",
+        "T"
+       ]
+      },
+      {
+       "from": [
+        "p_H",
+        "V"
+       ],
+       "to": [
+        "cap",
+        "H"
+       ]
+      },
+      {
+       "from": [
+        "p_CS",
+        "V"
+       ],
+       "to": [
+        "cap",
+        "C"
+       ]
+      },
+      {
+       "from": [
+        "p_BG",
+        "V"
+       ],
+       "to": [
+        "cap",
+        "B"
+       ]
+      },
+      {
+       "from": [
+        "act",
+        "R"
+       ],
+       "to": [
+        "p_A",
+        "V"
+       ]
+      }
+     ]
+    },
+    "G": 20,
+    "SP": 30,
+    "H": 54,
+    "TS": 15,
+    "CS": {
+     "r": 235,
+     "g": 238,
+     "b": 245,
+     "a": 1
+    },
+    "BG": {
+     "r": 11,
+     "g": 14,
+     "b": 20,
+     "a": 1
+    }
+   }
+  },
+  {
+   "id": "n3",
+   "type": "params/panel",
+   "x": 660,
+   "y": 100,
+   "values": {
+    "text": ""
+   }
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": [
+    "n1",
+    "L"
+   ],
+   "to": [
+    "n2",
+    "IT"
+   ]
+  },
+  {
+   "id": "w2",
+   "from": [
+    "n2",
+    "A"
+   ],
+   "to": [
+    "n3",
+    "V"
+   ]
+  }
+ ]
+}

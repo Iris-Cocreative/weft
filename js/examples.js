@@ -317,5 +317,34 @@ const EXAMPLES = {
     ['s16', 'G', 's17', 'G'],
     ['s20', 'R', 's21', 'A'],
     ['s22', 'G', 's23', 'G'], ['s21', 'C', 's23', 'F']
+  ]),
+
+  /* a legal feedback loop: each axis is  lerp(last frame's answer, mouse, ease)
+   * wired back through a Delay — the cycle the editor used to refuse.
+   * The circle IS the loop: no Smooth node, just raw feedback */
+  'Feedback chase': _EX([
+    ['f1', 'input/mouse', 30, 60],
+    ['f2', 'params/slider', 30, 320, { min: 0.01, max: 0.5, value: 0.12 }],
+    ['f3', 'math/lerp', 470, 60],
+    ['f4', 'state/delay', 250, 130],
+    ['f5', 'math/lerp', 470, 300],
+    ['f6', 'state/delay', 250, 390],
+    ['f7', 'vec/construct', 690, 170],
+    ['f8', 'crv/circle', 910, 130, { R: 26 }],
+    ['f9', 'disp/draw', 1130, 130, { S: { r: 94, g: 234, b: 212, a: 0.95 }, W: 2 }],
+    ['f10', 'vec/construct', 690, 400],
+    ['f11', 'crv/circle', 910, 360, { R: 4 }],
+    ['f12', 'disp/draw', 1130, 330, { F: { r: 230, g: 237, b: 250, a: 0.8 }, S: { r: 0, g: 0, b: 0, a: 0 } }]
+  ], [
+    ['f4', 'V', 'f3', 'A'], ['f1', 'X', 'f3', 'B'], ['f2', 'N', 'f3', 'T'],
+    ['f3', 'R', 'f4', 'V'],
+    ['f6', 'V', 'f5', 'A'], ['f1', 'Y', 'f5', 'B'], ['f2', 'N', 'f5', 'T'],
+    ['f5', 'R', 'f6', 'V'],
+    ['f3', 'R', 'f7', 'X'], ['f5', 'R', 'f7', 'Y'],
+    ['f7', 'P', 'f8', 'P'],
+    ['f8', 'C', 'f9', 'G'],
+    ['f1', 'X', 'f10', 'X'], ['f1', 'Y', 'f10', 'Y'],
+    ['f10', 'P', 'f11', 'P'],
+    ['f11', 'C', 'f12', 'G']
   ])
 };

@@ -188,7 +188,7 @@ const App = {
       let html = '';
       for (const cat of order) {
         const defs = Object.values(NODE_DEFS)
-          .filter(d => d.cat === cat)
+          .filter(d => d.cat === cat && !d.hidden)
           .filter(d => !q || d.title.toLowerCase().includes(q) || d.id.includes(q))
           .sort((a, b) => ((a.grp || 9) - (b.grp || 9)) || a.title.localeCompare(b.title));
         if (!defs.length) continue;
@@ -280,6 +280,8 @@ const App = {
       App.flash('loaded example: ' + sel.value);
       sel.value = '';
     });
+
+    document.getElementById('btnFit').addEventListener('click', () => Editor.zoomToFit(false));
 
     document.getElementById('btnNew').addEventListener('click', () => {
       try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
