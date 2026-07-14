@@ -634,10 +634,13 @@ const Editor = (() => {
       .sort((a, b) => a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
       .slice(0, 60);
     qaIndex = 0;
-    qaList.innerHTML = qaItems.map((d, i) =>
-      `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="${d.id}" title="${d.desc || ''}">
-        <span class="dot" style="background:${CATS[d.cat]}"></span>${d.title}<span class="qa-cat">${d.cat}</span>
-      </div>`).join('');
+    qaList.innerHTML = qaItems.map((d, i) => {
+      const icon = d.id === 'params/swatch' ? '<span class="icon-swatch"></span>'
+        : (weftIconSVG(d.id, d.cat) || `<span class="dot" style="background:${CATS[d.cat]}"></span>`);
+      return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="${d.id}" title="${d.desc || ''}">
+        <span class="pal-icon" style="color:${CATS[d.cat]}">${icon}</span>${d.title}<span class="qa-cat">${d.cat}</span>
+      </div>`;
+    }).join('');
   }
 
   function qaCommit(type) {

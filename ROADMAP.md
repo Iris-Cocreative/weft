@@ -177,9 +177,12 @@ is now in, so any of these can be picked up in a workshop pass):
   systems, icons, and chromeless custom nodes directly in Figma (2026-07-13),
   superseding the lite-session boards; implemented across style.css /
   editor.js / nodes.js / js/icons.js. `docs/DESIGN.md` = decision log +
-  tokens. Still open: D5 wire language, D7 atmosphere, D8 brand mark
-  (`docs/DESIGN-PLAN.md` method still applies to those), palette/quick-add
-  glyphs, remaining icon batches (James draws in Figma → export → icons.js).
+  tokens. Palette + quick-add now render node glyphs (2026-07-14, `.pal-icon`,
+  dot fallback); full glyph coverage same day — all 105 node icons live (11
+  Figma originals + 94 code-drafted, marked in icons.js; redraw in Figma at
+  leisure — a Figma export replaces a draft entry). Still open: D5 wire
+  language, D7 atmosphere, D8 brand mark (`docs/DESIGN-PLAN.md` method still
+  applies to those).
 - Working title stays **Weft** until the better name proves itself. Criteria:
   weaving/thread metaphor honest to the mechanics, one syllable-ish, ownable
   domain, no collision (Loom is taken by loom.com). Candidates to sit with:

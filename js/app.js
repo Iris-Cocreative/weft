@@ -197,8 +197,10 @@ const App = {
         for (const d of defs) {
           if (prevGrp !== null && (d.grp || 9) !== prevGrp) html += '<div class="pal-gap"></div>';
           prevGrp = d.grp || 9;
+          const icon = d.id === 'params/swatch' ? '<span class="icon-swatch"></span>'
+            : (weftIconSVG(d.id, d.cat) || `<span class="dot" style="background:${CATS[cat]}"></span>`);
           html += `<div class="pal-item" data-type="${d.id}" title="${d.desc || ''}">
-            <span class="dot" style="background:${CATS[cat]}"></span>${d.title}
+            <span class="pal-icon" style="color:${CATS[cat]}">${icon}</span>${d.title}
           </div>`;
         }
       }
