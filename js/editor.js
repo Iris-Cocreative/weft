@@ -460,7 +460,7 @@ const Editor = (() => {
 
   function onPointerDown(e) {
     closeCtx();
-    if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu, #typeKey')) return;
+    if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
     const portEl = e.target.closest && e.target.closest('.port');
     const nodeEl = e.target.closest && e.target.closest('.node');
 
@@ -1061,7 +1061,7 @@ const Editor = (() => {
       window.addEventListener('keydown', onKeyDown);
 
       editorEl.addEventListener('dblclick', e => {
-        if (e.target.closest('.node, #quickAdd, #ctxMenu, #typeKey')) return;
+        if (e.target.closest('.node, #quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
         openQA(e);
       });
       // right-click behavior lives in pointerdown/up (clean click = menu, drag = pan)

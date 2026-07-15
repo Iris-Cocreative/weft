@@ -4,18 +4,20 @@
 <meta charset="utf-8">
 <title>Weft — parametric designer for the web</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header id="toolbar">
-  <div class="brand">WEFT<span>weave parameters into web experiences</span></div>
+  <div class="brand"><span class="brand-mark" id="brandMark"></span>WEFT<span>weave parameters into web experiences</span></div>
   <div class="tools">
     <select id="exampleSelect"><option value="">Examples…</option></select>
-    <button id="btnFit" title="Zoom to fit the graph (F fits the selection, Home fits all)">Fit</button>
     <button id="btnNew" title="Clear the canvas (current graph is backed up)">New</button>
     <button id="btnSave" title="Download graph as JSON">Save</button>
+    <button id="btnSaveAs" title="Download graph as JSON under a new name">Save as</button>
     <button id="btnLoad" title="Open a saved graph">Open</button>
     <button id="btnExport" class="accent" title="Compile this graph to standalone JavaScript">Export JS</button>
+    <a class="about-link" href="about.html" title="what is weft?">about</a>
   </div>
 </header>
 
@@ -39,6 +41,10 @@
       <div class="tk-head">wire colors</div>
       <div class="tk-body"></div>
     </div>
+    <div id="loomTools">
+      <button id="btnFitIcon" title="zoom to fit — Home fits all, F fits the selection"></button>
+      <button id="btnGhosts" title="geometry previews on the cloth"></button>
+    </div>
   </section>
 
   <div id="splitter"></div>
@@ -58,6 +64,15 @@
 </footer>
 
 <input type="file" id="fileInput" accept=".json,.weft" hidden>
+
+<div id="askModal" class="modal hidden">
+  <div class="modal-box small">
+    <div class="modal-head"><b id="askTitle"></b></div>
+    <p class="modal-note" id="askBody"></p>
+    <input id="askInput" class="ask-input hidden" spellcheck="false" autocomplete="off">
+    <div class="modal-actions" id="askActions"></div>
+  </div>
+</div>
 
 <div id="exportModal" class="modal hidden">
   <div class="modal-box">

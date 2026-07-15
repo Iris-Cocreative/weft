@@ -6,6 +6,10 @@ const GRAPH_FORMAT = 1;
 const App = {
   graph: { format: GRAPH_FORMAT, nodes: [], wires: [] },
 
+  /* dirty = edited since the last file save / graph load (autosave doesn't count) */
+  _dirty: false,
+  _fileName: 'weft-graph.json',
+
   /* ------------------------------ graph format ------------------------------ */
 
   migrate(g) {
@@ -35,6 +39,7 @@ const App = {
     App.updateCounts();
     App.resetHistory();
     App.writeStorage();
+    App._dirty = false;
   },
 
   /* ------------------------------ change pipeline ------------------------------
@@ -43,6 +48,7 @@ const App = {
 
   _changeTimer: null,
   onGraphChanged() {
+    App._dirty = true;
     clearTimeout(App._changeTimer);
     App._changeTimer = setTimeout(() => {
       App._changeTimer = null;
@@ -136,9 +142,83 @@ const App = {
       App.graph.nodes.length + ' nodes · ' + App.graph.wires.length + ' wires';
   },
 
+  /* ------------------------------ ask dialog ------------------------------
+   * Small in-app prompt/confirm (native dialogs block the page). Resolves the
+   * chosen button's value — with `input` set, the accent button resolves the
+   * text instead. Esc / backdrop resolve null. */
+
+  ask({ title, body, input, buttons }) {
+    return new Promise(resolve => {
+      const modal = document.getElementById('askModal');
+      const inp = document.getElementById('askInput');
+      const actions = document.getElementById('askActions');
+      document.getElementById('askTitle').textContent = title || '';
+      document.getElementById('askBody').textContent = body || '';
+      document.getElementById('askBody').classList.toggle('hidden', !body);
+      inp.classList.toggle('hidden', input === undefined);
+      if (input !== undefined) inp.value = input;
+
+      const done = v => {
+        modal.classList.add('hidden');
+        modal.removeEventListener('pointerdown', onBackdrop);
+        window.removeEventListener('keydown', onKey, true);
+        resolve(v);
+      };
+      const confirm = b => done(input !== undefined && b.accent ? inp.value.trim() : b.value);
+      const onBackdrop = e => { if (e.target === modal) done(null); };
+      const onKey = e => {
+        if (e.key === 'Escape') { e.stopPropagation(); done(null); }
+        else if (e.key === 'Enter' && input !== undefined) {
+          const b = buttons.find(b => b.accent);
+          if (b) { e.stopPropagation(); confirm(b); }
+        }
+      };
+
+      actions.innerHTML = '';
+      for (const b of buttons) {
+        const el = document.createElement('button');
+        el.textContent = b.label;
+        if (b.accent) el.classList.add('accent');
+        el.addEventListener('click', () => confirm(b));
+        actions.appendChild(el);
+      }
+      modal.addEventListener('pointerdown', onBackdrop);
+      window.addEventListener('keydown', onKey, true);
+      modal.classList.remove('hidden');
+      if (input !== undefined) { inp.focus(); inp.select(); }
+    });
+  },
+
+  /* ------------------------------ save to file ------------------------------ */
+
+  saveGraph() {
+    App.download(App._fileName, JSON.stringify(App.serialize(), null, 2), 'application/json');
+    App._dirty = false;
+    App.flash('saved ' + App._fileName);
+  },
+
+  async saveGraphAs() {
+    let name = await App.ask({
+      title: 'save as',
+      input: App._fileName,
+      buttons: [{ label: 'Save', value: 'save', accent: true }, { label: 'Cancel', value: null }]
+    });
+    if (!name) return;
+    if (!/\.(json|weft)$/i.test(name)) name += '.json';
+    App._fileName = name;
+    try { localStorage.setItem('weft:filename', name); } catch (e) {}
+    App.saveGraph();
+  },
+
   /* ------------------------------ init ------------------------------ */
 
   init() {
+    document.getElementById('brandMark').innerHTML = weftLogoSVG('hdr');
+    document.getElementById('btnFitIcon').innerHTML = weftUISVG('fit');
+    try {
+      App._fileName = localStorage.getItem('weft:filename') || App._fileName;
+      Viewport.ghosts = localStorage.getItem('weft:ghosts') !== '0';
+    } catch (e) {}
     Editor.init(() => App.onGraphChanged());
     Viewport.init();
     App.buildPalette();
@@ -276,14 +356,44 @@ const App = {
       o.value = name; o.textContent = name;
       sel.appendChild(o);
     }
-    sel.addEventListener('change', () => {
-      if (!sel.value) return;
-      App.setGraph(JSON.parse(JSON.stringify(EXAMPLES[sel.value])));
-      App.flash('loaded example: ' + sel.value);
+    sel.addEventListener('change', async () => {
+      const name = sel.value;
       sel.value = '';
+      if (!name) return;
+      if (App._dirty && App.graph.nodes.length) {
+        const r = await App.ask({
+          title: 'unsaved changes',
+          body: 'the current graph isn’t saved to a file — loading “' + name + '” will replace it.',
+          buttons: [
+            { label: 'Save, then load', value: 'save', accent: true },
+            { label: 'Load without saving', value: 'discard' },
+            { label: 'Cancel', value: null }
+          ]
+        });
+        if (r === null) return;
+        if (r === 'save') App.saveGraph();
+      }
+      try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
+      App.setGraph(JSON.parse(JSON.stringify(EXAMPLES[name])));
+      Editor.zoomToFit(false);
+      App.flash('loaded example: ' + name);
     });
 
-    document.getElementById('btnFit').addEventListener('click', () => Editor.zoomToFit(false));
+    document.getElementById('btnFitIcon').addEventListener('click', () => Editor.zoomToFit(false));
+
+    const btnGhosts = document.getElementById('btnGhosts');
+    const paintGhosts = () => {
+      btnGhosts.innerHTML = weftEyeSVG(Viewport.ghosts ? 'shown' : 'hidden');
+      btnGhosts.classList.toggle('off', !Viewport.ghosts);
+      btnGhosts.title = 'geometry previews on the cloth — ' + (Viewport.ghosts ? 'on' : 'off');
+    };
+    btnGhosts.addEventListener('click', () => {
+      Viewport.ghosts = !Viewport.ghosts;
+      try { localStorage.setItem('weft:ghosts', Viewport.ghosts ? '1' : '0'); } catch (e) {}
+      paintGhosts();
+      App.flash(Viewport.ghosts ? 'cloth previews on' : 'cloth previews off — display nodes still draw');
+    });
+    paintGhosts();
 
     document.getElementById('btnNew').addEventListener('click', () => {
       try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
@@ -291,9 +401,8 @@ const App = {
       App.flash('canvas cleared — previous graph backed up');
     });
 
-    document.getElementById('btnSave').addEventListener('click', () => {
-      App.download('weft-graph.json', JSON.stringify(App.serialize(), null, 2), 'application/json');
-    });
+    document.getElementById('btnSave').addEventListener('click', () => App.saveGraph());
+    document.getElementById('btnSaveAs').addEventListener('click', () => App.saveGraphAs());
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnLoad').addEventListener('click', () => fileInput.click());
@@ -304,6 +413,9 @@ const App = {
       r.onload = () => {
         try {
           App.setGraph(JSON.parse(r.result));
+          Editor.zoomToFit(false);
+          App._fileName = f.name;
+          try { localStorage.setItem('weft:filename', f.name); } catch (e) {}
           App.flash('opened ' + f.name);
         } catch (e) {
           App.flash('could not open file: ' + e.message);

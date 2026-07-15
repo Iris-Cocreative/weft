@@ -9,6 +9,7 @@
  */
 const Viewport = {
   playing: true,
+  ghosts: true, // global switch for the faint geometry previews on the cloth
 
   init() {
     const canvas = document.getElementById('view');
@@ -268,11 +269,11 @@ const Viewport = {
       g2.fillRect(0, 0, rect.width, rect.height);
       g2.save();
       g2.translate(rect.width / 2, rect.height / 2);
-      drawGhosts(ctx, false);
+      if (Viewport.ghosts) drawGhosts(ctx, false);
       for (const it of ctx.drawList) {
         try { LM.drawItem(g2, it); } catch (e) { /* skip bad item */ }
       }
-      drawGhosts(ctx, true);
+      if (Viewport.ghosts) drawGhosts(ctx, true);
       drawAnchors();
       g2.restore();
 

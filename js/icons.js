@@ -165,3 +165,33 @@ function weftIconSVG(nodeId, cat) {
 function weftEyeSVG(kind) {
   return '<svg viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">' + WEFT_EYES[kind] + '</svg>';
 }
+
+/* ---- the weft mark — a wire woven through three warp threads (over, under, over),
+ * port dots at both ends. Gradient matches the wordmark (#5eead4 → #818cf8).
+ * id suffix keeps gradient ids unique when the mark appears twice on one page. */
+function weftLogoSVG(idSuffix) {
+  const g = 'weftlg' + (idSuffix || '');
+  return '<svg viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs><linearGradient id="' + g + '" x1="2" y1="13.5" x2="25" y2="13.5" gradientUnits="userSpaceOnUse">'
+    + '<stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>'
+    // warp threads — gaps where the weft passes in front
+    + '<path d="M7.5 3.5V7.5M7.5 12.5V23.5" stroke="#46536e" stroke-linecap="round"/>'
+    + '<path d="M13.5 3.5V23.5" stroke="#46536e" stroke-linecap="round"/>'
+    + '<path d="M19.5 3.5V7.5M19.5 12.5V23.5" stroke="#46536e" stroke-linecap="round"/>'
+    // the weft — over warp 1, under warp 2 (faint where it passes behind), over warp 3
+    + '<path class="weft-under" d="M11.8 15.8C12.4 16.6 12.9 17 13.5 17C14.1 17 14.6 16.6 15.2 15.8" stroke="url(#' + g + ')" stroke-width="1.4" stroke-linecap="round" opacity=".35"/>'
+    + '<path class="weft-thread" d="M2.5 13.5C4.5 11 5.7 10 7.5 10C9.8 10 10.4 13.8 11.8 15.8" stroke="url(#' + g + ')" stroke-width="1.4" stroke-linecap="round"/>'
+    + '<path class="weft-thread" d="M15.2 15.8C16.6 13.8 17.2 10 19.5 10C21.7 10 23 11 24.5 13.5" stroke="url(#' + g + ')" stroke-width="1.4" stroke-linecap="round"/>'
+    // port dots — out of one node, into the next
+    + '<circle cx="2.5" cy="13.5" r="1.5" fill="#5eead4"/>'
+    + '<circle cx="24.5" cy="13.5" r="1.5" fill="#818cf8"/>'
+    + '</svg>';
+}
+
+/* editor chrome glyphs (loom overlay buttons etc.) */
+const WEFT_UI = {
+  fit: '<path d="M9.5 4.5H6.5A2 2 0 0 0 4.5 6.5V9.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M17.5 4.5H20.5A2 2 0 0 1 22.5 6.5V9.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M22.5 17.5V20.5A2 2 0 0 1 20.5 22.5H17.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M9.5 22.5H6.5A2 2 0 0 1 4.5 20.5V17.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><circle cx="13.5" cy="13.5" r="1.8" fill="currentColor"/>',
+};
+function weftUISVG(kind) {
+  return '<svg viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">' + WEFT_UI[kind] + '</svg>';
+}
