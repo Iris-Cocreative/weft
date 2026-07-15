@@ -388,6 +388,172 @@ const EXAMPLES = {
     ['s22', 'G', 's23', 'G'], ['s21', 'C', 's23', 'F']
   ]),
 
+  /* the solar system as a dataflow — one Kepler machine, eight planets.
+   * Real J2000 orbital elements (JPL) live in Text Lists: semi-major axis a,
+   * eccentricity e, sidereal period, longitude of perihelion ϖ, mean
+   * longitude L₀. The chain solves mean anomaly → true anomaly (equation of
+   * the center, 3rd order in e) → radius, per planet, by list matching —
+   * ellipses drawn with the sun at the focus, correct shape and orientation.
+   * Time starts at 2000-01-01, one year = 6 s; the date is read back out of
+   * the same clock. Planet sizes are true to each other but exaggerated vs
+   * the orbits; the moon rides Earth on its own ellipse with its distance
+   * exaggerated (slider ×1 = true scale). Angles are negated so the system
+   * turns counterclockwise, as seen from ecliptic north. */
+  'Solar system': _EX([
+    /* — data: J2000 elements, mercury → neptune, one line per planet — */
+    ['da', 'params/textlist', 30, 40, { text: '0.38709927\n0.72333566\n1.00000261\n1.52371034\n5.20288700\n9.53667594\n19.18916464\n30.06992276' }],
+    ['de', 'params/textlist', 30, 300, { text: '0.20563593\n0.00677672\n0.01671123\n0.09339410\n0.04838624\n0.05386179\n0.04725744\n0.00859048' }],
+    ['dp', 'params/textlist', 30, 560, { text: '0.2408467\n0.61519726\n1.0000174\n1.8808476\n11.862615\n29.447498\n84.016846\n164.79132' }],
+    ['dw', 'params/textlist', 30, 820, { text: '77.45779628\n131.60246718\n102.93768193\n-23.94362959\n14.72847983\n92.59887831\n170.95427630\n44.96476227' }],
+    ['dl', 'params/textlist', 30, 1080, { text: '252.25032350\n181.97909950\n100.46457166\n-4.55343205\n34.39644051\n49.95424423\n313.23810451\n-55.12002969' }],
+    ['ds', 'params/textlist', 260, 40, { text: '0.383\n0.949\n1.000\n0.532\n11.209\n9.449\n4.007\n3.883' }],
+    ['dc', 'params/textlist', 260, 300, { text: '#b5a79b\n#eace8f\n#6ea8fe\n#e0714f\n#d9a066\n#e8d29a\n#9fe0e8\n#5f7de8' }],
+    ['dn', 'params/textlist', 260, 560, { text: 'mercury\nvenus\nearth\nmars\njupiter\nsaturn\nuranus\nneptune' }],
+    ['dm', 'params/textlist', 260, 820, { text: 'January\nFebruary\nMarch\nApril\nMay\nJune\nJuly\nAugust\nSeptember\nOctober\nNovember\nDecember' }],
+    ['u1', 'params/slider', 260, 1100, { min: 2, max: 240, value: 8 }],
+    ['u2', 'params/slider', 260, 1220, { min: 0.5, max: 10, value: 1.4 }],
+    ['u3', 'params/slider', 260, 1340, { min: 1, max: 400, value: 120 }],
+    ['t1', 'input/time', 30, 1360],
+    ['v1', 'input/viewport', 30, 1480],
+    /* — kepler: years since J2000 → M → ν → r, all lists of eight — */
+    ['k1', 'math/div', 520, 180, { B: 6 }],
+    ['k2', 'math/sub', 520, 40],
+    ['k3', 'math/expr', 740, 40, { expr: '(X + 360 * Z / Y) * PI / 180' }],
+    ['k4', 'math/expr', 960, 40, { expr: 'X + (2*Y - pow(Y,3)/4) * sin(X) + 1.25*Y*Y * sin(2*X) + (13/12) * pow(Y,3) * sin(3*X)' }],
+    ['k5', 'math/expr', 1180, 40, { expr: 'X * (1 - Y*Y) / (1 + Y * cos(Z))' }],
+    ['k6', 'math/expr', 1180, 200, { expr: '-(X + Y * PI / 180)' }],
+    ['k7', 'math/mul', 1400, 40],
+    ['k8', 'vec/polar', 1620, 100],
+    ['k9', 'math/mul', 1400, 280],
+    ['k10', 'math/max', 1620, 280, { B: 1 }],
+    ['k11', 'crv/circle', 1840, 160],
+    /* — orbit ellipses: centre sits a·e from the focus, toward aphelion — */
+    ['o1', 'math/mul', 740, 480],
+    ['o2', 'math/expr', 740, 620, { expr: 'X * sqrt(1 - Y*Y) * Z' }],
+    ['o3', 'math/expr', 740, 760, { expr: '-X * PI / 180' }],
+    ['o4', 'math/expr', 960, 480, { expr: 'X * Y * Z' }],
+    ['o5', 'math/expr', 960, 620, { expr: '-(X + 180) * PI / 180' }],
+    ['o6', 'vec/polar', 1180, 550],
+    ['o7', 'crv/ellipse', 1400, 550],
+    /* — the sun, at the shared focus — */
+    ['s1', 'crv/circle', 1400, 760, { R: 9 }],
+    ['s3', 'crv/circle', 1400, 900, { R: 3.5 }],
+    /* — the moon: same machine, one body, origin = earth (list item 2) — */
+    ['m1', 'sets/item', 1840, 40, { i: 2 }],
+    ['m2', 'math/expr', 520, 1050, { expr: '0.0025696 * X * Y' }],
+    ['m3', 'math/expr', 520, 1190, { expr: '(134.9634 + 360 * X / 0.0748013) * PI / 180' }],
+    ['m4', 'math/expr', 740, 1190, { expr: 'X + (2*Y - pow(Y,3)/4) * sin(X) + 1.25*Y*Y * sin(2*X) + (13/12) * pow(Y,3) * sin(3*X)', Y: 0.0549 }],
+    ['m5', 'math/expr', 960, 1050, { expr: 'X * (1 - Y*Y) / (1 + Y * cos(Z))', Y: 0.0549 }],
+    ['m6', 'math/expr', 960, 1190, { expr: '-(X + 83.3532 * PI / 180)' }],
+    ['m7', 'vec/polar', 1180, 1100],
+    ['m8', 'math/mul', 1180, 1260, { B: 0.273 }],
+    ['m9', 'math/max', 1400, 1260, { B: 0.8 }],
+    ['m10', 'crv/circle', 1620, 1100],
+    ['m12', 'math/expr', 740, 1050, { expr: 'X * sqrt(1 - 0.0549*0.0549)' }],
+    ['m13', 'math/expr', 740, 1330, { expr: 'X * 0.0549' }],
+    ['m14', 'vec/polar', 1400, 1400, { A: -4.5964 }],
+    ['m15', 'crv/ellipse', 1620, 1400, { A: -1.4548 }],
+    /* — name labels, floated above each planet by its own radius — */
+    ['b1', 'math/expr', 1840, 320, { expr: '-(X + 8)' }],
+    ['b2', 'vec/vecxy', 2060, 320],
+    ['b3', 'disp/text', 2060, 480, { S: 10 }],
+    ['b4', 'xf/move', 2280, 400],
+    /* — the date, read back out of the clock, pinned to the corner — */
+    ['g1', 'math/floor', 740, 1550],
+    ['g2', 'math/add', 960, 1550, { B: 2000 }],
+    ['g3', 'math/sub', 960, 1690],
+    ['g4', 'math/mul', 1180, 1690, { B: 12 }],
+    ['g5', 'sets/item', 1400, 1690],
+    ['g6', 'math/expr', 740, 1830, { expr: '-X / 2 + 64' }],
+    ['g7', 'math/expr', 740, 1970, { expr: 'X / 2 - 34' }],
+    ['g8', 'vec/construct', 1180, 1830],
+    ['g9', 'disp/text', 1620, 1690, { S: 20 }],
+    ['g10', 'math/expr', 960, 1830, { expr: '-X / 2 + 170' }],
+    ['g11', 'vec/construct', 1400, 1900],
+    ['g12', 'disp/text', 1620, 1870, { S: 20 }],
+    ['c1', 'math/expr', 960, 1970, { expr: '-X / 2 + 24' }],
+    ['c2', 'vec/construct', 1400, 2040],
+    ['c3', 'disp/text', 1620, 2040, { T: 'J2000 orbits · 1 year = 6 s · sizes + moon distance exaggerated — the sliders zoom', S: 12 }],
+    /* — draws, back to front — */
+    ['o8', 'disp/draw', 1620, 550, { S: { r: 110, g: 125, b: 160, a: 0.35 }, W: 1 }],
+    ['m16', 'disp/draw', 1840, 1400, { S: { r: 110, g: 125, b: 160, a: 0.35 }, W: 1 }],
+    ['s2', 'disp/draw', 1620, 730, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 255, g: 176, b: 61, a: 0.16 } }],
+    ['s4', 'disp/draw', 1620, 890, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 255, g: 210, b: 125, a: 1 } }],
+    ['k12', 'disp/draw', 2060, 160, { S: { r: 0, g: 0, b: 0, a: 0 }, W: 1 }],
+    ['m11', 'disp/draw', 1840, 1100, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 201, g: 204, b: 214, a: 1 } }],
+    ['b5', 'disp/draw', 2500, 400, { S: { r: 139, g: 158, b: 191, a: 0.75 } }],
+    ['g13', 'disp/draw', 1840, 1780, { S: { r: 230, g: 237, b: 250, a: 0.92 } }],
+    ['c4', 'disp/draw', 1840, 2040, { S: { r: 110, g: 125, b: 160, a: 0.85 } }],
+    ['z1', 'disp/bg', 2060, 2040, { C: { r: 6, g: 8, b: 14, a: 1 } }]
+  ], [
+    /* kepler chain */
+    ['t1', 'T', 'k1', 'A'],
+    ['dl', 'L', 'k2', 'A'], ['dw', 'L', 'k2', 'B'],
+    ['k2', 'R', 'k3', 'X'], ['dp', 'L', 'k3', 'Y'], ['k1', 'R', 'k3', 'Z'],
+    ['k3', 'R', 'k4', 'X'], ['de', 'L', 'k4', 'Y'],
+    ['da', 'L', 'k5', 'X'], ['de', 'L', 'k5', 'Y'], ['k4', 'R', 'k5', 'Z'],
+    ['k4', 'R', 'k6', 'X'], ['dw', 'L', 'k6', 'Y'],
+    ['k5', 'R', 'k7', 'A'], ['u1', 'N', 'k7', 'B'],
+    ['k6', 'R', 'k8', 'A'], ['k7', 'R', 'k8', 'R'],
+    ['ds', 'L', 'k9', 'A'], ['u2', 'N', 'k9', 'B'],
+    ['k9', 'R', 'k10', 'A'],
+    ['k8', 'P', 'k11', 'P'], ['k10', 'R', 'k11', 'R'],
+    ['k11', 'C', 'k12', 'G'], ['dc', 'L', 'k12', 'F'],
+    /* orbit ellipses */
+    ['da', 'L', 'o1', 'A'], ['u1', 'N', 'o1', 'B'],
+    ['da', 'L', 'o2', 'X'], ['de', 'L', 'o2', 'Y'], ['u1', 'N', 'o2', 'Z'],
+    ['dw', 'L', 'o3', 'X'],
+    ['da', 'L', 'o4', 'X'], ['de', 'L', 'o4', 'Y'], ['u1', 'N', 'o4', 'Z'],
+    ['dw', 'L', 'o5', 'X'],
+    ['o5', 'R', 'o6', 'A'], ['o4', 'R', 'o6', 'R'],
+    ['o6', 'P', 'o7', 'P'], ['o1', 'R', 'o7', 'RX'], ['o2', 'R', 'o7', 'RY'], ['o3', 'R', 'o7', 'A'],
+    ['o7', 'C', 'o8', 'G'],
+    /* sun */
+    ['s1', 'C', 's2', 'G'], ['s3', 'C', 's4', 'G'],
+    /* moon */
+    ['k8', 'P', 'm1', 'L'],
+    ['u1', 'N', 'm2', 'X'], ['u3', 'N', 'm2', 'Y'],
+    ['k1', 'R', 'm3', 'X'],
+    ['m3', 'R', 'm4', 'X'],
+    ['m2', 'R', 'm5', 'X'], ['m4', 'R', 'm5', 'Z'],
+    ['m4', 'R', 'm6', 'X'],
+    ['m1', 'E', 'm7', 'O'], ['m6', 'R', 'm7', 'A'], ['m5', 'R', 'm7', 'R'],
+    ['u2', 'N', 'm8', 'A'],
+    ['m8', 'R', 'm9', 'A'],
+    ['m7', 'P', 'm10', 'P'], ['m9', 'R', 'm10', 'R'],
+    ['m10', 'C', 'm11', 'G'],
+    ['m2', 'R', 'm12', 'X'],
+    ['m2', 'R', 'm13', 'X'],
+    ['m1', 'E', 'm14', 'O'], ['m13', 'R', 'm14', 'R'],
+    ['m14', 'P', 'm15', 'P'], ['m2', 'R', 'm15', 'RX'], ['m12', 'R', 'm15', 'RY'],
+    ['m15', 'C', 'm16', 'G'],
+    /* labels */
+    ['k10', 'R', 'b1', 'X'],
+    ['b1', 'R', 'b2', 'Y'],
+    ['dn', 'L', 'b3', 'T'], ['k8', 'P', 'b3', 'P'],
+    ['b3', 'G', 'b4', 'G'], ['b2', 'V', 'b4', 'T'],
+    ['b4', 'G', 'b5', 'G'],
+    /* date */
+    ['k1', 'R', 'g1', 'V'],
+    ['g1', 'R', 'g2', 'A'],
+    ['k1', 'R', 'g3', 'A'], ['g1', 'R', 'g3', 'B'],
+    ['g3', 'R', 'g4', 'A'],
+    ['dm', 'L', 'g5', 'L'], ['g4', 'R', 'g5', 'i'],
+    ['v1', 'W', 'g6', 'X'],
+    ['v1', 'H', 'g7', 'X'],
+    ['g6', 'R', 'g8', 'X'], ['g7', 'R', 'g8', 'Y'],
+    ['g5', 'E', 'g9', 'T'], ['g8', 'P', 'g9', 'P'],
+    ['v1', 'W', 'g10', 'X'],
+    ['g10', 'R', 'g11', 'X'], ['g7', 'R', 'g11', 'Y'],
+    ['g2', 'R', 'g12', 'T'], ['g11', 'P', 'g12', 'P'],
+    ['g9', 'G', 'g13', 'G'], ['g12', 'G', 'g13', 'G'],
+    /* caption */
+    ['v1', 'H', 'c1', 'X'],
+    ['c1', 'R', 'c2', 'Y'],
+    ['c2', 'P', 'c3', 'P'],
+    ['c3', 'G', 'c4', 'G']
+  ]),
+
   /* a legal feedback loop: each axis is  lerp(last frame's answer, mouse, ease)
    * wired back through a Delay — the cycle the editor used to refuse.
    * The circle IS the loop: no Smooth node, just raw feedback */
