@@ -218,6 +218,7 @@ const App = {
     try {
       App._fileName = localStorage.getItem('weft:filename') || App._fileName;
       Viewport.ghosts = localStorage.getItem('weft:ghosts') !== '0';
+      Viewport.merged = localStorage.getItem('weft:merged') === '1';
     } catch (e) {}
     Editor.init(() => App.onGraphChanged());
     Viewport.init();
@@ -323,7 +324,16 @@ const App = {
       const pv = document.getElementById('preview').getBoundingClientRect();
       const within = r => e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
       if (within(ed)) {
-        Editor.addAt(p.type, e.clientX, e.clientY);
+        // merged view: the drop point is also a cloth position — pin the anchor's
+        // handle exactly there and settle the card just beside it, off the handle
+        const pin = Viewport.merged && p.type === 'params/anchor';
+        const n = Editor.addAt(p.type, e.clientX + (pin ? 46 : 0), e.clientY + (pin ? 26 : 0));
+        if (n && pin) {
+          n.values.x = Math.round(e.clientX - pv.left - pv.width / 2);
+          n.values.y = Math.round(e.clientY - pv.top - pv.height / 2);
+          App.onGraphChanged();
+          App.flash('anchor pinned to the cloth — drag its handle any time');
+        }
       } else if (within(pv) && p.type === 'params/anchor') {
         const n = Editor.addAtCenter('params/anchor');
         if (n) {
@@ -380,6 +390,25 @@ const App = {
     });
 
     document.getElementById('btnFitIcon').addEventListener('click', () => Editor.zoomToFit(false));
+
+    const btnMerge = document.getElementById('btnMerge');
+    const mainEl = document.querySelector('main');
+    const paintMerge = () => {
+      mainEl.classList.toggle('merged', Viewport.merged);
+      btnMerge.innerHTML = weftUISVG(Viewport.merged ? 'split' : 'merge');
+      btnMerge.title = Viewport.merged
+        ? 'split — loom left, cloth right'
+        : 'merge — float the loom on the cloth';
+    };
+    btnMerge.addEventListener('click', () => {
+      Viewport.merged = !Viewport.merged;
+      try { localStorage.setItem('weft:merged', Viewport.merged ? '1' : '0'); } catch (e) {}
+      paintMerge();
+      App.flash(Viewport.merged
+        ? 'one canvas — the loom floats on the cloth · shift+wheel scrubs scroll'
+        : 'split view — the loom weaves left, the cloth wears it right');
+    });
+    paintMerge();
 
     const btnGhosts = document.getElementById('btnGhosts');
     const paintGhosts = () => {

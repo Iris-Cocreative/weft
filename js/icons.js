@@ -191,6 +191,10 @@ function weftLogoSVG(idSuffix) {
 /* editor chrome glyphs (loom overlay buttons etc.) */
 const WEFT_UI = {
   fit: '<path d="M9.5 4.5H6.5A2 2 0 0 0 4.5 6.5V9.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M17.5 4.5H20.5A2 2 0 0 1 22.5 6.5V9.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M22.5 17.5V20.5A2 2 0 0 1 20.5 22.5H17.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M9.5 22.5H6.5A2 2 0 0 1 4.5 20.5V17.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><circle cx="13.5" cy="13.5" r="1.8" fill="currentColor"/>',
+  // merge: the loom pane ghosted over the cloth pane — click to lay one on the other
+  merge: '<rect x="8.5" y="5.5" width="14" height="12" rx="1.5" stroke="currentColor" opacity=".35"/><rect x="4.5" y="9.5" width="14" height="12" rx="1.5" stroke="currentColor"/>',
+  // split: two panes side by side — click to pull them back apart
+  split: '<rect x="4.5" y="7.5" width="8" height="12" rx="1.5" stroke="currentColor"/><rect x="14.5" y="7.5" width="8" height="12" rx="1.5" stroke="currentColor"/>',
 };
 function weftUISVG(kind) {
   return '<svg viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">' + WEFT_UI[kind] + '</svg>';

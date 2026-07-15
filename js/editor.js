@@ -492,6 +492,9 @@ const Editor = (() => {
     }
     // background left-drag: marquee (shift = add to selection)
     closeQA();
+    // merged view: a background press also reaches the cloth — grabbing an
+    // anchor handle wins over the marquee; otherwise the design sees the click
+    if (Viewport.merged && Viewport.forward && Viewport.forward.down(e) === 'anchor') return;
     const wp = worldPos(e);
     S.drag = {
       kind: 'marquee', x0: wp.x, y0: wp.y,
@@ -581,6 +584,12 @@ const Editor = (() => {
 
   function onWheel(e) {
     e.preventDefault();
+    // merged view: shift+wheel scrubs the cloth's scroll simulator instead of
+    // zooming (browsers report a shifted wheel as deltaX)
+    if (Viewport.merged && e.shiftKey && Viewport.forward) {
+      Viewport.forward.wheel(e.deltaY || e.deltaX);
+      return;
+    }
     const r = editorEl.getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
     const z2 = LM.clamp(S.zoom * Math.exp(-e.deltaY * 0.0012), 0.08, 2.5);

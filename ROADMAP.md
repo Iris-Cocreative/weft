@@ -86,9 +86,12 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
 
 ## 2. Documentation & open source
 
-- [next] Own git repo (init locally first; GitHub org/user + license = James's
-  call — MIT suggested). Move docs to conventions: README (pitch + quickstart),
-  CONTRIBUTING (humans), CLAUDE.md/AGENTS.md (agents), docs/ for specs.
+- [partly shipped] Own git repo ✓ (`Iris-Cocreative/weft`, public, Pages).
+  License decided 2026-07-15: **PolyForm Noncommercial 1.0.0** (`LICENSE.md`,
+  verbatim official text + Required Notice; noted in the about-page footer) —
+  free for personal/noncommercial use, commercial rights stay with IRIS.
+  Still to do: README (pitch + quickstart), CONTRIBUTING (humans); CLAUDE.md
+  and docs/ already exist.
 - **Node spec as a contract**: document the def shape formally
   (docs/NODE-SPEC.md) so third parties/agents can author nodes safely.
 - **Node packs**: a pack = one JS file of `defNode` calls + manifest comment.
@@ -218,6 +221,15 @@ is now in, so any of these can be picked up in a workshop pass):
   cloth-preview eye (`Viewport.ghosts`, persisted, per-node eyes still win);
   examples + opened files auto zoom-to-fit; example layouts audited against
   real DOM boxes — Checker dispatch & Scroll scene remaps un-overlapped.
+- [shipped 2026-07-15] **Merged view** — one canvas: `Viewport.merged`
+  (persisted in `weft:merged`, toggled from `#loomTools`) floats the loom
+  directly on the cloth. CSS-only relayout (`main.merged`: preview absolute
+  behind a transparent editor; `#domLayer`/`#viewHud` ride above at z-2 so
+  Button/Element stay clickable). The cloth stays interactive under the loom
+  via `Viewport.forward`: background presses reach mouse/press nodes, anchor
+  handles win over the marquee, shift+wheel scrubs the scroll sim (plain
+  wheel still zooms), window-level pointermove takes over anchor drag/hover.
+  Palette-dropped anchors pin their handle at the drop point, card beside it.
 
 ### Legibility pass — [next], James 2026-07-14
 

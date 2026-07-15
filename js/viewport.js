@@ -10,11 +10,13 @@
 const Viewport = {
   playing: true,
   ghosts: true, // global switch for the faint geometry previews on the cloth
+  merged: false, // single-canvas view: the loom floats directly on the cloth
 
   init() {
     const canvas = document.getElementById('view');
     const g2 = canvas.getContext('2d');
     const fpsEl = document.getElementById('fps');
+    const editorEl = document.getElementById('editor');
 
     const GHOST = { r: 139, g: 158, b: 191, a: 0.32 };
     const SEL = { r: 74, g: 222, b: 128, a: 0.95 };
@@ -129,7 +131,24 @@ const Viewport = {
 
     const anchors = () => App.graph.nodes.filter(n => n.type === 'params/anchor' && n.enabled !== false);
 
-    window.addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; });
+    window.addEventListener('pointermove', e => {
+      mx = e.clientX; my = e.clientY;
+      // merged view: the canvas never sees pointer events (the loom is on top),
+      // so anchor dragging and hover detection run here instead
+      if (!Viewport.merged) return;
+      const p = centered(e.clientX, e.clientY, canvas.getBoundingClientRect());
+      if (anchorDrag) {
+        anchorDrag.values.x = Math.round(p.x);
+        anchorDrag.values.y = Math.round(p.y);
+        return;
+      }
+      anchorHot = null;
+      if (!(e.target.closest && e.target.closest('.node, .port, #quickAdd, #ctxMenu, #typeKey, #loomTools, #palette, #toolbar'))) {
+        for (const n of anchors()) {
+          if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) { anchorHot = n; break; }
+        }
+      }
+    });
     canvas.addEventListener('pointerdown', e => {
       const p = centered(e.clientX, e.clientY, canvas.getBoundingClientRect());
       for (const n of anchors()) {
@@ -161,6 +180,27 @@ const Viewport = {
       if (mouse.down) releasedBuf = true;
       mouse.down = false;
     });
+
+    /* merged view — the editor forwards background gestures here so the cloth
+     * stays interactive (anchors, mouse/press nodes, the scroll simulator) */
+    Viewport.forward = {
+      down(e) {
+        const p = centered(e.clientX, e.clientY, canvas.getBoundingClientRect());
+        for (const n of anchors()) {
+          if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) {
+            anchorDrag = n;
+            return 'anchor';
+          }
+        }
+        mouse.down = true;
+        pressedBuf = true;
+        return 'mouse';
+      },
+      wheel(dy) {
+        scroll.y = LM.clamp(scroll.y + dy, 0, scroll.max);
+        scrollShow = performance.now();
+      }
+    };
 
     let t = 0, frame = 0, last = performance.now(), fpsA = 60, lastFps = 0;
 
@@ -262,7 +302,14 @@ const Viewport = {
         const o = ctx.out[n.id];
         if (o && (o.H || []).some(Boolean)) { overHotspot = true; break; }
       }
-      canvas.style.cursor = (anchorDrag || anchorHot) ? 'grab' : overHotspot ? 'pointer' : '';
+      const cursor = (anchorDrag || anchorHot) ? 'grab' : overHotspot ? 'pointer' : '';
+      if (Viewport.merged) {
+        editorEl.style.cursor = cursor;
+        canvas.style.cursor = '';
+      } else {
+        canvas.style.cursor = cursor;
+        if (editorEl.style.cursor) editorEl.style.cursor = '';
+      }
 
       g2.setTransform(dpr, 0, 0, dpr, 0, 0);
       g2.fillStyle = ctx.bg ? LM.colorCss(ctx.bg) : '#0b0e14';

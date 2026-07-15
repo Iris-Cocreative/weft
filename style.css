@@ -27,6 +27,7 @@
   --accent: var(--primary);
   --accent-dim: var(--primary);
   --danger: #ff3b41;
+  --palette-w: 208px;
 }
 
 * { box-sizing: border-box; }
@@ -95,12 +96,24 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ================= layout ================= */
 
-main { display: flex; flex: 1; min-height: 0; }
+main { display: flex; flex: 1; min-height: 0; position: relative; }
+
+/* merged view — one canvas: the cloth fills the stage, the loom floats on top.
+ * #editor gets z-index 1 (its own stacking context); the cloth's interactive
+ * layers (#domLayer, #viewHud) ride above it at z-index 2 so buttons stay live. */
+main.merged #splitter { display: none; }
+main.merged #editor { z-index: 1; background: none; }
+main.merged #preview {
+  position: absolute; top: 0; bottom: 0; right: 0; left: var(--palette-w);
+  min-width: 0;
+}
+main.merged #domLayer { z-index: 2; }
+main.merged #viewHud { z-index: 2; right: 136px; }
 
 /* ---------------- palette ---------------- */
 
 #palette {
-  width: 208px; flex: none; display: flex; flex-direction: column;
+  width: var(--palette-w); flex: none; display: flex; flex-direction: column;
   background: var(--panel); border-right: 1px solid var(--line);
 }
 
