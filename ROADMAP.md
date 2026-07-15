@@ -83,6 +83,13 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
 - [shipped v0.8] **Feedback edges** — the Delay node (track 0.5). Interactions
   where the thing you point at moves in response are now expressible; the
   ceiling on this track is lifted.
+- [shipped 2026-07-15] ***Living lattice* example** — the state-track showcase:
+  viewport-filling iso lattice tiled with hexagons (circumradius spacing/√3),
+  one Spring node = hundreds of per-cell machines (R → size/hue, velocity →
+  torsion), whole-canvas Hotspot catches clicks → Sample & Hold + Timer launch
+  a travelling gaussian pulse through an Expression. Found a design lesson en
+  route: Edge-on-mouse-D misses sub-frame clicks; Hotspot's armed/release
+  trigger is the reliable click idiom.
 
 ## 2. Documentation & open source
 

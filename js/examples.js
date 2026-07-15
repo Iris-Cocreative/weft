@@ -235,6 +235,75 @@ const EXAMPLES = {
     ['n15', 'C', 'n16', 'G']
   ]),
 
+  /* The iso family's showpiece — a lattice that behaves like a material.
+   * Geometry: hexagons of circumradius spacing/√3 tile the iso lattice exactly
+   * (horizontal s, rows s·√3/2, half-staggered → honeycomb), so the quiet field
+   * reads as cloth, not dots. Physics: ONE Spring node is 300+ independent
+   * mass-machines (state is per list item); its R drives size + hue, and its
+   * VELOCITY drives rotation — cells twist while they move and settle straight.
+   * Interaction: pointer proximity pumps energy in; clicks are caught by a
+   * Hotspot on a viewport-filling rectangle — the whole canvas as an interface
+   * element (armed on press, fires on release, so no click is too quick).
+   * Its trigger makes Sample & Hold freeze the click point and Timer restart
+   * from zero — timer × speed = ring radius, and a gaussian around that ring
+   * in the Expression is a pulse that travels outward through the cells.
+   * Every part of the machine is an ordinary wire. */
+  'Living lattice': _EX([
+    ['h1', 'input/viewport', 30, 40],
+    ['h2', 'params/slider', 30, 180, { min: 26, max: 90, value: 46 }],
+    ['h3', 'input/mouse', 30, 340],
+    ['h4', 'vec/grid', 260, 40, { iso: true }],
+    ['h5', 'vec/construct', 260, 340],
+    ['h6', 'crv/rect', 260, 480],
+    ['h7', 'params/slider', 260, 680, { min: 120, max: 900, value: 430 }],
+    ['h8', 'vec/distance', 490, 40],
+    ['h29', 'input/hotspot', 490, 160],
+    ['h9', 'state/sample', 490, 300],
+    ['h10', 'state/timer', 490, 440],
+    ['h11', 'math/expr', 720, 40, { expr: 'pow(max(0, 1 - X/240), 2) + 1.7 * exp(-pow((Y - Z)/60, 2)) * max(0, 1 - Z/700) * min(Z, 1)' }],
+    ['h12', 'vec/distance', 720, 260],
+    ['h13', 'math/mul', 720, 420],
+    ['h14', 'math/remap', 720, 560, { S0: 0, S1: 700, T0: 0.55, T1: 0 }],
+    ['h15', 'state/spring', 950, 40, { F: 2.4, D: 0.35 }],
+    ['h16', 'math/expr', 950, 220, { expr: 'max(0.08, Y * 0.577 * (0.34 + 0.55 * min(X, 1.3)))' }],
+    ['h17', 'math/expr', 950, 380, { expr: '0.5236 + X * 0.06' }],
+    ['h18', 'disp/hsl', 950, 540, { H: 0.49, S: 0.85, L: 0.72 }],
+    ['h19', 'crv/polygon', 1180, 40, { N: 6 }],
+    ['h20', 'math/remap', 1180, 220, { S0: 0, S1: 1.5, T0: 0.47, T1: 0.82 }],
+    ['h21', 'math/remap', 1180, 440, { S0: 0, S1: 1.5, T0: 0.34, T1: 0.66 }],
+    ['h22', 'crv/circle', 1180, 660],
+    ['h23', 'disp/hsl', 1410, 40, { S: 0.68, A: 0.92 }],
+    ['h24', 'disp/draw', 1410, 220, { S: { r: 0, g: 0, b: 0, a: 0 }, W: 1.5 }],
+    ['h25', 'disp/text', 1410, 400, { T: 'move the pointer · click to drop a stone', P: { x: 0, y: 262 }, S: 13 }],
+    ['h26', 'disp/bg', 1410, 560, { C: { r: 8, g: 10, b: 15, a: 1 } }],
+    ['h27', 'disp/draw', 1640, 40, { S: { r: 94, g: 234, b: 212, a: 0.14 }, W: 1 }],
+    ['h28', 'disp/draw', 1640, 260, { S: { r: 91, g: 104, b: 128, a: 0.7 } }]
+  ], [
+    ['h1', 'W', 'h4', 'W'], ['h1', 'H', 'h4', 'H'], ['h2', 'N', 'h4', 'S'],
+    ['h3', 'X', 'h5', 'X'], ['h3', 'Y', 'h5', 'Y'],
+    ['h4', 'P', 'h8', 'A'], ['h5', 'P', 'h8', 'B'],
+    ['h1', 'W', 'h6', 'W'], ['h1', 'H', 'h6', 'H'],
+    ['h6', 'C', 'h29', 'G'],
+    ['h5', 'P', 'h9', 'V'], ['h29', 'C', 'h9', 'T'],
+    ['h29', 'C', 'h10', 'T'],
+    ['h4', 'P', 'h12', 'A'], ['h9', 'R', 'h12', 'B'],
+    ['h10', 'S', 'h13', 'A'], ['h7', 'N', 'h13', 'B'],
+    ['h8', 'D', 'h11', 'X'], ['h12', 'D', 'h11', 'Y'], ['h13', 'R', 'h11', 'Z'],
+    ['h11', 'R', 'h15', 'V'],
+    ['h15', 'R', 'h16', 'X'], ['h2', 'N', 'h16', 'Y'],
+    ['h15', 'V', 'h17', 'X'],
+    ['h15', 'R', 'h20', 'V'],
+    ['h15', 'R', 'h21', 'V'],
+    ['h4', 'P', 'h19', 'P'], ['h16', 'R', 'h19', 'R'], ['h17', 'R', 'h19', 'A'],
+    ['h20', 'R', 'h23', 'H'], ['h21', 'R', 'h23', 'L'],
+    ['h19', 'C', 'h27', 'G'], ['h23', 'C', 'h27', 'F'],
+    ['h9', 'R', 'h22', 'P'], ['h13', 'R', 'h22', 'R'],
+    ['h13', 'R', 'h14', 'V'],
+    ['h14', 'R', 'h18', 'A'],
+    ['h22', 'C', 'h24', 'G'], ['h18', 'C', 'h24', 'S'],
+    ['h25', 'G', 'h28', 'G']
+  ]),
+
   /* three circles = three independent toggle buttons from ONE node chain
    * (hotspot/latch/counter are per-list-item state machines); a real DOM
    * Button node resets everything */
