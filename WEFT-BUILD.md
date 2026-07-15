@@ -50,7 +50,16 @@ OUTPUT-MODES mode 2), zoom-to-fit (Fit / F / Home), Meta category (provisional
 slate), 106 nodes. Proof: `patches/organic-nav-v2.json` — the 92-node nav is
 now one 28-node **Organic Nav** cluster (nested Capsule Bar inside, real
 `<a>` labels, `aria-current`), 3 nodes at top level; write-up
-`patches/organic-nav-v2.md`.
+`patches/organic-nav-v2.md`. v0.8.1 (2026-07-15, workbench batch — James's
+14-item spec): collapsed nodes (double-click a head → icon + ports),
+**Relay** spliced in by double-clicking a wire (ports take the wire's
+colour), GH wire semantics (drop replaces, shift-drop stacks), reliable
+empty-click deselect, global navbar (About · Nodes · Loom), slider types
+(label + int/decimal-precision/odd/even + shift = transient integer snap,
+number-blue livery), Boolean Toggle redesign (bool-red, knob bottom=off /
+top=on), swatch simplified, anchor-handle eye (Params teal), Time pause +
+restart inputs/buttons, momentary **Button**, **Graph Data** (on-node plot),
+and a draw-display eye on the loom — 109 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -109,14 +118,16 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (106) — Grasshopper-matched names
+### Node library (109) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
   Latch, Sample & Hold, Timer, Previous Value, Edge, **Delay** (the legal
   feedback edge — cycles through it are allowed)
-- **Params**: Number Slider, Boolean Toggle, Colour Swatch, Text List,
-  Panel (inspect or type values)
+- **Params**: Number Slider (typed: int/decimal/odd/even + label), Boolean
+  Toggle, Button (momentary), Colour Swatch, Text List, Relay (wire
+  organiser — double-click a wire), Panel (inspect or type values),
+  Graph Data (on-node plot)
 - **Maths**: Addition, Subtraction, Multiplication, Division, Modulus, Power, Min, Max,
   ArcTangent 2, Negative, Absolute, Round, Floor, Ceiling, Square Root, Sine, Cosine,
   Tangent, Radians, Degrees, Pi, Remap Numbers, Clamp, Lerp, Smooth Step,
@@ -155,8 +166,10 @@ where you want it.
 ## Editor UX
 
 - Double-click canvas (or right-click) → searchable quick-add; palette on the left
-- Drag port→port to wire; drag a *connected input* to unplug and rewire
-- Double-click a wire to cut; click to select + Delete
+- Drag port→port to wire; drag a *connected input* to unplug and rewire.
+  A dropped wire replaces the input's wires (GH semantics); shift-drop stacks
+- Double-click a wire to splice in a Relay; click to select + Delete cuts
+- Double-click a node head to collapse it to icon + ports (and back)
 - Right-click node → Duplicate/Delete; Ctrl+D duplicates; Shift-click multi-select
 - Scroll to zoom, drag background to pan; splitter resizes the preview
 - Panels show live data; error nodes get a red ring with the message on hover

@@ -35,9 +35,39 @@ function _numInput(cls, value, parent) {
 /* ============================== INPUT ============================== */
 
 defNode('input/time', {
-  title: 'Time', cat: 'Input', desc: 'Seconds since start, frame count',
-  inputs: [], outputs: [{ name: 'T', type: 'number', label: 'seconds' }, { name: 'F', type: 'number', label: 'frame' }],
-  compute: (a, ctx) => ({ T: ctx.t, F: ctx.frame })
+  title: 'Time', cat: 'Input', desc: 'Seconds since start, frame count — P freezes it, R restarts it from zero',
+  inputs: [
+    { name: 'P', type: 'bool', default: false, label: 'pause' },
+    { name: 'R', type: 'bool', default: false, label: 'restart (trigger)' }],
+  outputs: [{ name: 'T', type: 'number', label: 'seconds' }, { name: 'F', type: 'number', label: 'frame' }],
+  compute: (a, ctx, node) => {
+    /* offset/freeze against host time so an untouched Time is exactly ctx.t */
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { off: 0, frozen: null, pr: false };
+    if (a.R && !s.pr) { s.off = ctx.t; if (s.frozen !== null) s.frozen = 0; }
+    s.pr = !!a.R;
+    if (a.P) {
+      if (s.frozen === null) s.frozen = ctx.t - s.off;
+    } else if (s.frozen !== null) {
+      s.off = ctx.t - s.frozen;
+      s.frozen = null;
+    }
+    return { T: s.frozen === null ? ctx.t - s.off : s.frozen, F: ctx.frame };
+  },
+  buildBody: (node, body, changed) => {
+    const seg = _mk('div', 'seg', body);
+    const pb = _mk('div', 'seg-b' + (node.values.P ? ' on' : ''), seg);
+    pb.textContent = '⏸'; pb.title = 'pause time (wired P overrides)';
+    _cleanClick(pb, () => {
+      node.values.P = !node.values.P;
+      pb.classList.toggle('on', !!node.values.P);
+      changed();
+    });
+    const rb = _mk('div', 'seg-b', seg);
+    rb.textContent = '↺'; rb.title = 'restart from zero (wired R overrides)';
+    _cleanClick(rb, () => { node.values.R = true; }); // one-frame pulse, cleared in postEval
+  },
+  postEval: node => { if (node.values.R === true) node.values.R = false; }
 });
 
 defNode('input/mouse', {
@@ -167,30 +197,111 @@ function _cleanClick(el, fn) {
   });
 }
 
+/* editor-only: live shift state — shift-dragging any slider snaps to integers
+ * (guarded so the headless tests, which have no window, still load this file) */
+let _weftShift = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', e => { if (e.key === 'Shift') _weftShift = true; });
+  window.addEventListener('keyup', e => { if (e.key === 'Shift') _weftShift = false; });
+  window.addEventListener('blur', () => { _weftShift = false; });
+}
+
 defNode('params/slider', {
-  title: 'Number Slider', cat: 'Params', desc: 'Draggable number', width: 200, bare: true,
+  title: 'Number Slider', cat: 'Params', width: 200, bare: true,
+  desc: 'Draggable number — shift-drag snaps to integers, double-click for label and rounding options',
   inputs: [], outputs: [{ name: 'N', type: 'number' }],
   defaults: { min: 0, max: 10, value: 5 },
   compute: (a, c, node) => ({ N: node.values.value === undefined ? 0 : node.values.value }),
   buildBody: (node, body, changed) => {
     const v = node.values;
+    /* rounding: float (with decimal precision), integer, odd, even */
+    const quant = x => {
+      const m = v.mode || 'float';
+      if (m === 'int') return Math.round(x);
+      if (m === 'odd') return 2 * Math.round((x - 1) / 2) + 1;
+      if (m === 'even') return 2 * Math.round(x / 2);
+      const p = Math.pow(10, v.prec === undefined ? 3 : v.prec);
+      return Math.round(x * p) / p;
+    };
     const sl = _mk('div', 'sl', body);
+    const lab = _mk('div', 'sl-label', sl);
     const mm = _mk('div', 'sl-minmax', sl);
     const mn = _numInput('sl-min', v.min, mm); mn.title = 'min';
     const mx = _numInput('sl-max', v.max, mm); mx.title = 'max';
     const track = _mk('div', 'sl-track', sl);
     const range = _mk('input', 'sl-range', track);
-    range.type = 'range'; range.step = 'any'; range.min = v.min; range.max = v.max; range.value = v.value;
+    range.type = 'range'; range.min = v.min; range.max = v.max; range.value = v.value;
     const num = _numInput('sl-val', v.value, sl);
+    const paintLabel = () => {
+      lab.textContent = v.label || '';
+      lab.style.display = v.label ? '' : 'none';
+    };
+    const step = () => {
+      const m = v.mode || 'float';
+      range.step = m === 'int' ? 1 : (m === 'odd' || m === 'even') ? 2 : 'any';
+    };
     const fill = () => {
       const span = (v.max - v.min) || 1;
       range.style.setProperty('--p', (LM.clamp((v.value - v.min) / span, 0, 1) * 100) + '%');
     };
-    fill();
-    range.addEventListener('input', () => { v.value = parseFloat(range.value); num.value = Math.round(v.value * 1000) / 1000; fill(); changed(); });
-    num.addEventListener('change', () => { v.value = parseFloat(num.value) || 0; range.value = v.value; fill(); changed(); });
+    paintLabel(); step(); fill();
+    const setVal = x => {
+      if (!isFinite(x)) x = 0;
+      v.value = x; num.value = x;
+      if (parseFloat(range.value) !== x) range.value = x;
+      fill(); changed();
+    };
+    range.addEventListener('input', () => setVal(_weftShift ? Math.round(parseFloat(range.value)) : quant(parseFloat(range.value))));
+    num.addEventListener('change', () => setVal(quant(parseFloat(num.value) || 0)));
     mn.addEventListener('change', () => { v.min = parseFloat(mn.value) || 0; range.min = v.min; fill(); changed(); });
     mx.addEventListener('change', () => { v.max = parseFloat(mx.value) || 0; range.max = v.max; fill(); changed(); });
+
+    /* double-click → options popover: label, rounding mode, decimal precision */
+    sl.addEventListener('dblclick', e => {
+      if (e.target.tagName === 'INPUT' && e.target !== range) return; // typing fields keep native dblclick
+      e.stopPropagation();
+      const nodeEl = body.closest('.node');
+      const old = body.querySelector('.sl-opts');
+      if (old) { old.remove(); if (nodeEl) nodeEl.style.zIndex = ''; return; }
+      const op = _mk('div', 'sl-opts', body);
+      if (nodeEl) nodeEl.style.zIndex = 25; // float the popover over neighbouring nodes
+      op.addEventListener('pointerdown', ev => ev.stopPropagation());
+      op.addEventListener('dblclick', ev => ev.stopPropagation());
+      const lrow = _mk('div', 'sl-opt-row', op);
+      _mk('span', 'sl-opt-cap', lrow).textContent = 'label';
+      const li = _mk('input', '', lrow);
+      li.type = 'text'; li.value = v.label || ''; li.spellcheck = false; li.placeholder = 'none';
+      li.addEventListener('change', () => { v.label = li.value.trim(); paintLabel(); changed(); });
+      const seg = _mk('div', 'seg', op);
+      const prow = _mk('div', 'sl-opt-row', op);
+      _mk('span', 'sl-opt-cap', prow).textContent = 'decimals';
+      const pi = _numInput('', v.prec === undefined ? 3 : v.prec, prow);
+      pi.min = 0; pi.max = 6; pi.step = 1;
+      pi.addEventListener('change', () => {
+        v.prec = LM.clamp(Math.round(parseFloat(pi.value) || 0), 0, 6);
+        pi.value = v.prec;
+        setVal(quant(v.value));
+      });
+      const paintPrec = () => { prow.style.display = (v.mode || 'float') === 'float' ? '' : 'none'; };
+      [['decimal', 'float'], ['integer', 'int'], ['odd', 'odd'], ['even', 'even']].forEach(m => {
+        const b = _mk('div', 'seg-b' + ((v.mode || 'float') === m[1] ? ' on' : ''), seg);
+        b.textContent = m[0];
+        _cleanClick(b, () => {
+          v.mode = m[1];
+          seg.querySelectorAll('.seg-b').forEach(x => x.classList.remove('on'));
+          b.classList.add('on');
+          step(); paintPrec(); setVal(quant(v.value));
+        });
+      });
+      paintPrec();
+      const closer = ev => {
+        if (op.contains(ev.target)) return;
+        op.remove();
+        if (nodeEl) nodeEl.style.zIndex = '';
+        window.removeEventListener('pointerdown', closer, true);
+      };
+      window.addEventListener('pointerdown', closer, true);
+    });
   }
 });
 
@@ -221,7 +332,6 @@ defNode('params/swatch', {
     const circle = _mk('div', 'sw-circle', sw);
     circle.title = 'Colour Swatch';
     const col = _mk('input', '', sw); col.type = 'color'; col.value = node.values.hex;
-    const al = _numInput('sw-alpha', node.values.a, sw); al.min = 0; al.max = 1; al.title = 'alpha';
     const paint = () => {
       const a = node.values.a === undefined ? 1 : node.values.a;
       circle.style.background = node.values.hex;
@@ -230,7 +340,105 @@ defNode('params/swatch', {
     paint();
     _cleanClick(circle, () => col.click());
     col.addEventListener('input', () => { node.values.hex = col.value; paint(); changed(); });
-    al.addEventListener('change', () => { node.values.a = LM.clamp(parseFloat(al.value) || 0, 0, 1); paint(); changed(); });
+  }
+});
+
+defNode('params/button', {
+  title: 'Button', cat: 'Params', bare: true,
+  desc: 'Momentary push button — true while pressed, false again on release (an editor control, like the toggle)',
+  inputs: [], outputs: [{ name: 'B', type: 'bool' }],
+  compute: (a, c, node) => ({ B: !!node._down }),
+  buildBody: (node, body) => {
+    const bt = _mk('div', 'pbtn', body);
+    bt.title = 'Button — true while pressed';
+    _mk('div', 'pbtn-core', bt);
+    const up = () => { node._down = false; bt.classList.remove('down'); };
+    bt.addEventListener('pointerdown', () => {
+      node._down = true;
+      bt.classList.add('down');
+      window.addEventListener('pointerup', up, { once: true });
+    });
+  }
+});
+
+defNode('params/relay', {
+  title: 'Relay', cat: 'Params', relay: true,
+  desc: 'Pass-through pill for organising wires — double-click any wire to drop one onto it',
+  inputs: [{ name: 'V', type: 'any' }], outputs: [{ name: 'V', type: 'any' }],
+  listInputs: ['V'],
+  compute: a => ({ V: a.V || [] })
+});
+
+defNode('params/graph', {
+  title: 'Graph Data', cat: 'Params', width: 200, bare: true,
+  desc: 'Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data.',
+  inputs: [{ name: 'X', type: 'number' }, { name: 'Y', type: 'number' }],
+  outputs: [{ name: 'X', type: 'number' }, { name: 'Y', type: 'number' }],
+  listInputs: ['X', 'Y'],
+  compute: a => ({ X: a.X || [], Y: a.Y || [] }),
+  buildBody: (node, body) => {
+    const gp = _mk('div', 'np gph', body);
+    const cv = _mk('canvas', 'gph-cv', gp);
+    cv.width = 2; cv.height = 2;
+  },
+  postEval: (node, el) => {
+    const cv = el.querySelector('.gph-cv');
+    if (!cv) return;
+    const ins = (node._last && node._last.ins) || {};
+    const X = ins.X || [], Y = ins.Y || [];
+    const W = 176, H = 92, dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(W * dpr)) {
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    /* both wired → scatter of (x,y); one wired → its values over series 0,1,2… */
+    const scatter = X.length && Y.length;
+    const ys = scatter ? Y : (X.length ? X : Y);
+    const xs = scatter ? X : ys.map((_, i) => i);
+    const n = Math.min(xs.length, ys.length, 2000);
+    if (!n) {
+      g.fillStyle = 'rgba(255,255,255,0.25)';
+      g.font = '10px Consolas, ui-monospace, monospace';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('no data', W / 2, H / 2);
+      return;
+    }
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const x = +xs[i] || 0, y = +ys[i] || 0;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    if (x1 - x0 < 1e-9) { x0 -= 0.5; x1 += 0.5; }
+    if (y1 - y0 < 1e-9) { y0 -= 0.5; y1 += 0.5; }
+    const pad = 7;
+    const px = x => pad + (x - x0) / (x1 - x0) * (W - pad * 2);
+    const py = y => H - pad - (y - y0) / (y1 - y0) * (H - pad * 2);
+    /* zero axes, faint, when zero is in range */
+    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 1;
+    if (y0 < 0 && y1 > 0) { g.beginPath(); g.moveTo(pad, py(0)); g.lineTo(W - pad, py(0)); g.stroke(); }
+    if (x0 < 0 && x1 > 0) { g.beginPath(); g.moveTo(px(0), pad); g.lineTo(px(0), H - pad); g.stroke(); }
+    g.strokeStyle = '#3e9aff'; g.fillStyle = '#3e9aff'; g.lineWidth = 1.4;
+    if (!scatter && n > 1) {
+      g.beginPath();
+      for (let i = 0; i < n; i++) { const x = px(+xs[i] || 0), y = py(+ys[i] || 0); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+    }
+    for (let i = 0; i < n; i++) {
+      g.beginPath();
+      g.arc(px(+xs[i] || 0), py(+ys[i] || 0), scatter ? 2.4 : 1.7, 0, LM.TAU);
+      g.fill();
+    }
+    /* range readout, corners */
+    g.fillStyle = 'rgba(255,255,255,0.3)';
+    g.font = '8.5px Consolas, ui-monospace, monospace';
+    g.textAlign = 'left'; g.textBaseline = 'bottom';
+    g.fillText(LM.fmt(y0), 2, H - 1);
+    g.textBaseline = 'top';
+    g.fillText(LM.fmt(y1), 2, 1);
   }
 });
 
@@ -1241,10 +1449,10 @@ defNode('meta/portout', {
     'math/pi': 5, 'math/phi': 5,
     'math/cmp': 6, 'math/logic': 6,
     /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
-    'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/curve': 0,
-    'params/slider': 1, 'params/toggle': 1, 'params/swatch': 1, 'params/textlist': 1,
+    'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/curve': 0, 'params/relay': 0,
+    'params/slider': 1, 'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,
     'params/anchor': 2,
-    'params/panel': 3,
+    'params/panel': 3, 'params/graph': 4,
     /* Sets: 1 generators · 2 access · 3 list surgery · 4 set operations */
     'sets/series': 1, 'sets/range': 1, 'sets/random': 1,
     'sets/item': 2, 'sets/length': 2,

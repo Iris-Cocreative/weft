@@ -27,6 +27,7 @@ const App = {
         const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: n.values };
         if (n.enabled === false) o.enabled = false;
         if (n.preview === false) o.preview = false;
+        if (n.collapsed) o.collapsed = true;
         return o;
       }),
       wires: App.graph.wires.map(w => ({ id: w.id, from: w.from, to: w.to }))
@@ -218,6 +219,7 @@ const App = {
     try {
       App._fileName = localStorage.getItem('weft:filename') || App._fileName;
       Viewport.ghosts = localStorage.getItem('weft:ghosts') !== '0';
+      Viewport.draws = localStorage.getItem('weft:draws') !== '0';
       Viewport.merged = localStorage.getItem('weft:merged') === '1';
     } catch (e) {}
     Editor.init(() => App.onGraphChanged());
@@ -409,6 +411,20 @@ const App = {
         : 'split view — the loom weaves left, the cloth wears it right');
     });
     paintMerge();
+
+    const btnDraw = document.getElementById('btnDraw');
+    const paintDraw = () => {
+      btnDraw.innerHTML = weftUISVG('draw');
+      btnDraw.classList.toggle('off', !Viewport.draws);
+      btnDraw.title = 'draw display on the cloth — ' + (Viewport.draws ? 'on' : 'off (previews only)');
+    };
+    btnDraw.addEventListener('click', () => {
+      Viewport.draws = !Viewport.draws;
+      try { localStorage.setItem('weft:draws', Viewport.draws ? '1' : '0'); } catch (e) {}
+      paintDraw();
+      App.flash(Viewport.draws ? 'draw display on' : 'draw display off — the cloth shows previews only');
+    });
+    paintDraw();
 
     const btnGhosts = document.getElementById('btnGhosts');
     const paintGhosts = () => {

@@ -73,7 +73,12 @@ Page scroll as a parameter — px, normalized 0..1, velocity (the editor simulat
 
 ### `input/time` — Time
 
-Seconds since start, frame count
+Seconds since start, frame count — P freezes it, R restarts it from zero
+
+| in | type | default | note |
+|---|---|---|---|
+| P | bool | `false` | pause |
+| R | bool | `false` | restart (trigger) |
 
 | out | type | note |
 |---|---|---|
@@ -111,6 +116,14 @@ True / false switch
 
 Node values (`values` keys, not ports): `{"on":true}`
 
+### `params/button` — Button
+
+Momentary push button — true while pressed, false again on release (an editor control, like the toggle)
+
+| out | type | note |
+|---|---|---|
+| B | bool |  |
+
 ### `params/swatch` — Colour Swatch
 
 Pick a colour
@@ -132,6 +145,20 @@ Pass-through container — wire a source through it, or set it directly; swap th
 | out | type | note |
 |---|---|---|
 | C | geometry |  |
+
+### `params/graph` — Graph Data
+
+Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data.
+
+| in | type | default | note |
+|---|---|---|---|
+| X | number |  | receives whole list |
+| Y | number |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| X | number |  |
+| Y | number |  |
 
 ### `params/panel` — Note Pad
 
@@ -161,7 +188,7 @@ Pass-through container — wire a source through it, or set it directly; swap th
 
 ### `params/slider` — Number Slider
 
-Draggable number
+Draggable number — shift-drag snaps to integers, double-click for label and rounding options
 
 | out | type | note |
 |---|---|---|
@@ -180,6 +207,18 @@ Pass-through container — wire a source through it, or set it directly; swap th
 | out | type | note |
 |---|---|---|
 | P | point |  |
+
+### `params/relay` — Relay
+
+Pass-through pill for organising wires — double-click any wire to drop one onto it
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| V | any |  |
 
 ### `params/textlist` — Text List
 
@@ -1374,4 +1413,4 @@ Text geometry at point P — wire into Draw
 
 ## Icon coverage
 
-106 node glyphs + 1 category fallback(s) in `js/icons.js`. Full coverage.
+109 node glyphs + 1 category fallback(s) in `js/icons.js`. Full coverage.

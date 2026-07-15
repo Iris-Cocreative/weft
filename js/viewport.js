@@ -10,6 +10,7 @@
 const Viewport = {
   playing: true,
   ghosts: true, // global switch for the faint geometry previews on the cloth
+  draws: true, // global switch for the drawList (Display output) — off = previews only
   merged: false, // single-canvas view: the loom floats directly on the cloth
 
   init() {
@@ -129,7 +130,7 @@ const Viewport = {
       y: clientY - rect.top - rect.height / 2
     });
 
-    const anchors = () => App.graph.nodes.filter(n => n.type === 'params/anchor' && n.enabled !== false);
+    const anchors = () => App.graph.nodes.filter(n => n.type === 'params/anchor' && n.enabled !== false && n.preview !== false);
 
     window.addEventListener('pointermove', e => {
       mx = e.clientX; my = e.clientY;
@@ -317,7 +318,7 @@ const Viewport = {
       g2.save();
       g2.translate(rect.width / 2, rect.height / 2);
       if (Viewport.ghosts) drawGhosts(ctx, false);
-      for (const it of ctx.drawList) {
+      if (Viewport.draws) for (const it of ctx.drawList) {
         try { LM.drawItem(g2, it); } catch (e) { /* skip bad item */ }
       }
       if (Viewport.ghosts) drawGhosts(ctx, true);

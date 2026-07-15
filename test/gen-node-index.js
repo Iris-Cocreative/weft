@@ -49,7 +49,11 @@ const html = `<!doctype html>
   nav { display:flex; align-items:center; gap:18px; margin-bottom:40px; font-size:13px; color:var(--muted); }
   nav .mark { width:26px; height:26px; flex:none; }
   nav .mark svg { width:100%; height:100%; display:block; }
-  nav b { font-weight:600; letter-spacing:0.28em; color:var(--ink); margin-right:auto; }
+  nav b { font-weight:600; letter-spacing:0.28em; color:var(--ink); }
+  nav .tagline { color:var(--faint); font-size:12px; margin-right:6px; }
+  nav a.here { color:var(--ink); }
+  nav a:last-child { margin-left:auto; }
+  @media (max-width:640px) { nav .tagline { display:none; } }
   h1 { font-size:26px; font-weight:300; margin:0 0 8px; }
   .sub { color:var(--muted); max-width:64ch; margin:0 0 22px; }
   #q { width:min(420px,100%); padding:8px 13px; background:var(--panel); color:var(--ink);
@@ -80,8 +84,10 @@ const html = `<!doctype html>
 <div class="wrap">
   <nav>
     <span class="mark">${logo}</span><b>WEFT</b>
-    <a href="index.html">open the loom</a>
+    <span class="tagline">weave parameters into web experiences</span>
     <a href="about.html">about</a>
+    <a class="here" href="nodes.html">nodes</a>
+    <a href="index.html">loom</a>
     <a href="https://github.com/Iris-Cocreative/weft">github</a>
   </nav>
   <h1>node index</h1>

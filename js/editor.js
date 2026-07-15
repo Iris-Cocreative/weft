@@ -23,7 +23,7 @@ const Editor = (() => {
   /* dynamic defs (clusters) keep their ports on the node, not the def */
   const insOf = n => { const d = defOf(n); return d ? ((d.dynamic && n.values && n.values.ins) || d.inputs || []) : []; };
   const outsOf = n => { const d = defOf(n); return d ? ((d.dynamic && n.values && n.values.outs) || d.outputs || []) : []; };
-  const previewCapable = (def, n) => !!def && def.cat !== 'Display' && def.id !== 'params/anchor' &&
+  const previewCapable = (def, n) => !!def && def.cat !== 'Display' && !def.relay &&
     ((def.dynamic && n ? (n.values.outs || []) : def.outputs) || []).some(o => o.type === 'geometry' || o.type === 'point');
 
   function worldPos(e) {
@@ -103,10 +103,12 @@ const Editor = (() => {
     return false;
   }
 
-  function connect(fromId, fromPort, toId, toPort) {
+  function connect(fromId, fromPort, toId, toPort, replace) {
     if (wouldCycle(fromId, toId)) { App.flash('that connection would create a cycle'); return false; }
-    // multiple wires per input are allowed (lists concatenate); only exact duplicates are refused
-    if (S.graph.wires.some(w => w.from[0] === fromId && w.from[1] === fromPort && w.to[0] === toId && w.to[1] === toPort)) return false;
+    // GH semantics: a dropped wire replaces whatever the input held; shift-drop
+    // stacks instead (lists concatenate). Exact duplicates are refused when stacking.
+    if (!replace && S.graph.wires.some(w => w.from[0] === fromId && w.from[1] === fromPort && w.to[0] === toId && w.to[1] === toPort)) return false;
+    if (replace) S.graph.wires = S.graph.wires.filter(w => !(w.to[0] === toId && w.to[1] === toPort));
     S.graph.wires.push({ id: 'w' + (S.widc++), from: [fromId, fromPort], to: [toId, toPort] });
     refreshLiterals(toId);
     drawWires();
@@ -147,9 +149,12 @@ const Editor = (() => {
 
     el.style.setProperty('--cat', CATS[def.cat] || '#888');
     if (def.bare) el.classList.add('bare');
+    if (def.relay) el.classList.add('relay');
     if (def.dynamic) el.classList.add('cluster');
+    if (def.id === 'params/anchor') el.classList.add('is-anchor');
+    if (n.collapsed) applyCollapsed(el, n, true);
 
-    if (!def.bare) {
+    if (!def.bare && !def.relay) {
       const head = document.createElement('div');
       head.className = 'node-head';
       const icon = weftIconSVG(def.id, def.cat);
@@ -176,10 +181,18 @@ const Editor = (() => {
           });
         });
       }
+      // double-click the head folds the card to icon + gradient + ports (great
+      // for Param nodes bundling wires); double-click again unfolds
+      head.addEventListener('dblclick', e => {
+        if (e.target.closest('.prev-toggle')) return;
+        if (e.target.isContentEditable) return;
+        e.stopPropagation();
+        toggleCollapsed(n.id);
+      });
       if (previewCapable(def, n)) {
         const pt = document.createElement('span');
         pt.className = 'prev-toggle';
-        pt.title = 'toggle geometry preview';
+        pt.title = def.id === 'params/anchor' ? 'toggle the anchor handle on the cloth' : 'toggle geometry preview';
         pt.innerHTML = weftEyeSVG(n.preview === false ? 'hidden' : 'shown');
         pt.addEventListener('pointerdown', e => e.stopPropagation());
         pt.addEventListener('click', e => {
@@ -245,6 +258,25 @@ const Editor = (() => {
 
   function position(el, n) {
     el.style.transform = `translate(${n.x}px, ${n.y}px)`;
+  }
+
+  /* collapsed = icon + gradient + ports only (double-click the head) */
+  function applyCollapsed(el, n, on) {
+    el.classList.toggle('collapsed', on);
+    const def = defOf(n);
+    el.style.width = on ? '' : (def && def.width ? def.width + 'px' : '');
+    el.style.minHeight = on ? Math.max(46, Math.max(insOf(n).length, outsOf(n).length) * 17 + 14) + 'px' : '';
+  }
+
+  function toggleCollapsed(id) {
+    const n = nodeById(id);
+    const def = n && defOf(n);
+    if (!def || def.bare || def.relay) return;
+    if (n.collapsed) delete n.collapsed; else n.collapsed = true;
+    const el = S.els.get(id);
+    if (el) applyCollapsed(el, n, !!n.collapsed);
+    drawWires();
+    changed();
   }
 
   function buildLiteral(n, inp, holder) {
@@ -328,10 +360,41 @@ const Editor = (() => {
     return `M ${p1.x} ${p1.y} C ${p1.x + dx} ${p1.y}, ${p2.x - dx} ${p2.y}, ${p2.x} ${p2.y}`;
   }
 
-  function outputTypeColor(from) {
+  function outputTypeColor(from, depth) {
     const n = nodeById(from[0]);
+    const d = n && defOf(n);
+    // relays are transparent: their wires (and ports) take the colour of
+    // whatever feeds them; a disconnected relay speaks 'any'
+    if (d && d.relay) return (depth || 0) > 32 ? TYPE_COLORS.any : relayColor(n.id, (depth || 0) + 1);
     const o = n && outsOf(n).find(o => o.name === from[1]);
     return o ? (TYPE_COLORS[o.type] || '#999') : '#999';
+  }
+
+  function relayColor(nodeId, depth) {
+    const w = S.graph.wires.find(w => w.to[0] === nodeId);
+    return w ? outputTypeColor(w.from, depth || 0) : TYPE_COLORS.any;
+  }
+
+  function paintRelayPorts() {
+    for (const n of S.graph.nodes) {
+      const d = defOf(n);
+      if (!d || !d.relay) continue;
+      const el = S.els.get(n.id);
+      if (!el) continue;
+      const c = relayColor(n.id, 0);
+      el.querySelectorAll('.port').forEach(p => p.style.setProperty('--t', c));
+    }
+  }
+
+  /* double-click a wire → splice a relay onto it (input wire + output wire) */
+  function insertRelayOnWire(w, wp) {
+    const from = w.from.slice(), to = w.to.slice();
+    removeWire(w.id);
+    const n = addNode('params/relay', Math.round(wp.x - 19), Math.round(wp.y - 11));
+    if (!n) return;
+    connect(from[0], from[1], n.id, 'V');
+    connect(n.id, 'V', to[0], to[1]);
+    selectOnly(n.id);
   }
 
   function drawWires() {
@@ -362,9 +425,10 @@ const Editor = (() => {
         S.selWire = w.id; S.sel.clear();
         updateSelection(); drawWires();
       });
-      hit.addEventListener('dblclick', e => { e.stopPropagation(); removeWire(w.id); });
+      hit.addEventListener('dblclick', e => { e.stopPropagation(); insertRelayOnWire(w, worldPos(e)); });
       svgEl.appendChild(hit);
     }
+    paintRelayPorts();
     if (S.drag && S.drag.kind === 'wire') {
       const fixed = portPos(S.drag.fixed.node, S.drag.fixed.dir, S.drag.fixed.port);
       const m = { x: S.drag.mx, y: S.drag.my };
@@ -443,7 +507,7 @@ const Editor = (() => {
     }
     const out = fixed.dir === 'out' ? fixed : other;
     const inn = fixed.dir === 'in' ? fixed : other;
-    if (!connect(out.node, out.port, inn.node, inn.port)) {
+    if (!connect(out.node, out.port, inn.node, inn.port, !e.shiftKey)) {
       drawWires();
       if (wasDetached) changed();
     }
@@ -527,6 +591,7 @@ const Editor = (() => {
       const wp = worldPos(e);
       const x = Math.min(d.x0, wp.x), y = Math.min(d.y0, wp.y);
       const w = Math.abs(wp.x - d.x0), h = Math.abs(wp.y - d.y0);
+      if ((w + h) * S.zoom > 3) d.moved = true;
       // CAD semantics: drag left = crossing (touch selects), drag right = window (contain selects)
       const crossing = wp.x < d.x0;
       marqueeEl.classList.toggle('crossing', crossing);
@@ -568,6 +633,12 @@ const Editor = (() => {
     if (d.kind === 'wire') { completeWire(e); return; }
     if (d.kind === 'marquee') {
       if (marqueeEl) { marqueeEl.remove(); marqueeEl = null; }
+      // a still click on empty space is a deselect (shift keeps the base selection) —
+      // without this, selection only cleared when the pointer happened to move
+      if (!d.moved) {
+        S.sel = new Set(d.base); S.selWire = null;
+        updateSelection(); drawWires();
+      }
       S.drag = null;
       return;
     }
@@ -686,6 +757,7 @@ const Editor = (() => {
       const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: JSON.parse(JSON.stringify(n.values || {})) };
       if (n.enabled === false) o.enabled = false;
       if (n.preview === false) o.preview = false;
+      if (n.collapsed) o.collapsed = true;
       return o;
     });
     const wires = S.graph.wires
@@ -758,6 +830,7 @@ const Editor = (() => {
       };
       if (src.enabled === false) n.enabled = false;
       if (src.preview === false) n.preview = false;
+      if (src.collapsed) n.collapsed = true;
       idMap[src.id] = n.id;
       S.graph.nodes.push(n);
       buildNode(n);
@@ -834,6 +907,7 @@ const Editor = (() => {
     const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: JSON.parse(JSON.stringify(n.values || {})) };
     if (n.enabled === false) o.enabled = false;
     if (n.preview === false) o.preview = false;
+    if (n.collapsed) o.collapsed = true;
     return o;
   }
 

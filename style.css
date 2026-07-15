@@ -12,6 +12,10 @@
   --white-40: rgba(255, 255, 255, 0.4);
   --primary: #2dd4bf;
   --eye-on: #14c50e;
+  /* wire-type colours surfaced as tokens (must match TYPE_COLORS in nodes.js) —
+   * value widgets wear the colour of the type they output */
+  --type-number: #3e9aff;
+  --type-bool: #ff3b41;
   --font-ui: "Neue Kabel", Inter, "Segoe UI", system-ui, sans-serif;
   --font-val: Consolas, ui-monospace, "Cascadia Mono", monospace;
 
@@ -88,11 +92,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 .tools button.accent:hover { background: linear-gradient(135deg, #115e59, #0f766e); }
 
-.about-link {
-  margin-left: 4px; padding: 5px 6px; font-size: 12px;
+/* global nav — brand + tagline, then About · Nodes · Loom; loom tools stay right */
+.nav-links { display: flex; gap: 2px; margin-left: 18px; margin-right: auto; }
+.nav-links a {
+  padding: 5px 10px; font-size: 12px; border-radius: 7px;
   color: var(--dim); text-decoration: none;
+  transition: color .15s, background .15s;
 }
-.about-link:hover { color: var(--accent); }
+.nav-links a:hover { color: var(--accent); background: #1a2233; }
+.nav-links a.here { color: var(--text); background: var(--panel2); }
 
 /* ================= layout ================= */
 
@@ -279,8 +287,13 @@ main.merged #viewHud { z-index: 2; right: 136px; }
 /* custom bodies */
 .node-body { padding: 4px 12px 2px; }
 
-/* --- Number Slider: ruler track, teal fill-to-thumb, value below (Figma) --- */
-.sl { width: 100%; padding: 2px 0; }
+/* --- Number Slider: ruler track, number-blue fill-to-thumb, value below (Figma) ---
+ * the widget wears the wire colour of its output type (number) */
+.sl { width: 100%; padding: 2px 0; position: relative; }
+.sl-label {
+  text-align: center; padding: 0 2px 1px;
+  color: var(--white-80); font: 11px var(--font-ui); letter-spacing: 0.02em;
+}
 .sl-minmax { display: flex; justify-content: space-between; padding: 0 2px; }
 .sl-minmax input {
   width: 44px; padding: 0 2px; background: transparent; border: 1px solid transparent;
@@ -294,7 +307,7 @@ main.merged #viewHud { z-index: 2; right: 136px; }
   width: 100%; height: 20px; margin: 0; cursor: ew-resize;
   border: 1px solid var(--white-40); border-radius: 10px;
   background:
-    linear-gradient(90deg, rgba(45, 212, 191, 0.45) var(--p, 50%), transparent var(--p, 50%)),
+    linear-gradient(90deg, rgba(62, 154, 255, 0.45) var(--p, 50%), transparent var(--p, 50%)),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 1px, transparent 1px 9px) 6px 50% / calc(100% - 12px) 8px no-repeat,
     var(--dark-200);
   outline: none;
@@ -302,28 +315,60 @@ main.merged #viewHud { z-index: 2; right: 136px; }
 .sl-range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
   width: 14px; height: 14px; border-radius: 50%;
-  background: var(--primary); border: none;
-  box-shadow: 0 0 6px rgba(45, 212, 191, 0.6);
+  background: var(--type-number); border: none;
+  box-shadow: 0 0 6px rgba(62, 154, 255, 0.6);
 }
 .sl-val {
   display: block; margin: 1px auto 0; width: 72px; text-align: center;
   background: transparent; border: 1px solid transparent; border-radius: 3px;
-  color: var(--primary); font: 11px var(--font-ui); outline: none;
+  color: var(--type-number); font: 11px var(--font-ui); outline: none;
 }
+
+/* slider options popover (double-click): label, rounding mode, precision */
+.sl-opts {
+  position: absolute; left: -2px; right: -2px; top: calc(100% + 6px); z-index: 30;
+  display: flex; flex-direction: column; gap: 5px;
+  background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); padding: 8px;
+}
+.sl-opt-row { display: flex; align-items: center; gap: 7px; }
+.sl-opt-cap { flex: none; width: 52px; font-size: 10px; color: var(--dim); }
+.sl-opt-row input { flex: 1; min-width: 0; }
 .sl-val:hover, .sl-val:focus { border-color: var(--dark-400); background: var(--dark-150); }
 
-/* --- Boolean Toggle: vertical pill, knob slides down when on (Figma) --- */
+/* --- Boolean Toggle: vertical pill in the bool wire colour (Figma 2026-07-15) —
+ * off: outlined pill, light knob resting at the bottom
+ * on:  solid pill, dark knob risen to the top --- */
 .tg {
   width: 31px; height: 52px; position: relative; cursor: pointer;
-  border: 1px solid var(--primary); border-radius: 999px;
+  border: 2px solid var(--type-bool); border-radius: 999px;
   background: var(--dark-200);
+  transition: background 0.15s ease;
 }
 .tg-knob {
-  position: absolute; left: 3px; top: 3px; width: 23px; height: 23px;
-  border-radius: 50%; background: var(--primary); opacity: 0.45;
-  transition: top 0.15s ease, opacity 0.15s ease;
+  position: absolute; left: 2px; top: 23px; width: 23px; height: 23px;
+  border-radius: 50%; background: var(--type-bool);
+  transition: top 0.15s ease, background 0.15s ease;
 }
-.tg.on .tg-knob { top: 24px; opacity: 1; box-shadow: 0 0 8px rgba(45, 212, 191, 0.6); }
+.tg.on { background: var(--type-bool); box-shadow: 0 0 8px rgba(255, 59, 65, 0.45); }
+.tg.on .tg-knob { top: 2px; background: var(--dark-100); }
+
+/* --- Button (params): momentary push — solid while pressed --- */
+.pbtn {
+  width: 40px; height: 40px; position: relative; cursor: pointer;
+  border: 2px solid var(--type-bool); border-radius: 50%;
+  background: var(--dark-200);
+  transition: background 0.1s ease;
+  touch-action: none; user-select: none;
+}
+.pbtn-core {
+  position: absolute; inset: 5px; border-radius: 50%;
+  background: var(--type-bool); opacity: 0.35;
+  transition: opacity 0.1s ease, background 0.1s ease;
+}
+.pbtn:hover .pbtn-core { opacity: 0.55; }
+.pbtn.down { background: var(--type-bool); box-shadow: 0 0 8px rgba(255, 59, 65, 0.45); }
+.pbtn.down .pbtn-core { background: var(--dark-100); opacity: 1; }
 
 /* --- Colour Swatch: the chosen colour as a circle (Figma) --- */
 .sw { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px; }
@@ -339,6 +384,10 @@ main.merged #viewHud { z-index: 2; right: 136px; }
   color: var(--white-40); font: 10px var(--font-val); outline: none;
 }
 .sw-alpha:hover, .sw-alpha:focus { border-color: var(--dark-400); background: var(--dark-150); color: var(--white-80); }
+
+/* --- Graph Data (params/graph): plot on the node, number-blue marks --- */
+.gph { padding: 4px; min-height: 0; }
+.gph-cv { display: block; border-radius: 5px; }
 
 /* --- Note Pad (params/panel): quiet dark sheet --- */
 .np {
@@ -463,6 +512,9 @@ main.merged #viewHud { z-index: 2; right: 136px; }
 }
 .prev-toggle svg { width: 100%; height: 100%; display: block; }
 .prev-toggle:hover { opacity: 1; filter: drop-shadow(0 0 4px rgba(20, 197, 14, 0.6)); }
+/* the anchor's eye toggles its cloth handle, and wears the Params colour */
+.node.is-anchor .prev-toggle { color: var(--cat); }
+.node.is-anchor .prev-toggle:hover { filter: drop-shadow(0 0 4px rgba(45, 212, 191, 0.6)); }
 .node.no-prev .prev-toggle { color: var(--white-40); opacity: 0.7; }
 .node.no-prev .prev-toggle:hover { filter: none; }
 
@@ -500,7 +552,7 @@ main.merged #viewHud { z-index: 2; right: 136px; }
   min-width: 0; background: none; border: none; border-radius: 0; box-shadow: none;
 }
 .node.bare.selected, .node.bare.error { box-shadow: none; }
-.node.bare.selected .node-body > * { outline: 1px solid var(--primary); outline-offset: 3px; border-radius: 6px; }
+.node.bare.selected .node-body > * { outline: 1px solid var(--primary); outline-offset: 3px; }
 .node.bare .node-rows { padding: 0; }
 .node.bare .node-cols { position: absolute; inset: 0; pointer-events: none; }
 .node.bare .col-ins, .node.bare .col-outs {
@@ -515,6 +567,55 @@ main.merged #viewHud { z-index: 2; right: 136px; }
 .node.bare .col-ins .port { margin-left: -7px; }
 .node.bare .col-outs .port { margin-right: -7px; }
 .node.bare .node-body { padding: 0; }
+
+/* collapsed nodes — double-click the head: icon + gradient + ports only.
+ * Ports overlay the card edges like bare widgets; everything textual hides. */
+.node.collapsed { min-width: 46px; width: 46px; }
+.node.collapsed .node-head {
+  border-bottom: none; border-radius: 12px; padding: 0;
+  position: absolute; inset: 0; justify-content: center; gap: 0;
+}
+.node.collapsed .node-head .title,
+.node.collapsed .node-head .head-gap,
+.node.collapsed .prev-toggle { display: none; }
+.node.collapsed .node-body,
+.node.collapsed .row .label,
+.node.collapsed .lit,
+.node.collapsed .row.out .rd { display: none; }
+.node.collapsed .node-rows {
+  position: absolute; inset: 0; padding: 0; background: none; pointer-events: none;
+}
+.node.collapsed .node-cols { position: absolute; inset: 0; }
+.node.collapsed .col-ins, .node.collapsed .col-outs {
+  position: absolute; top: 0; bottom: 0; margin: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+}
+.node.collapsed .col-ins { left: 0; }
+.node.collapsed .col-outs { right: 0; align-items: center; }
+.node.collapsed .row { padding: 0; min-height: 0; }
+.node.collapsed .port { pointer-events: auto; position: static; transform: none; }
+.node.collapsed .col-ins .port { margin-left: -7px; }
+.node.collapsed .col-outs .port { margin-right: -7px; }
+
+/* relay — a pass-through pill dropped onto a wire (double-click the wire);
+ * standard card colours, no head, ports at its ends take the wire's colour */
+.node.relay { min-width: 40px; width: 40px; height: 24px; border-radius: 999px; }
+.node.relay .node-rows {
+  position: absolute; inset: 0; padding: 0; background: none;
+  border-radius: 999px; pointer-events: none;
+}
+.node.relay .node-cols { position: absolute; inset: 0; }
+.node.relay .col-ins, .node.relay .col-outs {
+  position: absolute; top: 0; bottom: 0; margin: 0;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.node.relay .col-ins { left: 0; }
+.node.relay .col-outs { right: 0; align-items: center; }
+.node.relay .row { padding: 0; min-height: 0; }
+.node.relay .row .label, .node.relay .lit, .node.relay .row.out .rd { display: none; }
+.node.relay .port { pointer-events: auto; position: static; transform: none; }
+.node.relay .col-ins .port { margin-left: -7px; }
+.node.relay .col-outs .port { margin-right: -7px; }
 
 .anchor-row { display: flex; gap: 5px; }
 .anchor-row input { width: 56px; }
@@ -538,7 +639,7 @@ main.merged #viewHud { z-index: 2; right: 136px; }
 .node-body input.sw-alpha:hover, .node-body input.sw-alpha:focus {
   border-color: var(--dark-400); background: var(--dark-150);
 }
-.node-body input.sl-val { color: var(--primary); }
+.node-body input.sl-val { color: var(--type-number); }
 
 #ctxMenu {
   position: absolute; z-index: 30; min-width: 130px;

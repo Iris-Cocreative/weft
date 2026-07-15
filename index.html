@@ -10,6 +10,11 @@
 <body>
 <header id="toolbar">
   <div class="brand"><span class="brand-mark" id="brandMark"></span>WEFT<span>weave parameters into web experiences</span></div>
+  <nav class="nav-links">
+    <a href="about.html" title="what is weft?">About</a>
+    <a href="nodes.html" title="the node library">Nodes</a>
+    <a href="index.html" class="here" title="the editor">Loom</a>
+  </nav>
   <div class="tools">
     <select id="exampleSelect"><option value="">Examples…</option></select>
     <button id="btnNew" title="Clear the canvas (current graph is backed up)">New</button>
@@ -17,7 +22,6 @@
     <button id="btnSaveAs" title="Download graph as JSON under a new name">Save as</button>
     <button id="btnLoad" title="Open a saved graph">Open</button>
     <button id="btnExport" class="accent" title="Compile this graph to standalone JavaScript">Export JS</button>
-    <a class="about-link" href="about.html" title="what is weft?">about</a>
   </div>
 </header>
 
@@ -44,6 +48,7 @@
     <div id="loomTools">
       <button id="btnMerge" title="merge — float the loom on the cloth"></button>
       <button id="btnFitIcon" title="zoom to fit — Home fits all, F fits the selection"></button>
+      <button id="btnDraw" title="draw display on the cloth"></button>
       <button id="btnGhosts" title="geometry previews on the cloth"></button>
     </div>
   </section>
@@ -60,7 +65,7 @@
 </main>
 
 <footer id="status">
-  <span id="statusHint">the loom (left) weaves the logic, the cloth (right) wears it · drag to box-select (← touch · → contain) · right-drag pans, right-click adds · inputs accept multiple wires · Ctrl+C/V/D · Ctrl+Z</span>
+  <span id="statusHint">the loom (left) weaves the logic, the cloth (right) wears it · drag to box-select (← touch · → contain) · right-drag pans, right-click adds · dropped wires replace, shift-drop stacks · double-click a wire for a relay, a node head to fold it · Ctrl+C/V/D · Ctrl+Z</span>
   <span id="statusCounts"></span>
 </footer>
 

@@ -146,6 +146,11 @@ const WEFT_ICONS = {
   'input/button': '<rect x="3.5" y="11" width="16" height="8" rx="4" stroke="currentColor" stroke-miterlimit="10"/><path d="M21.5 8.5L24 6" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M23 11.5L26 10.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M19 6.5L19.5 3.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
   'input/hotspot': '<circle cx="13.5" cy="13.5" r="8" stroke="currentColor" stroke-miterlimit="10" stroke-dasharray="2.5 3"/><circle cx="13.5" cy="13.5" r="1.4" fill="currentColor"/><path d="M25 25L16.5 16.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M16.5 16.5L19.7 16.9" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M16.5 16.5L16.9 19.7" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
 
+  /* ---- code drafts — params II ---- */
+  'params/relay': '<path d="M2.5 13.5H9" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M18 13.5H24.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><rect x="9" y="9.5" width="9" height="8" rx="4" stroke="currentColor" stroke-miterlimit="10"/>',
+  'params/button': '<circle cx="13.5" cy="13.5" r="9.5" stroke="currentColor" stroke-miterlimit="10"/><circle cx="13.5" cy="13.5" r="4.5" fill="currentColor"/>',
+  'params/graph': '<path d="M4.5 3.5V22.5H24.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="17" r="1.5" fill="currentColor"/><circle cx="13.5" cy="10.5" r="1.5" fill="currentColor"/><circle cx="18" cy="13.5" r="1.5" fill="currentColor"/><circle cx="22.5" cy="6.5" r="1.5" fill="currentColor"/>',
+
   /* ---- code drafts — meta ---- */
   'meta/cluster': '<rect x="2.5" y="4.5" width="22" height="18" rx="3" stroke="currentColor" stroke-miterlimit="10"/><rect x="6" y="8.5" width="5.5" height="4.5" rx="1" stroke="currentColor" stroke-miterlimit="10"/><rect x="15.5" y="14" width="5.5" height="4.5" rx="1" stroke="currentColor" stroke-miterlimit="10"/><path d="M11.5 10.75C14 10.75 13 16.25 15.5 16.25" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
   'meta/portin': '<path d="M17.5 3.5V23.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M3.5 13.5H13" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M13 13.5L10 11.9" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M13 13.5L10 15.1" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><circle cx="17.5" cy="13.5" r="1.8" fill="currentColor"/>',
@@ -195,6 +200,8 @@ const WEFT_UI = {
   merge: '<rect x="8.5" y="5.5" width="14" height="12" rx="1.5" stroke="currentColor" opacity=".35"/><rect x="4.5" y="9.5" width="14" height="12" rx="1.5" stroke="currentColor"/>',
   // split: two panes side by side — click to pull them back apart
   split: '<rect x="4.5" y="7.5" width="8" height="12" rx="1.5" stroke="currentColor"/><rect x="14.5" y="7.5" width="8" height="12" rx="1.5" stroke="currentColor"/>',
+  // draw: the Draw node's pen — toggles the drawList (Display output) on the cloth
+  draw: '<path d="M11.5 22.5L13 17.5L21.5 9L25 12.5L16.5 21L11.5 22.5Z" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 17.5L16.5 21" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M2.5 23.5C4.5 19 7 23 9.5 18.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
 };
 function weftUISVG(kind) {
   return '<svg viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">' + WEFT_UI[kind] + '</svg>';

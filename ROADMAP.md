@@ -90,6 +90,14 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   a travelling gaussian pulse through an Expression. Found a design lesson en
   route: Edge-on-mouse-D misses sub-frame clicks; Hotspot's armed/release
   trigger is the reliable click idiom.
+- [shipped 2026-07-15] ***Solar system* example** — the list-matching
+  showcase at astronomical scale: real J2000 Keplerian elements (JPL) in Text
+  Lists drive ONE chain (mean anomaly → equation of the center → true anomaly
+  → radius) for all eight planets; orbit ellipses with the sun at the focus,
+  correct shape + perihelion orientation; the moon reuses the same machine
+  with Earth (List Item 2) as its polar origin. 1 year = 6 s from 2000-01-01,
+  date read back out of the clock (floor/frac → year number + month via List
+  Item on a Text List). Verified against the real J2000 sky to <1°.
 
 ## 2. Documentation & open source
 
@@ -237,6 +245,26 @@ is now in, so any of these can be picked up in a workshop pass):
   handles win over the marquee, shift+wheel scrubs the scroll sim (plain
   wheel still zooms), window-level pointermove takes over anchor drag/hover.
   Palette-dropped anchors pin their handle at the drop point, card beside it.
+- [shipped 2026-07-15] **Workbench batch** (14 items, James's spec) —
+  **collapsed nodes** (double-click a head → icon + gradient + ports only,
+  `n.collapsed` persisted; made for Param nodes bundling wires); **Relay**
+  (`params/relay`, double-click any wire to splice one in — pill in card
+  colours, ports take the incoming wire's type colour, `any` when bare);
+  **GH wire semantics** (a dropped wire *replaces* the input's wires;
+  shift-drop stacks); click-empty-space deselect fixed (was motion-dependent);
+  **global navbar** (About · Nodes · Loom on index/about/nodes, loom tools
+  only in the app); **slider types shipped** (label + integer/decimal-with-
+  precision/odd/even via double-click options popover, shift-drag = transient
+  integer snap, number-blue livery); Colour Swatch dropped its alpha field +
+  output port centred; **Boolean Toggle redesigned** (bool-red, 2px border,
+  knob bottom=off / solid+dark knob top=on, per Figma shot); anchor handle
+  visibility toggled by a Params-teal eye; **Time** gained P (pause) + R
+  (restart) inputs with on-node buttons (offset/freeze against host time — an
+  untouched Time still equals `ctx.t`); **Button** (`params/button`, momentary
+  true-while-pressed); **Graph Data** (`params/graph`, plots flow-through data
+  on the node — X alone = curve over auto series, X+Y = scatter, range fits
+  data); loom got a **draw-display eye** (`Viewport.draws`) beside the ghosts
+  eye — previews-only mode.
 
 ### Legibility pass — [next], James 2026-07-14
 
@@ -259,12 +287,10 @@ they're cheap next to the tracks above.
   nodes with real nested graphs, evaluated through `ctx.defs`, exportable and
   nestable. The 5-node "phase-shifted wave line" ×3 case is now: collapse once,
   duplicate the cluster.
-- **Slider types** (GH parity, James's spec): a type per slider —
-  **integer · decimal · even · odd** — plus decimal defaulting to 3 places
-  (`0.000`) instead of today's full float. Shift while dragging snaps to integers.
-  Make shift a transient *snap modifier*, not a type change, so it never mutates
-  the patch. This single feature kills a whole bug class: the patch above had
-  `20.1508947939262` standing in for a column count.
+- ~~**Slider types**~~ → **shipped 2026-07-15** (workbench batch, §5 above):
+  integer · decimal (3-place default, precision setting) · even · odd via the
+  double-click options popover, plus a label field; shift-drag is a transient
+  snap modifier exactly as spec'd — it never mutates the slider's type.
 - **Dead-branch dimming.** An output wired to nothing should be visibly dim. Free
   to compute (the evaluator already knows the wire graph) and it makes an entire
   category of mistake self-evident.
@@ -275,8 +301,8 @@ Then:
   or `x/360` on a port to modify values in-wire; James priority: mid). Design
   against the Expression node and the planned Shift control so we don't ship
   three overlapping answers.
-- [idea] Relay/reroute pins on wires (GH Relay; double-click wire to insert) —
-  pairs with the existing "wire reroute handles" idea.
+- ~~[idea] Relay/reroute pins on wires~~ → **shipped 2026-07-15** (workbench
+  batch, §5 above): double-click a wire splices in `params/relay`.
 - [idea] drag from an empty port → quick-add pre-wired (GH's best gesture)
 - [idea] node alignment/distribution, comment/group frames
 - [idea] keyboard palette (Tab, like GH), arrow-key nudge
