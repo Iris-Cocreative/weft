@@ -1114,5 +1114,47 @@ const EXAMPLES = {
     ['m4', 'C', 'm5', 'G'],
     ['m2', 'R', 'm6', 'V'],
     ['m6', 'R', 'm7', 'V']
+  ]),
+
+  /* Custom JS (Phase 4) — the superformula, a shape no native node knows,
+   * wrapped in one code node with its magic numbers promoted to sliders
+   * (the knob-extraction pattern). "each" mode: the code runs per angle,
+   * longest-list matching against the single-valued knobs, exactly like a
+   * native node. */
+  'Superformula': _EX([
+    ['s1', 'params/slider', 30, 40, { min: 2, max: 16, value: 6, mode: 'int', label: 'symmetry' }],
+    ['s2', 'params/slider', 30, 150, { min: 0.1, max: 2, value: 0.3, label: 'pinch' }],
+    ['s3', 'params/slider', 30, 260, { min: 0.1, max: 5, value: 1.7, label: 'edge' }],
+    ['s4', 'params/slider', 30, 370, { min: 40, max: 220, value: 130, mode: 'int', label: 'size' }],
+    ['rg', 'sets/range', 30, 480, { A: 0, B: 6.2832, N: 256 }],
+    ['js', 'meta/js', 280, 150, {
+      title: 'superformula', mode: 'each',
+      ins: [
+        { name: 'T', type: 'number', default: 0 },
+        { name: 'M', type: 'number', default: 6 },
+        { name: 'N1', type: 'number', default: 0.3 },
+        { name: 'N2', type: 'number', default: 1.7 },
+        { name: 'R', type: 'number', default: 130 }
+      ],
+      outs: [{ name: 'P', type: 'point' }],
+      code: 'const q = M * T / 4;\nconst f = Math.abs(Math.cos(q)), g = Math.abs(Math.sin(q));\nconst r = R * Math.pow(Math.pow(f, N2) + Math.pow(g, N2), -1 / N1);\nreturn { P: { x: r * Math.cos(T), y: r * Math.sin(T) } };'
+    }],
+    ['pl', 'crv/polyline', 560, 150, { C: true }],
+    ['t1', 'input/time', 560, 330],
+    ['mu', 'math/mul', 740, 330, { B: 0.05 }],
+    ['ro', 'xf/rotate', 920, 150],
+    ['dr', 'disp/draw', 1140, 150, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 129, g: 140, b: 248, a: 0.12 }, W: 2 }],
+    ['bg', 'disp/bg', 1140, 330]
+  ], [
+    ['rg', 'R', 'js', 'T'],
+    ['s1', 'N', 'js', 'M'],
+    ['s2', 'N', 'js', 'N1'],
+    ['s3', 'N', 'js', 'N2'],
+    ['s4', 'N', 'js', 'R'],
+    ['js', 'P', 'pl', 'V'],
+    ['pl', 'C', 'ro', 'G'],
+    ['t1', 'T', 'mu', 'A'],
+    ['mu', 'R', 'ro', 'A'],
+    ['ro', 'G', 'dr', 'G']
   ])
 };

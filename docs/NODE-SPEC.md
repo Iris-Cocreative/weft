@@ -201,6 +201,24 @@ cluster → *Expand cluster*; double-click its name to rename.
 
 Full design rationale: `EVENTS-AND-STATE.md`.
 
+### Custom JS (`meta/js`)
+
+The code-block node — for logic that has no node yet. Ports live on the node
+like a cluster's (`values.ins` / `values.outs`); the body in `values.code`;
+`values.mode` picks the list semantics:
+
+- `"each"` (default) — the body runs once per list item with longest-list
+  matching, exactly like a native compute. Each input port is a variable;
+  return an object keyed by output port names (an array under a key flattens).
+- `"list"` — the body runs once and every port variable is the whole list.
+
+Also in scope: `ctx`, `node`, `LM`. The compute purity rules (§7) apply — no
+DOM, no `Date.now()`/`Math.random()`; state on `node._state`. Reserved port
+names: `title`, `ins`, `outs`, `graph`, `code`, `mode`. **Trust boundary:**
+like Expression, a graph carrying Custom JS runs code on the machine that
+opens it — share accordingly. Authoring guidance + examples:
+`LLM-AUTHORING.md` §7.
+
 ## 7. Node definition contract (for node authors)
 
 ```js
@@ -276,6 +294,10 @@ Guidance:
 - Check port names and types against `NODE-CATALOG.md` — port letters matter
   (`math/sin` input is `V`, `crv/circle` output is `C`).
 - Prefer list-thinking: one Series driving many elements beats many nodes.
+- The distilled, prompt-ready version of all this (port reference, idioms,
+  few-shot patches) is `LLM-AUTHORING.md`. Validate any authored patch
+  headlessly with `node test/validate-patch.js patch.json` — it checks types,
+  port names, evaluation, visibility and export compile.
 
 ## 9. Compatibility promises
 

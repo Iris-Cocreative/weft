@@ -198,6 +198,80 @@ const App = {
     });
   },
 
+  /* ------------------------------ share links ------------------------------
+   * The whole graph rides in the URL hash: #w= deflate-raw + base64url (or
+   * #wj= plain base64url JSON where CompressionStream is unavailable).
+   * Zero-backend sharing — the hash never reaches a server. */
+
+  _b64(u8) {
+    let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  },
+
+  _unb64(s) {
+    s = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (s.length % 4) s += '=';
+    const bin = atob(s);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  },
+
+  async _pipe(u8, stream) {
+    const r = new Response(new Blob([u8]).stream().pipeThrough(stream));
+    return new Uint8Array(await r.arrayBuffer());
+  },
+
+  async shareLink() {
+    if (!App.graph.nodes.length) { App.flash('nothing to share — the canvas is empty'); return; }
+    App._flushPending();
+    const bytes = new TextEncoder().encode(JSON.stringify(App.serialize()));
+    const canDeflate = typeof CompressionStream !== 'undefined';
+    const hash = canDeflate
+      ? '#w=' + App._b64(await App._pipe(bytes, new CompressionStream('deflate-raw')))
+      : '#wj=' + App._b64(bytes);
+    const url = location.origin + location.pathname + location.search + hash;
+    let copied = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      }
+    } catch (e) { /* clipboard unavailable (file://, permissions) — show the link instead */ }
+    if (copied) {
+      App.flash('share link copied — the whole patch lives in the URL (' + url.length + ' chars)');
+    } else {
+      await App.ask({
+        title: 'share link',
+        body: 'copy the link below — the whole patch lives in the URL.',
+        input: url,
+        buttons: [{ label: 'Done', value: 'done', accent: true }]
+      });
+    }
+  },
+
+  async loadFromHash() {
+    const m = /^#(w|wj)=([A-Za-z0-9_-]+)$/.exec(location.hash || '');
+    if (!m) return false;
+    const clear = () => { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} };
+    try {
+      let bytes = App._unb64(m[2]);
+      if (m[1] === 'w') bytes = await App._pipe(bytes, new DecompressionStream('deflate-raw'));
+      const g = App.migrate(JSON.parse(new TextDecoder().decode(bytes)));
+      try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
+      App.setGraph(g);
+      Editor.zoomToFit(false);
+      clear();
+      App.flash('opened a shared patch — your previous graph is backed up');
+      return true;
+    } catch (e) {
+      clear();
+      App.flash('could not open the shared link: ' + (e.message || e));
+      return false;
+    }
+  },
+
   /* ------------------------------ save to file ------------------------------ */
 
   saveGraph() {
@@ -241,6 +315,7 @@ const App = {
 
     const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Hexa graph'])));
     App.setGraph(g);
+    App.loadFromHash(); // a #w= share link replaces the graph (previous one is backed up)
   },
 
   bindKeys() {
@@ -272,7 +347,7 @@ const App = {
   buildPalette() {
     const list = document.getElementById('paletteList');
     const search = document.getElementById('paletteSearch');
-    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio'];
+    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio', 'Meta'];
 
     const render = q => {
       q = (q || '').toLowerCase();
@@ -467,6 +542,7 @@ const App = {
 
     document.getElementById('btnSave').addEventListener('click', () => App.saveGraph());
     document.getElementById('btnSaveAs').addEventListener('click', () => App.saveGraphAs());
+    document.getElementById('btnShare').addEventListener('click', () => App.shareLink());
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnLoad').addEventListener('click', () => fileInput.click());

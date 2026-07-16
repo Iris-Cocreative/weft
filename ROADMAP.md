@@ -19,8 +19,9 @@ per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
 - [shipped v0.2] **Undo/redo** — coalescing snapshot stack, Ctrl+Z/Shift+Ctrl+Z/Ctrl+Y.
 - [shipped v0.2] Marquee (shift-drag) select; copy/paste of subgraphs as
   graph-JSON fragments with id-remap + auto-layout for coordinate-less patches.
-- [idea] Share links: graph JSON compressed into the URL hash → anyone with the
-  file/URL opens the exact patch. Zero-backend sharing. (Phase 4)
+- [shipped v0.9] **Share links** — Share button: graph → deflate-raw →
+  base64url → `#w=` URL hash (plain-JSON `#wj=` fallback); opening the link
+  restores the patch, previous work backed up. Zero-backend sharing.
 - [shipped v0.5] **GHX importer** (`tools/ghx-import.html`) — .ghx → Weft patch
   JSON; unmapped GH types become `?` placeholder nodes so imports double as gap
   reports (verified against all 7 demos in `Grasshopper Demos/`). "Weft opens
@@ -28,6 +29,10 @@ per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
   table as nodes ship keeps the importer honest.
 - [idea] Dirty-flag evaluation (skip re-eval when no animated inputs and
   nothing changed) — only when someone hits a perf wall; measure first.
+  *First measurement exists (kaleidoscope case study, 2026-07-16): ~22ms/eval
+  at 3.7k draw items, ~half of it per-item compute+coerce inside Draw nodes.
+  The likelier first fix is a drawList fast path (skip coercion for
+  already-typed geometry/colour lists), not dirty flags.*
 
 ## 0.5. Composition — making patches practical (PLAN Phase 3) — ✅ SHIPPED v0.8 (2026-07-14)
 
@@ -117,13 +122,15 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   drawList JSON → diff. (smoke.js already checks "runs + draws"; goldens
   catch silent visual regressions.)
 - GitHub Actions: run smoke on PR. Node-only, no browser needed.
-- [idea] **Weft guide on a small model** — "how do I…" help answered by Haiku
-  with NODE-CATALOG + NODE-SPEC + a `docs/RECIPES.md` cookbook stuffed in
-  context (no RAG needed — the whole corpus fits in one prompt, cache it).
-  Two surfaces: a `weft-guide` subagent in `.claude/agents/` for dev sessions,
-  and later an in-app "?" panel via an n8n proxy webhook. Division of labor:
-  small model answers *how-to* (the answer exists verbatim in the docs);
-  patch *authoring* stays with big models (Phase 4).
+- [shipped v0.9, first surface] **Weft guide on a small model** — "how do I…"
+  help answered by Haiku with the docs stuffed in context (no RAG — the corpus
+  fits in one prompt). Shipped: `docs/RECIPES.md` (task → node-chain cookbook)
+  + the `weft-guide` subagent (`~/.claude/agents/weft-guide.md`, model: haiku,
+  reads RECIPES + LLM-AUTHORING + CATALOG whole). Patch *authoring* stays with
+  big models via the `/weft-patch` skill (`~/.claude/skills/weft-patch/`),
+  which validates output with `test/validate-patch.js` before delivering.
+  Still open: the second surface — an in-app "?" panel via an n8n proxy
+  webhook.
 
 ## 3. Digital Pattern Language
 
@@ -401,8 +408,10 @@ Staged, don't leap:
   the FFT-bands follow-up now just needs a second analyser read).*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
-- Graph gallery / community sharing once share-links exist.
-- Expression node uses `new Function` — fine for your own patches; add a note
-  to sharing docs when a gallery exists (untrusted graphs run code).
+- Graph gallery / community sharing — share links exist as of v0.9; a gallery
+  is now just a page of them.
+- Expression + Custom JS use `new Function` — fine for your own patches; the
+  trust boundary is documented (NODE-SPEC §Custom JS, LLM-AUTHORING §7):
+  graphs run code, label shared ones. Revisit if a public gallery lands.
 - Perf: OffscreenCanvas + worker eval if graphs grow huge.
 - Accessibility of exported experiences (prefers-reduced-motion switch node?).

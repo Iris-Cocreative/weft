@@ -1479,6 +1479,211 @@ Seismograph on the cloth — streams the values in V away from pen point P; L is
 |---|---|---|
 | G | geometry | trace curves |
 
+## Audio
+
+### `audio/out` — Audio Out
+
+The speaker — every handle wired in is mixed to the master volume V; sound starts after the first click or keypress (browser rule)
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio |  | audio in · receives whole list |
+| V | number | `0.8` | master volume |
+
+### `audio/filter` — Filter
+
+Biquad filter — pick the mode on the node; cutoff F Hz, resonance Q (per list item)
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio |  | audio in |
+| F | number | `800` | cutoff Hz |
+| Q | number | `1` | resonance |
+
+| out | type | note |
+|---|---|---|
+| A | audio | audio |
+
+Node values (`values` keys, not ports): `{"mode":"lowpass"}`
+
+### `audio/gain` — Gain
+
+Scale a signal’s volume — per list item, so a list of voices gets a gain each (host-smoothed, no zipper noise)
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio |  | audio in |
+| G | number | `0.5` | gain 0..1 |
+
+| out | type | note |
+|---|---|---|
+| A | audio | audio |
+
+### `audio/mic` — Mic In
+
+Microphone loudness as a number — V is the level (RMS, roughly 0..1, boosted by G) for driving visuals; the browser asks permission once, R turns true when the mic is live. Never routed to the speakers.
+
+| in | type | default | note |
+|---|---|---|---|
+| G | number | `1` | boost |
+
+| out | type | note |
+|---|---|---|
+| V | number | level 0..1 |
+| R | bool | mic ready |
+
+### `audio/mix` — Mix
+
+Sum every wired signal into ONE signal (multi-wire In, scaled by G) — the epicycle builder: mix a small fast circle into a big slow one and the Vector Scope draws rolling-circle figures
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio |  | audio in (stacks) · receives whole list |
+| G | number | `1` | gain 0..2 |
+
+| out | type | note |
+|---|---|---|
+| A | audio | audio |
+
+### `audio/noise` — Noise
+
+White noise source (a shared looped buffer) — an audio handle out
+
+| out | type | note |
+|---|---|---|
+| A | audio | audio |
+
+### `audio/note` — Note
+
+A musical pitch — pick the note on the node or wire N (0–12 semitones above C, 12 rolls into the next octave), set the octave O; F is the frequency in Hz (equal temperament, A4 = the graph tuning, 432 by default), M the MIDI number. A list of octaves is a chord of octaves.
+
+| in | type | default | note |
+|---|---|---|---|
+| N | number | `-1` | note 0-12 (-1 = use picker) |
+| O | number | `4` | octave |
+
+| out | type | note |
+|---|---|---|
+| F | number | frequency Hz |
+| M | number | midi note |
+
+Node values (`values` keys, not ports): `{"note":9}`
+
+### `audio/osc` — Oscillator
+
+A tone at F Hz — pick the waveform on the node; the output is an audio handle (wire it toward Audio Out), not samples
+
+| in | type | default | note |
+|---|---|---|---|
+| F | number | `220` | frequency Hz |
+| D | number | `0` | detune cents |
+
+| out | type | note |
+|---|---|---|
+| A | audio | audio |
+
+Node values (`values` keys, not ports): `{"wave":"sine"}`
+
+### `audio/path` — Path to Audio
+
+Turn geometry into sound: the curve’s outline is resampled into a looped stereo waveform traced F times a second — wire X/Y to a Vector Scope and the beam draws your shape; wire either into the mix to hear it. Oscilloscope music, the Weft way.
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | path to trace |
+| F | number | `108` | loops per second (Hz) |
+
+| out | type | note |
+|---|---|---|
+| X | audio | horizontal signal |
+| Y | audio | vertical signal |
+
+### `audio/scale` — Scale
+
+Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument
+
+| in | type | default | note |
+|---|---|---|---|
+| V | number | `57` | value (midi note, fractional ok) |
+
+| out | type | note |
+|---|---|---|
+| F | number | frequency Hz |
+| M | number | snapped midi |
+
+Node values (`values` keys, not ports): `{"root":9,"scale":"pentatonic"}`
+
+### `audio/scope` — Scope
+
+Oscilloscope — taps the audio wire In (an analyser, never routed onward) and draws the actual waveform: T ms of signal, W×H px at P, trigger-locked on a rising zero crossing so the trace holds still. V is the drawn samples, L the RMS level.
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio |  | audio in |
+| P | point | `{"x":0,"y":0}` | centre |
+| W | number | `320` | width px |
+| H | number | `120` | height px (±1 fills it) |
+| T | number | `20` | time window ms |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.95}` | beam colour |
+
+| out | type | note |
+|---|---|---|
+| G | geometry | waveform |
+| V | number | samples -1..1 |
+| L | number | level 0..1 |
+
+### `audio/xyscope` — Vector Scope
+
+XY oscilloscope — signal X deflects the beam horizontally, Y vertically, plotting sound against sound: harmonic ratios draw Lissajous roses and knots. Taps only (never routed onward); ±1 fills the S×S square at P.
+
+| in | type | default | note |
+|---|---|---|---|
+| X | audio |  | horizontal |
+| Y | audio |  | vertical |
+| P | point | `{"x":0,"y":0}` | centre |
+| S | number | `300` | size px |
+| T | number | `30` | time window ms |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.95}` | beam colour |
+
+| out | type | note |
+|---|---|---|
+| G | geometry | figure |
+| P | point | beam points |
+
+## Meta
+
+### `meta/cluster` — Cluster
+
+A subgraph folded into one node — select nodes and choose “Collapse to cluster”; its ports are the wires that crossed the selection edge
+
+Node values (`values` keys, not ports): `{"title":"cluster","ins":[],"outs":[],"graph":{"nodes":[],"wires":[]}}`
+
+### `meta/js` — Custom JS
+
+A code-block node — write a JS body against ports you declare; “each” runs per list item like any node, “list” receives whole lists. Graphs run code — share accordingly
+
+Node values (`values` keys, not ports): `{"title":"custom js","mode":"each","ins":[{"name":"X","type":"number","default":1}],"outs":[{"name":"R","type":"number"}],"code":"return { R: X * 2 };"}`
+
+### `meta/portin` — Port In
+
+Inside a cluster: emits whatever list arrives at the cluster input port it is named after
+
+| out | type | note |
+|---|---|---|
+| V | any |  |
+
+Node values (`values` keys, not ports): `{"port":"A"}`
+
+### `meta/portout` — Port Out
+
+Inside a cluster: whatever arrives here leaves the cluster through the output port it is named after
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  | receives whole list |
+
+Node values (`values` keys, not ports): `{"port":"A"}`
+
 ## Icon coverage
 
-125 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+126 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

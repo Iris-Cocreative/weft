@@ -1,0 +1,104 @@
+{
+  "weft": "patch",
+  "format": 1,
+  "nodes": [
+    { "id": "sym", "type": "params/slider", "x": 30, "y": 40, "values": { "min": 2, "max": 24, "value": 8, "mode": "int", "label": "symmetry" } },
+    { "id": "pts", "type": "params/slider", "x": 30, "y": 130, "values": { "min": 20, "max": 300, "value": 70, "mode": "int", "label": "points" } },
+    { "id": "spd", "type": "params/slider", "x": 30, "y": 220, "values": { "min": 1, "max": 100, "value": 35, "mode": "int", "label": "speed" } },
+    { "id": "con", "type": "params/slider", "x": 30, "y": 310, "values": { "min": 20, "max": 120, "value": 42, "mode": "int", "label": "connect" } },
+    { "id": "tim", "type": "input/time", "x": 30, "y": 410 },
+
+    { "id": "tsc", "type": "math/expr", "x": 270, "y": 400, "values": { "expr": "X * Y * 0.01" } },
+    { "id": "idx", "type": "sets/series", "x": 270, "y": 40, "values": { "S": 0, "N": 1 } },
+    { "id": "rbase", "type": "sets/random", "x": 270, "y": 160, "values": { "A": 20, "B": 420, "S": 1 } },
+    { "id": "rosc", "type": "sets/random", "x": 270, "y": 280, "values": { "A": 15, "B": 115, "S": 2 } },
+    { "id": "rfrq", "type": "sets/random", "x": 270, "y": 520, "values": { "A": 0.2, "B": 2.7, "S": 3 } },
+    { "id": "roff", "type": "sets/random", "x": 270, "y": 640, "values": { "A": 0, "B": 6.283, "S": 4 } },
+    { "id": "rafq", "type": "sets/random", "x": 270, "y": 760, "values": { "A": 0.15, "B": 2.15, "S": 5 } },
+    { "id": "ramp", "type": "sets/random", "x": 270, "y": 880, "values": { "A": 0, "B": 0.5, "S": 6 } },
+    { "id": "rdst", "type": "sets/random", "x": 270, "y": 1000, "values": { "A": 0.4, "B": 1.6, "S": 7 } },
+    { "id": "rwht", "type": "sets/random", "x": 270, "y": 1120, "values": { "A": 0, "B": 1, "S": 8 } },
+
+    { "id": "seed", "type": "meta/js", "x": 560, "y": 200, "values": {
+      "title": "slice points", "mode": "each",
+      "ins": [
+        { "name": "I", "type": "number", "default": 0 },
+        { "name": "N", "type": "number", "default": 100 },
+        { "name": "SYM", "type": "number", "default": 8 },
+        { "name": "TM", "type": "number", "default": 0 },
+        { "name": "BASE", "type": "number", "default": 100 },
+        { "name": "OSC", "type": "number", "default": 40 },
+        { "name": "FRQ", "type": "number", "default": 1 },
+        { "name": "OFF", "type": "number", "default": 0 },
+        { "name": "AFQ", "type": "number", "default": 1 },
+        { "name": "AMP", "type": "number", "default": 0.2 }
+      ],
+      "outs": [
+        { "name": "P", "type": "point" },
+        { "name": "HU", "type": "number" }
+      ],
+      "code": "const slice = Math.PI * 2 / Math.max(2, SYM);\nconst r = Math.max(5, BASE + Math.sin(TM * FRQ + OFF) * OSC);\nconst a = (I / Math.max(1, N)) * slice + Math.sin(TM * AFQ + I) * AMP;\nreturn { P: { x: Math.cos(a) * r, y: Math.sin(a) * r }, HU: I / Math.max(1, N) };"
+    } },
+
+    { "id": "kal", "type": "meta/js", "x": 840, "y": 200, "values": {
+      "title": "kaleidoscope", "mode": "list",
+      "ins": [
+        { "name": "P", "type": "point" },
+        { "name": "HU", "type": "number" },
+        { "name": "WHT", "type": "number" },
+        { "name": "DST", "type": "number" },
+        { "name": "CON", "type": "number", "default": 55 },
+        { "name": "SYM", "type": "number", "default": 8 },
+        { "name": "TM", "type": "number", "default": 0 }
+      ],
+      "outs": [
+        { "name": "LG", "type": "geometry" },
+        { "name": "LC", "type": "color" },
+        { "name": "DG", "type": "geometry" },
+        { "name": "DC", "type": "color" }
+      ],
+      "code": "const pts = P, n = pts.length;\nconst con = CON[0] || 55, sym = Math.max(2, Math.round(SYM[0] || 8)), tm = TM[0] || 0;\nconst cons = [];\nconst step = n > 200 ? 2 : 1;\nfor (let i = 0; i < n; i += step) for (let j = i + 1; j < n; j += step) {\n  const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;\n  const d = Math.sqrt(dx * dx + dy * dy);\n  const max = (DST[i % DST.length] + DST[j % DST.length]) * 0.5 * con;\n  if (d < max) cons.push([i, j, (1 - d / max) * 0.35]);\n}\nconst LGo = [], LCo = [], DGo = [], DCo = [];\nfor (let s = 0; s < sym; s++) {\n  const rot = s * (Math.PI * 2 / sym) + tm * 0.1;\n  const cr = Math.cos(rot), sr = Math.sin(rot);\n  for (let m = 0; m < 2; m++) {\n    const my = m ? -1 : 1;\n    const tx = p => ({ x: p.x * cr - p.y * my * sr, y: p.x * sr + p.y * my * cr });\n    for (const c of cons) {\n      const a = tx(pts[c[0]]), b = tx(pts[c[1]]);\n      const w = WHT[c[0] % WHT.length] < 0.35 || WHT[c[1] % WHT.length] < 0.35;\n      LGo.push({ kind: 'line', a: a, b: b });\n      LCo.push(w ? { r: 255, g: 255, b: 255, a: c[2] * 0.6 }\n        : LM.hslToColor((HU[c[0] % HU.length] + HU[c[1] % HU.length]) / 2 + tm * 0.08, 0.7, 0.6, c[2]));\n    }\n    for (let i = 0; i < n; i++) {\n      const q = tx(pts[i]);\n      const w = WHT[i % WHT.length] < 0.35;\n      DGo.push({ kind: 'circle', cx: q.x, cy: q.y, r: w ? 1.2 : 1.9 });\n      DCo.push(w ? { r: 255, g: 255, b: 255, a: 0.9 }\n        : LM.hslToColor(HU[i % HU.length] + tm * 0.08, 0.8, 0.55 + 0.2 * Math.sin(tm * 2 + i * 0.5), 0.85));\n    }\n  }\n}\nreturn { LG: LGo, LC: LCo, DG: DGo, DC: DCo };"
+    } },
+
+    { "id": "linedraw", "type": "disp/draw", "x": 1130, "y": 160, "values": { "W": 0.5 } },
+    { "id": "dotdraw", "type": "disp/draw", "x": 1130, "y": 330, "values": { "S": { "r": 0, "g": 0, "b": 0, "a": 0 }, "W": 0 } },
+    { "id": "bg", "type": "disp/bg", "x": 1130, "y": 500, "values": { "C": { "r": 5, "g": 5, "b": 8, "a": 1 } } }
+  ],
+  "wires": [
+    { "from": ["pts", "N"], "to": ["idx", "C"] },
+    { "from": ["pts", "N"], "to": ["rbase", "N"] },
+    { "from": ["pts", "N"], "to": ["rosc", "N"] },
+    { "from": ["pts", "N"], "to": ["rfrq", "N"] },
+    { "from": ["pts", "N"], "to": ["roff", "N"] },
+    { "from": ["pts", "N"], "to": ["rafq", "N"] },
+    { "from": ["pts", "N"], "to": ["ramp", "N"] },
+    { "from": ["pts", "N"], "to": ["rdst", "N"] },
+    { "from": ["pts", "N"], "to": ["rwht", "N"] },
+    { "from": ["tim", "T"], "to": ["tsc", "X"] },
+    { "from": ["spd", "N"], "to": ["tsc", "Y"] },
+
+    { "from": ["idx", "S"], "to": ["seed", "I"] },
+    { "from": ["pts", "N"], "to": ["seed", "N"] },
+    { "from": ["sym", "N"], "to": ["seed", "SYM"] },
+    { "from": ["tsc", "R"], "to": ["seed", "TM"] },
+    { "from": ["rbase", "R"], "to": ["seed", "BASE"] },
+    { "from": ["rosc", "R"], "to": ["seed", "OSC"] },
+    { "from": ["rfrq", "R"], "to": ["seed", "FRQ"] },
+    { "from": ["roff", "R"], "to": ["seed", "OFF"] },
+    { "from": ["rafq", "R"], "to": ["seed", "AFQ"] },
+    { "from": ["ramp", "R"], "to": ["seed", "AMP"] },
+
+    { "from": ["seed", "P"], "to": ["kal", "P"] },
+    { "from": ["seed", "HU"], "to": ["kal", "HU"] },
+    { "from": ["rwht", "R"], "to": ["kal", "WHT"] },
+    { "from": ["rdst", "R"], "to": ["kal", "DST"] },
+    { "from": ["con", "N"], "to": ["kal", "CON"] },
+    { "from": ["sym", "N"], "to": ["kal", "SYM"] },
+    { "from": ["tsc", "R"], "to": ["kal", "TM"] },
+
+    { "from": ["kal", "LG"], "to": ["linedraw", "G"] },
+    { "from": ["kal", "LC"], "to": ["linedraw", "S"] },
+    { "from": ["kal", "DG"], "to": ["dotdraw", "G"] },
+    { "from": ["kal", "DC"], "to": ["dotdraw", "F"] }
+  ]
+}

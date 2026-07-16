@@ -22,7 +22,7 @@ const fmtDefault = v => {
   return '`' + JSON.stringify(v) + '`';
 };
 
-const order = ['Input', 'Params', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
+const order = ['Input', 'Params', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio', 'Meta'];
 let md = `# Weft node catalog
 
 *Auto-generated from \`js/nodes.js\` by \`test/gen-catalog.js\` — do not edit by hand.*

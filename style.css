@@ -432,6 +432,33 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .expr-src:focus { border-color: #a855f7; }
 
+/* --- Custom JS (meta/js): code body + port editor --- */
+.js-code {
+  width: 100%; margin-top: 4px; padding: 4px 7px; display: block;
+  background: #0c111c; border: 1px solid #26304a; border-radius: 6px;
+  color: #c8d2e4; font: 11px/1.5 ui-monospace, Consolas, monospace;
+  outline: none; resize: vertical; tab-size: 2; white-space: pre;
+}
+.js-code:focus { border-color: var(--accent-dim); }
+.js-ports { display: flex; gap: 8px; margin-top: 4px; }
+.js-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.js-port { display: flex; gap: 3px; align-items: center; min-width: 0; }
+.js-port input.js-name { width: 34px; flex: 0 0 auto; }
+.js-port select.js-type {
+  flex: 1; min-width: 0; background: var(--dark-150); border: 1px solid var(--dark-400);
+  border-radius: 3px; color: var(--white-60); font: 10px var(--font-ui); outline: none; padding: 1px 2px;
+}
+.js-x {
+  flex: 0 0 auto; color: var(--white-40); cursor: pointer; font: 12px var(--font-ui);
+  padding: 0 2px; user-select: none;
+}
+.js-x:hover { color: var(--type-bool); }
+.js-add {
+  color: var(--white-40); cursor: pointer; font: 10px var(--font-ui);
+  padding: 1px 2px; user-select: none;
+}
+.js-add:hover { color: var(--primary); }
+
 /* ---------------- quick add + context menu ---------------- */
 
 #quickAdd {

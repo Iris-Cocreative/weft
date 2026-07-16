@@ -2057,6 +2057,131 @@ defNode('meta/portout', {
   compute: (a, ctx, node) => { if (ctx.clusterOuts) ctx.clusterOuts[node.values.port] = a.V || []; return {}; }
 });
 
+/* Custom JS — the code-block node (Phase 4): not every function needs to become
+ * a node. Write a body, declare the ports it needs (the Houdini pattern:
+ * promote magic numbers to inputs). Same trust boundary as Expression —
+ * graphs run code, share accordingly. */
+defNode('meta/js', {
+  title: 'Custom JS', cat: 'Meta', dynamic: true, width: 236,
+  desc: 'A code-block node — write a JS body against ports you declare; “each” runs per list item like any node, “list” receives whole lists. Graphs run code — share accordingly',
+  inputs: [], outputs: [],
+  defaults: {
+    title: 'custom js', mode: 'each',
+    ins: [{ name: 'X', type: 'number', default: 1 }],
+    outs: [{ name: 'R', type: 'number' }],
+    code: 'return { R: X * 2 };'
+  },
+  compute: (a, ctx, node) => {
+    const v = node.values || {};
+    const ins = v.ins || [], outs = v.outs || [];
+    const key = (v.code || '') + ' ' + ins.map(p => p.name).join(',');
+    /* guard the fn's type like math/expr: functions never survive JSON */
+    if (node._jsKey !== key || typeof node._jsFn !== 'function') {
+      node._jsKey = key;
+      const params = ins.map(p => p.name).concat('ctx', 'node', 'LM');
+      node._jsFn = new Function(...params, '"use strict";\n' + (v.code || 'return {};'));
+    }
+    const r = {};
+    for (const o of outs) r[o.name] = [];
+    const take = res => {
+      if (!res) return;
+      for (const o of outs) {
+        const x = res[o.name];
+        if (x === undefined) continue;
+        if (Array.isArray(x)) { for (const it of x) r[o.name].push(it); }
+        else r[o.name].push(x);
+      }
+    };
+    if (v.mode === 'list') {
+      take(node._jsFn.apply(null, ins.map(p => a[p.name] || []).concat(ctx, node, LM)));
+    } else {
+      let iter = 1;
+      for (const p of ins) { const L = a[p.name] || []; if (L.length > iter) iter = L.length; }
+      if (iter > 10000) iter = 10000;
+      for (let i = 0; i < iter; i++) {
+        ctx.i = i; // state (node._state) keys per item, same as native nodes
+        take(node._jsFn.apply(null, ins.map(p => {
+          const L = a[p.name] || [];
+          return L.length ? L[Math.min(i, L.length - 1)] : undefined;
+        }).concat(ctx, node, LM)));
+      }
+    }
+    return r;
+  },
+  buildBody: (node, body, changed) => {
+    const v = node.values;
+    const seg = _mk('div', 'seg', body);
+    [['each', 'run the body once per list item (longest-list matching)'],
+     ['list', 'run the body once — every port is the whole list']].forEach(([m, tip]) => {
+      const b = _mk('div', 'seg-b' + ((v.mode || 'each') === m ? ' on' : ''), seg);
+      b.textContent = m;
+      b.title = tip;
+      b.addEventListener('pointerdown', e => e.stopPropagation());
+      b.addEventListener('click', () => {
+        v.mode = m;
+        seg.querySelectorAll('.seg-b').forEach(x => x.classList.toggle('on', x === b));
+        changed();
+      });
+    });
+
+    const ta = _mk('textarea', 'js-code', body);
+    ta.value = v.code || '';
+    ta.spellcheck = false;
+    const fit = () => { ta.rows = Math.max(3, Math.min(14, ta.value.split('\n').length + 1)); };
+    fit();
+    ta.addEventListener('pointerdown', e => e.stopPropagation());
+    ta.addEventListener('keydown', e => e.stopPropagation());
+    ta.addEventListener('input', fit);
+    ta.addEventListener('change', () => { v.code = ta.value; changed(); });
+
+    /* port editor — a row per port; renames/removals prune their wires */
+    const RESERVED = ['title', 'ins', 'outs', 'graph', 'code', 'mode'];
+    const clean = (name, self) => {
+      let s = String(name).trim().replace(/\W/g, '').replace(/^\d+/, '');
+      if (!s) s = 'A';
+      const taken = (v.ins || []).concat(v.outs || []).filter(p => p !== self).map(p => p.name);
+      while (taken.indexOf(s) >= 0 || RESERVED.indexOf(s) >= 0) s += '2';
+      return s;
+    };
+    const rebuild = () => { changed(); Editor.rebuildNode(node.id); };
+    const wrap = _mk('div', 'js-ports', body);
+    const side = (list, dir) => {
+      const col = _mk('div', 'js-col', wrap);
+      for (const p of list) {
+        const row = _mk('div', 'js-port', col);
+        const nm = _mk('input', 'js-name', row);
+        nm.type = 'text'; nm.value = p.name; nm.spellcheck = false;
+        nm.title = dir === 'in' ? 'input port — a variable in the body' : 'output port — a key on the returned object';
+        nm.addEventListener('pointerdown', e => e.stopPropagation());
+        nm.addEventListener('change', () => { p.name = clean(nm.value, p); rebuild(); });
+        const ty = _mk('select', 'js-type', row);
+        for (const t of ['number', 'bool', 'string', 'point', 'vector', 'color', 'geometry', 'audio', 'any']) {
+          const o = _mk('option', '', ty);
+          o.value = t; o.textContent = t;
+          if (p.type === t) o.selected = true;
+        }
+        ty.style.color = TYPE_COLORS[p.type] || '';
+        ty.addEventListener('pointerdown', e => e.stopPropagation());
+        ty.addEventListener('change', () => { p.type = ty.value; rebuild(); });
+        const x = _mk('span', 'js-x', row);
+        x.textContent = '×';
+        x.title = 'remove port';
+        x.addEventListener('pointerdown', e => e.stopPropagation());
+        x.addEventListener('click', () => { list.splice(list.indexOf(p), 1); rebuild(); });
+      }
+      const add = _mk('div', 'js-add', col);
+      add.textContent = dir === 'in' ? '+ in' : '+ out';
+      add.addEventListener('pointerdown', e => e.stopPropagation());
+      add.addEventListener('click', () => {
+        list.push({ name: clean(dir === 'in' ? 'X' : 'R', null), type: 'number' });
+        rebuild();
+      });
+    };
+    side(v.ins = v.ins || [], 'in');
+    side(v.outs = v.outs || [], 'out');
+  }
+});
+
 /* ---- palette grouping (cluster related nodes) + compact styling ---- */
 (function () {
   const groups = {
@@ -2096,7 +2221,9 @@ defNode('meta/portout', {
     'audio/note': 0, 'audio/scale': 0,
     'audio/osc': 1, 'audio/noise': 1, 'audio/path': 1,
     'audio/gain': 2, 'audio/filter': 2, 'audio/mix': 2,
-    'audio/out': 3, 'audio/mic': 3, 'audio/scope': 3, 'audio/xyscope': 3
+    'audio/out': 3, 'audio/mic': 3, 'audio/scope': 3, 'audio/xyscope': 3,
+    /* Meta: composition */
+    'meta/js': 1
   };
   for (const id in groups) if (NODE_DEFS[id]) NODE_DEFS[id].grp = groups[id];
   const compact = ['math/neg', 'math/abs', 'math/round', 'math/floor', 'math/ceil', 'math/sqrt',

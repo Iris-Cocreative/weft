@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.8 — composition & the interface boundary.** v0.1 (2026-07-12): editor,
+**Status: v0.9 — LLM co-creation.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -120,6 +120,25 @@ Plus *Rose window*: the interval-as-flower vectorscope figures (looma-style)
 — a rose r=cos(kθ) built from pure list math (Range → cos/sin/mul → PolyLine)
 then beam-drawn via Path to Audio; k=2 = the 4-leaf clover, k=4 = 8 petals;
 a k-rose is two partials at (k+1):(k−1) in quadrature — interval = flower.
+v0.9 (2026-07-16, **Phase 4 of PLAN.md — LLM co-creation**): the graph as a
+shared artifact human and model both edit. **Custom JS** (`meta/js`, the
+second dynamic def) — a code-block node: declare ports on the node (add /
+remove / retype in the body; renames prune wires via `Editor.rebuildNode`),
+write a body that runs per item ("each", longest-list matching like any
+native node) or once over whole lists ("list"); `ctx`/`node`/`LM` in scope,
+Expression's trust boundary, *Superformula* example. **Share links** — the
+whole graph deflated into the URL hash (`#w=`), zero-backend; open the link,
+get the patch. **`docs/LLM-AUTHORING.md`** — the prompt-ready authoring spec
+(defs-generated port reference, idioms, few-shots, pitfalls) +
+**`docs/RECIPES.md`** (task → node-chain cookbook) + **`test/validate-patch.js`**
+(headless patch checker: types, port letters, eval, visibility, export) +
+the `/weft-patch` skill and Haiku `weft-guide` subagent in `~/.claude/`.
+Thesis demo: `patches/kaleidoscope.{json,md}` — the hand-coded mandala art
+test (~200 lines) as **20 nodes / 32 wires**, four sliders, two Custom JS
+nodes carrying exactly the code-shaped parts; gaps logged (trails, radial
+paint, cross-product matching, measured perf ceiling). Also fixed:
+NODE-CATALOG + nodes.html had omitted Audio and Meta categories since
+v0.8.2 — 124 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -156,6 +175,10 @@ weft/
     app.js          shell: palette, toolbar, autosave, export modal, splitter
     icons.js        node glyphs from Figma (editor-only, never exported)
   docs/DESIGN.md    design system: decision log + tokens (Figma = drawing source)
+  docs/LLM-AUTHORING.md  prompt-ready patch-authoring spec (port reference, idioms, few-shots)
+  docs/RECIPES.md   task → node-chain cookbook (the guide agent's knowledge base)
+  test/validate-patch.js  headless patch checker (types, ports, eval, export)
+  patches/          case studies: organic-nav (v1+v2), kaleidoscope (Phase 4 thesis demo)
   tools/
     ghx-import.html standalone GHX → Weft patch converter (+ gap report)
   design/           option boards for the visual-language lite sessions (D1…)
@@ -179,7 +202,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (123) — Grasshopper-matched names
+### Node library (124) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
@@ -198,7 +221,9 @@ weft/
   Cull Pattern, Shift List, Dispatch, Select (the list-level ternary),
   Set Union, Set Intersection, Set Difference (set ops share `LM.setEq`)
 - **Meta**: Cluster (+ hidden Port In / Port Out boundary markers) — subgraphs
-  folded into named, nestable, exportable nodes
+  folded into named, nestable, exportable nodes · Custom JS — the code-block
+  node: declared ports, per-item or whole-list body, `LM` in scope (graphs run
+  code — Expression's trust boundary)
 - **Vector**: Construct Point, Deconstruct, Distance, Point Polar, Angle,
   Grid (square/iso point lattice; outputs column, row, and the lattice's
   canonical colour class K — see NODE-LIBRARY principle 6)
@@ -231,6 +256,16 @@ tracked on `window` (page-wide interaction), coordinates relative to the canvas
 center. For Webflow: paste into an embed / site JS, add a `data-weft` canvas
 where you want it.
 
+### Sharing
+
+The Share button packs the serialized graph into the URL hash — deflate-raw +
+base64url as `#w=…` (plain base64url JSON `#wj=` where CompressionStream is
+missing). Opening such a link restores the exact patch (the previous graph is
+backed up to `weft:backup`) and clears the hash. Nothing ever reaches a server.
+Patches also travel as plain JSON fragments in chat (`{"weft":"patch",…}` —
+Ctrl+C/Ctrl+V on the loom); authoring contract for humans and LLMs:
+`docs/LLM-AUTHORING.md`.
+
 ## Editor UX
 
 - Double-click canvas (or right-click) → searchable quick-add; palette on the left
@@ -260,6 +295,18 @@ where you want it.
 
   The practice generalises (see PLAN, Continuous workstreams): rebuild something
   real, count the nodes, and let the workarounds write the roadmap.
+
+- **kaleidoscope** (2026-07-16, the Phase 4 thesis demo) — James's hand-coded
+  `art tests/mandala.html` (~200 lines of canvas JS) re-expressed as
+  `patches/kaleidoscope.json`: **20 nodes, 32 wires**, sliders for
+  symmetry/points/speed/connect, deterministic seeded randomness (the same
+  mandala every load — share-linkable), and two Custom JS nodes holding
+  exactly the two genuinely-code parts (the per-particle formula; the O(n²)
+  connection web + kaleidoscope replication). Write-up and verdict:
+  `patches/kaleidoscope.md`. Gaps logged: trails (feedback buffer), radial
+  gradient paint (known from organic-nav), **cross-product list matching**
+  (data trees), and the first measured perf ceiling (~22ms/eval at 3.7k draw
+  items — half of it per-item coercion in Draw nodes).
 
   **The after-picture (v0.8, same day):** with Phase 3 shipped, the nav
   rebuilt as `patches/organic-nav-v2.json` — one reusable **Organic Nav**

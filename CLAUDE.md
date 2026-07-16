@@ -16,13 +16,21 @@ There is no system Node — use the workspace portable Node:
 # regenerate docs/NODE-CATALOG.md (REQUIRED after changing js/nodes.js)
 & "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\gen-catalog.js
 
+# regenerate nodes.html (REQUIRED after changing js/nodes.js or js/icons.js)
+& "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\gen-node-index.js
+
+# validate an authored patch (types, ports, eval, visibility, export)
+& "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\validate-patch.js patch.json
+
 # serve for browser verification (Chrome extension can't open file://)
-python -m http.server 8137   # from the workspace root, then /weft/index.html
+python -m http.server 8137 --bind 127.0.0.1   # from weft/, then /index.html
 ```
 
 The language contract (graph JSON, types, list semantics, node-def rules for
 *users and LLMs*) lives in `docs/NODE-SPEC.md`; the node inventory in
-`docs/NODE-CATALOG.md` (generated — never edit by hand).
+`docs/NODE-CATALOG.md` (generated — never edit by hand); the prompt-ready
+authoring distillation in `docs/LLM-AUTHORING.md`; the how-do-I cookbook in
+`docs/RECIPES.md`.
 
 Definition of done for any change:
 1. `test/smoke.js` passes (all node defs evaluate, all examples run + draw, exports compile).
@@ -102,7 +110,11 @@ Load order (classic scripts, shared globals): engine → nodes → audio → edi
    so `title`, `ins`, `outs` and `graph` are reserved port names. Runtime state
    lives on `node._sub` (a copy) — never let underscore fields leak into
    `values.graph` (they survive JSON as stale strings; see the `_exprSrc` guard
-   in math/expr).
+   in math/expr). **Custom JS** (`meta/js`) is the second dynamic def and adds
+   `code` and `mode` to the reserved names; its compute rebuilds `node._jsFn`
+   through the same stale-source guard, and its port editor mutates
+   `values.ins/outs` then calls `Editor.rebuildNode(id)` (which prunes wires
+   to vanished ports). Same trust boundary as Expression: graphs run code.
 
 ## Recipe: adding a node
 

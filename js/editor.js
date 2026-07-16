@@ -1230,6 +1230,23 @@ const Editor = (() => {
     collapseSelection,
     zoomToFit,
 
+    /* rebuild one node's card in place — dynamic-port nodes (Custom JS) edit
+     * their own ports; wires to a port that no longer exists are pruned */
+    rebuildNode(id) {
+      const n = nodeById(id);
+      if (!n) return;
+      const inNames = new Set(insOf(n).map(p => p.name));
+      const outNames = new Set(outsOf(n).map(p => p.name));
+      S.graph.wires = S.graph.wires.filter(w =>
+        (w.to[0] !== id || inNames.has(w.to[1])) && (w.from[0] !== id || outNames.has(w.from[1])));
+      const el = S.els.get(id);
+      if (el) el.remove();
+      S.els.delete(id);
+      buildNode(n);
+      updateSelection();
+      drawWiresNow();
+    },
+
     get graph() { return S.graph; }
   };
 })();

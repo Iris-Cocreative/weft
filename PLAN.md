@@ -203,30 +203,47 @@ nodes. Labels are real `<a>` elements with `aria-current`; hover feedback runs
 through Delay instead of luck. Write-up: `patches/organic-nav-v2.md` (including
 what still costs too much — the active-index idiom, Format for attr strings).
 
-## Phase 4 — LLM co-creation
+## Phase 4 — LLM co-creation — ✅ SHIPPED 2026-07-16 (v0.9)
 
 The graph is a *shared artifact* human and model both edit. Parameters mean
 iteration without re-prompting; precedent validated by ComfyBench/ComfyUI-R1.
 Lands *after* Phase 3 so the patches a model emits are small enough to read.
 
-1. `docs/LLM-AUTHORING.md` — prompt-ready spec + layout conventions + few-shot
-   patch examples (distilled from NODE-SPEC).
-2. A `/weft-patch` skill (or CLAUDE.md section): "describe an experience →
-   receive graph JSON → paste into Weft."
-3. **Custom JS node** — a code-block node: James's "not every function needs to
-   become a node." An LLM (or human) wraps arbitrary logic and *promotes
-   parameters* to ports (the Houdini pattern). Document the trust boundary
-   (same as Expression: graphs run code; share accordingly).
-4. **Share links** — graph compressed into URL hash; zero-backend sharing.
-5. Demo of the thesis: take an existing hand-coded animation from the IRIS
-   library, re-express it as a patch, tweak it by slider. Measure the feel.
-6. **Small-model help channel** — `docs/RECIPES.md` (task → node-chain
-   cookbook) + a Haiku-powered `weft-guide` subagent whose context is
-   CATALOG + SPEC + RECIPES stuffed whole (no RAG; cache the prompt). How-to
-   answers go to the small model; patch authoring stays with big models.
-   (Details in ROADMAP track 2.)
+1. ✅ `docs/LLM-AUTHORING.md` — prompt-ready spec: the contract, a full
+   port-letter reference generated from the defs, list idioms, Custom JS
+   contract, layout conventions, two few-shot patches (both machine-verified),
+   a pitfalls checklist, delivery etiquette.
+2. ✅ **`/weft-patch` skill** (`~/.claude/skills/weft-patch/`) — describe an
+   experience → receive graph JSON → paste into Weft. The skill *validates
+   before delivering* via the new `test/validate-patch.js` (headless: unknown
+   types, wrong port letters, eval errors, invisible output, export compile —
+   exact, friendly failure messages).
+3. ✅ **Custom JS node** (`meta/js`) — the code-block node, second dynamic def
+   after Cluster: ports declared on the node (add/remove/retype in the body
+   UI; renames prune their wires via the new `Editor.rebuildNode`), body runs
+   per item ("each" — longest-list matching like any native node) or once with
+   whole lists ("list"). `ctx`/`node`/`LM` in scope; same purity rules; same
+   trust boundary as Expression, documented in SPEC + AUTHORING. *Superformula*
+   example locks it into the corpus (a shape no native node knows, knobs
+   promoted to sliders).
+4. ✅ **Share links** — Share button packs the serialized graph into the URL
+   hash (`#w=` deflate-raw + base64url via CompressionStream, `#wj=` plain
+   fallback); opening such a link restores the patch (previous work backed up
+   to `weft:backup`), zero backend. The Superformula patch is a 955-char hash.
+5. ✅ **Thesis demo** — `patches/kaleidoscope.json` + `.md`: James's hand-coded
+   `art tests/mandala.html` (~200 lines) re-expressed as **20 nodes / 32
+   wires** — sliders for symmetry/points/speed/connect, deterministic seeds,
+   two Custom JS nodes carrying exactly the two genuinely-code parts. Verdict
+   in the write-up; gaps found: trails (feedback buffer), radial paint (known),
+   **cross-product list matching** (the sharpest language finding), and a
+   measured per-item perf ceiling (~22ms/eval at defaults).
+6. ✅ **Small-model help channel** — `docs/RECIPES.md` (task → node-chain
+   cookbook) + the Haiku `weft-guide` subagent (`~/.claude/agents/`) that reads
+   RECIPES + AUTHORING + CATALOG whole. Still open (deliberately): the in-app
+   "?" panel via an n8n proxy — ROADMAP track 2.
 
-Exit: a non-coder can ask an AI for an experience and then *play* it into shape.
+Exit met: describe → JSON → paste → *play*. Also fixed en route: NODE-CATALOG
+and nodes.html had silently omitted the Audio and Meta categories since v0.8.2.
 
 ## Phase 5 — Media, type & vector (the web's unfair advantages)
 

@@ -19,7 +19,7 @@ const { WEFT_ICONS, WEFT_CAT_ICONS, NODE_DEFS, CATS, TYPE_COLORS } =
   vm.runInContext('({ WEFT_ICONS, WEFT_CAT_ICONS, NODE_DEFS, CATS, TYPE_COLORS })', sandbox);
 const logo = vm.runInContext('weftLogoSVG("nx")', sandbox);
 
-const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
+const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio', 'Meta'];
 const catDesc = {
   Params: 'hand-set values and inspectors — sliders, toggles, swatches, points, and the pads and graphs that watch what flows through the wires.',
   Input: 'the outside world flowing in — mouse, time, keyboard, scroll, viewport, and hotspots that turn any geometry into interface.',
@@ -29,15 +29,18 @@ const catDesc = {
   Vector: 'points and vectors — construct them, split them, measure distance and angle, swing them polar.',
   Curve: 'drawable geometry — lines, circles, polygons, rects and arcs, plus the tools that divide and evaluate along them.',
   Transform: 'reshape geometry — move, rotate, scale; transforms stack, and lists of transforms fan one shape into many.',
-  Display: 'where the graph touches the cloth — strokes and fills, colour tools, text, backgrounds, streaming traces, real DOM elements.'
+  Display: 'where the graph touches the cloth — strokes and fills, colour tools, text, backgrounds, streaming traces, real DOM elements.',
+  Audio: 'sound as dataflow — pitch pickers, oscillators, filters and mixers whose wires carry handles into a live Web Audio graph, plus the mic, scopes and geometry-to-waveform bridges.',
+  Meta: 'composition — clusters fold subgraphs into named, reusable nodes, and Custom JS wraps code that has no node yet, its magic numbers promoted to ports.'
 };
 const items = Object.values(NODE_DEFS)
   .filter(d => !d.hidden)
   .map(d => ({
     id: d.id, title: d.title, cat: d.cat, desc: d.desc || '',
     icon: WEFT_ICONS[d.id] || WEFT_CAT_ICONS[d.cat] || '',
-    ins: (d.inputs || []).map(p => ({ n: p.name, t: p.type, l: p.label || '' })),
-    outs: (d.outputs || []).map(p => ({ n: p.name, t: p.type, l: p.label || '' }))
+    /* dynamic nodes (Custom JS) keep ports on the node — show their defaults */
+    ins: ((d.inputs && d.inputs.length ? d.inputs : (d.dynamic && d.defaults && d.defaults.ins) || [])).map(p => ({ n: p.name, t: p.type, l: p.label || '' })),
+    outs: ((d.outputs && d.outputs.length ? d.outputs : (d.dynamic && d.defaults && d.defaults.outs) || [])).map(p => ({ n: p.name, t: p.type, l: p.label || '' }))
   }))
   .sort((a, b) => (order.indexOf(a.cat) - order.indexOf(b.cat)) || a.title.localeCompare(b.title));
 
