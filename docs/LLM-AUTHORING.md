@@ -215,6 +215,8 @@ and/or/xor/not).
 `audio/osc` F D → A · `audio/noise` → A · `audio/gain` In G → A ·
 `audio/filter` In F Q → A · `audio/mix` In(list) G → A ·
 `audio/out` In V (sink) · `audio/mic` → V:loudness ·
+`audio/pitch` → F:Hz M:midi C:clarity (tracks a sung/played note) ·
+`audio/track` G → A V R (computer audio via share picker) ·
 `audio/scope` In … → G V L · `audio/xyscope` X Y … → G ·
 `audio/path` G F → X Y (geometry outline → looped waveform).
 

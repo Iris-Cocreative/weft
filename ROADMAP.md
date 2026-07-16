@@ -405,7 +405,10 @@ Staged, don't leap:
   `ctx.audioState`), 432/440 concert-pitch setting (`graph.meta.tuneA4` +
   `ctx.tuneA4`), Note note-input N, Cymatics chladni display node. Done in
   v0.8.5: Scope oscilloscope (waveform read-back via `ctx.audioState.wave` —
-  the FFT-bands follow-up now just needs a second analyser read).*
+  the FFT-bands follow-up now just needs a second analyser read). Done in
+  v0.9.1: Pitch In (autocorrelation pitch tracker — sung note → Hz/MIDI),
+  Track In (computer audio via `getDisplayMedia`, picker armed on first
+  click), Cymatics anti-collapse rework + reset input.*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
 - Graph gallery / community sharing — share links exist as of v0.9; a gallery

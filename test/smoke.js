@@ -534,6 +534,58 @@ for (const name of Object.keys(EXAMPLES)) {
   }
 }
 
+/* 17 — pitch in, track in, cymatics reset + anti-collapse */
+{
+  const g = { nodes: [ { id: 'pt', type: 'audio/pitch', values: {} } ], wires: [] };
+  const c = mkCtx();
+  c.audioState['pt:0'] = { freq: 432, clarity: 0.9, level: 0.3, ready: true };
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  if (!c.audioList.some(d => d.kind === 'pitch')) failures.push('pitch: descriptor not declared');
+  if ((c.out.pt.F || [])[0] !== 432) failures.push('pitch: freq not read back');
+  if (Math.abs((c.out.pt.M || [])[0] - 69) > 1e-9) failures.push('pitch: 432 Hz at A4=432 should be midi 69, got ' + (c.out.pt.M || [])[0]);
+  if ((c.out.pt.C || [])[0] !== 0.9 || (c.out.pt.R || [])[0] !== true) failures.push('pitch: clarity/ready not read back');
+  const cq = mkCtx();
+  cq.tuneA4 = 440;
+  cq.audioState['pt:0'] = { freq: 440, clarity: 1, ready: true };
+  LM.evaluateGraph(g, NODE_DEFS, cq);
+  if (Math.abs((cq.out.pt.M || [])[0] - 69) > 1e-9) failures.push('pitch: midi must follow ctx.tuneA4, got ' + (cq.out.pt.M || [])[0]);
+
+  const g2 = { nodes: [
+      { id: 'tk', type: 'audio/track', values: { G: 1.5 } },
+      { id: 'ot', type: 'audio/out', values: {} } ],
+    wires: [ { from: ['tk', 'A'], to: ['ot', 'In'] } ] };
+  const c2 = mkCtx();
+  c2.audioState['tk:0'] = { level: 0.5, ready: true };
+  LM.evaluateGraph(g2, NODE_DEFS, c2);
+  const td = c2.audioList.find(d => d.kind === 'track');
+  if (!td) failures.push('track: descriptor not declared');
+  else if (Math.abs(td.gain - 1.5) > 1e-9) failures.push('track: gain param wrong, got ' + td.gain);
+  const od = c2.audioList.find(d => d.kind === 'out');
+  if (!od || (od.src || []).join(',') !== 'tk:0') failures.push('track: handle should route into out, got [' + ((od || {}).src || []).join(',') + ']');
+  if ((c2.out.tk.V || [])[0] !== 0.5 || (c2.out.tk.R || [])[0] !== true) failures.push('track: level/ready not read back');
+  try { new Function(WeftExport.buildJS(g2)); } catch (e) { failures.push('track: export does not compile — ' + e.message); }
+
+  // cymatics: settled grains must stay spread across the plate (no center-line
+  // collapse), and flipping R re-throws the sand
+  const cy = { id: 'cy', values: {} };
+  const cyArgs = { F: 220, P: { x: 0, y: 0 }, S: 320, N: 900, C: { r: 255, g: 255, b: 255, a: 1 }, W: 1, R: false };
+  for (let f = 0; f < 600; f++) NODE_DEFS['disp/cymatics'].compute(cyArgs, mkCtx(), cy);
+  const pts = cy._state[0].pts;
+  const sd = axis => {
+    let m = 0; for (const p of pts) m += p[axis]; m /= pts.length;
+    let s = 0; for (const p of pts) s += (p[axis] - m) * (p[axis] - m);
+    return Math.sqrt(s / pts.length);
+  };
+  if (sd('x') < 0.3 || sd('y') < 0.3)
+    failures.push('cymatics: grains collapsed (stddev x=' + sd('x').toFixed(2) + ' y=' + sd('y').toFixed(2) + ')');
+  const before = pts.map(p => ({ x: p.x, y: p.y }));
+  NODE_DEFS['disp/cymatics'].compute(Object.assign({}, cyArgs, { R: true }), mkCtx(), cy);
+  const after = cy._state[0].pts;
+  let moved = 0;
+  for (let i = 0; i < before.length; i++) moved += Math.hypot(after[i].x - before[i].x, after[i].y - before[i].y);
+  if (!(moved / before.length > 0.3)) failures.push('cymatics: R edge should re-throw the sand (mean move ' + (moved / before.length).toFixed(3) + ')');
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

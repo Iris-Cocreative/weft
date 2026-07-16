@@ -140,6 +140,21 @@ paint, cross-product matching, measured perf ceiling); also in the Examples
 dropdown as *Mandala* (25 examples). Also fixed:
 NODE-CATALOG + nodes.html had omitted Audio and Meta categories since
 v0.8.2 — 124 nodes.
+v0.9.1 (2026-07-16, listening): **Pitch In** (`audio/pitch`) — hears the
+note: host `pitch` kind runs normalized autocorrelation on a half-rate
+2048-window (60–1200 Hz, first-strong-peak picking so harmonics don't fool
+it an octave down, parabolic lag refine, wobble-smoothed) → F Hz +
+fractional MIDI M (from `ctx.tuneA4` — wire M into Scale V to snap a sung
+note in key) + clarity C + ready R. **Track In** (`audio/track`) — the
+computer's own sound as a source: `getDisplayMedia` needs a gesture, so the
+share picker opens on the first click after the node appears (tick "also
+share audio"; video track stopped immediately); routes A through the graph,
+V loudness read-back. **Cymatics reworked**: grains now take a capped
+Newton step down the amplitude gradient toward their *nearest* nodal line
+(plus the amplitude-scaled shake) — the old pure random walk was diffusion,
+which slowly leaked every grain into the biggest still basins (the
+center-line collapse); new R input re-throws the sand on any flip
+(button, trigger or toggle) — 126 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

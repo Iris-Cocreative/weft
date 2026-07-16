@@ -1431,14 +1431,15 @@ defNode('disp/harmonograph', {
 
 defNode('disp/cymatics', {
   title: 'Cymatics', cat: 'Display', width: 168,
-  desc: 'Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator',
+  desc: 'Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator. Flip R (button, trigger, toggle) to re-throw the sand.',
   inputs: [
     { name: 'F', type: 'number', default: 220, label: 'frequency Hz' },
     { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
     { name: 'S', type: 'number', default: 320, label: 'plate size px' },
     { name: 'N', type: 'number', default: 900, label: 'grains' },
     { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.85 }, label: 'grain colour' },
-    { name: 'W', type: 'number', default: 1, label: 'grain size' }],
+    { name: 'W', type: 'number', default: 1, label: 'grain size' },
+    { name: 'R', type: 'bool', default: false, label: 'reset — any change re-throws the sand' }],
   outputs: [{ name: 'P', type: 'point', label: 'grain points' }],
   compute: (a, ctx, node) => {
     const size = Math.max(40, +a.S || 320), h = size / 2;
@@ -1446,22 +1447,37 @@ defNode('disp/cymatics', {
     const count = LM.clamp(Math.round(+a.N) || 900, 50, 2500);
     const st = node._state = node._state || {};
     const s = st[ctx.i || 0] = st[ctx.i || 0] || { rand: LM.rng(77 + (ctx.i || 0) * 977), pts: null };
-    if (!s.pts || s.pts.length !== count) {
+    const rst = s.lastR !== undefined && !!a.R !== s.lastR; // edge on either flank — a trigger or a toggle both work
+    s.lastR = !!a.R;
+    if (!s.pts || s.pts.length !== count || rst) {
       s.pts = [];
       for (let k = 0; k < count; k++) s.pts.push({ x: s.rand() * 2 - 1, y: s.rand() * 2 - 1 });
     }
     /* square-plate standing wave: mode numbers rise with pitch (log), so
-     * higher notes make finer figures — grains random-walk scaled by local
-     * amplitude and freeze where the plate is still (the nodal lines) */
+     * higher notes make finer figures. Each grain slides down the amplitude
+     * gradient toward its NEAREST nodal line (newton step) plus a shake
+     * scaled by local amplitude — pure random walk would slowly leak every
+     * grain into the biggest still basins (the center-line collapse) */
     const k = Math.log2(F / 32.7);
     const u = 1 + k * 0.9, v = 2 + k * 1.45, PI = Math.PI;
     const amp = (x, y) =>
       Math.cos(u * PI * x) * Math.cos(v * PI * y) - Math.cos(v * PI * x) * Math.cos(u * PI * y);
-    const step = 0.09 * Math.min((ctx.dt || 0) * 60, 3);
-    if (step > 0) for (const p of s.pts) {
-      const j = step * Math.min(1, Math.abs(amp(p.x, p.y)) * 0.6);
-      p.x = LM.clamp(p.x + (s.rand() * 2 - 1) * j, -1, 1);
-      p.y = LM.clamp(p.y + (s.rand() * 2 - 1) * j, -1, 1);
+    const gx = (x, y) =>
+      -u * PI * Math.sin(u * PI * x) * Math.cos(v * PI * y) + v * PI * Math.sin(v * PI * x) * Math.cos(u * PI * y);
+    const gy = (x, y) =>
+      -v * PI * Math.cos(u * PI * x) * Math.sin(v * PI * y) + u * PI * Math.cos(v * PI * x) * Math.sin(u * PI * y);
+    const fs = Math.min((ctx.dt || 0) * 60, 3);
+    const step = 0.09 * fs, cap = 0.05 * fs;
+    if (fs > 0) for (const p of s.pts) {
+      const A = amp(p.x, p.y);
+      const dx = gx(p.x, p.y), dy = gy(p.x, p.y);
+      const g2 = dx * dx + dy * dy + 1e-6;
+      let sc = 0.35 * fs; // relaxation toward the zero, capped so grains can't jump cells
+      const nl = Math.sqrt(A * A * g2) / g2; // |newton step|
+      if (nl * sc > cap) sc = cap / nl;
+      const j = step * Math.min(1, Math.abs(A) * 0.6) * 0.7;
+      p.x = LM.clamp(p.x - A * dx / g2 * sc + (s.rand() * 2 - 1) * j, -1, 1);
+      p.y = LM.clamp(p.y - A * dy / g2 * sc + (s.rand() * 2 - 1) * j, -1, 1);
     }
     const dot = Math.max(0.4, (+a.W || 1) * 0.9);
     const none = { r: 0, g: 0, b: 0, a: 0 };
@@ -1862,6 +1878,44 @@ defNode('audio/mic', {
   }
 });
 
+defNode('audio/pitch', {
+  title: 'Pitch In', cat: 'Audio', width: 158,
+  desc: 'Hears the note — tracks the frequency of a sung or played pitch from the microphone: F in Hz, M the fractional MIDI number (wire it into Scale\'s V to snap in key), C how sure the tracker is (0..1, gate on it), R true once the mic is live. Holds the last pitch through silence.',
+  outputs: [
+    { name: 'F', type: 'number', label: 'frequency Hz' },
+    { name: 'M', type: 'number', label: 'midi (fractional)' },
+    { name: 'C', type: 'number', label: 'clarity 0..1' },
+    { name: 'R', type: 'bool', label: 'mic ready' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({ id, kind: 'pitch' });
+    const st = (ctx.audioState && ctx.audioState[id]) || {};
+    const f = +st.freq || 0;
+    return {
+      F: f,
+      M: f > 0 ? 69 + 12 * Math.log2(f / (ctx.tuneA4 || 432)) : 0,
+      C: LM.clamp(+st.clarity || 0, 0, 1),
+      R: !!st.ready
+    };
+  }
+});
+
+defNode('audio/track', {
+  title: 'Track In', cat: 'Audio', width: 158,
+  desc: 'The computer\'s own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". Route A through filters and gains to Audio Out; V is loudness for visuals. Share a different tab than Weft or it will feed back.',
+  inputs: [{ name: 'G', type: 'number', default: 1, label: 'gain' }],
+  outputs: [
+    { name: 'A', type: 'audio' },
+    { name: 'V', type: 'number', label: 'level 0..1' },
+    { name: 'R', type: 'bool', label: 'sharing' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({ id, kind: 'track', gain: LM.clamp(+a.G || 0, 0, 2) });
+    const st = (ctx.audioState && ctx.audioState[id]) || {};
+    return { A: id, V: LM.clamp(+st.level || 0, 0, 1), R: !!st.ready };
+  }
+});
+
 /* ============================== STATE ==============================
  * Nodes that remember. Memory lives on node._state keyed by ctx.i (the
  * list-match index) so a list-fed state node is N independent machines.
@@ -2221,7 +2275,7 @@ defNode('meta/js', {
     'audio/note': 0, 'audio/scale': 0,
     'audio/osc': 1, 'audio/noise': 1, 'audio/path': 1,
     'audio/gain': 2, 'audio/filter': 2, 'audio/mix': 2,
-    'audio/out': 3, 'audio/mic': 3, 'audio/scope': 3, 'audio/xyscope': 3,
+    'audio/out': 3, 'audio/mic': 3, 'audio/pitch': 3, 'audio/track': 3, 'audio/scope': 3, 'audio/xyscope': 3,
     /* Meta: composition */
     'meta/js': 1
   };

@@ -100,6 +100,12 @@ geometry that reaches no Draw node is invisible.
   voices.
 - **React visuals to the mic** — `audio/mic(→ V loudness) → state/smooth →
   remap` → anything.
+- **Sing a note, hear it in key** — `audio/pitch(→ M fractional midi) →
+  audio/scale(V → F) → audio/osc` — the graph harmonizes with you; gate on
+  `C` clarity to ignore silence.
+- **Play computer audio through the graph** — `audio/track(→ A) →
+  audio/filter → audio/out`; share a *different* tab and tick "also share
+  audio", or it feeds back. `V` is loudness for visuals.
 - **See the wave** — tap any audio wire into `audio/scope(In → G)`; XY figures:
   `audio/xyscope(X, Y)`. Geometry as sound: `audio/path(G → X Y)`.
 

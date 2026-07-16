@@ -1116,6 +1116,41 @@ const EXAMPLES = {
     ['m6', 'R', 'm7', 'V']
   ]),
 
+  /* Sing a note and the graph sings it back in key — Pitch In hears the
+   * frequency, Scale snaps the fractional MIDI to A pentatonic, an
+   * oscillator plays the snapped note, gated by tracker clarity so silence
+   * stays silent. The circle is the pitch, the number is the Hz. */
+  'Sing': _EX([
+    ['s1', 'audio/pitch', 30, 40],
+    ['s2', 'audio/scale', 250, 40],
+    ['s3', 'audio/osc', 470, 40],
+    ['s4', 'math/remap', 250, 300, { S0: 0.6, S1: 0.95, T0: 0, T1: 0.14 }],
+    ['s5', 'audio/gain', 690, 40],
+    ['s6', 'audio/out', 910, 40],
+    ['s8', 'math/remap', 250, 440, { S0: 45, S1: 81, T0: 20, T1: 170 }],
+    ['s7', 'math/clamp', 470, 440, { A: 12, B: 175 }],
+    ['s9', 'crv/circle', 690, 340],
+    ['s10', 'disp/draw', 910, 260, { S: { r: 255, g: 54, b: 163, a: 0.9 }, F: { r: 255, g: 54, b: 163, a: 0.12 }, W: 2 }],
+    ['s11', 'math/round', 250, 580, {}],
+    ['s12', 'disp/text', 470, 580, { P: { x: 0, y: 195 }, S: 20 }],
+    ['s13', 'disp/draw', 690, 580, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 230, g: 236, b: 246, a: 0.8 }, W: 0 }],
+    ['s14', 'disp/bg', 910, 620]
+  ], [
+    ['s1', 'M', 's2', 'V'],
+    ['s2', 'F', 's3', 'F'],
+    ['s3', 'A', 's5', 'In'],
+    ['s1', 'C', 's4', 'V'],
+    ['s4', 'R', 's5', 'G'],
+    ['s5', 'A', 's6', 'In'],
+    ['s2', 'M', 's8', 'V'],
+    ['s8', 'R', 's7', 'V'],
+    ['s7', 'R', 's9', 'R'],
+    ['s9', 'C', 's10', 'G'],
+    ['s1', 'F', 's11', 'V'],
+    ['s11', 'R', 's12', 'T'],
+    ['s12', 'G', 's13', 'G']
+  ]),
+
   /* The Phase 4 thesis demo (patches/kaleidoscope.md) — James's hand-coded
    * mandala art test as 20 nodes: seeded particles in a symmetry slice, a
    * distance-threshold connection web, the slice replicated symmetry × mirror

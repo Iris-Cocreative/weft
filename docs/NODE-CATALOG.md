@@ -1350,7 +1350,7 @@ Colour from hue, saturation, lightness (all 0..1; hue wraps)
 
 ### `disp/cymatics` — Cymatics
 
-Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator
+Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator. Flip R (button, trigger, toggle) to re-throw the sand.
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1360,6 +1360,7 @@ Chladni plate — sand grains shake off the vibrating regions and settle along t
 | N | number | `900` | grains |
 | C | color | `{"r":94,"g":234,"b":212,"a":0.85}` | grain colour |
 | W | number | `1` | grain size |
+| R | bool | `false` | reset — any change re-throws the sand |
 
 | out | type | note |
 |---|---|---|
@@ -1598,6 +1599,17 @@ Turn geometry into sound: the curve’s outline is resampled into a looped stere
 | X | audio | horizontal signal |
 | Y | audio | vertical signal |
 
+### `audio/pitch` — Pitch In
+
+Hears the note — tracks the frequency of a sung or played pitch from the microphone: F in Hz, M the fractional MIDI number (wire it into Scale's V to snap in key), C how sure the tracker is (0..1, gate on it), R true once the mic is live. Holds the last pitch through silence.
+
+| out | type | note |
+|---|---|---|
+| F | number | frequency Hz |
+| M | number | midi (fractional) |
+| C | number | clarity 0..1 |
+| R | bool | mic ready |
+
 ### `audio/scale` — Scale
 
 Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument
@@ -1631,6 +1643,20 @@ Oscilloscope — taps the audio wire In (an analyser, never routed onward) and d
 | G | geometry | waveform |
 | V | number | samples -1..1 |
 | L | number | level 0..1 |
+
+### `audio/track` — Track In
+
+The computer's own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". Route A through filters and gains to Audio Out; V is loudness for visuals. Share a different tab than Weft or it will feed back.
+
+| in | type | default | note |
+|---|---|---|---|
+| G | number | `1` | gain |
+
+| out | type | note |
+|---|---|---|
+| A | audio |  |
+| V | number | level 0..1 |
+| R | bool | sharing |
 
 ### `audio/xyscope` — Vector Scope
 
@@ -1686,4 +1712,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-126 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+128 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

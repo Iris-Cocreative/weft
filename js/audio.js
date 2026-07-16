@@ -87,11 +87,13 @@ const WeftAudio = {
         const z = actx.createGain(); z.gain.value = 0;
         an.connect(z); z.connect(master);
         e.main = an; e.in = an; e.z = z; e.buf = new Float32Array(an.fftSize);
-      } else if (d.kind === 'mic') {
+      } else if (d.kind === 'mic' || d.kind === 'pitch') {
         /* microphone → analyser only: never routed toward the speakers (no
-         * feedback squeal); its loudness flows back to the graph as a number */
+         * feedback squeal); loudness (and, for pitch, the tracked frequency)
+         * flows back to the graph as numbers. pitch needs a longer window */
         const an = actx.createAnalyser();
-        an.fftSize = 512; an.smoothingTimeConstant = 0;
+        an.fftSize = d.kind === 'pitch' ? 2048 : 512;
+        an.smoothingTimeConstant = 0;
         e.main = an; e.buf = new Float32Array(an.fftSize);
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
@@ -100,6 +102,30 @@ const WeftAudio = {
             e.src = actx.createMediaStreamSource(stream);
             e.src.connect(an);
           }).catch(() => { });
+        }
+      } else if (d.kind === 'track') {
+        /* computer audio in — getDisplayMedia demands a user gesture, so the
+         * share picker opens on the first click after the node appears. Video
+         * track is mandatory in the API; it gets stopped immediately */
+        const g = actx.createGain(); g.gain.value = d.gain;
+        const an = actx.createAnalyser();
+        an.fftSize = 512; an.smoothingTimeConstant = 0;
+        g.connect(an);
+        e.main = g; e.out = g; e.an = an; e.buf = new Float32Array(an.fftSize);
+        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          e.arm = () => {
+            if (live[d.id] !== e || e.prompted) return;
+            e.prompted = true;
+            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then(stream => {
+              if (live[d.id] !== e) { stream.getTracks().forEach(t => t.stop()); return; }
+              stream.getVideoTracks().forEach(t => t.stop()); // only the sound is wanted
+              if (!stream.getAudioTracks().length) { stream.getTracks().forEach(t => t.stop()); return; }
+              e.stream = stream;
+              e.src = actx.createMediaStreamSource(stream);
+              e.src.connect(g);
+            }).catch(() => { });
+          };
+          window.addEventListener('pointerdown', e.arm, { once: true });
         }
       }
       return e;
@@ -141,6 +167,66 @@ const WeftAudio = {
           lv = Math.min(1, Math.sqrt(sum / e.buf.length) * 3); // rms, ~0..1 for voice
         }
         levels[d.id] = { level: lv, ready: !!e.src };
+      } else if (d.kind === 'track') {
+        setP(e, 'g', m.gain, d.gain);
+        let lv = 0;
+        if (e.src && actx.state === 'running') {
+          e.an.getFloatTimeDomainData(e.buf);
+          let sum = 0;
+          for (let i = 0; i < e.buf.length; i++) sum += e.buf[i] * e.buf[i];
+          lv = Math.min(1, Math.sqrt(sum / e.buf.length) * 2);
+        }
+        levels[d.id] = { level: lv, ready: !!e.src };
+      } else if (d.kind === 'pitch') {
+        /* pitch tracking: normalized autocorrelation on a half-rate copy of
+         * the window (voice/instrument range doesn't need 48kHz), then take
+         * the FIRST peak within 12% of the global max — the absolute max is
+         * often the octave below on harmonic-rich sounds */
+        let lv = 0, cl = 0, f = e.freq || 0;
+        if (e.src && actx.state === 'running') {
+          m.getFloatTimeDomainData(e.buf);
+          const n2 = e.buf.length >> 1;
+          if (!e.b2) e.b2 = new Float32Array(n2);
+          const b = e.b2;
+          let sum = 0;
+          for (let i = 0; i < n2; i++) { b[i] = e.buf[i << 1]; sum += b[i] * b[i]; }
+          lv = Math.min(1, Math.sqrt(sum / n2) * 3);
+          if (sum / n2 > 2e-5) { // enough signal to bother
+            const sr2 = actx.sampleRate / 2;
+            const maxLag = Math.min(Math.floor(sr2 / 60), n2 >> 1);   // floor ~60 Hz
+            const minLag = Math.max(8, Math.floor(sr2 / 1200));       // ceiling ~1200 Hz
+            const W = n2 - maxLag;
+            if (!e.pe) { e.pe = new Float64Array(n2 + 1); e.ac = new Float64Array(maxLag + 2); }
+            const pe = e.pe, ac = e.ac;
+            for (let i = 0; i < n2; i++) pe[i + 1] = pe[i] + b[i] * b[i];
+            const e0 = pe[W];
+            let gm = 0;
+            for (let lag = minLag; lag <= maxLag; lag++) {
+              let s2 = 0;
+              for (let i = 0; i < W; i++) s2 += b[i] * b[i + lag];
+              const r = s2 / (Math.sqrt(e0 * (pe[W + lag] - pe[lag])) + 1e-9);
+              ac[lag] = r;
+              if (r > gm) gm = r;
+            }
+            if (gm > 0.5) {
+              const th = gm * 0.88;
+              for (let lag = minLag + 1; lag < maxLag; lag++) {
+                if (ac[lag] >= th && ac[lag] >= ac[lag - 1] && ac[lag] >= ac[lag + 1]) {
+                  const den = ac[lag - 1] - 2 * ac[lag] + ac[lag + 1]; // parabolic refine
+                  let off = den ? 0.5 * (ac[lag - 1] - ac[lag + 1]) / den : 0;
+                  if (off > 0.5) off = 0.5; else if (off < -0.5) off = -0.5;
+                  const nf = sr2 / (lag + off);
+                  cl = ac[lag];
+                  /* smooth vibrato-scale wobble, jump on real note changes */
+                  f = (f > 0 && Math.abs(nf - f) / f < 0.25) ? f + (nf - f) * 0.35 : nf;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        e.freq = f;
+        levels[d.id] = { freq: f, clarity: cl, level: lv, ready: !!e.src };
       }
     };
     const drop = id => {
@@ -149,6 +235,8 @@ const WeftAudio = {
       try { if (e.kind === 'osc' || e.kind === 'noise') e.main.stop(); } catch (err) { }
       try { if (e.srcNode) { e.srcNode.stop(); e.srcNode.disconnect(); } } catch (err) { }
       try { if (e.stream) e.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
+      try { if (e.arm) window.removeEventListener('pointerdown', e.arm); } catch (err) { }
+      try { if (e.an) e.an.disconnect(); } catch (err) { }
       try { if (e.z) e.z.disconnect(); } catch (err) { }
       try { e.main.disconnect(); } catch (err) { }
       delete live[id]; // sources can't restart after stop — a re-appearing id gets a fresh node
