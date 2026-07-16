@@ -141,10 +141,17 @@ const WeftAudio = {
           e.arm = () => {
             if (live[d.id] !== e || e.prompted) return;
             e.prompted = true;
-            navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }).then(stream => {
+            navigator.mediaDevices.getDisplayMedia({
+              video: true,
+              /* voice processing (echo cancel / noise suppress / AGC) runs
+               * MONO in Chrome and would downmix the capture — turn it all
+               * off so the stereo image survives to the splitter */
+              audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 }
+            }).then(stream => {
               if (live[d.id] !== e) { stream.getTracks().forEach(t => t.stop()); return; }
               stream.getVideoTracks().forEach(t => t.stop()); // only the sound is wanted
               if (!stream.getAudioTracks().length) { stream.getTracks().forEach(t => t.stop()); return; }
+              stream.getAudioTracks().forEach(t => { try { t.contentHint = 'music'; } catch (err) { } });
               e.stream = stream;
               e.src = actx.createMediaStreamSource(stream);
               e.src.connect(g);

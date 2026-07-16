@@ -161,7 +161,10 @@ the full stereo feed; new L/R outputs are split channels via a host
 renamed S). L→X, R→Y on the Vector Scope = a goniometer — the *Music
 scope* example, whose meter dots breathe on the new **VL/VR per-channel
 level outputs** (each splitter leg gets its own analyser — built for
-visualizers). **Pitch In is a processor** — new In port analyses any
+visualizers; capture requests `echoCancellation/noiseSuppression/
+autoGainControl: false, channelCount: 2` + `contentHint = 'music'` —
+Chrome's default voice pipeline is mono and was collapsing the stereo
+image). **Pitch In is a processor** — new In port analyses any
 wired signal (scope-style tap with zero-gain keep-alive); unwired it
 falls back to the microphone, and the permission prompt only fires if
 nothing is wired. **Mic In gains A** — the live mic routes into the
