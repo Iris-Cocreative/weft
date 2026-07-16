@@ -71,6 +71,11 @@ const WeftAudio = {
         const g = actx.createGain(); g.gain.value = d.vol;
         g.connect(master);
         e.main = g; e.in = g;
+      } else if (d.kind === 'scope') {
+        /* a tap, not a route: whatever wires in gets analysed, never forwarded */
+        const an = actx.createAnalyser();
+        an.fftSize = 2048; an.smoothingTimeConstant = 0;
+        e.main = an; e.in = an; e.buf = new Float32Array(an.fftSize);
       } else if (d.kind === 'mic') {
         /* microphone → analyser only: never routed toward the speakers (no
          * feedback squeal); its loudness flows back to the graph as a number */
@@ -98,7 +103,10 @@ const WeftAudio = {
         if (m.type !== d.mode) m.type = d.mode;
         setP(e, 'f', m.frequency, d.freq); setP(e, 'q', m.Q, d.q);
       } else if (d.kind === 'out') setP(e, 'v', m.gain, d.vol);
-      else if (d.kind === 'mic') {
+      else if (d.kind === 'scope') {
+        if (actx.state === 'running') m.getFloatTimeDomainData(e.buf);
+        levels[d.id] = { wave: e.buf, sr: actx.sampleRate, ready: !!(e.srcs && e.srcs.length) };
+      } else if (d.kind === 'mic') {
         let lv = 0;
         if (e.src && actx.state === 'running') {
           m.getFloatTimeDomainData(e.buf);

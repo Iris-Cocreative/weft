@@ -967,6 +967,33 @@ const EXAMPLES = {
     ['c2', 'F', 'c6', 'F']
   ]),
 
+  /* A real oscilloscope: the Scope node taps the audio wire and draws the
+   * actual samples, trigger-locked. A sawtooth runs through a lowpass whose
+   * cutoff rides mouse X — slide right and watch the hard edges melt as the
+   * harmonics come off. Mouse Y = volume. */
+  'Oscilloscope': _EX([
+    ['o1', 'params/slider', 30, 40, { min: 55, max: 440, value: 110 }],
+    ['o2', 'audio/osc', 250, 40, { wave: 'sawtooth' }],
+    ['o3', 'input/mouse', 30, 220],
+    ['o4', 'math/remap', 250, 220, { S0: 0, S1: 1, T0: 200, T1: 6000 }],
+    ['o5', 'audio/filter', 470, 40, { mode: 'lowpass', Q: 4 }],
+    ['o6', 'math/remap', 250, 400, { S0: 0, S1: 1, T0: 0.25, T1: 0 }],
+    ['o7', 'audio/gain', 690, 40],
+    ['o8', 'audio/out', 910, 40],
+    ['o9', 'audio/scope', 690, 260, { W: 480, H: 200, T: 18 }],
+    ['o10', 'disp/bg', 910, 420]
+  ], [
+    ['o1', 'N', 'o2', 'F'],
+    ['o2', 'A', 'o5', 'In'],
+    ['o3', 'NX', 'o4', 'V'],
+    ['o4', 'R', 'o5', 'F'],
+    ['o5', 'A', 'o7', 'In'],
+    ['o3', 'NY', 'o6', 'V'],
+    ['o6', 'R', 'o7', 'G'],
+    ['o7', 'A', 'o8', 'In'],
+    ['o5', 'A', 'o9', 'In']
+  ]),
+
   /* Microphone loudness as a number — a breathing circle and a scrolling
    * trace of the room. The browser asks mic permission when this loads. */
   'Mic meter': _EX([

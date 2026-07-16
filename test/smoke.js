@@ -417,6 +417,36 @@ for (const name of Object.keys(EXAMPLES)) {
   if (js2.indexOf('audio.state()') >= 0) failures.push('export: non-audio graph should not reference audio.state()');
 }
 
+/* 15 — oscilloscope: tap declaration, trigger lock, level math */
+{
+  const g = { nodes: [
+      { id: 'o', type: 'audio/osc', values: {} },
+      { id: 'sc', type: 'audio/scope', values: {} } ],
+    wires: [ { from: ['o', 'A'], to: ['sc', 'In'] } ] };
+  const c = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  const d = c.audioList.find(x => x.kind === 'scope');
+  if (!d) failures.push('scope: descriptor not declared');
+  else if ((d.src || []).join(',') !== 'o:0') failures.push('scope: src should be [o:0], got [' + (d.src || []).join(',') + ']');
+  if ((c.out.sc.G || [])[0] && c.out.sc.G[0].kind !== 'line') failures.push('scope: no signal should draw a flat line');
+  if ((c.out.sc.V || []).length) failures.push('scope: no signal should output empty samples');
+
+  // synthetic full-scale sine starting mid-cycle: trigger must lock near a rising zero
+  const wave = new Float32Array(2048);
+  for (let i = 0; i < wave.length; i++) wave[i] = Math.sin(2 * Math.PI * (i + 37) / 100);
+  const c2 = mkCtx();
+  c2.audioState['sc:0'] = { wave, sr: 48000, ready: true };
+  LM.evaluateGraph(g, NODE_DEFS, c2);
+  const V = c2.out.sc.V || [], L = (c2.out.sc.L || [])[0], G = (c2.out.sc.G || [])[0];
+  if (!V.length) failures.push('scope: samples not read back');
+  else {
+    if (Math.abs(V[0]) > 0.15 || !(V[1] > V[0])) failures.push('scope: trigger not locked to rising zero (V0=' + V[0] + ', V1=' + V[1] + ')');
+    if (Math.abs(L - 1) > 0.05) failures.push('scope: full-scale sine level should be ~1, got ' + L);
+    if (!G || G.kind !== 'poly' || G.pts.length !== V.length) failures.push('scope: waveform poly mismatch');
+    if (G && G.pts.length > 512) failures.push('scope: beam should cap at 512 points, got ' + G.pts.length);
+  }
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

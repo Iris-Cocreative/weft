@@ -396,7 +396,9 @@ Staged, don't leap:
   master limiter, preview mute button (viewport pause still doesn't mute — mute
   button covers it). Done in v0.8.4: Mic In (loudness → number via
   `ctx.audioState`), 432/440 concert-pitch setting (`graph.meta.tuneA4` +
-  `ctx.tuneA4`), Note note-input N, Cymatics chladni display node.*
+  `ctx.tuneA4`), Note note-input N, Cymatics chladni display node. Done in
+  v0.8.5: Scope oscilloscope (waveform read-back via `ctx.audioState.wave` —
+  the FFT-bands follow-up now just needs a second analyser read).*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
 - Graph gallery / community sharing once share-links exist.

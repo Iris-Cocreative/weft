@@ -1631,6 +1631,62 @@ defNode('audio/out', {
   }
 });
 
+defNode('audio/scope', {
+  title: 'Scope', cat: 'Audio', width: 168,
+  desc: 'Oscilloscope — taps the audio wire In (an analyser, never routed onward) and draws the actual waveform: T ms of signal, W×H px at P, trigger-locked on a rising zero crossing so the trace holds still. V is the drawn samples, L the RMS level.',
+  inputs: [
+    { name: 'In', type: 'audio', label: 'audio in' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'W', type: 'number', default: 320, label: 'width px' },
+    { name: 'H', type: 'number', default: 120, label: 'height px (±1 fills it)' },
+    { name: 'T', type: 'number', default: 20, label: 'time window ms' },
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.95 }, label: 'beam colour' }],
+  outputs: [
+    { name: 'G', type: 'geometry', label: 'waveform' },
+    { name: 'V', type: 'number', label: 'samples -1..1' },
+    { name: 'L', type: 'number', label: 'level 0..1' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'scope', src: typeof a.In === 'string' ? [a.In] : []
+    });
+    const W = Math.max(10, +a.W || 320), H = Math.max(2, +a.H || 120);
+    const none = { r: 0, g: 0, b: 0, a: 0 };
+    const dim = { r: a.C.r, g: a.C.g, b: a.C.b, a: (a.C.a === undefined ? 1 : a.C.a) * 0.22 };
+    ctx.drawList.push({ /* the graticule centre line — zero volts */
+      geom: { kind: 'line', a: { x: a.P.x - W / 2, y: a.P.y }, b: { x: a.P.x + W / 2, y: a.P.y } },
+      stroke: dim, fill: none, width: 1
+    });
+    const st = (ctx.audioState && ctx.audioState[id]) || {};
+    const buf = st.wave;
+    if (!buf || !buf.length) { /* no signal yet (or headless) — flat beam */
+      const g = { kind: 'line', a: { x: a.P.x - W / 2, y: a.P.y }, b: { x: a.P.x + W / 2, y: a.P.y } };
+      ctx.drawList.push({ geom: g, stroke: a.C, fill: none, width: 1.5 });
+      return { G: g, V: [], L: 0 };
+    }
+    /* trigger: sync the left edge to the first rising zero crossing so a
+     * periodic wave draws in the same place every frame instead of crawling */
+    let t0 = 0;
+    const half = buf.length >> 1;
+    for (let i = 1; i < half; i++) {
+      if (buf[i - 1] <= 0 && buf[i] > 0) { t0 = i; break; }
+    }
+    const sr = st.sr || 48000;
+    const n = Math.max(8, Math.min(buf.length - t0, Math.round(sr * LM.clamp(+a.T || 20, 1, 40) / 1000)));
+    const step = Math.max(1, Math.ceil(n / 512)); /* ≤512 beam points */
+    const pts = [], out = [];
+    let sum = 0;
+    for (let i = 0; i < n; i += step) {
+      const v = buf[t0 + i] || 0;
+      out.push(v); sum += v * v;
+      pts.push({ x: a.P.x - W / 2 + (i / (n - 1)) * W, y: a.P.y - v * (H / 2) });
+    }
+    const g = { kind: 'poly', pts, closed: false };
+    ctx.drawList.push({ geom: g, stroke: a.C, fill: none, width: 1.5 });
+    return { G: g, V: out, L: Math.min(1, Math.sqrt(sum / out.length) * 1.414) };
+  }
+});
+
 defNode('audio/mic', {
   title: 'Mic In', cat: 'Audio',
   desc: 'Microphone loudness as a number — V is the level (RMS, roughly 0..1, boosted by G) for driving visuals; the browser asks permission once, R turns true when the mic is live. Never routed to the speakers.',
@@ -1879,7 +1935,7 @@ defNode('meta/portout', {
     /* Audio: 0 pitch · 1 sources · 2 processors · 3 in/out */
     'audio/note': 0, 'audio/scale': 0,
     'audio/osc': 1, 'audio/noise': 1, 'audio/gain': 2, 'audio/filter': 2,
-    'audio/out': 3, 'audio/mic': 3
+    'audio/out': 3, 'audio/mic': 3, 'audio/scope': 3
   };
   for (const id in groups) if (NODE_DEFS[id]) NODE_DEFS[id].grp = groups[id];
   const compact = ['math/neg', 'math/abs', 'math/round', 'math/floor', 'math/ceil', 'math/sqrt',

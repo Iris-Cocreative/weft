@@ -90,6 +90,13 @@ local plate amplitude and settle on the nodal lines of F, modes rise with
 pitch (deterministic via `LM.rng`); three examples — *Scale board* (labelled
 scale rungs + marker + three real `<button>` drones from ONE list-matched
 Element node), *Cymatics*, *Mic meter* — 118 nodes.
+v0.8.5 (2026-07-16): **Scope** (`audio/scope`) — a real oscilloscope: taps any
+audio wire through a host-side AnalyserNode (a tap, never routed onward),
+time-domain samples flow back via `ctx.audioState` (`{wave, sr, ready}`), and
+the compute draws a trigger-locked beam (rising-zero-crossing sync, T ms
+window, ≤512 points, zero-volt graticule line) plus outputs the samples V and
+RMS level L. *Oscilloscope* example: sawtooth → resonant lowpass on mouse X —
+watch harmonics melt off the wave — 119 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -149,7 +156,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (118) — Grasshopper-matched names
+### Node library (119) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,

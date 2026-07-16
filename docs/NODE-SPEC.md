@@ -153,7 +153,7 @@ The evaluation context `ctx` provides:
 | `domList` | real-DOM-element requests pushed by nodes: Button `{id, kind:'button', label, x, y}` · Element `{id, kind:'element', tag, text, attrs, rect}` — the host reconciles actual elements |
 | `domState` | host-owned persistent map: element id → `{hover, focus, down, clicks}` |
 | `audioList` | Web-Audio requests pushed by Audio nodes: `{id, kind:'osc'\|'noise'\|'gain'\|'filter'\|'out'\|'mic', …params, src:[handles]}` — the host (`js/audio.js`) reconciles a live audio graph each frame; sound starts after the first user gesture (browser autoplay rule) |
-| `audioState` | host-owned read-back map: descriptor id → `{level, ready}` (last frame's mic loudness — the audio counterpart of `domState`) |
+| `audioState` | host-owned read-back map: descriptor id → `{level, ready}` (Mic In loudness) or `{wave, sr, ready}` (Scope: last frame's time-domain samples + sample rate) — the audio counterpart of `domState` |
 | `tuneA4` | concert pitch: the A4 reference in Hz (432 unless the graph's `meta.tuneA4` says otherwise) — Note and Scale derive every frequency from it |
 | `measureText` | `(text, sizePx) → {w, h}` — host-measured with the same font Draw uses (`h` is a deterministic `size × 1.2` line box) |
 | `defs` | the node-definition table (used by clusters to evaluate their inner graph) |

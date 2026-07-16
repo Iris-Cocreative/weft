@@ -25,7 +25,7 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | **Transform** | `xf/` | Moving geometry — affine maps | 3 |
 | **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM), Trace, Cymatics | 8 |
 | **Meta** | `meta/` | Composition — Cluster and its Port In / Port Out boundary markers (hidden from the palette) | 3 |
-| **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number); wires carry handle strings, `js/audio.js` reconciles the real Web Audio graph | 8 |
+| **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number), Scope (oscilloscope: waveform samples back onto the cloth); wires carry handle strings, `js/audio.js` reconciles the real Web Audio graph | 9 |
 
 A patch reads left to right as: **world & intent → numbers → lists → geometry → pixels**.
 Icons should reinforce that flow (see `DESIGN-PLAN.md`).
