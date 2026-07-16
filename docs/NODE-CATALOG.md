@@ -148,12 +148,14 @@ Pass-through container — wire a source through it, or set it directly; swap th
 
 ### `params/graph` — Graph Data
 
-Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data.
+Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data, or wire two corner points A (min x,y) and B (max x,y) to pin it.
 
 | in | type | default | note |
 |---|---|---|---|
 | X | number |  | receives whole list |
 | Y | number |  | receives whole list |
+| A | point |  | range corner (min x, min y) |
+| B | point |  | range corner (max x, max y) |
 
 | out | type | note |
 |---|---|---|
@@ -1346,6 +1348,23 @@ Colour from hue, saturation, lightness (all 0..1; hue wraps)
 |---|---|---|
 | C | color |  |
 
+### `disp/cymatics` — Cymatics
+
+Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator
+
+| in | type | default | note |
+|---|---|---|---|
+| F | number | `220` | frequency Hz |
+| P | point | `{"x":0,"y":0}` | centre |
+| S | number | `320` | plate size px |
+| N | number | `900` | grains |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.85}` | grain colour |
+| W | number | `1` | grain size |
+
+| out | type | note |
+|---|---|---|
+| P | point | grain points |
+
 ### `disp/draw` — Draw
 
 Render geometry with stroke S, fill F, line width W
@@ -1425,14 +1444,14 @@ Text geometry at point P — wire into Draw
 
 ### `disp/trace` — Trace
 
-Seismograph on the cloth — streams the values in V away from pen point P along vector D (direction = where the trail goes, length = pace px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail
+Seismograph on the cloth — streams the values in V away from pen point P; L is the trail length in px (always true px), D sets direction and scroll speed (px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail
 
 | in | type | default | note |
 |---|---|---|---|
 | V | number |  | values (px offset) · receives whole list |
 | C | color |  | line colours · receives whole list |
 | P | point | `{"x":0,"y":0}` | pen point |
-| D | vector | `{"x":-60,"y":0}` | direction + pace px/s |
+| D | vector | `{"x":-60,"y":0}` | direction + speed px/s |
 | L | number | `240` | trail length px |
 | W | number | `1.5` | width |
 
@@ -1442,4 +1461,4 @@ Seismograph on the cloth — streams the values in V away from pen point P along
 
 ## Icon coverage
 
-111 node glyphs + 1 category fallback(s) in `js/icons.js`. Full coverage.
+112 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

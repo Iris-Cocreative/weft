@@ -36,13 +36,14 @@ Definition of done for any change:
 |---|---|---|
 | `js/engine.js` | `LM` — evaluator, geometry, color, transforms, canvas render | **NO** |
 | `js/nodes.js` | `NODE_DEFS` — node library | only in `buildBody`/`postEval` |
+| `js/audio.js` | `WeftAudio` — Web Audio host, reconciles `ctx.audioList` (serialized into audio exports) | audio only, never at load |
 | `js/editor.js` | node canvas UI (pan/zoom, wires, quick-add) | yes |
 | `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim) | yes |
 | `js/export.js` | graph → standalone JS compiler | no |
 | `js/examples.js` | `EXAMPLES` — doubles as test fixtures | no |
 | `js/app.js` | shell: palette, toolbar, persistence, modal | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → editor → viewport → export → examples → app.
+Load order (classic scripts, shared globals): engine → nodes → audio → editor → viewport → export → examples → app.
 
 ## Invariants — do not break these
 
@@ -76,11 +77,18 @@ Load order (classic scripts, shared globals): engine → nodes → editor → vi
    frame-latched bools in ordinary wires — never callbacks or event subscriptions.
    Cross-frame memory lives on `node._state` keyed by `ctx.i` (per list item) and
    resets on graph load. The ctx input contract (`dt`, `mouse.pressed/released`,
-   `keys`, `scroll`, `domList`/`domState`, `measureText`, `defs`) is supplied
-   **identically** by `viewport.js` and the export mount — change one, change
-   both, and update the ctx table in NODE-SPEC §6 and smoke's `mkCtx`. Nodes
-   needing real DOM elements declare them via `ctx.domList` and read back
-   `ctx.domState`; only the hosts touch the DOM.
+   `keys`, `scroll`, `domList`/`domState`, `audioList`/`audioState`, `tuneA4`,
+   `measureText`, `defs`) is
+   supplied **identically** by `viewport.js` and the export mount — change one,
+   change both, and update the ctx table in NODE-SPEC §6 and smoke's `mkCtx`.
+   Nodes needing real DOM elements declare them via `ctx.domList` and read back
+   `ctx.domState`; only the hosts touch the DOM. Audio nodes likewise *declare*
+   Web Audio nodes via `ctx.audioList` (handle strings flow through `audio`
+   wires) and read back mic loudness via `ctx.audioState`; only the host
+   (`js/audio.js` `WeftAudio.makeHost`) touches the `AudioContext`, and cluster
+   computes must forward `audioList`, `audioState` and `tuneA4` into the child
+   ctx like the DOM channels. Pitch nodes derive Hz from `ctx.tuneA4` (432
+   default, per-graph override in `graph.meta.tuneA4`) — never hard-code 440.
    **The one sanctioned exception to acyclicity** (amended for Phase 3): a def
    with `feedback: true` (Delay) contributes **no edges** to the topological
    sort — wiring through it makes a cycle legal. Its compute reads last frame's
@@ -104,7 +112,7 @@ Load order (classic scripts, shared globals): engine → nodes → editor → vi
    (`{name, type, default, label?}` — single-letter names, GH style),
    `compute` (pure arrow, see invariant 1), optionally `listInputs`,
    `defaults`, `width`, `buildBody`, `postEval`.
-2. Types: `number | bool | string | point | color | geometry | any`.
+2. Types: `number | bool | string | point | color | geometry | audio | any`.
    New types need: `TYPE_COLORS` entry, `LM.coerce` case, literal editor in
    `editor.js buildLiteral` (or none), and a `LM.fmt` case.
 3. Clamp unbounded counts/iterations (see Series: cap 10000).

@@ -125,6 +125,17 @@ const Viewport = {
       }
     };
 
+    const audioHost = (typeof WeftAudio !== 'undefined') ? WeftAudio.makeHost() : null;
+    const btnMute = document.getElementById('btnMute');
+    if (btnMute) {
+      if (!audioHost) btnMute.style.display = 'none';
+      else btnMute.addEventListener('click', () => {
+        audioHost.mute(!audioHost.isMuted());
+        btnMute.textContent = audioHost.isMuted() ? '🔇' : '🔊';
+        btnMute.classList.toggle('muted', audioHost.isMuted());
+      });
+    }
+
     const centered = (clientX, clientY, rect) => ({
       x: clientX - rect.left - rect.width / 2,
       y: clientY - rect.top - rect.height / 2
@@ -292,10 +303,13 @@ const Viewport = {
       const ctx = {
         t, dt: Viewport.playing ? dt : 0, frame: frame++, mouse, keys, scroll,
         W: rect.width, H: rect.height, measureText, defs: NODE_DEFS,
-        drawList: [], domList: [], domState, bg: null, errors: {}, out: {}
+        drawList: [], domList: [], audioList: [], domState, bg: null, errors: {}, out: {},
+        audioState: audioHost ? audioHost.state() : {},
+        tuneA4: (App.graph.meta && App.graph.meta.tuneA4) || 432
       };
       try { LM.evaluateGraph(App.graph, NODE_DEFS, ctx); } catch (e) { /* keep rendering */ }
       syncDom(ctx.domList);
+      if (audioHost) audioHost.sync(ctx.audioList);
 
       let overHotspot = false;
       for (const n of App.graph.nodes) {
@@ -324,6 +338,14 @@ const Viewport = {
       if (Viewport.ghosts) drawGhosts(ctx, true);
       drawAnchors();
       g2.restore();
+
+      // audio unlock hint: browsers hold sound until a gesture
+      if (audioHost && audioHost.pending() && !audioHost.isMuted()) {
+        g2.font = '11px Inter, system-ui, sans-serif';
+        g2.textAlign = 'left'; g2.textBaseline = 'bottom';
+        g2.fillStyle = 'rgba(15,181,186,0.85)';
+        g2.fillText('click anywhere to start sound', 12, rect.height - 10);
+      }
 
       // scroll-simulator indicator: a slim thumb on the right edge while scrubbing
       const scrollAge = now - scrollShow;

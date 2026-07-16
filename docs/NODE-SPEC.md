@@ -36,6 +36,9 @@ inventory lives in `NODE-CATALOG.md` (auto-generated — regenerate with
 Rules:
 - `format` — integer format version. Omitted = 1. Loaders migrate old formats
   forward; a graph with a *newer* format than the app is refused, not guessed.
+- `meta` (optional) — graph-level settings. Currently one key: `tuneA4`
+  (concert pitch in Hz for the Audio pitch nodes; omitted = 432). Rides
+  through save, autosave and export.
 - `id` — any string unique within the graph (`n1`, `n2`… by convention).
 - `x`/`y` — canvas position. **Optional in authored patches**: pasting a patch
   whose nodes lack coordinates triggers automatic topological layout
@@ -82,12 +85,13 @@ should omit `ext`.
 | `vector` | `{x, y}` — structurally a point; semantically a direction/translation | two number fields |
 | `color` | `{r, g, b, a}` — rgb 0–255, a 0–1 | color picker + alpha |
 | `geometry` | see §5 | none |
+| `audio` | handle string — a descriptor id naming a live Web Audio node; samples never flow through wires | none |
 | `any` | passthrough | none |
 
 **Coercion:** any output may wire into any input; values are coerced per item:
 number↔bool (0=false), string→number (parse), anything→string (formatted),
 number→point (`{x:v,y:v}`), point→number (magnitude), hex string→color,
-number→gray color. Geometry and `any` pass through untouched. When no sensible
+number→gray color. Geometry, `audio` and `any` pass through untouched. When no sensible
 coercion exists the result is a neutral value (0, `{x:0,y:0}`, white), never an exception.
 
 ## 4. Lists — the core semantic
@@ -148,6 +152,9 @@ The evaluation context `ctx` provides:
 | `drawList` | render items pushed by Draw nodes: `{geom, stroke, fill, width}` |
 | `domList` | real-DOM-element requests pushed by nodes: Button `{id, kind:'button', label, x, y}` · Element `{id, kind:'element', tag, text, attrs, rect}` — the host reconciles actual elements |
 | `domState` | host-owned persistent map: element id → `{hover, focus, down, clicks}` |
+| `audioList` | Web-Audio requests pushed by Audio nodes: `{id, kind:'osc'\|'noise'\|'gain'\|'filter'\|'out'\|'mic', …params, src:[handles]}` — the host (`js/audio.js`) reconciles a live audio graph each frame; sound starts after the first user gesture (browser autoplay rule) |
+| `audioState` | host-owned read-back map: descriptor id → `{level, ready}` (last frame's mic loudness — the audio counterpart of `domState`) |
+| `tuneA4` | concert pitch: the A4 reference in Hz (432 unless the graph's `meta.tuneA4` says otherwise) — Note and Scale derive every frequency from it |
 | `measureText` | `(text, sizePx) → {w, h}` — host-measured with the same font Draw uses (`h` is a deterministic `size × 1.2` line box) |
 | `defs` | the node-definition table (used by clusters to evaluate their inner graph) |
 | `clusterIns` / `clusterOuts` | inside a cluster's inner graph only: the port lists flowing across the boundary (read by Port In, written by Port Out) |
@@ -227,6 +234,12 @@ Compute rules (they make export-to-JS possible — the tool's reason to exist):
    initialized lazily — a state node must behave sensibly from a cold start.
    Real DOM elements are *declared* via `ctx.domList` and read back via
    `ctx.domState`; computes never touch the DOM directly.
+9. Audio works the same way: computes *declare* Web Audio nodes by pushing
+   descriptors onto `ctx.audioList` and pass handle strings through `audio`
+   wires; computes never touch the `AudioContext` — the host (`js/audio.js`)
+   owns it and reconciles the live graph each frame. Read-back flows the
+   other way through `ctx.audioState` (mic levels), mirroring `domState`,
+   and pitch math reads `ctx.tuneA4` rather than hard-coding a reference.
 
 ## 8. Authoring patches (human or LLM)
 

@@ -23,6 +23,7 @@ const App = {
   serialize() {
     return {
       format: GRAPH_FORMAT,
+      meta: (App.graph.meta && App.graph.meta.tuneA4) ? { tuneA4: App.graph.meta.tuneA4 } : undefined,
       nodes: App.graph.nodes.map(n => {
         const o = { id: n.id, type: n.type, x: n.x, y: n.y, values: n.values };
         if (n.enabled === false) o.enabled = false;
@@ -41,6 +42,13 @@ const App = {
     App.resetHistory();
     App.writeStorage();
     App._dirty = false;
+    App.paintTune();
+  },
+
+  /* concert pitch: A4 reference in Hz, saved with the graph (432 unless set) */
+  paintTune() {
+    const b = document.getElementById('btnTune');
+    if (b) b.textContent = String((App.graph && App.graph.meta && App.graph.meta.tuneA4) || 432);
   },
 
   /* ------------------------------ change pipeline ------------------------------
@@ -264,7 +272,7 @@ const App = {
   buildPalette() {
     const list = document.getElementById('paletteList');
     const search = document.getElementById('paletteSearch');
-    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display'];
+    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio'];
 
     const render = q => {
       q = (q || '').toLowerCase();
@@ -350,7 +358,7 @@ const App = {
 
   buildTypeKey() {
     const body = document.querySelector('#typeKey .tk-body');
-    const order = ['number', 'point', 'vector', 'geometry', 'color', 'bool', 'string', 'any'];
+    const order = ['number', 'point', 'vector', 'geometry', 'color', 'bool', 'string', 'audio', 'any'];
     body.innerHTML = order.map(t =>
       `<div class="tk-row"><span class="tk-line" style="background:${TYPE_COLORS[t]}"></span>${t}</div>`).join('') +
       `<div class="tk-note">wires take the colour of their source output</div>`;
@@ -439,6 +447,17 @@ const App = {
       App.flash(Viewport.ghosts ? 'cloth previews on' : 'cloth previews off — display nodes still draw');
     });
     paintGhosts();
+
+    const btnTune = document.getElementById('btnTune');
+    if (btnTune) btnTune.addEventListener('click', () => {
+      const cur = (App.graph.meta && App.graph.meta.tuneA4) || 432;
+      App.graph.meta = App.graph.meta || {};
+      App.graph.meta.tuneA4 = cur === 432 ? 440 : 432;
+      App.paintTune();
+      App.onGraphChanged();
+      App.flash('concert pitch: A4 = ' + App.graph.meta.tuneA4 + ' Hz — saves with the graph');
+    });
+    App.paintTune();
 
     document.getElementById('btnNew').addEventListener('click', () => {
       try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}

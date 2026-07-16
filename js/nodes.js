@@ -9,11 +9,13 @@
  * (Meta is provisional slate until the Figma pass reaches it) */
 const CATS = {
   Input: '#03a514', Params: '#2dd4bf', State: '#c1362e', Maths: '#3b5dba', Sets: '#7831be',
-  Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc', Meta: '#8494ad'
+  Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc', Meta: '#8494ad',
+  Audio: '#0fb5ba' /* provisional until the Figma pass */
 };
 const TYPE_COLORS = {
   number: '#3e9aff', bool: '#ff3b41', string: '#fbbb00', point: '#fb6c09',
-  vector: '#8cff14', color: '#d730f8', geometry: '#7057ff', any: '#8ea4c3'
+  vector: '#8cff14', color: '#d730f8', geometry: '#7057ff', any: '#8ea4c3',
+  audio: '#0fb5ba'
 };
 
 const NODE_DEFS = {};
@@ -371,8 +373,11 @@ defNode('params/relay', {
 
 defNode('params/graph', {
   title: 'Graph Data', cat: 'Params', width: 200, bare: true,
-  desc: 'Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data.',
-  inputs: [{ name: 'X', type: 'number' }, { name: 'Y', type: 'number' }],
+  desc: 'Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data, or wire two corner points A (min x,y) and B (max x,y) to pin it.',
+  inputs: [
+    { name: 'X', type: 'number' }, { name: 'Y', type: 'number' },
+    { name: 'A', type: 'point', label: 'range corner (min x, min y)' },
+    { name: 'B', type: 'point', label: 'range corner (max x, max y)' }],
   outputs: [{ name: 'X', type: 'number' }, { name: 'Y', type: 'number' }],
   listInputs: ['X', 'Y'],
   compute: a => ({ X: a.X || [], Y: a.Y || [] }),
@@ -411,6 +416,12 @@ defNode('params/graph', {
       const x = +xs[i] || 0, y = +ys[i] || 0;
       if (x < x0) x0 = x; if (x > x1) x1 = x;
       if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    /* wired corner points pin the range (steady axes for live data) */
+    const cA = (ins.A || [])[0], cB = (ins.B || [])[0];
+    if (cA && cB && cA.x !== undefined && cB.x !== undefined) {
+      x0 = Math.min(cA.x, cB.x); x1 = Math.max(cA.x, cB.x);
+      y0 = Math.min(cA.y, cB.y); y1 = Math.max(cA.y, cB.y);
     }
     if (x1 - x0 < 1e-9) { x0 -= 0.5; x1 += 0.5; }
     if (y1 - y0 < 1e-9) { y0 -= 0.5; y1 += 0.5; }
@@ -1321,29 +1332,37 @@ defNode('disp/element', {
 
 defNode('disp/trace', {
   title: 'Trace', cat: 'Display',
-  desc: 'Seismograph on the cloth — streams the values in V away from pen point P along vector D (direction = where the trail goes, length = pace px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail',
+  desc: 'Seismograph on the cloth — streams the values in V away from pen point P; L is the trail length in px (always true px), D sets direction and scroll speed (px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail',
   inputs: [
     { name: 'V', type: 'number', label: 'values (px offset)' },
     { name: 'C', type: 'color', label: 'line colours' },
     { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'pen point' },
-    { name: 'D', type: 'vector', default: { x: -60, y: 0 }, label: 'direction + pace px/s' },
+    { name: 'D', type: 'vector', default: { x: -60, y: 0 }, label: 'direction + speed px/s' },
     { name: 'L', type: 'number', default: 240, label: 'trail length px' },
     { name: 'W', type: 'number', default: 1.5, label: 'width' }],
   outputs: [{ name: 'G', type: 'geometry', label: 'trace curves' }],
   listInputs: ['V', 'C'],
   compute: (a, ctx, node) => {
+    /* samples live at fixed px positions along the trail (not timestamps), so
+     * the trail is always exactly L px and changing D only changes how fast
+     * new values scroll in — it never stretches what was already drawn */
     const pace = Math.hypot(a.D.x, a.D.y);
+    const L = Math.max(0, +a.L || 0);
     const st = node._state = node._state || {};
-    const s = st[ctx.i || 0] = st[ctx.i || 0] || { t: null, samples: [] };
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { t: null, off: 0, samples: [] };
     if (ctx.t !== s.t) {
-      if (s.t !== null && ctx.t < s.t) s.samples.length = 0; /* time restarted */
+      if (s.t !== null && ctx.t < s.t) { s.samples.length = 0; s.off = 0; } /* time restarted */
       s.t = ctx.t;
-      s.samples.push({ t: ctx.t, v: (a.V || []).slice(0, 16).map(x => +x || 0) });
-      const span = pace > 1e-6 ? Math.max(0, a.L) / pace : 0;
+      s.off += pace * (ctx.dt || 0);
+      const v = (a.V || []).slice(0, 16).map(x => +x || 0);
+      const minGap = Math.max(0.5, L / 3000); /* density cap — high fps refines the newest point instead of flooding */
+      const lastP = s.samples.length ? s.samples[s.samples.length - 1].p : -Infinity;
+      if (s.off - lastP >= minGap) s.samples.push({ p: s.off, v });
+      else if (s.samples.length) s.samples[s.samples.length - 1].v = v;
       let drop = 0;
-      while (drop < s.samples.length - 1 && s.samples[drop].t < ctx.t - span) drop++;
+      while (drop < s.samples.length - 1 && s.off - s.samples[drop].p > L) drop++;
       if (drop) s.samples.splice(0, drop);
-      if (s.samples.length > 1200) s.samples.splice(0, s.samples.length - 1200);
+      if (s.samples.length > 4000) s.samples.splice(0, s.samples.length - 4000);
     }
     if (pace < 1e-6) return { G: [] };
     const d = { x: a.D.x / pace, y: a.D.y / pace };
@@ -1365,12 +1384,265 @@ defNode('disp/trace', {
       };
       for (const smp of s.samples) {
         if (smp.v[k] === undefined) { flush(); continue; } /* line absent that frame — break the trail */
-        const back = (ctx.t - smp.t) * pace;
+        const back = s.off - smp.p;
         run.push({ x: a.P.x + d.x * back + q.x * smp.v[k], y: a.P.y + d.y * back + q.y * smp.v[k] });
       }
       flush();
     }
     return { G: polys };
+  }
+});
+
+defNode('disp/cymatics', {
+  title: 'Cymatics', cat: 'Display', width: 168,
+  desc: 'Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator',
+  inputs: [
+    { name: 'F', type: 'number', default: 220, label: 'frequency Hz' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'S', type: 'number', default: 320, label: 'plate size px' },
+    { name: 'N', type: 'number', default: 900, label: 'grains' },
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.85 }, label: 'grain colour' },
+    { name: 'W', type: 'number', default: 1, label: 'grain size' }],
+  outputs: [{ name: 'P', type: 'point', label: 'grain points' }],
+  compute: (a, ctx, node) => {
+    const size = Math.max(40, +a.S || 320), h = size / 2;
+    const F = LM.clamp(+a.F || 220, 20, 20000);
+    const count = LM.clamp(Math.round(+a.N) || 900, 50, 2500);
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { rand: LM.rng(77 + (ctx.i || 0) * 977), pts: null };
+    if (!s.pts || s.pts.length !== count) {
+      s.pts = [];
+      for (let k = 0; k < count; k++) s.pts.push({ x: s.rand() * 2 - 1, y: s.rand() * 2 - 1 });
+    }
+    /* square-plate standing wave: mode numbers rise with pitch (log), so
+     * higher notes make finer figures — grains random-walk scaled by local
+     * amplitude and freeze where the plate is still (the nodal lines) */
+    const k = Math.log2(F / 32.7);
+    const u = 1 + k * 0.9, v = 2 + k * 1.45, PI = Math.PI;
+    const amp = (x, y) =>
+      Math.cos(u * PI * x) * Math.cos(v * PI * y) - Math.cos(v * PI * x) * Math.cos(u * PI * y);
+    const step = 0.09 * Math.min((ctx.dt || 0) * 60, 3);
+    if (step > 0) for (const p of s.pts) {
+      const j = step * Math.min(1, Math.abs(amp(p.x, p.y)) * 0.6);
+      p.x = LM.clamp(p.x + (s.rand() * 2 - 1) * j, -1, 1);
+      p.y = LM.clamp(p.y + (s.rand() * 2 - 1) * j, -1, 1);
+    }
+    const dot = Math.max(0.4, (+a.W || 1) * 0.9);
+    const none = { r: 0, g: 0, b: 0, a: 0 };
+    const out = [];
+    for (const p of s.pts) {
+      const x = a.P.x + p.x * h, y = a.P.y + p.y * h;
+      out.push({ x, y });
+      ctx.drawList.push({ geom: { kind: 'circle', cx: x, cy: y, r: dot }, stroke: none, fill: a.C, width: 0 });
+    }
+    return { P: out };
+  }
+});
+
+/* ============================== AUDIO ==============================
+ * Sound as dataflow. Audio wires carry HANDLES (descriptor-id strings),
+ * never samples: each compute pushes a descriptor onto ctx.audioList and
+ * the host (viewport / export mount) reconciles a live Web Audio graph
+ * (js/audio.js). Control runs at frame rate (~60Hz) with host-side
+ * smoothing — continuous sound, not a sequencer. List matching = voices:
+ * 3 frequencies into one Oscillator is 3 oscillators.
+ */
+
+defNode('audio/note', {
+  title: 'Note', cat: 'Audio', width: 150,
+  desc: 'A musical pitch — pick the note on the node or wire N (0–12 semitones above C, 12 rolls into the next octave), set the octave O; F is the frequency in Hz (equal temperament, A4 = the graph tuning, 432 by default), M the MIDI number. A list of octaves is a chord of octaves.',
+  inputs: [
+    { name: 'N', type: 'number', default: -1, label: 'note 0-12 (-1 = use picker)' },
+    { name: 'O', type: 'number', default: 4, label: 'octave' }],
+  outputs: [{ name: 'F', type: 'number', label: 'frequency Hz' }, { name: 'M', type: 'number', label: 'midi note' }],
+  defaults: { note: 9 }, /* A */
+  compute: (a, ctx, node) => {
+    const nn = Math.round(+a.N);
+    const n = (isFinite(nn) && nn >= 0) ? LM.clamp(nn, 0, 12)
+      : LM.clamp(Math.round((node.values && node.values.note) || 0), 0, 11);
+    const m = 12 * (LM.clamp(Math.round(+a.O || 0), -1, 9) + 1) + n;
+    return { F: (ctx.tuneA4 || 432) * Math.pow(2, (m - 69) / 12), M: m };
+  },
+  buildBody: (node, body, changed) => {
+    const sel = _mk('select', 'aud-sel', body);
+    ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].forEach((nm, i) => {
+      const o = _mk('option', '', sel);
+      o.value = i; o.textContent = nm;
+    });
+    sel.value = String(node.values.note || 0);
+    sel.addEventListener('change', () => { node.values.note = +sel.value; changed(); });
+  }
+});
+
+defNode('audio/scale', {
+  title: 'Scale', cat: 'Audio', width: 168,
+  desc: 'Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument',
+  inputs: [{ name: 'V', type: 'number', default: 57, label: 'value (midi note, fractional ok)' }],
+  outputs: [{ name: 'F', type: 'number', label: 'frequency Hz' }, { name: 'M', type: 'number', label: 'snapped midi' }],
+  defaults: { root: 9, scale: 'pentatonic' }, /* A minor pentatonic — hard to sound bad */
+  compute: (a, ctx, node) => {
+    const scales = {
+      major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10],
+      pentatonic: [0, 3, 5, 7, 10], chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    };
+    const v = node.values || {};
+    const set = scales[v.scale] || scales.pentatonic;
+    const root = LM.clamp(Math.round(v.root || 0), 0, 11);
+    const V = LM.clamp(+a.V || 0, 0, 127);
+    const m0 = Math.round(V);
+    let best = m0, bd = Infinity;
+    for (let m = m0 - 12; m <= m0 + 12; m++) {
+      if (set.indexOf(((m - root) % 12 + 12) % 12) < 0) continue;
+      const dd = Math.abs(V - m);
+      if (dd < bd) { bd = dd; best = m; }
+    }
+    return { F: (ctx.tuneA4 || 432) * Math.pow(2, (best - 69) / 12), M: best };
+  },
+  buildBody: (node, body, changed) => {
+    const sel = _mk('select', 'aud-sel', body);
+    ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].forEach((nm, i) => {
+      const o = _mk('option', '', sel);
+      o.value = i; o.textContent = nm + ' root';
+    });
+    sel.value = String(node.values.root || 0);
+    sel.addEventListener('change', () => { node.values.root = +sel.value; changed(); });
+    const seg = _mk('div', 'seg', body);
+    [['major', 'maj'], ['minor', 'min'], ['pentatonic', 'pent'], ['chromatic', 'chr']].forEach(w => {
+      const b = _mk('div', 'seg-b' + ((node.values.scale || 'pentatonic') === w[0] ? ' on' : ''), seg);
+      b.textContent = w[1]; b.title = w[0];
+      _cleanClick(b, () => {
+        node.values.scale = w[0];
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
+defNode('audio/osc', {
+  title: 'Oscillator', cat: 'Audio', width: 168,
+  desc: 'A tone at F Hz — pick the waveform on the node; the output is an audio handle (wire it toward Audio Out), not samples',
+  inputs: [
+    { name: 'F', type: 'number', default: 220, label: 'frequency Hz' },
+    { name: 'D', type: 'number', default: 0, label: 'detune cents' }],
+  outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
+  defaults: { wave: 'sine' },
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'osc', wave: (node.values && node.values.wave) || 'sine',
+      freq: LM.clamp(+a.F || 0, 0, 20000), detune: LM.clamp(+a.D || 0, -4800, 4800)
+    });
+    return { A: id };
+  },
+  buildBody: (node, body, changed) => {
+    const seg = _mk('div', 'seg', body);
+    [['sine', 'sin'], ['square', 'sqr'], ['sawtooth', 'saw'], ['triangle', 'tri']].forEach(w => {
+      const b = _mk('div', 'seg-b' + ((node.values.wave || 'sine') === w[0] ? ' on' : ''), seg);
+      b.textContent = w[1]; b.title = w[0];
+      _cleanClick(b, () => {
+        node.values.wave = w[0];
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
+defNode('audio/noise', {
+  title: 'Noise', cat: 'Audio',
+  desc: 'White noise source (a shared looped buffer) — an audio handle out',
+  inputs: [],
+  outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({ id, kind: 'noise' });
+    return { A: id };
+  }
+});
+
+defNode('audio/gain', {
+  title: 'Gain', cat: 'Audio',
+  desc: 'Scale a signal’s volume — per list item, so a list of voices gets a gain each (host-smoothed, no zipper noise)',
+  inputs: [
+    { name: 'In', type: 'audio', label: 'audio in' },
+    { name: 'G', type: 'number', default: 0.5, label: 'gain 0..1' }],
+  outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'gain', gain: LM.clamp(+a.G || 0, 0, 2),
+      src: typeof a.In === 'string' ? [a.In] : []
+    });
+    return { A: id };
+  }
+});
+
+defNode('audio/filter', {
+  title: 'Filter', cat: 'Audio', width: 168,
+  desc: 'Biquad filter — pick the mode on the node; cutoff F Hz, resonance Q (per list item)',
+  inputs: [
+    { name: 'In', type: 'audio', label: 'audio in' },
+    { name: 'F', type: 'number', default: 800, label: 'cutoff Hz' },
+    { name: 'Q', type: 'number', default: 1, label: 'resonance' }],
+  outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
+  defaults: { mode: 'lowpass' },
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'filter', mode: (node.values && node.values.mode) || 'lowpass',
+      freq: LM.clamp(+a.F || 0, 10, 20000), q: LM.clamp(+a.Q || 0, 0.0001, 30),
+      src: typeof a.In === 'string' ? [a.In] : []
+    });
+    return { A: id };
+  },
+  buildBody: (node, body, changed) => {
+    const seg = _mk('div', 'seg', body);
+    [['lowpass', 'lp'], ['highpass', 'hp'], ['bandpass', 'bp'], ['notch', 'notch']].forEach(w => {
+      const b = _mk('div', 'seg-b' + ((node.values.mode || 'lowpass') === w[0] ? ' on' : ''), seg);
+      b.textContent = w[1]; b.title = w[0];
+      _cleanClick(b, () => {
+        node.values.mode = w[0];
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
+defNode('audio/out', {
+  title: 'Audio Out', cat: 'Audio',
+  desc: 'The speaker — every handle wired in is mixed to the master volume V; sound starts after the first click or keypress (browser rule)',
+  inputs: [
+    { name: 'In', type: 'audio', label: 'audio in' },
+    { name: 'V', type: 'number', default: 0.8, label: 'master volume' }],
+  outputs: [],
+  listInputs: ['In'],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'out', vol: LM.clamp(+a.V || 0, 0, 1),
+      src: (a.In || []).filter(h => typeof h === 'string')
+    });
+    return {};
+  }
+});
+
+defNode('audio/mic', {
+  title: 'Mic In', cat: 'Audio',
+  desc: 'Microphone loudness as a number — V is the level (RMS, roughly 0..1, boosted by G) for driving visuals; the browser asks permission once, R turns true when the mic is live. Never routed to the speakers.',
+  inputs: [{ name: 'G', type: 'number', default: 1, label: 'boost' }],
+  outputs: [
+    { name: 'V', type: 'number', label: 'level 0..1' },
+    { name: 'R', type: 'bool', label: 'mic ready' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({ id, kind: 'mic' });
+    const st = (ctx.audioState && ctx.audioState[id]) || {};
+    return { V: LM.clamp((st.level || 0) * Math.max(0, +a.G || 0), 0, 1), R: !!st.ready };
   }
 });
 
@@ -1540,6 +1812,7 @@ defNode('meta/cluster', {
       t: ctx.t, dt: ctx.dt, frame: ctx.frame, mouse: ctx.mouse, keys: ctx.keys, scroll: ctx.scroll,
       W: ctx.W, H: ctx.H, measureText: ctx.measureText, defs: ctx.defs,
       drawList: ctx.drawList, domList: ctx.domList, domState: ctx.domState,
+      audioList: ctx.audioList, audioState: ctx.audioState, tuneA4: ctx.tuneA4,
       bg: null, errors: {}, out: {}, clusterIns: a, clusterOuts: {}
     };
     LM.evaluateGraph(node._sub, ctx.defs, c2);
@@ -1602,7 +1875,11 @@ defNode('meta/portout', {
     /* Curve: 1 primitives · 2 from points · 3 operations */
     'crv/line': 1, 'crv/circle': 1, 'crv/ellipse': 1, 'crv/rect': 1, 'crv/polygon': 1, 'crv/arc': 1,
     'crv/polyline': 2, 'crv/interp': 2,
-    'crv/divide': 3, 'crv/eval': 3
+    'crv/divide': 3, 'crv/eval': 3,
+    /* Audio: 0 pitch · 1 sources · 2 processors · 3 in/out */
+    'audio/note': 0, 'audio/scale': 0,
+    'audio/osc': 1, 'audio/noise': 1, 'audio/gain': 2, 'audio/filter': 2,
+    'audio/out': 3, 'audio/mic': 3
   };
   for (const id in groups) if (NODE_DEFS[id]) NODE_DEFS[id].grp = groups[id];
   const compact = ['math/neg', 'math/abs', 'math/round', 'math/floor', 'math/ceil', 'math/sqrt',

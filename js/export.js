@@ -42,6 +42,7 @@ const WeftExport = (() => {
 
   function serializeGraph(graph) {
     return JSON.stringify({
+      meta: (graph.meta && graph.meta.tuneA4) ? { tuneA4: graph.meta.tuneA4 } : undefined,
       nodes: graph.nodes.map(n => {
         const o = { id: n.id, type: n.type, values: n.values || {} };
         if (n.enabled === false) o.enabled = false;
@@ -52,6 +53,7 @@ const WeftExport = (() => {
   }
 
   function buildJS(graph) {
+    const hasAudio = [...collectTypes(graph)].some(t => t.indexOf('audio/') === 0);
     return `/* Exported from Weft — a parametric web experience.
  * Attaches to <canvas data-weft> if present, otherwise creates a
  * full-window background canvas. Coordinates are centered: (0,0) is
@@ -61,8 +63,9 @@ const WeftExport = (() => {
 const GRAPH = ${serializeGraph(graph)};
 const DEFS = ${serializeDefs(graph)};
 const LM = ${serializeLM()};
-
+${hasAudio ? 'const WeftAudio = { makeHost: ' + WeftAudio.makeHost.toString() + ' };\n' : ''}
 function mount(canvas) {
+${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}
   const g2 = canvas.getContext('2d');
   const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false };
   let mx = null, my = null, frame = 0;
@@ -191,10 +194,13 @@ function mount(canvas) {
     const ctx = {
       t: (now - t0) / 1000, dt, frame: frame++, mouse, keys, scroll,
       W: rect.width, H: rect.height, measureText, defs: DEFS,
-      drawList: [], domList: [], domState, bg: null, errors: {}, out: {}
+      drawList: [], domList: [], audioList: [], domState, bg: null, errors: {}, out: {},
+      audioState: ${hasAudio ? 'audio.state()' : '{}'},
+      tuneA4: (GRAPH.meta && GRAPH.meta.tuneA4) || 432
     };
     LM.evaluateGraph(GRAPH, DEFS, ctx);
     syncDom(ctx.domList, rect);
+${hasAudio ? '    audio.sync(ctx.audioList);\n' : ''}
     let overHotspot = false;
     for (const n of GRAPH.nodes) {
       if (n.type !== 'input/hotspot' || n.enabled === false) continue;

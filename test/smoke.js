@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const src = ['js/engine.js', 'js/nodes.js', 'js/examples.js', 'js/export.js']
+const src = ['js/engine.js', 'js/nodes.js', 'js/audio.js', 'js/examples.js', 'js/export.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -31,7 +31,8 @@ const mkCtx = () => ({
   scroll: { y: 0, max: 0, v: 0 },
   W: 800, H: 600, defs: NODE_DEFS,
   measureText: (t, s) => ({ w: String(t).length * s * 0.6, h: s * 1.2 }),
-  drawList: [], domList: [], domState: {}, bg: null, errors: {}, out: {}
+  drawList: [], domList: [], audioList: [], audioState: {}, domState: {}, bg: null, errors: {}, out: {},
+  tuneA4: 432
 });
 
 /* 1 — every node def evaluates standalone with defaults */
@@ -289,6 +290,131 @@ for (const name of Object.keys(EXAMPLES)) {
   c3.domState['el:0'] = { hover: false, focus: false, down: false, clicks: 3 };
   LM.evaluateGraph(g, NODE_DEFS, c3);
   if ((c3.out.el.K || [])[0] !== false) failures.push('element: click trigger is not frame-latched');
+}
+
+/* 12 — audio nodes declare descriptors with handle chains; export carries the host */
+{
+  const g = { nodes: [
+      { id: 'o', type: 'audio/osc', values: { wave: 'sine' } },
+      { id: 'gn', type: 'audio/gain', values: {} },
+      { id: 'ao', type: 'audio/out', values: {} } ],
+    wires: [ { from: ['o', 'A'], to: ['gn', 'In'] }, { from: ['gn', 'A'], to: ['ao', 'In'] } ] };
+  const c = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  if (Object.keys(c.errors).length) failures.push('audio chain: errored → ' + JSON.stringify(c.errors));
+  if (c.audioList.length !== 3) failures.push('audio chain: expected 3 descriptors got ' + c.audioList.length);
+  const byKind = {};
+  for (const d of c.audioList) byKind[d.kind] = d;
+  if (!byKind.osc || !byKind.gain || !byKind.out) failures.push('audio chain: missing kinds ' + JSON.stringify(Object.keys(byKind)));
+  else {
+    if ((byKind.gain.src || []).join(',') !== 'o:0') failures.push('audio gain src: expected o:0 got [' + (byKind.gain.src || []).join(',') + ']');
+    if ((byKind.out.src || []).join(',') !== 'gn:0') failures.push('audio out src: expected gn:0 got [' + (byKind.out.src || []).join(',') + ']');
+  }
+  // list matching = voices: 3 frequencies → 3 osc descriptors, gain follows per-item
+  const g2 = { nodes: [
+      { id: 'sr', type: 'sets/series', values: { S: 220, N: 55, C: 3 } },
+      { id: 'o', type: 'audio/osc', values: {} },
+      { id: 'gn', type: 'audio/gain', values: {} } ],
+    wires: [ { from: ['sr', 'S'], to: ['o', 'F'] }, { from: ['o', 'A'], to: ['gn', 'In'] } ] };
+  const c2 = mkCtx();
+  LM.evaluateGraph(g2, NODE_DEFS, c2);
+  const oscs = c2.audioList.filter(d => d.kind === 'osc');
+  const gains = c2.audioList.filter(d => d.kind === 'gain');
+  if (oscs.length !== 3) failures.push('audio voices: expected 3 oscs got ' + oscs.length);
+  if (oscs.length === 3 && (oscs[0].freq !== 220 || oscs[2].freq !== 330)) failures.push('audio voices: freqs wrong ' + oscs.map(d => d.freq).join(','));
+  if (gains.length !== 3 || gains.map(d => d.src.join()).join(',') !== 'o:0,o:1,o:2') failures.push('audio voices: gain srcs wrong ' + JSON.stringify(gains.map(d => d.src)));
+  // cluster forwarding: an osc inside a cluster lands in the outer audioList
+  const g3 = { nodes: [ {
+      id: 'cl', type: 'meta/cluster', x: 0, y: 0,
+      values: { title: 'voice', ins: [], outs: [],
+        graph: { nodes: [ { id: 'io', type: 'audio/osc', values: {} } ], wires: [] } }
+    } ], wires: [] };
+  const c3 = mkCtx();
+  LM.evaluateGraph(g3, NODE_DEFS, c3);
+  if (Object.keys(c3.errors).length) failures.push('audio in cluster: errored → ' + JSON.stringify(c3.errors));
+  if (!c3.audioList.some(d => d.kind === 'osc')) failures.push('audio in cluster: descriptor not forwarded to outer ctx');
+  // export: audio graph carries the serialized host; non-audio graphs stay clean
+  try {
+    const js = WeftExport.buildJS(g);
+    new Function(js);
+    if (js.indexOf('WeftAudio') < 0) failures.push('audio export: WeftAudio host missing');
+    if (js.indexOf('audio.sync') < 0) failures.push('audio export: sync call missing');
+  } catch (e) { failures.push('audio export does not compile → ' + e.message); }
+  const plain = WeftExport.buildJS({ nodes: [ { id: 'ci', type: 'crv/circle', values: {} } ], wires: [] });
+  if (plain.indexOf('WeftAudio') >= 0) failures.push('non-audio export: WeftAudio leaked in');
+}
+
+/* 13 — pitch helpers + trace px semantics */
+{
+  const n = NODE_DEFS['audio/note'].compute({ N: -1, O: 4 }, mkCtx(), { values: { note: 9 } });
+  if (Math.abs(n.F - 432) > 1e-6 || n.M !== 69) failures.push('note: A4 should be 432/69 (432 tuning default), got ' + n.F + '/' + n.M);
+  const c440 = mkCtx(); c440.tuneA4 = 440;
+  const n440 = NODE_DEFS['audio/note'].compute({ N: -1, O: 4 }, c440, { values: { note: 9 } });
+  if (Math.abs(n440.F - 440) > 1e-6) failures.push('note: A4 at 440 tuning should be 440, got ' + n440.F);
+  const nOv = NODE_DEFS['audio/note'].compute({ N: 5, O: 4 }, mkCtx(), { values: { note: 9 } });
+  if (nOv.M !== 65) failures.push('note: N=5 O=4 should override picker to midi 65 (F4), got ' + nOv.M);
+  const nRoll = NODE_DEFS['audio/note'].compute({ N: 12, O: 4 }, mkCtx(), { values: { note: 0 } });
+  if (nRoll.M !== 72) failures.push('note: N=12 should roll into the next octave (midi 72), got ' + nRoll.M);
+  const sc = NODE_DEFS['audio/scale'].compute({ V: 70 }, mkCtx(), { values: { root: 9, scale: 'pentatonic' } });
+  if (sc.M !== 69) failures.push('scale: 70 in A pent should snap to 69, got ' + sc.M);
+  const sc2 = NODE_DEFS['audio/scale'].compute({ V: 70 }, mkCtx(), { values: { root: 9, scale: 'chromatic' } });
+  if (sc2.M !== 70) failures.push('scale chromatic: should pass 70 through, got ' + sc2.M);
+  // trace: trail is always L px regardless of fps/speed — samples live at px positions
+  const tn = { id: 'tr', values: {} };
+  const args = { V: [10], C: [], P: { x: 0, y: 0 }, D: { x: -100, y: 0 }, L: 50, W: 1 };
+  let out = null;
+  for (let f = 0; f < 200; f++) {
+    const c = mkCtx(); c.t = f * 0.016; c.dt = 0.016;
+    out = NODE_DEFS['disp/trace'].compute(args, c, tn);
+  }
+  const pts = (out.G[0] || {}).pts || [];
+  let xMin = Infinity, xMax = -Infinity;
+  for (const p of pts) { if (p.x < xMin) xMin = p.x; if (p.x > xMax) xMax = p.x; }
+  const span = xMax - xMin;
+  if (!(span > 45 && span <= 50.5)) failures.push('trace: 50px trail spans ' + span.toFixed(1) + 'px (want ~50)');
+}
+
+/* 14 — mic read-back, cymatics settling, tuning in exports */
+{
+  const g = { nodes: [ { id: 'mc', type: 'audio/mic', values: {} } ], wires: [] };
+  const c = mkCtx();
+  c.audioState['mc:0'] = { level: 0.4, ready: true };
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  if (!c.audioList.some(d => d.kind === 'mic')) failures.push('mic: descriptor not declared into audioList');
+  if (Math.abs((c.out.mc.V || [])[0] - 0.4) > 1e-9) failures.push('mic: level not read back, got ' + (c.out.mc.V || [])[0]);
+  if ((c.out.mc.R || [])[0] !== true) failures.push('mic: ready flag not read back');
+  const c2 = mkCtx();
+  c2.audioState['mc:0'] = { level: 0.8, ready: true };
+  g.nodes[0].values.G = 2;
+  LM.evaluateGraph(g, NODE_DEFS, c2);
+  if ((c2.out.mc.V || [])[0] !== 1) failures.push('mic: boosted level should clamp to 1, got ' + (c2.out.mc.V || [])[0]);
+
+  // cymatics: grains migrate toward nodal lines (mean |amplitude| falls as it settles)
+  const cy = { id: 'cy', values: {} };
+  const cyArgs = { F: 220, P: { x: 0, y: 0 }, S: 320, N: 900, C: { r: 255, g: 255, b: 255, a: 1 }, W: 1 };
+  const k = Math.log2(220 / 32.7), u = 1 + k * 0.9, v = 2 + k * 1.45, PI = Math.PI;
+  const amp = (x, y) => Math.cos(u * PI * x) * Math.cos(v * PI * y) - Math.cos(v * PI * x) * Math.cos(u * PI * y);
+  const meanAmp = () => {
+    const pts = cy._state[0].pts;
+    let s = 0;
+    for (const p of pts) s += Math.abs(amp(p.x, p.y));
+    return s / pts.length;
+  };
+  const c3 = mkCtx();
+  NODE_DEFS['disp/cymatics'].compute(cyArgs, c3, cy);
+  if (c3.drawList.length !== 900) failures.push('cymatics: expected 900 grains drawn, got ' + c3.drawList.length);
+  const a0 = meanAmp();
+  for (let f = 0; f < 240; f++) NODE_DEFS['disp/cymatics'].compute(cyArgs, mkCtx(), cy);
+  const a1 = meanAmp();
+  if (!(a1 < a0 * 0.75)) failures.push('cymatics: grains did not settle toward nodal lines (' + a0.toFixed(3) + ' → ' + a1.toFixed(3) + ')');
+
+  // tuning: graph meta rides into the export and the exported ctx carries it
+  const js = WeftExport.buildJS({ meta: { tuneA4: 440 }, nodes: [ { id: 'o', type: 'audio/osc', values: {} } ], wires: [] });
+  if (js.indexOf('"tuneA4":440') < 0) failures.push('export: graph meta tuneA4 not serialized');
+  if (js.indexOf('tuneA4: (GRAPH.meta && GRAPH.meta.tuneA4) || 432') < 0) failures.push('export: ctx tuneA4 default missing');
+  if (js.indexOf('audio.state()') < 0) failures.push('export: audio graph ctx should read audio.state()');
+  const js2 = WeftExport.buildJS({ nodes: [ { id: 'ci', type: 'crv/circle', values: {} } ], wires: [] });
+  if (js2.indexOf('audio.state()') >= 0) failures.push('export: non-audio graph should not reference audio.state()');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

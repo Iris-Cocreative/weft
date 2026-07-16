@@ -55,7 +55,7 @@ const LM = {
 
   /* ---------- type coercion (loose, Grasshopper-friendly) ---------- */
   coerce: (v, t) => {
-    if (v === null || v === undefined || t === 'any' || t === 'geometry') return v;
+    if (v === null || v === undefined || t === 'any' || t === 'geometry' || t === 'audio') return v;
     switch (t) {
       case 'number':
         if (typeof v === 'number') return v;
@@ -334,6 +334,8 @@ const LM = {
   evaluateGraph: (graph, defs, ctx) => {
     ctx.drawList = ctx.drawList || [];
     ctx.domList = ctx.domList || [];
+    ctx.audioList = ctx.audioList || [];
+    ctx.audioState = ctx.audioState || {};
     ctx.errors = ctx.errors || {};
     ctx.out = ctx.out || {};
     const byId = {};

@@ -59,7 +59,37 @@ empty-click deselect, global navbar (About · Nodes · Loom), slider types
 number-blue livery), Boolean Toggle redesign (bool-red, knob bottom=off /
 top=on), swatch simplified, anchor-handle eye (Params teal), Time pause +
 restart inputs/buttons, momentary **Button**, **Graph Data** (on-node plot),
-and a draw-display eye on the loom — 109 nodes.
+and a draw-display eye on the loom — 109 nodes. v0.8.2 (2026-07-15, audio
+experiment): new **Audio** category — Oscillator, Noise, Gain, Filter,
+Audio Out. Sound as dataflow via the Element pattern: computes push
+descriptors onto `ctx.audioList`, wires carry *handle* strings (samples never
+touch wires), and a new host (`js/audio.js`, serialized into audio exports)
+owns the `AudioContext` and reconciles a live Web Audio graph each frame
+(smoothed params, teardown by reconcile, gesture unlock). List matching =
+voices: a Series into one Oscillator is a chord (*Drone chord* example).
+Continuous sound only — sequencing/ADSR are follow-ups — 114 nodes.
+v0.8.3 (2026-07-15, instrument pass — from James's theremin session): **Note**
+(pick note + octave → Hz/MIDI) and **Scale** (snap any continuous value to the
+nearest note of a scale — mouse becomes an in-key instrument; *Theremin*
+example), master bus **limiter** in the audio host (every Audio Out mixes
+through a DynamicsCompressor brickwall — stacked voices can't blow out
+speakers) + **mute button** in the preview HUD, **Trace rewritten to px-true
+trails** (samples live at fixed px positions, L is always exactly L px, D only
+sets direction/speed — no more fps- or pace-dependent length), **Graph Data
+range pinning** (wire corner points A/B to fix the axes), merged-mode HUD
+moved below the loom tools (fps counter no longer overlaps) — 116 nodes.
+v0.8.4 (2026-07-16, sound in & sound seen — from James's keyboard-theremin
+session): **432 Hz tuning** — Note/Scale derive Hz from `ctx.tuneA4` (432
+default, HUD button toggles 432/440, saved in `graph.meta.tuneA4`, rides into
+exports); **Note note-input** (wire N 0–12 to play it from data, 12 rolls into
+the next octave); **Mic In** (`audio/mic`) — microphone loudness → number for
+visuals via the new `ctx.audioState` read-back channel (analyser in the host,
+never routed to speakers, stream stopped on drop); **Cymatics**
+(`disp/cymatics`) — chladni-plate sand simulation: grains random-walk scaled by
+local plate amplitude and settle on the nodal lines of F, modes rise with
+pitch (deterministic via `LM.rng`); three examples — *Scale board* (labelled
+scale rungs + marker + three real `<button>` drones from ONE list-matched
+Element node), *Cymatics*, *Mic meter* — 118 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -88,6 +118,7 @@ weft/
   js/
     engine.js       LM — the pure runtime (evaluator, geometry, colors, transforms, render)
     nodes.js        NODE_DEFS — the node library (+ editor-only custom bodies)
+    audio.js        WeftAudio — Web Audio host: reconciles ctx.audioList (serialized into audio exports)
     editor.js       node canvas: pan/zoom, drag, wires, quick-add, context menu
     viewport.js     live preview: evaluates graph every rAF, renders drawList
     export.js       WeftExport — compiles graph → standalone JS via fn.toString()
@@ -118,7 +149,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (109) — Grasshopper-matched names
+### Node library (118) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
@@ -147,6 +178,13 @@ weft/
 - **Display**: Draw, Text, Colour HSL, Gradient, Background, Measure Text
   (host `ctx.measureText`), Element (a real DOM element — `<a>`, heading,
   anything — placed by geometry bounds; hover/focus/click flow back as data)
+- **Audio** (experiment, v0.8.2–3): pitch — Note (note+octave → Hz/MIDI),
+  Scale (snap continuous values to a scale: maj/min/pent/chromatic + root) ·
+  sources — Oscillator (sine/square/saw/tri), Noise · processors — Gain,
+  Filter (lp/hp/bp/notch) · sink — Audio Out (all outs mix through a master
+  limiter; mute button in the preview HUD). Wires carry handle strings;
+  `js/audio.js` reconciles the real Web Audio graph (control at frame rate,
+  ~60 Hz smoothed; audio-rate feedback/sequencing are not v1)
 
 ### Geometry model (2D)
 

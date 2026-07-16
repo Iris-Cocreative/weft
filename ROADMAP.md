@@ -387,6 +387,16 @@ Staged, don't leap:
 ## 9. Horizon / unsorted
 
 - Audio input (mic FFT → parameters) and WebMIDI/gamepad — live-performance patching.
+  *Update 2026-07-15: audio OUTPUT shipped as a v0.8.2 experiment (Audio category:
+  Oscillator, Noise, Gain, Filter, Audio Out — handle wires + `js/audio.js` host).
+  Natural follow-ups: ADSR envelope, sample-accurate sequencer (AudioContext-clock
+  lookahead), native DelayNode echo, FFT band read-back (extend `ctx.audioState`),
+  panner, per-cluster id prefixing (duplicated audio clusters currently dedupe to
+  one voice — shared with domList). Done in v0.8.3: Note + Scale pitch nodes,
+  master limiter, preview mute button (viewport pause still doesn't mute — mute
+  button covers it). Done in v0.8.4: Mic In (loudness → number via
+  `ctx.audioState`), 432/440 concert-pitch setting (`graph.meta.tuneA4` +
+  `ctx.tuneA4`), Note note-input N, Cymatics chladni display node.*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
 - Graph gallery / community sharing once share-links exist.

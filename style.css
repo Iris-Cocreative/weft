@@ -116,7 +116,7 @@ main.merged #preview {
   min-width: 0;
 }
 main.merged #domLayer { z-index: 2; }
-main.merged #viewHud { z-index: 2; right: 136px; }
+main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom tools — no overlap */
 
 /* ---------------- palette ---------------- */
 
@@ -700,6 +700,18 @@ main.merged #viewHud { z-index: 2; right: 136px; }
   background: rgba(16, 21, 31, 0.75); border: 1px solid var(--line);
   border-radius: 7px; padding: 4px 9px; backdrop-filter: blur(4px);
 }
+#btnMute.muted { color: var(--faint); }
+#btnTune { width: auto !important; padding: 0 8px; font-size: 11px; color: var(--faint); }
+#btnTune:hover { color: var(--text); }
+
+/* audio node bodies — note / root pickers */
+.aud-sel {
+  width: 100%; margin: 2px 0;
+  background: rgba(16, 21, 31, 0.8); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px;
+  font: inherit; font-size: 11px; padding: 3px 5px; cursor: pointer;
+}
+.aud-sel:hover { border-color: var(--accent-dim); }
 
 /* ---------------- status bar ---------------- */
 

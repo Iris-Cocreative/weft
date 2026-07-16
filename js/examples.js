@@ -808,5 +808,182 @@ const EXAMPLES = {
     ['s1', 'X', 's10', 'X'], ['s1', 'Y', 's10', 'Y'],
     ['s10', 'P', 's11', 'P'],
     ['s11', 'C', 's12', 'G']
+  ]),
+
+  /* Audio: four sine voices in a 2:3:4:5 stack, swelling on a slow LFO that
+   * also breathes a circle — sound starts after the first click (browser rule). */
+  'Drone chord': _EX([
+    ['a1', 'sets/series', 30, 40, { S: 110, N: 55, C: 4 }],
+    ['a2', 'audio/osc', 250, 40, { wave: 'sine' }],
+    ['a3', 'input/time', 30, 300],
+    ['a4', 'math/mul', 250, 320, { B: 0.6 }],
+    ['a5', 'math/sin', 450, 320],
+    ['a6', 'math/remap', 650, 280, { S0: -1, S1: 1, T0: 0.04, T1: 0.16 }],
+    ['a7', 'audio/gain', 470, 40],
+    ['a8', 'audio/out', 690, 40],
+    ['a9', 'math/remap', 650, 480, { S0: -1, S1: 1, T0: 44, T1: 92 }],
+    ['a10', 'crv/circle', 880, 440],
+    ['a11', 'disp/draw', 1100, 440, { S: { r: 94, g: 234, b: 212, a: 0.9 }, W: 2 }],
+    ['a12', 'disp/bg', 1100, 620]
+  ], [
+    ['a1', 'S', 'a2', 'F'],
+    ['a2', 'A', 'a7', 'In'],
+    ['a6', 'R', 'a7', 'G'],
+    ['a7', 'A', 'a8', 'In'],
+    ['a3', 'T', 'a4', 'A'],
+    ['a4', 'R', 'a5', 'V'],
+    ['a5', 'R', 'a6', 'V'],
+    ['a5', 'R', 'a9', 'V'],
+    ['a9', 'R', 'a10', 'R'],
+    ['a10', 'C', 'a11', 'G']
+  ]),
+
+  /* Audio: mouse X = pitch snapped to A minor pentatonic (the Scale node is
+   * what makes it an instrument), mouse Y = volume. The trace draws the
+   * snapped melody as a stairstep — quantization made visible. */
+  'Theremin': _EX([
+    ['t1', 'input/mouse', 30, 40],
+    ['t2', 'math/remap', 250, 40, { S0: 0, S1: 1, T0: 45, T1: 81 }],
+    ['t3', 'audio/scale', 470, 40, { root: 9, scale: 'pentatonic' }],
+    ['t4', 'audio/osc', 690, 40, { wave: 'sine' }],
+    ['t5', 'math/remap', 250, 280, { S0: 0, S1: 1, T0: 0.3, T1: 0 }],
+    ['t6', 'audio/gain', 690, 240],
+    ['t7', 'audio/out', 910, 40],
+    ['t8', 'vec/construct', 250, 480],
+    ['t9', 'math/remap', 470, 320, { S0: 0, S1: 0.3, T0: 6, T1: 26 }],
+    ['t10', 'crv/circle', 470, 480],
+    ['t11', 'disp/draw', 690, 480, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.18 }, W: 2 }],
+    ['t12', 'math/remap', 690, 320, { S0: 45, S1: 81, T0: 60, T1: -60 }],
+    ['t13', 'disp/trace', 910, 320, { P: { x: 0, y: 170 }, D: { x: -140, y: 0 }, L: 500, W: 2 }],
+    ['t14', 'disp/bg', 910, 520]
+  ], [
+    ['t1', 'NX', 't2', 'V'],
+    ['t2', 'R', 't3', 'V'],
+    ['t3', 'F', 't4', 'F'],
+    ['t4', 'A', 't6', 'In'],
+    ['t1', 'NY', 't5', 'V'],
+    ['t5', 'R', 't6', 'G'],
+    ['t6', 'A', 't7', 'In'],
+    ['t1', 'X', 't8', 'X'], ['t1', 'Y', 't8', 'Y'],
+    ['t8', 'P', 't10', 'P'],
+    ['t5', 'R', 't9', 'V'],
+    ['t9', 'R', 't10', 'R'],
+    ['t10', 'C', 't11', 'G'],
+    ['t3', 'M', 't12', 'V'],
+    ['t12', 'R', 't13', 'V']
+  ]),
+
+  /* The theremin grown into an instrument you can see: every note of A
+   * pentatonic drawn as a labelled rung (Series → Scale → Set Union dedupes
+   * the snapped notes), a marker riding the rung you're playing, and three
+   * REAL <button> drones (one Element node, list-matched ×3) latching
+   * A2 / E3 / A3 under everything. Buttons on the interface itself. */
+  'Scale board': _EX([
+    ['s1', 'sets/series', 30, 40, { S: 57, N: 1, C: 25 }],
+    ['s2', 'audio/scale', 250, 40, { root: 9, scale: 'pentatonic' }],
+    ['s3', 'sets/union', 470, 40],
+    ['s4', 'math/remap', 690, 40, { S0: 57, S1: 81, T0: 150, T1: -190 }],
+    ['s5', 'vec/construct', 910, 40, { X: -200 }],
+    ['s6', 'vec/construct', 910, 190, { X: 0 }],
+    ['s7', 'crv/rect', 1130, 190, { W: 330, H: 1 }],
+    ['s8', 'disp/draw', 1350, 190, { S: { r: 142, g: 164, b: 195, a: 0.25 }, W: 1 }],
+    ['s9', 'math/mod', 690, 340, { B: 12 }],
+    ['s10', 'params/textlist', 690, 480, { text: 'C\nC#\nD\nD#\nE\nF\nF#\nG\nG#\nA\nA#\nB' }],
+    ['s11', 'sets/item', 910, 360],
+    ['s12', 'disp/text', 1130, 340, { S: 12 }],
+    ['s13', 'disp/draw', 1350, 340, { S: { r: 230, g: 237, b: 250, a: 0.65 } }],
+    ['v1', 'input/mouse', 30, 620],
+    ['v2', 'math/remap', 250, 620, { S0: 0, S1: 1, T0: 81, T1: 57 }],
+    ['v3', 'audio/scale', 470, 620, { root: 9, scale: 'pentatonic' }],
+    ['v4', 'audio/osc', 690, 620, { wave: 'sine' }],
+    ['v5', 'audio/gain', 910, 620, { G: 0.14 }],
+    ['v6', 'audio/out', 1570, 620],
+    ['v7', 'math/remap', 690, 770, { S0: 57, S1: 81, T0: 150, T1: -190 }],
+    ['v8', 'vec/construct', 910, 770, { X: -165 }],
+    ['v9', 'crv/circle', 1130, 770, { R: 7 }],
+    ['v10', 'disp/draw', 1350, 770, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.5 }, W: 1.5 }],
+    ['d1', 'params/number', 30, 950, { N: 45 }],
+    ['d2', 'params/number', 30, 1040, { N: 52 }],
+    ['d3', 'params/number', 30, 1130, { N: 57 }],
+    ['d4', 'audio/scale', 250, 990, { root: 0, scale: 'chromatic' }],
+    ['d5', 'audio/osc', 470, 990, { wave: 'sine' }],
+    ['d6', 'sets/series', 30, 1280, { S: 0, N: 1, C: 3 }],
+    ['d7', 'math/remap', 250, 1280, { S0: 0, S1: 2, T0: -120, T1: 120 }],
+    ['d8', 'vec/construct', 470, 1280, { Y: 220 }],
+    ['d9', 'crv/rect', 690, 1280, { W: 104, H: 32 }],
+    ['d10', 'params/textlist', 690, 1420, { text: 'drone A2\ndrone E3\ndrone A3' }],
+    ['d11', 'disp/element', 910, 1280, { T: 'button' }],
+    ['d12', 'state/latch', 1130, 1280],
+    ['d13', 'sets/select', 1350, 1280, { T: 0.12, F: 0 }],
+    ['d14', 'audio/gain', 1350, 1080],
+    ['b1', 'disp/bg', 1570, 770]
+  ], [
+    ['s1', 'S', 's2', 'V'],
+    ['s2', 'M', 's3', 'A'], ['s2', 'M', 's3', 'B'],
+    ['s3', 'U', 's4', 'V'],
+    ['s4', 'R', 's5', 'Y'], ['s4', 'R', 's6', 'Y'],
+    ['s6', 'P', 's7', 'P'], ['s7', 'C', 's8', 'G'],
+    ['s3', 'U', 's9', 'A'],
+    ['s10', 'L', 's11', 'L'], ['s9', 'R', 's11', 'i'],
+    ['s11', 'E', 's12', 'T'], ['s5', 'P', 's12', 'P'],
+    ['s12', 'G', 's13', 'G'],
+    ['v1', 'NY', 'v2', 'V'],
+    ['v2', 'R', 'v3', 'V'],
+    ['v3', 'F', 'v4', 'F'],
+    ['v4', 'A', 'v5', 'In'],
+    ['v5', 'A', 'v6', 'In'],
+    ['v3', 'M', 'v7', 'V'],
+    ['v7', 'R', 'v8', 'Y'],
+    ['v8', 'P', 'v9', 'P'],
+    ['v9', 'C', 'v10', 'G'],
+    ['d1', 'N', 'd4', 'V'], ['d2', 'N', 'd4', 'V'], ['d3', 'N', 'd4', 'V'],
+    ['d4', 'F', 'd5', 'F'],
+    ['d6', 'S', 'd7', 'V'],
+    ['d7', 'R', 'd8', 'X'],
+    ['d8', 'P', 'd9', 'P'],
+    ['d9', 'C', 'd11', 'G'], ['d10', 'L', 'd11', 'C'],
+    ['d11', 'K', 'd12', 'T'],
+    ['d12', 'B', 'd13', 'P'],
+    ['d5', 'A', 'd14', 'In'], ['d13', 'L', 'd14', 'G'],
+    ['d14', 'A', 'v6', 'In']
+  ]),
+
+  /* Sound made visible: sand on a vibrating plate migrates to the quiet
+   * nodal lines of whatever frequency is playing. Slide the pitch and watch
+   * the figure reorganize. */
+  'Cymatics': _EX([
+    ['c1', 'params/slider', 30, 40, { min: 36, max: 96, value: 57 }],
+    ['c2', 'audio/scale', 250, 40, { root: 9, scale: 'pentatonic' }],
+    ['c3', 'audio/osc', 470, 40, { wave: 'sine' }],
+    ['c4', 'audio/gain', 690, 40, { G: 0.12 }],
+    ['c5', 'audio/out', 910, 40],
+    ['c6', 'disp/cymatics', 470, 240, { S: 380, N: 1400 }],
+    ['c7', 'disp/bg', 690, 420]
+  ], [
+    ['c1', 'N', 'c2', 'V'],
+    ['c2', 'F', 'c3', 'F'],
+    ['c3', 'A', 'c4', 'In'],
+    ['c4', 'A', 'c5', 'In'],
+    ['c2', 'F', 'c6', 'F']
+  ]),
+
+  /* Microphone loudness as a number — a breathing circle and a scrolling
+   * trace of the room. The browser asks mic permission when this loads. */
+  'Mic meter': _EX([
+    ['m1', 'audio/mic', 30, 40],
+    ['m2', 'state/smooth', 250, 40, { S: 10 }],
+    ['m3', 'math/remap', 470, 40, { S0: 0, S1: 1, T0: 14, T1: 190 }],
+    ['m4', 'crv/circle', 690, 40],
+    ['m5', 'disp/draw', 910, 40, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.15 }, W: 2 }],
+    ['m6', 'math/remap', 470, 220, { S0: 0, S1: 1, T0: 0, T1: -150 }],
+    ['m7', 'disp/trace', 690, 220, { P: { x: 0, y: 170 }, D: { x: -120, y: 0 }, L: 600, W: 2 }],
+    ['m8', 'disp/bg', 910, 320]
+  ], [
+    ['m1', 'V', 'm2', 'V'],
+    ['m2', 'R', 'm3', 'V'],
+    ['m3', 'R', 'm4', 'R'],
+    ['m4', 'C', 'm5', 'G'],
+    ['m2', 'R', 'm6', 'V'],
+    ['m6', 'R', 'm7', 'V']
   ])
 };
