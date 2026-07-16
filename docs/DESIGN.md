@@ -50,6 +50,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | Transform | `#ff6767` |
 | Display | `#f009fc` |
 | Meta | `#8494ad` *(provisional slate — not yet through Figma; clusters also stack a card-shadow to say "there's more inside")* |
+| Audio | `#ff36a3` *(code-side decision 2026-07-16, not yet through Figma: "signal pink" — the open hue slot; replaced the provisional teal `#0fb5ba`, which sat on top of Params. Rose maximizes wire contrast against number-blue, the wire most often beside audio. CRT-phosphor teal `#5eead4` stays as the default beam colour on Scope / Vector Scope / Cymatics — instrument screens, not category identity)* |
 
 ### Type colours (`Line Types/*`, → `TYPE_COLORS` in nodes.js — ports AND wires)
 
@@ -63,6 +64,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | color | `#d730f8` |
 | geometry | `#7057ff` |
 | any | `#8ea4c3` |
+| audio | `#ff36a3` *(matches the Audio category — handles, not samples)* |
 
 ## Card anatomy (reference: Figma "Node Card" component / the Polygon instance)
 

@@ -10,12 +10,12 @@
 const CATS = {
   Input: '#03a514', Params: '#2dd4bf', State: '#c1362e', Maths: '#3b5dba', Sets: '#7831be',
   Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc', Meta: '#8494ad',
-  Audio: '#0fb5ba' /* provisional until the Figma pass */
+  Audio: '#ff36a3' /* signal pink — the open slot on the wheel, far from number-blue wires */
 };
 const TYPE_COLORS = {
   number: '#3e9aff', bool: '#ff3b41', string: '#fbbb00', point: '#fb6c09',
   vector: '#8cff14', color: '#d730f8', geometry: '#7057ff', any: '#8ea4c3',
-  audio: '#0fb5ba'
+  audio: '#ff36a3'
 };
 
 const NODE_DEFS = {};

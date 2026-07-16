@@ -343,7 +343,7 @@ const Viewport = {
       if (audioHost && audioHost.pending() && !audioHost.isMuted()) {
         g2.font = '11px Inter, system-ui, sans-serif';
         g2.textAlign = 'left'; g2.textBaseline = 'bottom';
-        g2.fillStyle = 'rgba(15,181,186,0.85)';
+        g2.fillStyle = 'rgba(255,54,163,0.85)';
         g2.fillText('click anywhere to start sound', 12, rect.height - 10);
       }
 
