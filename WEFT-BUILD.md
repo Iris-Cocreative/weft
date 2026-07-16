@@ -155,6 +155,15 @@ Newton step down the amplitude gradient toward their *nearest* nodal line
 which slowly leaked every grain into the biggest still basins (the
 center-line collapse); new R input re-throws the sand on any flip
 (button, trigger or toggle) — 126 nodes.
+v0.9.2 (2026-07-16, signal plumbing): **Track In goes stereo** — A stays
+the full stereo feed; new L/R outputs are split channels via a host
+`chan` kind (ChannelSplitter behind per-channel unity gains; ready flag
+renamed S). L→X, R→Y on the Vector Scope = a goniometer — the *Music
+scope* example. **Pitch In is a processor** — new In port analyses any
+wired signal (scope-style tap with zero-gain keep-alive); unwired it
+falls back to the microphone, and the permission prompt only fires if
+nothing is wired. **Mic In gains A** — the live mic routes into the
+graph (filters, scopes, effects; headphones advised).
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

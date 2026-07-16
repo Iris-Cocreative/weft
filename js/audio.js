@@ -87,22 +87,36 @@ const WeftAudio = {
         const z = actx.createGain(); z.gain.value = 0;
         an.connect(z); z.connect(master);
         e.main = an; e.in = an; e.z = z; e.buf = new Float32Array(an.fftSize);
-      } else if (d.kind === 'mic' || d.kind === 'pitch') {
-        /* microphone → analyser only: never routed toward the speakers (no
-         * feedback squeal); loudness (and, for pitch, the tracked frequency)
-         * flows back to the graph as numbers. pitch needs a longer window */
+      } else if (d.kind === 'mic') {
+        /* microphone → analyser for loudness, plus a unity gain the graph can
+         * route onward (headphones advised — speakers feed back acoustically) */
         const an = actx.createAnalyser();
-        an.fftSize = d.kind === 'pitch' ? 2048 : 512;
-        an.smoothingTimeConstant = 0;
-        e.main = an; e.buf = new Float32Array(an.fftSize);
+        an.fftSize = 512; an.smoothingTimeConstant = 0;
+        const g = actx.createGain(); g.gain.value = 1;
+        e.main = an; e.out = g; e.buf = new Float32Array(an.fftSize);
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
             if (live[d.id] !== e) { stream.getTracks().forEach(t => t.stop()); return; }
             e.stream = stream;
             e.src = actx.createMediaStreamSource(stream);
-            e.src.connect(an);
+            e.src.connect(an); e.src.connect(g);
           }).catch(() => { });
         }
+      } else if (d.kind === 'pitch') {
+        /* pitch tracker: analyses whatever wires in, or falls back to the mic
+         * when nothing does (the mic is only requested in update(), and only
+         * if the input stays unwired — see there). Zero-gain leg keeps a
+         * wired-but-unrouted branch pulled, same trick as the scope tap */
+        const an = actx.createAnalyser();
+        an.fftSize = 2048; an.smoothingTimeConstant = 0;
+        const z = actx.createGain(); z.gain.value = 0;
+        an.connect(z); z.connect(master);
+        e.main = an; e.in = an; e.z = z; e.buf = new Float32Array(an.fftSize);
+      } else if (d.kind === 'chan') {
+        /* one channel of a stereo entry — a unity gain fed from the parent's
+         * splitter (wired up in update(), when the parent surely exists) */
+        const g = actx.createGain(); g.gain.value = 1;
+        e.main = g; e.out = g; e.srcSplit = null;
       } else if (d.kind === 'track') {
         /* computer audio in — getDisplayMedia demands a user gesture, so the
          * share picker opens on the first click after the node appears. Video
@@ -111,6 +125,8 @@ const WeftAudio = {
         const an = actx.createAnalyser();
         an.fftSize = 512; an.smoothingTimeConstant = 0;
         g.connect(an);
+        e.split = actx.createChannelSplitter(2);
+        g.connect(e.split);
         e.main = g; e.out = g; e.an = an; e.buf = new Float32Array(an.fftSize);
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
           e.arm = () => {
@@ -177,13 +193,37 @@ const WeftAudio = {
           lv = Math.min(1, Math.sqrt(sum / e.buf.length) * 2);
         }
         levels[d.id] = { level: lv, ready: !!e.src };
+      } else if (d.kind === 'chan') {
+        const pe = live[d.of], sp = (pe && pe.split) || null;
+        if (sp !== e.srcSplit) { // parent appeared or was rebuilt
+          try { if (e.srcSplit) e.srcSplit.disconnect(m); } catch (err) { }
+          if (sp) sp.connect(m, d.ch);
+          e.srcSplit = sp;
+        }
       } else if (d.kind === 'pitch') {
+        /* source policy: analyse whatever the graph wires in; fall back to
+         * the microphone only while the input stays unwired (so a patch that
+         * feeds it audio never triggers a mic permission prompt) */
+        const wired = !!(e.srcs && e.srcs.length);
+        if (e.src) {
+          if (wired && !e.micCut) { try { e.src.disconnect(m); } catch (err) { } e.micCut = true; }
+          else if (!wired && e.micCut) { e.src.connect(m); e.micCut = false; }
+        } else if (!wired && !e.reqd && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          e.reqd = true;
+          navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            if (live[d.id] !== e) { stream.getTracks().forEach(t => t.stop()); return; }
+            e.stream = stream;
+            e.src = actx.createMediaStreamSource(stream);
+            if (e.srcs && e.srcs.length) e.micCut = true;
+            else e.src.connect(m);
+          }).catch(() => { });
+        }
         /* pitch tracking: normalized autocorrelation on a half-rate copy of
          * the window (voice/instrument range doesn't need 48kHz), then take
          * the FIRST peak within 12% of the global max — the absolute max is
          * often the octave below on harmonic-rich sounds */
         let lv = 0, cl = 0, f = e.freq || 0;
-        if (e.src && actx.state === 'running') {
+        if ((wired || (e.src && !e.micCut)) && actx.state === 'running') {
           m.getFloatTimeDomainData(e.buf);
           const n2 = e.buf.length >> 1;
           if (!e.b2) e.b2 = new Float32Array(n2);
@@ -226,7 +266,7 @@ const WeftAudio = {
           }
         }
         e.freq = f;
-        levels[d.id] = { freq: f, clarity: cl, level: lv, ready: !!e.src };
+        levels[d.id] = { freq: f, clarity: cl, level: lv, ready: !!(wired || e.src) };
       }
     };
     const drop = id => {
@@ -238,6 +278,9 @@ const WeftAudio = {
       try { if (e.arm) window.removeEventListener('pointerdown', e.arm); } catch (err) { }
       try { if (e.an) e.an.disconnect(); } catch (err) { }
       try { if (e.z) e.z.disconnect(); } catch (err) { }
+      try { if (e.split) e.split.disconnect(); } catch (err) { }
+      try { if (e.srcSplit) e.srcSplit.disconnect(e.main); } catch (err) { }
+      try { if (e.out && e.out !== e.main) e.out.disconnect(); } catch (err) { }
       try { e.main.disconnect(); } catch (err) { }
       delete live[id]; // sources can't restart after stop — a re-appearing id gets a fresh node
       delete levels[id];

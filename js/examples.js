@@ -1151,6 +1151,25 @@ const EXAMPLES = {
     ['s12', 'G', 's13', 'G']
   ]),
 
+  /* Play music on the vectorscope — a goniometer. Add the node, click once,
+   * share a tab with sound ("also share audio"!) and the stereo field draws
+   * itself: mono = a diagonal line, wide stereo = a blooming figure. The
+   * scope below shows the waveform; Track In A also routes to the speaker. */
+  'Music scope': _EX([
+    ['t1', 'audio/track', 30, 40],
+    ['t2', 'audio/xyscope', 470, 40, { S: 300, P: { x: 0, y: -50 } }],
+    ['t3', 'audio/scope', 470, 380, { P: { x: 0, y: 170 }, W: 460, H: 100, T: 30 }],
+    ['t4', 'audio/gain', 250, 340, { G: 0.8 }],
+    ['t5', 'audio/out', 250, 520],
+    ['t6', 'disp/bg', 690, 520]
+  ], [
+    ['t1', 'L', 't2', 'X'],
+    ['t1', 'R', 't2', 'Y'],
+    ['t1', 'A', 't4', 'In'],
+    ['t4', 'A', 't5', 'In'],
+    ['t4', 'A', 't3', 'In']
+  ]),
+
   /* The Phase 4 thesis demo (patches/kaleidoscope.md) — James's hand-coded
    * mandala art test as 20 nodes: seeded particles in a symmetry slice, a
    * distance-threshold connection web, the slice replicated symmetry × mirror

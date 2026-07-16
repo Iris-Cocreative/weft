@@ -1522,7 +1522,7 @@ Scale a signal’s volume — per list item, so a list of voices gets a gain eac
 
 ### `audio/mic` — Mic In
 
-Microphone loudness as a number — V is the level (RMS, roughly 0..1, boosted by G) for driving visuals; the browser asks permission once, R turns true when the mic is live. Never routed to the speakers.
+Microphone as signal and number — A routes the live mic into the graph (filters, scopes, effects; wear headphones, speakers feed back), V is the loudness (RMS, roughly 0..1, boosted by G) for driving visuals, R turns true when the mic is live. The browser asks permission once.
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1530,6 +1530,7 @@ Microphone loudness as a number — V is the level (RMS, roughly 0..1, boosted b
 
 | out | type | note |
 |---|---|---|
+| A | audio |  |
 | V | number | level 0..1 |
 | R | bool | mic ready |
 
@@ -1601,14 +1602,18 @@ Turn geometry into sound: the curve’s outline is resampled into a looped stere
 
 ### `audio/pitch` — Pitch In
 
-Hears the note — tracks the frequency of a sung or played pitch from the microphone: F in Hz, M the fractional MIDI number (wire it into Scale's V to snap in key), C how sure the tracker is (0..1, gate on it), R true once the mic is live. Holds the last pitch through silence.
+Hears the note — a pitch tracker for any signal: wire audio into In (an oscillator, Track In, a whole mix) or leave it unwired and it listens to the microphone instead (permission is only asked if nothing is wired). F in Hz, M the fractional MIDI number (wire it into Scale's V to snap in key), C how sure the tracker is (0..1, gate on it), R true once a source is live. Holds the last pitch through silence.
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio | `0` |  |
 
 | out | type | note |
 |---|---|---|
 | F | number | frequency Hz |
 | M | number | midi (fractional) |
 | C | number | clarity 0..1 |
-| R | bool | mic ready |
+| R | bool | source ready |
 
 ### `audio/scale` — Scale
 
@@ -1646,7 +1651,7 @@ Oscilloscope — taps the audio wire In (an analyser, never routed onward) and d
 
 ### `audio/track` — Track In
 
-The computer's own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". Route A through filters and gains to Audio Out; V is loudness for visuals. Share a different tab than Weft or it will feed back.
+The computer's own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". A is the full stereo signal, L and R the split channels (L→X, R→Y on a Vector Scope = a goniometer); V is loudness for visuals, S true while sharing. Share a different tab than Weft or it will feed back.
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1654,9 +1659,11 @@ The computer's own sound as a source — the first click after this node appears
 
 | out | type | note |
 |---|---|---|
-| A | audio |  |
+| A | audio | stereo |
+| L | audio | left |
+| R | audio | right |
 | V | number | level 0..1 |
-| R | bool | sharing |
+| S | bool | sharing |
 
 ### `audio/xyscope` — Vector Scope
 

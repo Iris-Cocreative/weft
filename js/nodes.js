@@ -1865,30 +1865,32 @@ defNode('audio/xyscope', {
 
 defNode('audio/mic', {
   title: 'Mic In', cat: 'Audio',
-  desc: 'Microphone loudness as a number — V is the level (RMS, roughly 0..1, boosted by G) for driving visuals; the browser asks permission once, R turns true when the mic is live. Never routed to the speakers.',
+  desc: 'Microphone as signal and number — A routes the live mic into the graph (filters, scopes, effects; wear headphones, speakers feed back), V is the loudness (RMS, roughly 0..1, boosted by G) for driving visuals, R turns true when the mic is live. The browser asks permission once.',
   inputs: [{ name: 'G', type: 'number', default: 1, label: 'boost' }],
   outputs: [
+    { name: 'A', type: 'audio' },
     { name: 'V', type: 'number', label: 'level 0..1' },
     { name: 'R', type: 'bool', label: 'mic ready' }],
   compute: (a, ctx, node) => {
     const id = node.id + ':' + (ctx.i || 0);
     if (ctx.audioList) ctx.audioList.push({ id, kind: 'mic' });
     const st = (ctx.audioState && ctx.audioState[id]) || {};
-    return { V: LM.clamp((st.level || 0) * Math.max(0, +a.G || 0), 0, 1), R: !!st.ready };
+    return { A: id, V: LM.clamp((st.level || 0) * Math.max(0, +a.G || 0), 0, 1), R: !!st.ready };
   }
 });
 
 defNode('audio/pitch', {
   title: 'Pitch In', cat: 'Audio', width: 158,
-  desc: 'Hears the note — tracks the frequency of a sung or played pitch from the microphone: F in Hz, M the fractional MIDI number (wire it into Scale\'s V to snap in key), C how sure the tracker is (0..1, gate on it), R true once the mic is live. Holds the last pitch through silence.',
+  desc: 'Hears the note — a pitch tracker for any signal: wire audio into In (an oscillator, Track In, a whole mix) or leave it unwired and it listens to the microphone instead (permission is only asked if nothing is wired). F in Hz, M the fractional MIDI number (wire it into Scale\'s V to snap in key), C how sure the tracker is (0..1, gate on it), R true once a source is live. Holds the last pitch through silence.',
+  inputs: [{ name: 'In', type: 'audio', default: 0 }],
   outputs: [
     { name: 'F', type: 'number', label: 'frequency Hz' },
     { name: 'M', type: 'number', label: 'midi (fractional)' },
     { name: 'C', type: 'number', label: 'clarity 0..1' },
-    { name: 'R', type: 'bool', label: 'mic ready' }],
+    { name: 'R', type: 'bool', label: 'source ready' }],
   compute: (a, ctx, node) => {
     const id = node.id + ':' + (ctx.i || 0);
-    if (ctx.audioList) ctx.audioList.push({ id, kind: 'pitch' });
+    if (ctx.audioList) ctx.audioList.push({ id, kind: 'pitch', src: typeof a.In === 'string' ? [a.In] : [] });
     const st = (ctx.audioState && ctx.audioState[id]) || {};
     const f = +st.freq || 0;
     return {
@@ -1902,17 +1904,23 @@ defNode('audio/pitch', {
 
 defNode('audio/track', {
   title: 'Track In', cat: 'Audio', width: 158,
-  desc: 'The computer\'s own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". Route A through filters and gains to Audio Out; V is loudness for visuals. Share a different tab than Weft or it will feed back.',
+  desc: 'The computer\'s own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". A is the full stereo signal, L and R the split channels (L→X, R→Y on a Vector Scope = a goniometer); V is loudness for visuals, S true while sharing. Share a different tab than Weft or it will feed back.',
   inputs: [{ name: 'G', type: 'number', default: 1, label: 'gain' }],
   outputs: [
-    { name: 'A', type: 'audio' },
+    { name: 'A', type: 'audio', label: 'stereo' },
+    { name: 'L', type: 'audio', label: 'left' },
+    { name: 'R', type: 'audio', label: 'right' },
     { name: 'V', type: 'number', label: 'level 0..1' },
-    { name: 'R', type: 'bool', label: 'sharing' }],
+    { name: 'S', type: 'bool', label: 'sharing' }],
   compute: (a, ctx, node) => {
     const id = node.id + ':' + (ctx.i || 0);
-    if (ctx.audioList) ctx.audioList.push({ id, kind: 'track', gain: LM.clamp(+a.G || 0, 0, 2) });
+    if (ctx.audioList) {
+      ctx.audioList.push({ id, kind: 'track', gain: LM.clamp(+a.G || 0, 0, 2) });
+      ctx.audioList.push({ id: id + 'l', kind: 'chan', of: id, ch: 0 });
+      ctx.audioList.push({ id: id + 'r', kind: 'chan', of: id, ch: 1 });
+    }
     const st = (ctx.audioState && ctx.audioState[id]) || {};
-    return { A: id, V: LM.clamp(+st.level || 0, 0, 1), R: !!st.ready };
+    return { A: id, L: id + 'l', R: id + 'r', V: LM.clamp(+st.level || 0, 0, 1), S: !!st.ready };
   }
 });
 

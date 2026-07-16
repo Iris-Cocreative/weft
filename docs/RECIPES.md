@@ -102,10 +102,13 @@ geometry that reaches no Draw node is invisible.
   remap` → anything.
 - **Sing a note, hear it in key** — `audio/pitch(→ M fractional midi) →
   audio/scale(V → F) → audio/osc` — the graph harmonizes with you; gate on
-  `C` clarity to ignore silence.
+  `C` clarity to ignore silence. Pitch In is a processor too: wire any
+  audio into its `In` (unwired = mic fallback).
 - **Play computer audio through the graph** — `audio/track(→ A) →
   audio/filter → audio/out`; share a *different* tab and tick "also share
   audio", or it feeds back. `V` is loudness for visuals.
+- **Goniometer** — `audio/track(L → xyscope X, R → xyscope Y)`: the stereo
+  field draws itself (mono = diagonal line, wide mix = blooming figure).
 - **See the wave** — tap any audio wire into `audio/scope(In → G)`; XY figures:
   `audio/xyscope(X, Y)`. Geometry as sound: `audio/path(G → X Y)`.
 

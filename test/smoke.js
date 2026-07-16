@@ -382,6 +382,7 @@ for (const name of Object.keys(EXAMPLES)) {
   LM.evaluateGraph(g, NODE_DEFS, c);
   if (!c.audioList.some(d => d.kind === 'mic')) failures.push('mic: descriptor not declared into audioList');
   if (Math.abs((c.out.mc.V || [])[0] - 0.4) > 1e-9) failures.push('mic: level not read back, got ' + (c.out.mc.V || [])[0]);
+  if ((c.out.mc.A || [])[0] !== 'mc:0') failures.push('mic: audio handle not returned');
   if ((c.out.mc.R || [])[0] !== true) failures.push('mic: ready flag not read back');
   const c2 = mkCtx();
   c2.audioState['mc:0'] = { level: 0.8, ready: true };
@@ -540,7 +541,9 @@ for (const name of Object.keys(EXAMPLES)) {
   const c = mkCtx();
   c.audioState['pt:0'] = { freq: 432, clarity: 0.9, level: 0.3, ready: true };
   LM.evaluateGraph(g, NODE_DEFS, c);
-  if (!c.audioList.some(d => d.kind === 'pitch')) failures.push('pitch: descriptor not declared');
+  const pd0 = c.audioList.find(d => d.kind === 'pitch');
+  if (!pd0) failures.push('pitch: descriptor not declared');
+  else if ((pd0.src || []).length) failures.push('pitch: unwired input should have empty src');
   if ((c.out.pt.F || [])[0] !== 432) failures.push('pitch: freq not read back');
   if (Math.abs((c.out.pt.M || [])[0] - 69) > 1e-9) failures.push('pitch: 432 Hz at A4=432 should be midi 69, got ' + (c.out.pt.M || [])[0]);
   if ((c.out.pt.C || [])[0] !== 0.9 || (c.out.pt.R || [])[0] !== true) failures.push('pitch: clarity/ready not read back');
@@ -549,6 +552,14 @@ for (const name of Object.keys(EXAMPLES)) {
   cq.audioState['pt:0'] = { freq: 440, clarity: 1, ready: true };
   LM.evaluateGraph(g, NODE_DEFS, cq);
   if (Math.abs((cq.out.pt.M || [])[0] - 69) > 1e-9) failures.push('pitch: midi must follow ctx.tuneA4, got ' + (cq.out.pt.M || [])[0]);
+  const gp = { nodes: [
+      { id: 'o', type: 'audio/osc', values: {} },
+      { id: 'pw', type: 'audio/pitch', values: {} } ],
+    wires: [ { from: ['o', 'A'], to: ['pw', 'In'] } ] };
+  const cp = mkCtx();
+  LM.evaluateGraph(gp, NODE_DEFS, cp);
+  const pd1 = cp.audioList.find(d => d.kind === 'pitch');
+  if (!pd1 || (pd1.src || []).join(',') !== 'o:0') failures.push('pitch: wired audio should land in src, got [' + ((pd1 || {}).src || []).join(',') + ']');
 
   const g2 = { nodes: [
       { id: 'tk', type: 'audio/track', values: { G: 1.5 } },
@@ -562,7 +573,11 @@ for (const name of Object.keys(EXAMPLES)) {
   else if (Math.abs(td.gain - 1.5) > 1e-9) failures.push('track: gain param wrong, got ' + td.gain);
   const od = c2.audioList.find(d => d.kind === 'out');
   if (!od || (od.src || []).join(',') !== 'tk:0') failures.push('track: handle should route into out, got [' + ((od || {}).src || []).join(',') + ']');
-  if ((c2.out.tk.V || [])[0] !== 0.5 || (c2.out.tk.R || [])[0] !== true) failures.push('track: level/ready not read back');
+  if ((c2.out.tk.V || [])[0] !== 0.5 || (c2.out.tk.S || [])[0] !== true) failures.push('track: level/sharing not read back');
+  const chans = c2.audioList.filter(d => d.kind === 'chan');
+  if (chans.length !== 2 || chans[0].of !== 'tk:0' || chans[0].ch !== 0 || chans[1].ch !== 1)
+    failures.push('track: expected two chan descriptors of the track (ch 0/1)');
+  if ((c2.out.tk.L || [])[0] !== 'tk:0l' || (c2.out.tk.R || [])[0] !== 'tk:0r') failures.push('track: L/R handles wrong');
   try { new Function(WeftExport.buildJS(g2)); } catch (e) { failures.push('track: export does not compile — ' + e.message); }
 
   // cymatics: settled grains must stay spread across the plate (no center-line

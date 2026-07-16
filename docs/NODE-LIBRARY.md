@@ -25,7 +25,7 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | **Transform** | `xf/` | Moving geometry — affine maps | 3 |
 | **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM), Trace, Cymatics, Harmonograph | 9 |
 | **Meta** | `meta/` | Composition — Cluster and its Port In / Port Out boundary markers (hidden from the palette) | 3 |
-| **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number), Pitch In (autocorrelation pitch tracker: sung note → Hz/MIDI), Track In (computer audio via the share picker), Scope (oscilloscope: waveform samples back onto the cloth), Vector Scope (XY / Lissajous), Mix (sum signals — epicycles), Path to Audio (geometry → looped stereo waveform — oscilloscope music) | 14 |
+| **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number + routable signal), Pitch In (autocorrelation pitch tracker for any wired audio, mic fallback → Hz/MIDI), Track In (computer audio via the share picker, stereo + L/R split), Scope (oscilloscope: waveform samples back onto the cloth), Vector Scope (XY / Lissajous), Mix (sum signals — epicycles), Path to Audio (geometry → looped stereo waveform — oscilloscope music) | 14 |
 
 A patch reads left to right as: **world & intent → numbers → lists → geometry → pixels**.
 Icons should reinforce that flow (see `DESIGN-PLAN.md`).
