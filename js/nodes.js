@@ -1932,6 +1932,41 @@ defNode('audio/track', {
   }
 });
 
+defNode('audio/fft', {
+  title: 'Bands', cat: 'Audio', width: 158,
+  desc: 'Spectrum analyser — splits the signal wired into In across N frequency bands (log-spaced 40 Hz–16 kHz, so each octave gets fair space) and outputs B as a LIST of levels 0..1, low to high. Wire B through Remap into circles, rects, anything — list matching builds the visualizer. S smooths over time (0 = twitchy, 0.9 = syrup).',
+  inputs: [
+    { name: 'In', type: 'audio', default: 0 },
+    { name: 'N', type: 'number', default: 8, label: 'bands' },
+    { name: 'S', type: 'number', default: 0.75, label: 'smoothing 0..0.99' }],
+  outputs: [
+    { name: 'B', type: 'number', label: 'band levels 0..1 (list)' },
+    { name: 'R', type: 'bool', label: 'signal wired' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'fft',
+      src: typeof a.In === 'string' ? [a.In] : [],
+      tc: LM.clamp(+a.S || 0, 0, 0.99)
+    });
+    const st = (ctx.audioState && ctx.audioState[id]) || {};
+    const n = LM.clamp(Math.round(+a.N) || 8, 1, 64);
+    const out = [];
+    if (st.bins && st.sr) {
+      const bins = st.bins, hz = (st.sr / 2) / bins.length;
+      const fLo = 40, fHi = Math.min(16000, st.sr / 2), ratio = fHi / fLo;
+      for (let k = 0; k < n; k++) {
+        const i0 = Math.max(0, Math.floor(fLo * Math.pow(ratio, k / n) / hz));
+        const i1 = Math.min(bins.length - 1, Math.max(i0, Math.ceil(fLo * Math.pow(ratio, (k + 1) / n) / hz)));
+        let s = 0;
+        for (let i = i0; i <= i1; i++) s += bins[i] * bins[i];
+        out.push(Math.sqrt(s / (i1 - i0 + 1)));
+      }
+    } else for (let k = 0; k < n; k++) out.push(0);
+    return { B: out, R: !!st.ready };
+  }
+});
+
 /* ============================== STATE ==============================
  * Nodes that remember. Memory lives on node._state keyed by ctx.i (the
  * list-match index) so a list-fed state node is N independent machines.
@@ -2291,7 +2326,7 @@ defNode('meta/js', {
     'audio/note': 0, 'audio/scale': 0,
     'audio/osc': 1, 'audio/noise': 1, 'audio/path': 1,
     'audio/gain': 2, 'audio/filter': 2, 'audio/mix': 2,
-    'audio/out': 3, 'audio/mic': 3, 'audio/pitch': 3, 'audio/track': 3, 'audio/scope': 3, 'audio/xyscope': 3,
+    'audio/out': 3, 'audio/mic': 3, 'audio/pitch': 3, 'audio/track': 3, 'audio/scope': 3, 'audio/xyscope': 3, 'audio/fft': 3,
     /* Meta: composition */
     'meta/js': 1
   };

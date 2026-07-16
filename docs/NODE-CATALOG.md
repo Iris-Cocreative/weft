@@ -1491,6 +1491,21 @@ The speaker — every handle wired in is mixed to the master volume V; sound sta
 | In | audio |  | audio in · receives whole list |
 | V | number | `0.8` | master volume |
 
+### `audio/fft` — Bands
+
+Spectrum analyser — splits the signal wired into In across N frequency bands (log-spaced 40 Hz–16 kHz, so each octave gets fair space) and outputs B as a LIST of levels 0..1, low to high. Wire B through Remap into circles, rects, anything — list matching builds the visualizer. S smooths over time (0 = twitchy, 0.9 = syrup).
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio | `0` |  |
+| N | number | `8` | bands |
+| S | number | `0.75` | smoothing 0..0.99 |
+
+| out | type | note |
+|---|---|---|
+| B | number | band levels 0..1 (list) |
+| R | bool | signal wired |
+
 ### `audio/filter` — Filter
 
 Biquad filter — pick the mode on the node; cutoff F Hz, resonance Q (per list item)
@@ -1721,4 +1736,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-128 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+129 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

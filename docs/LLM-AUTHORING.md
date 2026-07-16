@@ -218,6 +218,7 @@ and/or/xor/not).
 `audio/pitch` In(audio, optional — mic fallback) → F:Hz M:midi C:clarity ·
 `audio/track` G → A:stereo L R V VL VR S (computer audio via share picker) ·
 `audio/scope` In … → G V L · `audio/xyscope` X Y … → G ·
+`audio/fft` In N S:smoothing → B:list-of-band-levels R (spectrum, log 40Hz–16kHz) ·
 `audio/path` G F → X Y (geometry outline → looped waveform).
 
 ### Meta

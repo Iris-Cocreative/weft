@@ -582,6 +582,31 @@ for (const name of Object.keys(EXAMPLES)) {
     failures.push('track: per-channel levels not read back (VL=' + (c2.out.tk.VL || [])[0] + ' VR=' + (c2.out.tk.VR || [])[0] + ')');
   try { new Function(WeftExport.buildJS(g2)); } catch (e) { failures.push('track: export does not compile — ' + e.message); }
 
+  // fft bands: descriptor + log-band math (energy at 100 Hz lands in band 1 of 8)
+  const gf = { nodes: [
+      { id: 'o2', type: 'audio/osc', values: {} },
+      { id: 'ft', type: 'audio/fft', values: {} } ],
+    wires: [ { from: ['o2', 'A'], to: ['ft', 'In'] } ] };
+  const cf = mkCtx();
+  const bins = new Float32Array(1024); // 48kHz → 23.4 Hz per bin; 100 Hz ≈ bin 4
+  bins[3] = bins[4] = bins[5] = 1;
+  cf.audioState['ft:0'] = { bins, sr: 48000, ready: true };
+  LM.evaluateGraph(gf, NODE_DEFS, cf);
+  const fd = cf.audioList.find(d => d.kind === 'fft');
+  if (!fd || (fd.src || []).join(',') !== 'o2:0') failures.push('fft: descriptor/src wrong');
+  else if (Math.abs(fd.tc - 0.75) > 1e-9) failures.push('fft: smoothing default wrong, got ' + fd.tc);
+  const B = cf.out.ft.B || [];
+  if (B.length !== 8) failures.push('fft: expected 8 default bands, got ' + B.length);
+  else {
+    if (!(B[1] > 0.4)) failures.push('fft: 100 Hz energy should land in band 1, got ' + B[1].toFixed(3));
+    if (B[6] > 0.05 || B[7] > 0.05) failures.push('fft: high bands should be silent');
+  }
+  if ((cf.out.ft.R || [])[0] !== true) failures.push('fft: ready not read back');
+  const cf2 = mkCtx();
+  gf.nodes[1].values.N = 200;
+  LM.evaluateGraph(gf, NODE_DEFS, cf2);
+  if ((cf2.out.ft.B || []).length !== 64) failures.push('fft: band count should clamp to 64');
+
   // cymatics: settled grains must stay spread across the plate (no center-line
   // collapse), and flipping R re-throws the sand
   const cy = { id: 'cy', values: {} };

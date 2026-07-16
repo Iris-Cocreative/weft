@@ -109,6 +109,10 @@ geometry that reaches no Draw node is invisible.
   audio", or it feeds back. `V` is loudness for visuals.
 - **Goniometer** — `audio/track(L → xyscope X, R → xyscope Y)`: the stereo
   field draws itself (mono = diagonal line, wide mix = blooming figure).
+- **Spectrum visualizer** — `audio/fft(In, N:12 → B list) → math/remap →
+  crv/circle(R)` with `sets/series → vec/construct` for positions: list
+  matching turns N band levels into N pulsing shapes. Colour by pitch:
+  `audio/pitch(M) → remap → disp/hsl → Draw F`.
 - **See the wave** — tap any audio wire into `audio/scope(In → G)`; XY figures:
   `audio/xyscope(X, Y)`. Geometry as sound: `audio/path(G → X Y)`.
 

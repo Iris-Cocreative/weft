@@ -408,7 +408,11 @@ Staged, don't leap:
   the FFT-bands follow-up now just needs a second analyser read). Done in
   v0.9.1: Pitch In (autocorrelation pitch tracker — sung note → Hz/MIDI),
   Track In (computer audio via `getDisplayMedia`, picker armed on first
-  click), Cymatics anti-collapse rework + reset input.*
+  click), Cymatics anti-collapse rework + reset input. Done in v0.9.2/3:
+  Track In stereo L/R + VL/VR levels (true stereo needs the voice pipeline
+  off), Pitch In processor input, Mic In routable, **Bands FFT node**
+  (`audio/fft` — the band read-back is done; remaining audio follow-ups:
+  ADSR, sequencer, DelayNode echo, panner, cluster id prefixing).*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
 - Graph gallery / community sharing — share links exist as of v0.9; a gallery

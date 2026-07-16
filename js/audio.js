@@ -123,6 +123,16 @@ const WeftAudio = {
          * splitter (wired up in update(), when the parent surely exists) */
         const g = actx.createGain(); g.gain.value = 1;
         e.main = g; e.out = g; e.srcSplit = null;
+      } else if (d.kind === 'fft') {
+        /* spectrum tap — like the scope but frequency-domain: byte bins ride
+         * back to the graph normalized 0..1; zero-gain leg keeps it pulled */
+        const an = actx.createAnalyser();
+        an.fftSize = 2048; an.smoothingTimeConstant = d.tc;
+        const z = actx.createGain(); z.gain.value = 0;
+        an.connect(z); z.connect(master);
+        e.main = an; e.in = an; e.z = z;
+        e.bu = new Uint8Array(an.frequencyBinCount);
+        e.bf = new Float32Array(an.frequencyBinCount);
       } else if (d.kind === 'track') {
         /* computer audio in — getDisplayMedia demands a user gesture, so the
          * share picker opens on the first click after the node appears. Video
@@ -216,6 +226,13 @@ const WeftAudio = {
           if (sp) sp.connect(m, d.ch);
           e.srcSplit = sp;
         }
+      } else if (d.kind === 'fft') {
+        if (m.smoothingTimeConstant !== d.tc) m.smoothingTimeConstant = d.tc;
+        if (actx.state === 'running') {
+          m.getByteFrequencyData(e.bu);
+          for (let i = 0; i < e.bu.length; i++) e.bf[i] = e.bu[i] / 255;
+        }
+        levels[d.id] = { bins: e.bf, sr: actx.sampleRate, ready: !!(e.srcs && e.srcs.length) };
       } else if (d.kind === 'pitch') {
         /* source policy: analyse whatever the graph wires in; fall back to
          * the microphone only while the input stays unwired (so a patch that

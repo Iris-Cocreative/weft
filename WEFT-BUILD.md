@@ -169,6 +169,15 @@ wired signal (scope-style tap with zero-gain keep-alive); unwired it
 falls back to the microphone, and the permission prompt only fires if
 nothing is wired. **Mic In gains A** — the live mic routes into the
 graph (filters, scopes, effects; headphones advised).
+v0.9.3 (2026-07-16, the visualizer kit): **Bands** (`audio/fft`) — the
+spectrum tap: host `fft` kind (byte frequency bins normalized 0..1,
+zero-gain keep-alive, per-node smoothingTimeConstant), compute groups
+bins into N log-spaced bands 40 Hz–16 kHz and returns B as a LIST —
+list matching turns twelve levels into twelve pulsing circles with no
+extra plumbing. *Visualizer* example: one Track In listened to five
+ways — Cymatics sand reorganizing to the melody (Pitch In reading
+Track In, processor mode), 12 spectrum circles coloured by pitch via
+HSL, the goniometer, VL/VR meter dots, and the speaker — 127 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

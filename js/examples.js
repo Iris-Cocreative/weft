@@ -1182,6 +1182,57 @@ const EXAMPLES = {
     ['t10', 'C', 't11', 'G']
   ]),
 
+  /* The full rig — share a music tab and the whole surface listens:
+   * Cymatics sand reorganizes to the melody (Pitch In reads the tune from
+   * Track In, no mic involved), the spectrum breathes as 12 circles whose
+   * colour follows the pitch, the goniometer draws the stereo field and
+   * two pink dots meter L/R. Everything here is one Track In, listened to
+   * five different ways. */
+  'Visualizer': _EX([
+    ['v1', 'audio/track', 30, 40],
+    ['v2', 'audio/pitch', 250, 40],
+    ['v3', 'disp/cymatics', 470, 40, { P: { x: 0, y: -30 }, S: 320, N: 1100, W: 0.8, C: { r: 94, g: 234, b: 212, a: 0.3 } }],
+    ['v12', 'audio/xyscope', 690, 40, { S: 150, P: { x: -200, y: -170 }, T: 25 }],
+    ['v18', 'audio/gain', 910, 40, { G: 0.8 }],
+    ['v19', 'audio/out', 1130, 40],
+    ['v4', 'math/remap', 470, 340, { S0: 45, S1: 85, T0: 0, T1: 0.92 }],
+    ['v5', 'disp/hsl', 690, 340, { S: 0.85, L: 0.6, A: 0.9 }],
+    ['v6', 'audio/fft', 250, 480, { N: 12 }],
+    ['v7', 'math/remap', 470, 480, { S0: 0, S1: 1, T0: 3, T1: 30 }],
+    ['v8', 'sets/series', 470, 640, { S: -165, N: 30, C: 12 }],
+    ['v9', 'vec/construct', 690, 640, { Y: 180 }],
+    ['v10', 'crv/circle', 910, 480],
+    ['v11', 'disp/draw', 1130, 480, { S: { r: 0, g: 0, b: 0, a: 0 }, W: 0 }],
+    ['v13', 'math/remap', 30, 340, { S0: 0, S1: 1, T0: 3, T1: 24 }],
+    ['v14', 'math/remap', 30, 500, { S0: 0, S1: 1, T0: 3, T1: 24 }],
+    ['v15', 'crv/circle', 250, 640, { P: { x: -235, y: -60 } }],
+    ['v16', 'crv/circle', 250, 790, { P: { x: -165, y: -60 } }],
+    ['v17', 'disp/draw', 470, 790, { S: { r: 255, g: 54, b: 163, a: 0.9 }, F: { r: 255, g: 54, b: 163, a: 0.25 }, W: 1.5 }],
+    ['v20', 'disp/bg', 910, 790]
+  ], [
+    ['v1', 'A', 'v2', 'In'],
+    ['v2', 'F', 'v3', 'F'],
+    ['v2', 'M', 'v4', 'V'],
+    ['v4', 'R', 'v5', 'H'],
+    ['v1', 'A', 'v6', 'In'],
+    ['v6', 'B', 'v7', 'V'],
+    ['v8', 'S', 'v9', 'X'],
+    ['v9', 'P', 'v10', 'P'],
+    ['v7', 'R', 'v10', 'R'],
+    ['v10', 'C', 'v11', 'G'],
+    ['v5', 'C', 'v11', 'F'],
+    ['v1', 'L', 'v12', 'X'],
+    ['v1', 'R', 'v12', 'Y'],
+    ['v1', 'VL', 'v13', 'V'],
+    ['v1', 'VR', 'v14', 'V'],
+    ['v13', 'R', 'v15', 'R'],
+    ['v14', 'R', 'v16', 'R'],
+    ['v15', 'C', 'v17', 'G'],
+    ['v16', 'C', 'v17', 'G'],
+    ['v1', 'A', 'v18', 'In'],
+    ['v18', 'A', 'v19', 'In']
+  ]),
+
   /* The Phase 4 thesis demo (patches/kaleidoscope.md) — James's hand-coded
    * mandala art test as 20 nodes: seeded particles in a symmetry slice, a
    * distance-threshold connection web, the slice replicated symmetry × mirror
