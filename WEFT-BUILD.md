@@ -116,6 +116,10 @@ two damped pendulums, pure compute, no audio; integer ratios = Lissajous,
 damping nests them, wire Time into phase to spin). Examples *Harmonograph*
 (silent, math-only) and *Shape song* (polygon → Path to Audio → Vector
 Scope + speaker: the shape and the timbre are the same signal) — 123 nodes.
+Plus *Rose window*: the interval-as-flower vectorscope figures (looma-style)
+— a rose r=cos(kθ) built from pure list math (Range → cos/sin/mul → PolyLine)
+then beam-drawn via Path to Audio; k=2 = the 4-leaf clover, k=4 = 8 petals;
+a k-rose is two partials at (k+1):(k−1) in quadrature — interval = flower.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

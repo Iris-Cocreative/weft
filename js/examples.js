@@ -1010,6 +1010,51 @@ const EXAMPLES = {
     ['x5', 'A', 'x6', 'Y']
   ]),
 
+  /* The interval-as-flower figures from audio vectorscopes (looma-style):
+   * a rose r = cos(k·θ) is BUILT from pure list math — Range sweeps θ,
+   * cos/sin/multiply shape 512 points per frame, PolyLine closes the petal
+   * curve — then Path to Audio turns the outline into sound and the Vector
+   * Scope's beam retraces it. Petals: k=2 → 4-leaf clover, k=4 → 8-petal
+   * flower, odd k → k petals. In audio terms a k-rose is two partials at
+   * the ratio (k+1):(k−1) in quadrature — the interval IS the flower.
+   * Unwire Round for fractional k: the rose stops closing and precesses. */
+  'Rose window': _EX([
+    ['r1', 'sets/range', 30, 40, { A: 0, B: 6.28319, N: 511 }],
+    ['r2', 'params/slider', 30, 200, { min: 2, max: 7, value: 2 }],
+    ['r3', 'math/round', 250, 200],
+    ['r4', 'math/mul', 470, 120],
+    ['r5', 'math/cos', 690, 120],
+    ['r6', 'math/cos', 470, 280],
+    ['r7', 'math/sin', 470, 400],
+    ['r8', 'math/mul', 910, 200],
+    ['r9', 'math/mul', 910, 360],
+    ['r10', 'math/mul', 1130, 200, { B: 130 }],
+    ['r11', 'math/mul', 1130, 360, { B: 130 }],
+    ['r12', 'vec/construct', 1350, 280],
+    ['r13', 'crv/polyline', 1570, 280, { C: true }],
+    ['r14', 'audio/path', 1790, 280, { F: 96 }],
+    ['r15', 'audio/xyscope', 2010, 160, { S: 330 }],
+    ['r16', 'audio/gain', 2010, 420, { G: 0.07 }],
+    ['r17', 'audio/out', 2230, 420],
+    ['r18', 'disp/bg', 2230, 160]
+  ], [
+    ['r2', 'N', 'r3', 'V'],
+    ['r1', 'R', 'r4', 'A'], ['r3', 'R', 'r4', 'B'],
+    ['r4', 'R', 'r5', 'V'],
+    ['r1', 'R', 'r6', 'V'],
+    ['r1', 'R', 'r7', 'V'],
+    ['r5', 'R', 'r8', 'A'], ['r6', 'R', 'r8', 'B'],
+    ['r5', 'R', 'r9', 'A'], ['r7', 'R', 'r9', 'B'],
+    ['r8', 'R', 'r10', 'A'],
+    ['r9', 'R', 'r11', 'A'],
+    ['r10', 'R', 'r12', 'X'], ['r11', 'R', 'r12', 'Y'],
+    ['r12', 'P', 'r13', 'V'],
+    ['r13', 'C', 'r14', 'G'],
+    ['r14', 'X', 'r15', 'X'], ['r14', 'Y', 'r15', 'Y'],
+    ['r14', 'X', 'r16', 'In'],
+    ['r16', 'A', 'r17', 'In']
+  ]),
+
   /* The Vector Scope's math twin — no sound at all. Two damped pendulums
    * swing a pen: the sliders pick the frequency ratio (3:2, 5:4, 7:3…),
    * damping nests the figure inward, and Time drifts the phase so the
