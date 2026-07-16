@@ -106,6 +106,16 @@ a tapped branch that reaches no speaker still gets pulled by the audio graph.
 *Oscilloscope* example now carries both instruments: a sine pair at a
 slider-picked harmonic ratio (3:1 = trefoil), Y detuned +1 cent so the figure
 slowly tumbles through its phases — 120 nodes.
+v0.8.7 (2026-07-16, oscilloscope music): **Mix** (`audio/mix` — sum wired
+signals into one, the epicycle builder), **Path to Audio** (`audio/path` —
+any geometry's outline arc-length-resampled into a 512-sample looped stereo
+waveform traced F times/sec; host `path` kind swaps buffer sources behind a
+stable unity gain, X/Y share a shape-hash key so they rebuild phase-locked),
+and **Harmonograph** (`disp/harmonograph` — the Vector Scope's math twin:
+two damped pendulums, pure compute, no audio; integer ratios = Lissajous,
+damping nests them, wire Time into phase to spin). Examples *Harmonograph*
+(silent, math-only) and *Shape song* (polygon → Path to Audio → Vector
+Scope + speaker: the shape and the timbre are the same signal) — 123 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -165,7 +175,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (120) — Grasshopper-matched names
+### Node library (123) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,

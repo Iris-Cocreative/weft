@@ -1393,6 +1393,42 @@ defNode('disp/trace', {
   }
 });
 
+defNode('disp/harmonograph', {
+  title: 'Harmonograph', cat: 'Display', width: 168,
+  desc: 'The Victorian drawing machine, and the Vector Scope’s math twin — two damped pendulums (frequencies X and Y) swing a pen for T seconds: integer ratios give Lissajous figures, damping D nests them inward, phase H rotates the figure (wire Time for a slow spin). Pure numbers, no sound.',
+  inputs: [
+    { name: 'X', type: 'number', default: 3, label: 'x pendulum frequency' },
+    { name: 'Y', type: 'number', default: 2, label: 'y pendulum frequency' },
+    { name: 'H', type: 'number', default: 0, label: 'phase (rad) — wire Time to spin' },
+    { name: 'D', type: 'number', default: 0.05, label: 'damping (0 = pure lissajous)' },
+    { name: 'T', type: 'number', default: 44, label: 'swing time (s of pen travel)' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'S', type: 'number', default: 320, label: 'size px' },
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.8 }, label: 'pen colour' }],
+  outputs: [
+    { name: 'G', type: 'geometry', label: 'figure' },
+    { name: 'P', type: 'point', label: 'pen points' }],
+  compute: (a, ctx) => {
+    const h = Math.max(10, +a.S || 320) / 2;
+    const fx = +a.X || 0, fy = +a.Y || 0, ph = +a.H || 0;
+    const d = Math.max(0, +a.D || 0);
+    const T = LM.clamp(+a.T || 44, 1, 200);
+    const n = LM.clamp(Math.round(T * 40), 256, 3000);
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const t = T * i / (n - 1);
+      const env = Math.exp(-d * t);
+      pts.push({
+        x: a.P.x + Math.sin(fx * t + ph) * env * h,
+        y: a.P.y - Math.sin(fy * t) * env * h
+      });
+    }
+    const g = { kind: 'poly', pts, closed: false };
+    ctx.drawList.push({ geom: g, stroke: a.C, fill: { r: 0, g: 0, b: 0, a: 0 }, width: 1.5 });
+    return { G: g, P: pts };
+  }
+});
+
 defNode('disp/cymatics', {
   title: 'Cymatics', cat: 'Display', width: 168,
   desc: 'Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator',
@@ -1684,6 +1720,76 @@ defNode('audio/scope', {
     const g = { kind: 'poly', pts, closed: false };
     ctx.drawList.push({ geom: g, stroke: a.C, fill: none, width: 1.5 });
     return { G: g, V: out, L: Math.min(1, Math.sqrt(sum / out.length) * 1.414) };
+  }
+});
+
+defNode('audio/mix', {
+  title: 'Mix', cat: 'Audio',
+  desc: 'Sum every wired signal into ONE signal (multi-wire In, scaled by G) — the epicycle builder: mix a small fast circle into a big slow one and the Vector Scope draws rolling-circle figures',
+  inputs: [
+    { name: 'In', type: 'audio', label: 'audio in (stacks)' },
+    { name: 'G', type: 'number', default: 1, label: 'gain 0..2' }],
+  outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
+  listInputs: ['In'],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'gain', gain: LM.clamp(+a.G || 0, 0, 2),
+      src: (a.In || []).filter(h => typeof h === 'string')
+    });
+    return { A: id };
+  }
+});
+
+defNode('audio/path', {
+  title: 'Path to Audio', cat: 'Audio', width: 168,
+  desc: 'Turn geometry into sound: the curve’s outline is resampled into a looped stereo waveform traced F times a second — wire X/Y to a Vector Scope and the beam draws your shape; wire either into the mix to hear it. Oscilloscope music, the Weft way.',
+  inputs: [
+    { name: 'G', type: 'geometry', label: 'path to trace' },
+    { name: 'F', type: 'number', default: 108, label: 'loops per second (Hz)' }],
+  outputs: [
+    { name: 'X', type: 'audio', label: 'horizontal signal' },
+    { name: 'Y', type: 'audio', label: 'vertical signal' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (!a.G) return {};
+    const raw = LM.toPoly(a.G, 256).pts;
+    if (!raw || raw.length < 2) return {};
+    /* arc-length resample to a uniform closed 512-sample loop so the beam
+     * moves at constant speed (and the tone stays clean) */
+    const seg = [];
+    let total = 0;
+    for (let i = 0; i < raw.length; i++) {
+      const q = raw[(i + 1) % raw.length];
+      const L = Math.hypot(q.x - raw[i].x, q.y - raw[i].y);
+      seg.push(L); total += L;
+    }
+    if (total < 1e-6) return {};
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of raw) {
+      if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+      if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
+    }
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const half = Math.max(x1 - x0, y1 - y0) / 2 || 1;
+    const N = 512, xs = [], ys = [];
+    let i = 0, acc = 0;
+    for (let k = 0; k < N; k++) {
+      const target = total * k / N;
+      while (i < seg.length - 1 && acc + seg[i] < target) { acc += seg[i]; i++; }
+      const p = raw[i], q = raw[(i + 1) % raw.length];
+      const f = seg[i] > 1e-9 ? (target - acc) / seg[i] : 0;
+      xs.push((p.x + (q.x - p.x) * f - cx) / half);
+      ys.push(-(p.y + (q.y - p.y) * f - cy) / half); /* cloth is y-down, scopes are y-up */
+    }
+    let key = 0; /* cheap shape hash — the host only rebuilds buffers when this moves */
+    for (let k = 0; k < N; k += 7) key = (key * 31 + ((xs[k] * 1e4) | 0) + ((ys[k] * 1e4) | 0)) | 0;
+    const freq = LM.clamp(+a.F || 108, 0.1, 2000);
+    if (ctx.audioList) {
+      ctx.audioList.push({ id: id + 'x', kind: 'path', wave: xs, key, freq });
+      ctx.audioList.push({ id: id + 'y', kind: 'path', wave: ys, key, freq });
+    }
+    return { X: id + 'x', Y: id + 'y' };
   }
 });
 
@@ -1988,7 +2094,8 @@ defNode('meta/portout', {
     'crv/divide': 3, 'crv/eval': 3,
     /* Audio: 0 pitch · 1 sources · 2 processors · 3 in/out */
     'audio/note': 0, 'audio/scale': 0,
-    'audio/osc': 1, 'audio/noise': 1, 'audio/gain': 2, 'audio/filter': 2,
+    'audio/osc': 1, 'audio/noise': 1, 'audio/path': 1,
+    'audio/gain': 2, 'audio/filter': 2, 'audio/mix': 2,
     'audio/out': 3, 'audio/mic': 3, 'audio/scope': 3, 'audio/xyscope': 3
   };
   for (const id in groups) if (NODE_DEFS[id]) NODE_DEFS[id].grp = groups[id];

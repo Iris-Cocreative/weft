@@ -71,6 +71,12 @@ const WeftAudio = {
         const g = actx.createGain(); g.gain.value = d.vol;
         g.connect(master);
         e.main = g; e.in = g;
+      } else if (d.kind === 'path') {
+        /* looped waveform playback (Path to Audio). The unity gain is the
+         * stable connection point — the buffer source swaps behind it
+         * whenever the sampled path changes (sources can't restart) */
+        const g = actx.createGain(); g.gain.value = 1;
+        e.main = g; e.out = g; e.key = null;
       } else if (d.kind === 'scope') {
         /* a tap, not a route: whatever wires in gets analysed, never forwarded.
          * The zero-gain leg to master keeps the branch alive even when the
@@ -108,7 +114,22 @@ const WeftAudio = {
         if (m.type !== d.mode) m.type = d.mode;
         setP(e, 'f', m.frequency, d.freq); setP(e, 'q', m.Q, d.q);
       } else if (d.kind === 'out') setP(e, 'v', m.gain, d.vol);
-      else if (d.kind === 'scope') {
+      else if (d.kind === 'path') {
+        if (d.key !== e.key) {
+          e.key = d.key;
+          try { if (e.srcNode) { e.srcNode.stop(); e.srcNode.disconnect(); } } catch (err) { }
+          const n = d.wave.length;
+          const b = actx.createBuffer(1, n, actx.sampleRate);
+          const ch = b.getChannelData(0);
+          for (let i = 0; i < n; i++) ch[i] = d.wave[i];
+          const s = actx.createBufferSource();
+          s.buffer = b; s.loop = true;
+          s.playbackRate.value = d.freq * n / actx.sampleRate;
+          s.connect(m); s.start();
+          e.srcNode = s; e.last = {};
+        }
+        setP(e, 'r', e.srcNode.playbackRate, d.freq * d.wave.length / actx.sampleRate);
+      } else if (d.kind === 'scope') {
         if (actx.state === 'running') m.getFloatTimeDomainData(e.buf);
         levels[d.id] = { wave: e.buf, sr: actx.sampleRate, ready: !!(e.srcs && e.srcs.length) };
       } else if (d.kind === 'mic') {
@@ -126,6 +147,7 @@ const WeftAudio = {
       const e = live[id];
       if (!e) return;
       try { if (e.kind === 'osc' || e.kind === 'noise') e.main.stop(); } catch (err) { }
+      try { if (e.srcNode) { e.srcNode.stop(); e.srcNode.disconnect(); } } catch (err) { }
       try { if (e.stream) e.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
       try { if (e.z) e.z.disconnect(); } catch (err) { }
       try { e.main.disconnect(); } catch (err) { }

@@ -1412,6 +1412,26 @@ Blend colour A → B by T (0..1)
 |---|---|---|
 | C | color |  |
 
+### `disp/harmonograph` — Harmonograph
+
+The Victorian drawing machine, and the Vector Scope’s math twin — two damped pendulums (frequencies X and Y) swing a pen for T seconds: integer ratios give Lissajous figures, damping D nests them inward, phase H rotates the figure (wire Time for a slow spin). Pure numbers, no sound.
+
+| in | type | default | note |
+|---|---|---|---|
+| X | number | `3` | x pendulum frequency |
+| Y | number | `2` | y pendulum frequency |
+| H | number | `0` | phase (rad) — wire Time to spin |
+| D | number | `0.05` | damping (0 = pure lissajous) |
+| T | number | `44` | swing time (s of pen travel) |
+| P | point | `{"x":0,"y":0}` | centre |
+| S | number | `320` | size px |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.8}` | pen colour |
+
+| out | type | note |
+|---|---|---|
+| G | geometry | figure |
+| P | point | pen points |
+
 ### `disp/measure` — Measure Text
 
 Width and height of text T at size S px, plus its bounding rect centred at P — measured by the host with the same font Draw uses
@@ -1461,4 +1481,4 @@ Seismograph on the cloth — streams the values in V away from pen point P; L is
 
 ## Icon coverage
 
-122 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+125 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

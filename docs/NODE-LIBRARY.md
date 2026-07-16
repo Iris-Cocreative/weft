@@ -23,9 +23,9 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | **Vector** | `vec/` | Points and vectors — position as data | 12 |
 | **Curve** | `crv/` | Geometry construction and interrogation | 10 |
 | **Transform** | `xf/` | Moving geometry — affine maps | 3 |
-| **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM), Trace, Cymatics | 8 |
+| **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM), Trace, Cymatics, Harmonograph | 9 |
 | **Meta** | `meta/` | Composition — Cluster and its Port In / Port Out boundary markers (hidden from the palette) | 3 |
-| **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number), Scope (oscilloscope: waveform samples back onto the cloth), Vector Scope (XY / Lissajous); wires carry handle strings, `js/audio.js` reconciles the real Web Audio graph | 10 |
+| **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number), Scope (oscilloscope: waveform samples back onto the cloth), Vector Scope (XY / Lissajous), Mix (sum signals — epicycles), Path to Audio (geometry → looped stereo waveform — oscilloscope music) | 12 |
 
 A patch reads left to right as: **world & intent → numbers → lists → geometry → pixels**.
 Icons should reinforce that flow (see `DESIGN-PLAN.md`).

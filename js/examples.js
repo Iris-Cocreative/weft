@@ -1010,6 +1010,47 @@ const EXAMPLES = {
     ['x5', 'A', 'x6', 'Y']
   ]),
 
+  /* The Vector Scope's math twin — no sound at all. Two damped pendulums
+   * swing a pen: the sliders pick the frequency ratio (3:2, 5:4, 7:3…),
+   * damping nests the figure inward, and Time drifts the phase so the
+   * whole web slowly revolves. */
+  'Harmonograph': _EX([
+    ['h1', 'params/slider', 30, 40, { min: 1, max: 9, value: 3 }],
+    ['h2', 'params/slider', 30, 140, { min: 1, max: 9, value: 2 }],
+    ['h3', 'params/slider', 30, 240, { min: 0, max: 0.2, value: 0.04 }],
+    ['h4', 'input/time', 30, 360],
+    ['h5', 'math/mul', 250, 360, { B: 0.25 }],
+    ['h6', 'disp/harmonograph', 470, 140, { S: 360, T: 50 }],
+    ['h7', 'disp/bg', 690, 320]
+  ], [
+    ['h1', 'N', 'h6', 'X'],
+    ['h2', 'N', 'h6', 'Y'],
+    ['h3', 'N', 'h6', 'D'],
+    ['h4', 'T', 'h5', 'A'],
+    ['h5', 'R', 'h6', 'H']
+  ]),
+
+  /* Oscilloscope music, the Weft way: a polygon's outline becomes a looped
+   * stereo waveform (Path to Audio), the Vector Scope's beam retraces it
+   * 108 times a second, and the same signal — quietly — IS the sound you
+   * hear. Slide the sides: the shape and the timbre change together. */
+  'Shape song': _EX([
+    ['p1', 'params/slider', 30, 40, { min: 3, max: 9, value: 5 }],
+    ['p2', 'crv/polygon', 250, 40, { R: 100 }],
+    ['p3', 'audio/path', 470, 40, { F: 108 }],
+    ['p4', 'audio/xyscope', 690, 40, { S: 300 }],
+    ['p5', 'audio/gain', 690, 260, { G: 0.08 }],
+    ['p6', 'audio/out', 910, 260],
+    ['p7', 'disp/bg', 910, 40]
+  ], [
+    ['p1', 'N', 'p2', 'N'],
+    ['p2', 'C', 'p3', 'G'],
+    ['p3', 'X', 'p4', 'X'],
+    ['p3', 'Y', 'p4', 'Y'],
+    ['p3', 'X', 'p5', 'In'],
+    ['p5', 'A', 'p6', 'In']
+  ]),
+
   /* Microphone loudness as a number — a breathing circle and a scrolling
    * trace of the room. The browser asks mic permission when this loads. */
   'Mic meter': _EX([

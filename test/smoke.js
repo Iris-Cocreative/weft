@@ -480,6 +480,60 @@ for (const name of Object.keys(EXAMPLES)) {
   }
 }
 
+/* 16 — mix (summing), path-to-audio (resample + key), harmonograph */
+{
+  const g = { nodes: [
+      { id: 'o1', type: 'audio/osc', values: {} },
+      { id: 'o2', type: 'audio/osc', values: { F: 330 } },
+      { id: 'mx', type: 'audio/mix', values: {} } ],
+    wires: [ { from: ['o1', 'A'], to: ['mx', 'In'] }, { from: ['o2', 'A'], to: ['mx', 'In'] } ] };
+  const c = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  const mx = c.audioList.find(d => d.id === 'mx:0');
+  if (!mx) failures.push('mix: no descriptor');
+  else if ((mx.src || []).join(',') !== 'o1:0,o2:0') failures.push('mix: should sum both handles, got [' + (mx.src || []).join(',') + ']');
+
+  const pa = { id: 'pa', values: {} };
+  const circle = { kind: 'circle', cx: 40, cy: -10, r: 75 };
+  const c2 = mkCtx();
+  const r1 = NODE_DEFS['audio/path'].compute({ G: circle, F: 108 }, c2, pa);
+  const dx = c2.audioList.find(d => d.id === 'pa:0x'), dy = c2.audioList.find(d => d.id === 'pa:0y');
+  if (!dx || !dy) failures.push('path: expected x+y descriptors');
+  else {
+    if (dx.key !== dy.key) failures.push('path: x/y keys must be shared (phase lock)');
+    if (dx.wave.length !== 512 || dy.wave.length !== 512) failures.push('path: expected 512-sample loops');
+    let bad = 0;
+    for (let k = 0; k < 512; k += 16) {
+      const rr = Math.hypot(dx.wave[k], dy.wave[k]);
+      if (Math.abs(rr - 1) > 0.06) bad++;
+    }
+    if (bad) failures.push('path: circle should resample to the unit circle (' + bad + ' spots off)');
+    const c3 = mkCtx();
+    NODE_DEFS['audio/path'].compute({ G: circle, F: 108 }, c3, pa);
+    if (c3.audioList[0].key !== dx.key) failures.push('path: same geometry must produce the same key');
+    const c4 = mkCtx();
+    NODE_DEFS['audio/path'].compute({ G: { kind: 'circle', cx: 40, cy: -10, r: 75 }, F: 108 }, c4, pa);
+    const c5 = mkCtx();
+    NODE_DEFS['audio/path'].compute({ G: { kind: 'rect', cx: 0, cy: 0, w: 100, h: 60, rot: 0 }, F: 108 }, c5, pa);
+    if (c5.audioList[0].key === c4.audioList[0].key) failures.push('path: different shapes should change the key');
+    if (r1.X !== 'pa:0x' || r1.Y !== 'pa:0y') failures.push('path: handle outputs wrong');
+  }
+
+  const c6 = mkCtx();
+  const hg = NODE_DEFS['disp/harmonograph'].compute(
+    { X: 3, Y: 2, H: 0, D: 0.05, T: 44, P: { x: 0, y: 0 }, S: 320, C: { r: 255, g: 255, b: 255, a: 1 } }, c6, { id: 'hg', values: {} });
+  const pts = hg.G.pts;
+  if (!pts || pts.length < 256) failures.push('harmonograph: too few pen points');
+  else {
+    if (Math.hypot(pts[0].x, pts[0].y) > 1e-6) failures.push('harmonograph: pen should start at centre (sin 0)');
+    const rad = ps => Math.max(...ps.map(p => Math.hypot(p.x, p.y)));
+    const early = rad(pts.slice(0, pts.length >> 3)), late = rad(pts.slice(-(pts.length >> 3)));
+    if (!(late < early * 0.4)) failures.push('harmonograph: damping should shrink the figure (' + early.toFixed(1) + ' → ' + late.toFixed(1) + ')');
+    const escape = pts.filter(p => Math.abs(p.x) > 160.5 || Math.abs(p.y) > 160.5).length;
+    if (escape) failures.push('harmonograph: pen escaped the S/2 half-size on ' + escape + ' points');
+  }
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 
