@@ -442,6 +442,88 @@ defNode('params/graph', {
   }
 });
 
+defNode('params/timegraph', {
+  title: 'Time Graph', cat: 'Params', width: 200, bare: true,
+  desc: 'Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines)',
+  inputs: [{ name: 'V', type: 'number' }],
+  outputs: [{ name: 'V', type: 'number' }],
+  listInputs: ['V'],
+  compute: a => ({ V: a.V || [] }),
+  buildBody: (node, body) => {
+    const gp = _mk('div', 'np gph', body);
+    const cv = _mk('canvas', 'gph-cv', gp);
+    cv.width = 2; cv.height = 2;
+  },
+  postEval: (node, el, ctx) => {
+    const cv = el.querySelector('.gph-cv');
+    if (!cv || !ctx) return;
+    const SPAN = 6, MAXL = 8; /* seconds visible, max lines */
+    const tg = node._tg || (node._tg = { samples: [], t: null });
+    /* sample once per play-time tick — paused time freezes the trace */
+    if (ctx.t !== tg.t) {
+      if (tg.t !== null && ctx.t < tg.t) tg.samples.length = 0; /* time restarted */
+      tg.t = ctx.t;
+      const V = (node._last && node._last.ins.V) || [];
+      tg.samples.push({ t: ctx.t, v: V.slice(0, MAXL).map(x => +x || 0) });
+      let drop = 0;
+      while (drop < tg.samples.length && tg.samples[drop].t < ctx.t - SPAN) drop++;
+      if (drop) tg.samples.splice(0, drop);
+    }
+    const W = 176, H = 92, dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(W * dpr)) {
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const S = tg.samples;
+    let y0 = Infinity, y1 = -Infinity, lines = 0;
+    for (const s of S) {
+      if (s.v.length > lines) lines = s.v.length;
+      for (const y of s.v) { if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (!lines) {
+      g.fillStyle = 'rgba(255,255,255,0.25)';
+      g.font = '10px Consolas, ui-monospace, monospace';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('no data', W / 2, H / 2);
+      return;
+    }
+    if (y1 - y0 < 1e-9) { y0 -= 0.5; y1 += 0.5; }
+    const pad = 7, t0 = tg.t - SPAN;
+    const px = t => pad + (t - t0) / SPAN * (W - pad * 2);
+    const py = y => H - pad - (y - y0) / (y1 - y0) * (H - pad * 2);
+    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 1;
+    if (y0 < 0 && y1 > 0) { g.beginPath(); g.moveTo(pad, py(0)); g.lineTo(W - pad, py(0)); g.stroke(); }
+    const pal = ['#3e9aff', '#5eead4', '#fbbb00', '#fb6c09', '#d730f8', '#8cff14', '#ff3b41', '#8ea4c3'];
+    g.lineWidth = 1.4; g.lineJoin = 'round';
+    const last = S[S.length - 1];
+    for (let k = 0; k < lines; k++) {
+      g.strokeStyle = pal[k % pal.length];
+      g.beginPath();
+      let pen = false; /* v[k] missing (input gone that frame) breaks the line */
+      for (const s of S) {
+        if (s.v[k] === undefined) { pen = false; continue; }
+        const x = px(s.t), y = py(s.v[k]);
+        pen ? g.lineTo(x, y) : g.moveTo(x, y);
+        pen = true;
+      }
+      g.stroke();
+      if (last.v[k] !== undefined) {
+        g.fillStyle = pal[k % pal.length];
+        g.beginPath(); g.arc(px(last.t), py(last.v[k]), 2, 0, LM.TAU); g.fill();
+      }
+    }
+    g.fillStyle = 'rgba(255,255,255,0.3)';
+    g.font = '8.5px Consolas, ui-monospace, monospace';
+    g.textAlign = 'left'; g.textBaseline = 'bottom';
+    g.fillText(LM.fmt(y0), 2, H - 1);
+    g.textBaseline = 'top';
+    g.fillText(LM.fmt(y1), 2, 1);
+  }
+});
+
 defNode('params/anchor', {
   title: 'Anchor Point', cat: 'Params', desc: 'A point pinned to the cloth (render canvas) — drag its handle there directly',
   inputs: [], outputs: [{ name: 'P', type: 'point' }],
@@ -1237,6 +1319,61 @@ defNode('disp/element', {
   }
 });
 
+defNode('disp/trace', {
+  title: 'Trace', cat: 'Display',
+  desc: 'Seismograph on the cloth — streams the values in V away from pen point P along vector D (direction = where the trail goes, length = pace px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail',
+  inputs: [
+    { name: 'V', type: 'number', label: 'values (px offset)' },
+    { name: 'C', type: 'color', label: 'line colours' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'pen point' },
+    { name: 'D', type: 'vector', default: { x: -60, y: 0 }, label: 'direction + pace px/s' },
+    { name: 'L', type: 'number', default: 240, label: 'trail length px' },
+    { name: 'W', type: 'number', default: 1.5, label: 'width' }],
+  outputs: [{ name: 'G', type: 'geometry', label: 'trace curves' }],
+  listInputs: ['V', 'C'],
+  compute: (a, ctx, node) => {
+    const pace = Math.hypot(a.D.x, a.D.y);
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { t: null, samples: [] };
+    if (ctx.t !== s.t) {
+      if (s.t !== null && ctx.t < s.t) s.samples.length = 0; /* time restarted */
+      s.t = ctx.t;
+      s.samples.push({ t: ctx.t, v: (a.V || []).slice(0, 16).map(x => +x || 0) });
+      const span = pace > 1e-6 ? Math.max(0, a.L) / pace : 0;
+      let drop = 0;
+      while (drop < s.samples.length - 1 && s.samples[drop].t < ctx.t - span) drop++;
+      if (drop) s.samples.splice(0, drop);
+      if (s.samples.length > 1200) s.samples.splice(0, s.samples.length - 1200);
+    }
+    if (pace < 1e-6) return { G: [] };
+    const d = { x: a.D.x / pace, y: a.D.y / pace };
+    const q = { x: -d.y, y: d.x }; /* across the trail — positive values sit above a left-streaming trace */
+    let lines = 0;
+    for (const smp of s.samples) if (smp.v.length > lines) lines = smp.v.length;
+    const pal = ['#3e9aff', '#5eead4', '#fbbb00', '#fb6c09', '#d730f8', '#8cff14', '#ff3b41', '#8ea4c3'];
+    const polys = [];
+    for (let k = 0; k < lines; k++) {
+      const col = (a.C && a.C.length) ? a.C[k % a.C.length] : LM.hexToColor(pal[k % pal.length]);
+      let run = [];
+      const flush = () => {
+        if (run.length > 1) {
+          const g = { kind: 'poly', pts: run, closed: false };
+          ctx.drawList.push({ geom: g, stroke: col, fill: { r: 0, g: 0, b: 0, a: 0 }, width: a.W });
+          polys.push(g);
+        }
+        run = [];
+      };
+      for (const smp of s.samples) {
+        if (smp.v[k] === undefined) { flush(); continue; } /* line absent that frame — break the trail */
+        const back = (ctx.t - smp.t) * pace;
+        run.push({ x: a.P.x + d.x * back + q.x * smp.v[k], y: a.P.y + d.y * back + q.y * smp.v[k] });
+      }
+      flush();
+    }
+    return { G: polys };
+  }
+});
+
 /* ============================== STATE ==============================
  * Nodes that remember. Memory lives on node._state keyed by ctx.i (the
  * list-match index) so a list-fed state node is N independent machines.
@@ -1452,7 +1589,7 @@ defNode('meta/portout', {
     'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/curve': 0, 'params/relay': 0,
     'params/slider': 1, 'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,
     'params/anchor': 2,
-    'params/panel': 3, 'params/graph': 4,
+    'params/panel': 3, 'params/graph': 4, 'params/timegraph': 4,
     /* Sets: 1 generators · 2 access · 3 list surgery · 4 set operations */
     'sets/series': 1, 'sets/range': 1, 'sets/random': 1,
     'sets/item': 2, 'sets/length': 2,

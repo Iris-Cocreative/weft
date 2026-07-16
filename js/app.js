@@ -231,7 +231,7 @@ const App = {
     App.bindSplitter();
     App.bindExport();
 
-    const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Phyllotaxis'])));
+    const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Hexa graph'])));
     App.setGraph(g);
   },
 

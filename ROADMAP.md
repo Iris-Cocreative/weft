@@ -265,6 +265,36 @@ is now in, so any of these can be picked up in a workshop pass):
   on the node — X alone = curve over auto series, X+Y = scatter, range fits
   data); loom got a **draw-display eye** (`Viewport.draws`) beside the ghosts
   eye — previews-only mode.
+- [shipped 2026-07-15] **Time Graph** (`params/timegraph`) — seismograph
+  companion to Graph Data: scrolls the values flowing through it across a
+  rolling 6s window, each list item its own coloured line (wire several
+  sources into V for several traces; palette borrows the type colours, max 8
+  lines). Samples on `ctx.t` in `postEval` so paused time freezes the trace
+  and a restart clears it; history lives on `node._tg`, editor-only.
+- [shipped 2026-07-15] **Trace** (`disp/trace`) — the Time Graph's cloth
+  sibling: a runtime display node that streams the values in V away from pen
+  point P along vector D (direction = where the trail goes, magnitude = pace
+  px/s), trail length L px, one coloured line per list item (colours from C,
+  cycled; falls back to the type palette). Draws lines only — no frame, no
+  axes — and outputs the trail polylines as G for hotspots/reuse. History on
+  `node._state` keyed by `ctx.i` (a list of pens = independent instruments),
+  exports like any state node. New **Seismograph** example demos both: mouse
+  x/y scaled, swatch-coloured, Time Graph on the loom + Trace on the cloth
+  from an anchored pen, white dot marking the pointer. Line cap raised 8 → 16
+  same day (colour palette cycles).
+- [shipped 2026-07-15] **Hexa graph** — James's evolved seismograph piece
+  (breathing hexagon lattice, hover-woken springs, six rotated Trace pens
+  drawing a mandala of trails) added as an example and made the **default
+  graph** for first-time visitors (app.js falls back to it when there's no
+  autosave). Stored as raw graph JSON in examples.js — it carries collapsed /
+  preview flags `_EX` doesn't.
+- [shipped 2026-07-15] **Node index redesign** (nodes.html via
+  gen-node-index.js) — every category opens with a one-line description; cards
+  wear the loom livery (category gradient washing in from the left,
+  13px radius); the ports strip became a two-column grid — inputs left,
+  outputs right, each port a dot + letter + the same "label · type" text the
+  loom shows on hover, and port labels are searchable. Note Pad glyph
+  nudged up 0.5px — its bottom stroke was clipping at the viewBox edge.
 
 ### Legibility pass — [next], James 2026-07-14
 

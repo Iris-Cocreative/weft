@@ -230,6 +230,18 @@ A literal list of strings — one item per line
 
 Node values (`values` keys, not ports): `{"text":"one\ntwo\nthree"}`
 
+### `params/timegraph` — Time Graph
+
+Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | number |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| V | number |  |
+
 ### `params/vector` — Vector
 
 Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
@@ -1411,6 +1423,23 @@ Text geometry at point P — wire into Draw
 |---|---|---|
 | G | geometry |  |
 
+### `disp/trace` — Trace
+
+Seismograph on the cloth — streams the values in V away from pen point P along vector D (direction = where the trail goes, length = pace px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail
+
+| in | type | default | note |
+|---|---|---|---|
+| V | number |  | values (px offset) · receives whole list |
+| C | color |  | line colours · receives whole list |
+| P | point | `{"x":0,"y":0}` | pen point |
+| D | vector | `{"x":-60,"y":0}` | direction + pace px/s |
+| L | number | `240` | trail length px |
+| W | number | `1.5` | width |
+
+| out | type | note |
+|---|---|---|
+| G | geometry | trace curves |
+
 ## Icon coverage
 
-109 node glyphs + 1 category fallback(s) in `js/icons.js`. Full coverage.
+111 node glyphs + 1 category fallback(s) in `js/icons.js`. Full coverage.
