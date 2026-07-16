@@ -1904,13 +1904,15 @@ defNode('audio/pitch', {
 
 defNode('audio/track', {
   title: 'Track In', cat: 'Audio', width: 158,
-  desc: 'The computer\'s own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". A is the full stereo signal, L and R the split channels (L→X, R→Y on a Vector Scope = a goniometer); V is loudness for visuals, S true while sharing. Share a different tab than Weft or it will feed back.',
+  desc: 'The computer\'s own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". A is the full stereo signal, L and R the split channels (L→X, R→Y on a Vector Scope = a goniometer); V / VL / VR are overall and per-channel loudness for visuals, S true while sharing. Share a different tab than Weft or it will feed back.',
   inputs: [{ name: 'G', type: 'number', default: 1, label: 'gain' }],
   outputs: [
     { name: 'A', type: 'audio', label: 'stereo' },
     { name: 'L', type: 'audio', label: 'left' },
     { name: 'R', type: 'audio', label: 'right' },
     { name: 'V', type: 'number', label: 'level 0..1' },
+    { name: 'VL', type: 'number', label: 'left level' },
+    { name: 'VR', type: 'number', label: 'right level' },
     { name: 'S', type: 'bool', label: 'sharing' }],
   compute: (a, ctx, node) => {
     const id = node.id + ':' + (ctx.i || 0);
@@ -1920,7 +1922,13 @@ defNode('audio/track', {
       ctx.audioList.push({ id: id + 'r', kind: 'chan', of: id, ch: 1 });
     }
     const st = (ctx.audioState && ctx.audioState[id]) || {};
-    return { A: id, L: id + 'l', R: id + 'r', V: LM.clamp(+st.level || 0, 0, 1), S: !!st.ready };
+    return {
+      A: id, L: id + 'l', R: id + 'r',
+      V: LM.clamp(+st.level || 0, 0, 1),
+      VL: LM.clamp(+st.left || 0, 0, 1),
+      VR: LM.clamp(+st.right || 0, 0, 1),
+      S: !!st.ready
+    };
   }
 });
 

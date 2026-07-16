@@ -566,7 +566,7 @@ for (const name of Object.keys(EXAMPLES)) {
       { id: 'ot', type: 'audio/out', values: {} } ],
     wires: [ { from: ['tk', 'A'], to: ['ot', 'In'] } ] };
   const c2 = mkCtx();
-  c2.audioState['tk:0'] = { level: 0.5, ready: true };
+  c2.audioState['tk:0'] = { level: 0.5, left: 0.2, right: 0.9, ready: true };
   LM.evaluateGraph(g2, NODE_DEFS, c2);
   const td = c2.audioList.find(d => d.kind === 'track');
   if (!td) failures.push('track: descriptor not declared');
@@ -578,6 +578,8 @@ for (const name of Object.keys(EXAMPLES)) {
   if (chans.length !== 2 || chans[0].of !== 'tk:0' || chans[0].ch !== 0 || chans[1].ch !== 1)
     failures.push('track: expected two chan descriptors of the track (ch 0/1)');
   if ((c2.out.tk.L || [])[0] !== 'tk:0l' || (c2.out.tk.R || [])[0] !== 'tk:0r') failures.push('track: L/R handles wrong');
+  if ((c2.out.tk.VL || [])[0] !== 0.2 || (c2.out.tk.VR || [])[0] !== 0.9)
+    failures.push('track: per-channel levels not read back (VL=' + (c2.out.tk.VL || [])[0] + ' VR=' + (c2.out.tk.VR || [])[0] + ')');
   try { new Function(WeftExport.buildJS(g2)); } catch (e) { failures.push('track: export does not compile — ' + e.message); }
 
   // cymatics: settled grains must stay spread across the plate (no center-line

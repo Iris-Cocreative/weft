@@ -1651,7 +1651,7 @@ Oscilloscope — taps the audio wire In (an analyser, never routed onward) and d
 
 ### `audio/track` — Track In
 
-The computer's own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". A is the full stereo signal, L and R the split channels (L→X, R→Y on a Vector Scope = a goniometer); V is loudness for visuals, S true while sharing. Share a different tab than Weft or it will feed back.
+The computer's own sound as a source — the first click after this node appears opens the share picker: choose a tab or screen and tick "also share audio". A is the full stereo signal, L and R the split channels (L→X, R→Y on a Vector Scope = a goniometer); V / VL / VR are overall and per-channel loudness for visuals, S true while sharing. Share a different tab than Weft or it will feed back.
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1663,6 +1663,8 @@ The computer's own sound as a source — the first click after this node appears
 | L | audio | left |
 | R | audio | right |
 | V | number | level 0..1 |
+| VL | number | left level |
+| VR | number | right level |
 | S | bool | sharing |
 
 ### `audio/xyscope` — Vector Scope

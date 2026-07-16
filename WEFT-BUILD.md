@@ -159,7 +159,9 @@ v0.9.2 (2026-07-16, signal plumbing): **Track In goes stereo** — A stays
 the full stereo feed; new L/R outputs are split channels via a host
 `chan` kind (ChannelSplitter behind per-channel unity gains; ready flag
 renamed S). L→X, R→Y on the Vector Scope = a goniometer — the *Music
-scope* example. **Pitch In is a processor** — new In port analyses any
+scope* example, whose meter dots breathe on the new **VL/VR per-channel
+level outputs** (each splitter leg gets its own analyser — built for
+visualizers). **Pitch In is a processor** — new In port analyses any
 wired signal (scope-style tap with zero-gain keep-alive); unwired it
 falls back to the microphone, and the permission prompt only fires if
 nothing is wired. **Mic In gains A** — the live mic routes into the

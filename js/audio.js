@@ -45,6 +45,12 @@ const WeftAudio = {
       }
       return noiseBuf;
     };
+    const rms = (an, b) => { // 0..1-ish loudness off an analyser tap
+      an.getFloatTimeDomainData(b);
+      let s = 0;
+      for (let i = 0; i < b.length; i++) s += b[i] * b[i];
+      return Math.min(1, Math.sqrt(s / b.length) * 2);
+    };
     const setP = (e, name, param, v) => {
       if (e.last[name] !== undefined && Math.abs(e.last[name] - v) < EPS) return;
       e.last[name] = v;
@@ -127,6 +133,9 @@ const WeftAudio = {
         g.connect(an);
         e.split = actx.createChannelSplitter(2);
         g.connect(e.split);
+        e.anL = actx.createAnalyser(); e.anL.fftSize = 512; e.anL.smoothingTimeConstant = 0;
+        e.anR = actx.createAnalyser(); e.anR.fftSize = 512; e.anR.smoothingTimeConstant = 0;
+        e.split.connect(e.anL, 0); e.split.connect(e.anR, 1);
         e.main = g; e.out = g; e.an = an; e.buf = new Float32Array(an.fftSize);
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
           e.arm = () => {
@@ -185,14 +194,14 @@ const WeftAudio = {
         levels[d.id] = { level: lv, ready: !!e.src };
       } else if (d.kind === 'track') {
         setP(e, 'g', m.gain, d.gain);
-        let lv = 0;
+        let lv = 0, ll = 0, lr = 0;
         if (e.src && actx.state === 'running') {
-          e.an.getFloatTimeDomainData(e.buf);
-          let sum = 0;
-          for (let i = 0; i < e.buf.length; i++) sum += e.buf[i] * e.buf[i];
-          lv = Math.min(1, Math.sqrt(sum / e.buf.length) * 2);
+          lv = rms(e.an, e.buf);
+          if (!e.bufL) { e.bufL = new Float32Array(e.anL.fftSize); e.bufR = new Float32Array(e.anR.fftSize); }
+          ll = rms(e.anL, e.bufL);
+          lr = rms(e.anR, e.bufR);
         }
-        levels[d.id] = { level: lv, ready: !!e.src };
+        levels[d.id] = { level: lv, left: ll, right: lr, ready: !!e.src };
       } else if (d.kind === 'chan') {
         const pe = live[d.of], sp = (pe && pe.split) || null;
         if (sp !== e.srcSplit) { // parent appeared or was rebuilt
@@ -277,6 +286,8 @@ const WeftAudio = {
       try { if (e.stream) e.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
       try { if (e.arm) window.removeEventListener('pointerdown', e.arm); } catch (err) { }
       try { if (e.an) e.an.disconnect(); } catch (err) { }
+      try { if (e.anL) e.anL.disconnect(); } catch (err) { }
+      try { if (e.anR) e.anR.disconnect(); } catch (err) { }
       try { if (e.z) e.z.disconnect(); } catch (err) { }
       try { if (e.split) e.split.disconnect(); } catch (err) { }
       try { if (e.srcSplit) e.srcSplit.disconnect(e.main); } catch (err) { }
