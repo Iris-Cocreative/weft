@@ -97,6 +97,15 @@ the compute draws a trigger-locked beam (rising-zero-crossing sync, T ms
 window, ≤512 points, zero-volt graticule line) plus outputs the samples V and
 RMS level L. *Oscilloscope* example: sawtooth → resonant lowpass on mouse X —
 watch harmonics melt off the wave — 119 nodes.
+v0.8.6 (2026-07-16): **Vector Scope** (`audio/xyscope`) — the XY mode: X
+deflects the beam horizontally, Y vertically, plotting sound against sound
+(Lissajous figures). Pure compute reuse: it declares TWO ordinary `scope`
+taps and pairs the read-back buffers; no trigger needed (closed figures are
+phase-stable). Scope taps also gained a zero-gain keep-alive leg to master so
+a tapped branch that reaches no speaker still gets pulled by the audio graph.
+*Oscilloscope* example now carries both instruments: a sine pair at a
+slider-picked harmonic ratio (3:1 = trefoil), Y detuned +1 cent so the figure
+slowly tumbles through its phases — 120 nodes.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -156,7 +165,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (119) — Grasshopper-matched names
+### Node library (120) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,

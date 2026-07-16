@@ -1461,4 +1461,4 @@ Seismograph on the cloth — streams the values in V away from pen point P; L is
 
 ## Icon coverage
 
-113 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+114 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

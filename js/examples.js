@@ -967,10 +967,13 @@ const EXAMPLES = {
     ['c2', 'F', 'c6', 'F']
   ]),
 
-  /* A real oscilloscope: the Scope node taps the audio wire and draws the
-   * actual samples, trigger-locked. A sawtooth runs through a lowpass whose
-   * cutoff rides mouse X — slide right and watch the hard edges melt as the
-   * harmonics come off. Mouse Y = volume. */
+  /* A real oscilloscope AND a vectorscope. Top: the Scope node taps the
+   * audio wire and draws the actual samples, trigger-locked — a sawtooth
+   * through a lowpass whose cutoff rides mouse X (slide right and watch the
+   * hard edges melt). Mouse Y = volume. Bottom: a Vector Scope plots a sine
+   * pair against each other in XY — the ratio slider picks the harmonic
+   * (1 = circle/ellipse, 2 = figure-eight, 3 = trefoil weave…); park it
+   * between integers and the figure slowly tumbles. */
   'Oscilloscope': _EX([
     ['o1', 'params/slider', 30, 40, { min: 55, max: 440, value: 110 }],
     ['o2', 'audio/osc', 250, 40, { wave: 'sawtooth' }],
@@ -980,8 +983,14 @@ const EXAMPLES = {
     ['o6', 'math/remap', 250, 400, { S0: 0, S1: 1, T0: 0.25, T1: 0 }],
     ['o7', 'audio/gain', 690, 40],
     ['o8', 'audio/out', 910, 40],
-    ['o9', 'audio/scope', 690, 260, { W: 480, H: 200, T: 18 }],
-    ['o10', 'disp/bg', 910, 420]
+    ['o9', 'audio/scope', 690, 260, { W: 480, H: 150, T: 18, P: { x: 0, y: -175 } }],
+    ['o10', 'disp/bg', 910, 420],
+    ['x1', 'audio/osc', 250, 580, { wave: 'sine' }],
+    ['x2', 'params/slider', 30, 660, { min: 1, max: 4, value: 3 }],
+    ['x3', 'math/round', 250, 720],
+    ['x4', 'math/mul', 470, 660],
+    ['x5', 'audio/osc', 690, 660, { wave: 'sine', D: 1 }], /* 1 cent sharp: the phase drifts, so the figure slowly tumbles */
+    ['x6', 'audio/xyscope', 910, 580, { S: 280, T: 30, P: { x: 0, y: 105 } }]
   ], [
     ['o1', 'N', 'o2', 'F'],
     ['o2', 'A', 'o5', 'In'],
@@ -991,7 +1000,14 @@ const EXAMPLES = {
     ['o3', 'NY', 'o6', 'V'],
     ['o6', 'R', 'o7', 'G'],
     ['o7', 'A', 'o8', 'In'],
-    ['o5', 'A', 'o9', 'In']
+    ['o5', 'A', 'o9', 'In'],
+    ['o1', 'N', 'x1', 'F'],
+    ['o1', 'N', 'x4', 'A'],
+    ['x2', 'N', 'x3', 'V'],
+    ['x3', 'R', 'x4', 'B'],
+    ['x4', 'R', 'x5', 'F'],
+    ['x1', 'A', 'x6', 'X'],
+    ['x5', 'A', 'x6', 'Y']
   ]),
 
   /* Microphone loudness as a number — a breathing circle and a scrolling

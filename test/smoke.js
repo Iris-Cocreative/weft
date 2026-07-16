@@ -445,6 +445,39 @@ for (const name of Object.keys(EXAMPLES)) {
     if (!G || G.kind !== 'poly' || G.pts.length !== V.length) failures.push('scope: waveform poly mismatch');
     if (G && G.pts.length > 512) failures.push('scope: beam should cap at 512 points, got ' + G.pts.length);
   }
+
+  // vector scope: declares two taps; cos vs sin at one frequency draws a circle
+  const g2 = { nodes: [
+      { id: 'ox', type: 'audio/osc', values: {} },
+      { id: 'oy', type: 'audio/osc', values: {} },
+      { id: 'xy', type: 'audio/xyscope', values: { S: 200 } } ],
+    wires: [ { from: ['ox', 'A'], to: ['xy', 'X'] }, { from: ['oy', 'A'], to: ['xy', 'Y'] } ] };
+  const c4 = mkCtx();
+  LM.evaluateGraph(g2, NODE_DEFS, c4);
+  const taps = c4.audioList.filter(x => x.kind === 'scope');
+  if (taps.length !== 2) failures.push('xyscope: expected 2 tap descriptors, got ' + taps.length);
+  else if (taps[0].src.join(',') !== 'ox:0' || taps[1].src.join(',') !== 'oy:0')
+    failures.push('xyscope: tap srcs wrong (' + taps[0].src + ' / ' + taps[1].src + ')');
+  const wx = new Float32Array(2048), wy = new Float32Array(2048);
+  for (let i = 0; i < 2048; i++) {
+    wx[i] = Math.cos(2 * Math.PI * i / 480);
+    wy[i] = Math.sin(2 * Math.PI * i / 480);
+  }
+  const c5 = mkCtx();
+  c5.audioState['xy:0x'] = { wave: wx, sr: 48000, ready: true };
+  c5.audioState['xy:0y'] = { wave: wy, sr: 48000, ready: true };
+  LM.evaluateGraph(g2, NODE_DEFS, c5);
+  const fig = (c5.out.xy.G || [])[0];
+  if (!fig || fig.kind !== 'poly') failures.push('xyscope: expected a poly figure');
+  else {
+    let bad = 0;
+    for (const p of fig.pts) {
+      const r = Math.hypot(p.x, p.y);
+      if (Math.abs(r - 100) > 1) bad++;
+    }
+    if (bad) failures.push('xyscope: cos/sin should trace a 100px-radius circle (' + bad + '/' + fig.pts.length + ' points off)');
+    if (fig.pts.length > 1024) failures.push('xyscope: beam should cap at 1024 points, got ' + fig.pts.length);
+  }
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

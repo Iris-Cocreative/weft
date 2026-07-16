@@ -72,10 +72,15 @@ const WeftAudio = {
         g.connect(master);
         e.main = g; e.in = g;
       } else if (d.kind === 'scope') {
-        /* a tap, not a route: whatever wires in gets analysed, never forwarded */
+        /* a tap, not a route: whatever wires in gets analysed, never forwarded.
+         * The zero-gain leg to master keeps the branch alive even when the
+         * tapped source reaches no speaker (an XY pair, say) — silent, but
+         * the graph keeps pulling samples through it */
         const an = actx.createAnalyser();
         an.fftSize = 2048; an.smoothingTimeConstant = 0;
-        e.main = an; e.in = an; e.buf = new Float32Array(an.fftSize);
+        const z = actx.createGain(); z.gain.value = 0;
+        an.connect(z); z.connect(master);
+        e.main = an; e.in = an; e.z = z; e.buf = new Float32Array(an.fftSize);
       } else if (d.kind === 'mic') {
         /* microphone → analyser only: never routed toward the speakers (no
          * feedback squeal); its loudness flows back to the graph as a number */
@@ -122,6 +127,7 @@ const WeftAudio = {
       if (!e) return;
       try { if (e.kind === 'osc' || e.kind === 'noise') e.main.stop(); } catch (err) { }
       try { if (e.stream) e.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
+      try { if (e.z) e.z.disconnect(); } catch (err) { }
       try { e.main.disconnect(); } catch (err) { }
       delete live[id]; // sources can't restart after stop — a re-appearing id gets a fresh node
       delete levels[id];
