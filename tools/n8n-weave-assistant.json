@@ -1,0 +1,226 @@
+{
+  "name": "Weft — weave assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weft-assistant",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "weft-wh-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "weft-assistant"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "key-check",
+              "leftValue": "={{ $json.headers['x-weft-key'] }}",
+              "rightValue": "CHANGE-ME-SHARED-KEY",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "weft-if-1",
+      "name": "Key ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"reply\": \"\", \"ops\": [], \"error\": \"bad key\" }",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "weft-401",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 160]
+    },
+    {
+      "parameters": {
+        "url": "https://iris-cocreative.github.io/weft/docs/LLM-AUTHORING.md",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "weft-spec",
+      "name": "Fetch authoring spec",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, -80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compose the Anthropic Messages API request.\n// System = assistant role + ops protocol, then the live authoring spec\n// (fetched fresh from GitHub Pages, cached by the API between calls).\nconst spec = String($json.data || '');\nconst req = $('Webhook').first().json.body || {};\n\nconst CORE = [\n  'You are the weave assistant, living inside Weft — a node-based parametric designer for the web.',\n  'The user is looking at their node canvas (the loom) and the live render (the cloth). You can edit the graph for them.',\n  '',\n  'You receive with every message: the full graph JSON, the ids of any selected nodes (that is what the user means by \"this\"/\"these\"),',\n  'live per-node eval errors, and often a small snapshot of the current render.',\n  '',\n  'HOW TO ANSWER',\n  'Reply conversationally and briefly. To change the graph, append exactly ONE fenced block labelled weft-ops containing a JSON array of ops:',\n  '',\n  '```weft-ops',\n  '[ { \"op\": \"...\" }, ... ]',\n  '```',\n  '',\n  'No block means no changes (fine for questions). Ops are validated and applied atomically — if any op is invalid, NOTHING applies and the user sees the errors. The user can Ctrl+Z any applied change.',\n  '',\n  'THE OPS',\n  '1. add — new nodes and/or wires:',\n  '   {\"op\":\"add\",\"nodes\":[{\"id\":\"f1\",\"type\":\"crv/circle\",\"x\":320,\"y\":80,\"values\":{\"R\":90}}],\"wires\":[{\"from\":[\"f1\",\"C\"],\"to\":[\"n5\",\"G\"]}]}',\n  '   Give every new node an id so you can wire it (ids colliding with existing nodes are auto-renamed, and the wires you send in the SAME add op are remapped with them). Omit x/y to auto-layout below the existing patch.',\n  '2. set — edit an existing node: {\"op\":\"set\",\"id\":\"n3\",\"values\":{\"max\":50,\"value\":12},\"x\":120,\"y\":40}',\n  '   values merge shallowly into node.values. Sliders use {min,max,value,mode:\"int\"|\"float\",prec}. Also accepts enabled/preview booleans.',\n  '3. delete — {\"op\":\"delete\",\"ids\":[\"n3\",\"n4\"]} and/or {\"op\":\"delete\",\"wires\":[{\"from\":[\"n1\",\"T\"],\"to\":[\"n2\",\"X\"]}]}',\n  '4. wire — {\"op\":\"wire\",\"from\":[\"n1\",\"T\"],\"to\":[\"n2\",\"X\"]} — replaces whatever feeds that input; add \"stack\":true to merge alongside instead (multi-wire inputs concatenate).',\n  '5. unwire — {\"op\":\"unwire\",\"to\":[\"n2\",\"X\"]} (or from, or both) — removes matching wires.',\n  '6. replace — {\"op\":\"replace\",\"graph\":{\"format\":1,\"nodes\":[...],\"wires\":[...]}} — swaps the whole patch. Last resort; prefer minimal edits so the user keeps their layout and history.',\n  '',\n  'RULES',\n  '- Use exact node type ids and single-letter port names from the spec below. Wrong ports/types reject the whole op list.',\n  '- Everything in values must be plain JSON.',\n  '- Prefer editing what exists over rebuilding. Respect the user\\'s layout; place new nodes near what they connect to (~250px columns, x grows rightward, y downward).',\n  '- Give parameters as params/slider nodes wired in, not magic constants, when the user is likely to want to play with them.',\n  '- If eval errors are present and relevant, explain the cause in your reply.',\n  '- If the request is ambiguous, make the smallest reasonable interpretation and say what you assumed.'\n].join('\\n');\n\nconst messages = [];\nfor (const t of req.history || []) {\n  if (t && t.text) messages.push({ role: t.role === 'assistant' ? 'assistant' : 'user', content: String(t.text) });\n}\nconst content = [];\nif (typeof req.snapshot === 'string' && req.snapshot.indexOf('data:image/jpeg;base64,') === 0) {\n  content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: req.snapshot.split(',')[1] } });\n}\ncontent.push({\n  type: 'text',\n  text: 'CURRENT GRAPH (weft format 1):\\n' + JSON.stringify(req.graph || { nodes: [], wires: [] })\n    + '\\n\\nSELECTED NODE IDS: ' + JSON.stringify(req.selection || [])\n    + '\\n\\nLIVE EVAL ERRORS: ' + JSON.stringify(req.errors || {})\n    + '\\n\\nUSER MESSAGE:\\n' + String(req.message || '')\n});\nmessages.push({ role: 'user', content });\n\nreturn [{ json: { body: {\n  model: 'claude-sonnet-5',\n  max_tokens: 8000,\n  system: [\n    { type: 'text', text: CORE },\n    { type: 'text', text: 'AUTHORITATIVE WEFT AUTHORING SPEC (node types, ports, list semantics):\\n\\n' + spec, cache_control: { type: 'ephemeral' } }\n  ],\n  messages\n} } }];"
+      },
+      "id": "weft-compose",
+      "name": "Compose request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, -80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 170000
+        }
+      },
+      "id": "weft-claude",
+      "name": "Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, -80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE-AFTER-IMPORT",
+          "name": "Anthropic x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the model's answer into reply text + the weft-ops block (if any).\nconst res = $json;\nconst text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nlet reply = text.trim();\nlet ops = [];\nconst m = text.match(/```(?:weft-ops|json)\\s*\\n([\\s\\S]*?)```/);\nif (m) {\n  try {\n    const p = JSON.parse(m[1]);\n    ops = Array.isArray(p) ? p : (Array.isArray(p.ops) ? p.ops : []);\n    reply = text.replace(m[0], '').trim();\n  } catch (e) { /* leave the fence visible so the user can see what went wrong */ }\n}\nreturn [{ json: { reply, ops } }];"
+      },
+      "id": "weft-parse",
+      "name": "Parse reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, -80]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops || [] }) }}",
+        "options": {}
+      },
+      "id": "weft-ok",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1320, -80]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Key ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Key ok?": {
+      "main": [
+        [
+          {
+            "node": "Fetch authoring spec",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch authoring spec": {
+      "main": [
+        [
+          {
+            "node": "Compose request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose request": {
+      "main": [
+        [
+          {
+            "node": "Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "main": [
+        [
+          {
+            "node": "Parse reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse reply": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

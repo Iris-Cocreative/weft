@@ -11,6 +11,10 @@ geometry that reaches no Draw node is invisible.
   T0:min T1:max → R) → crv/circle(R)`. Remap is how a ±1 wave becomes any range.
 - **Spin** — `input/time(T) → math/mul(A, B:speed → R) → xf/rotate(A)`. Radians;
   B≈0.5 is a slow turn.
+- **Play with time like a turntable** (slow / speed / reverse live) —
+  `params/slider(min:-2 max:2 value:1) → input/turntable(R) → T` feeds whatever
+  Time fed. Turntable *integrates* the rate, so dragging the slider bends time
+  from where it is — scaling `input/time` with a multiply would teleport instead.
 - **Orbit** — `input/time(T) → math/mul → vec/polar(A, R:radius → P)`.
 - **Ease toward a target** (cursor follower) — `… → state/smooth(V, S:stiffness
   → R)`. Higher S = snappier.

@@ -72,6 +72,32 @@ defNode('input/time', {
   postEval: node => { if (node.values.R === true) node.values.R = false; }
 });
 
+defNode('input/turntable', {
+  title: 'Turntable', cat: 'Input',
+  desc: 'Time as a record on a deck — R scales the spin (1 = realtime, 0.5 half-speed, 0 holds, negative plays backwards) and the platter integrates, so twisting the rate never jumps; Z rewinds to zero',
+  inputs: [
+    { name: 'R', type: 'number', default: 1, label: 'rate (−1 = reverse)' },
+    { name: 'Z', type: 'bool', default: false, label: 'rewind (trigger)' }],
+  outputs: [{ name: 'T', type: 'number', label: 'seconds' }],
+  compute: (a, ctx, node) => {
+    /* integrate rate × dt instead of scaling ctx.t — the platter has momentum
+     * of position, so changing the rate bends time from here, never teleports */
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { t: 0, pz: false };
+    if (a.Z && !s.pz) s.t = 0;
+    s.pz = !!a.Z;
+    s.t += ctx.dt * (Number.isFinite(+a.R) ? +a.R : 0);
+    return { T: s.t };
+  },
+  buildBody: (node, body) => {
+    const seg = _mk('div', 'seg', body);
+    const zb = _mk('div', 'seg-b', seg);
+    zb.textContent = '↺'; zb.title = 'rewind to zero (wired Z overrides)';
+    _cleanClick(zb, () => { node.values.Z = true; }); // one-frame pulse, cleared in postEval
+  },
+  postEval: node => { if (node.values.Z === true) node.values.Z = false; }
+});
+
 defNode('input/mouse', {
   title: 'Mouse', cat: 'Input', desc: 'Pointer position (canvas-centered px + normalized 0..1) and button state',
   inputs: [], outputs: [
@@ -2291,7 +2317,7 @@ defNode('meta/js', {
 (function () {
   const groups = {
     /* Input: 1 ambient (time/mouse/viewport) · 2 interaction */
-    'input/time': 1, 'input/mouse': 1, 'input/viewport': 1,
+    'input/time': 1, 'input/turntable': 1, 'input/mouse': 1, 'input/viewport': 1,
     'input/hotspot': 2, 'input/button': 2, 'input/keyboard': 2, 'input/scroll': 2,
     /* State: 1 motion (followers) · 2 memory · 3 time/triggers */
     'state/smooth': 1, 'state/spring': 1,

@@ -50,8 +50,9 @@ Definition of done for any change:
 | `js/export.js` | graph → standalone JS compiler | no |
 | `js/examples.js` | `EXAMPLES` — doubles as test fixtures | no |
 | `js/app.js` | shell: palette, toolbar, persistence, modal | yes |
+| `js/assistant.js` | weave assistant — chat panel → n8n webhook → validated graph ops (docs/ASSISTANT.md); dormant without a saved webhook config | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → audio → editor → viewport → export → examples → app.
+Load order (classic scripts, shared globals): engine → nodes → audio → editor → viewport → export → examples → app → assistant.
 
 ## Invariants — do not break these
 

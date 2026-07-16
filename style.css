@@ -532,6 +532,70 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 #loomTools button svg { width: 100%; height: 100%; display: block; }
 #loomTools button.off { color: var(--faint); }
 
+/* ---------------- weave assistant ---------------- */
+
+#assistant {
+  position: absolute; top: 52px; right: 12px; bottom: 12px; width: 340px;
+  max-width: calc(100% - 24px); z-index: 12;
+  display: flex; flex-direction: column;
+  background: rgba(13, 17, 25, 0.94); border: 1px solid var(--line2);
+  border-radius: 12px; backdrop-filter: blur(8px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+#assistant.hidden { display: none; }
+.as-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 10px 8px 12px; border-bottom: 1px solid var(--line);
+}
+.as-title { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.as-head button {
+  width: 24px; height: 24px; padding: 0; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: 6px; color: var(--faint);
+}
+.as-head button:hover { color: var(--text); border-color: var(--line2); }
+.as-setup { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.as-setup p { font-size: 11px; color: var(--dim); margin: 0 0 8px; line-height: 1.45; }
+.as-setup input {
+  width: 100%; margin: 0 0 6px; padding: 6px 9px;
+  background: var(--bg); border: 1px solid var(--line2); border-radius: 7px;
+  color: var(--text); font-size: 11px; outline: none;
+}
+.as-setup input:focus { border-color: var(--accent-dim); }
+.as-setrow { display: flex; gap: 6px; }
+.as-setrow button {
+  padding: 5px 12px; cursor: pointer; font-size: 11px;
+  background: var(--bg); border: 1px solid var(--line2); border-radius: 7px; color: var(--dim);
+}
+.as-setrow button.accent { border-color: var(--accent-dim); color: var(--text); }
+.as-setrow button:hover { border-color: var(--accent-dim); color: var(--text); }
+.as-msgs { flex: 1; overflow-y: auto; padding: 10px 10px 4px; display: flex; flex-direction: column; gap: 8px; }
+.as-msg {
+  max-width: 92%; padding: 7px 10px; border-radius: 10px;
+  font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+}
+.as-msg.user { align-self: flex-end; background: rgba(94, 234, 212, 0.10); border: 1px solid rgba(94, 234, 212, 0.22); }
+.as-msg.assistant { align-self: flex-start; background: rgba(16, 21, 31, 0.9); border: 1px solid var(--line2); }
+.as-msg.note { align-self: center; font-size: 11px; color: #5eead4; background: none; padding: 2px 6px; }
+.as-msg.note.error { color: #f87171; white-space: pre-wrap; }
+.as-foot { padding: 8px 10px 10px; border-top: 1px solid var(--line); }
+.as-snap { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--faint); margin-bottom: 6px; cursor: pointer; }
+.as-inrow { display: flex; gap: 6px; align-items: flex-end; }
+.as-in {
+  flex: 1; resize: none; padding: 7px 9px; min-height: 40px;
+  background: var(--bg); border: 1px solid var(--line2); border-radius: 8px;
+  color: var(--text); font: inherit; font-size: 12px; outline: none;
+}
+.as-in:focus { border-color: var(--accent-dim); }
+.as-send {
+  width: 34px; height: 34px; cursor: pointer; flex: none;
+  background: rgba(94, 234, 212, 0.12); border: 1px solid rgba(94, 234, 212, 0.35);
+  border-radius: 8px; color: #5eead4;
+}
+.as-send:hover { background: rgba(94, 234, 212, 0.2); }
+.as-send:disabled { opacity: 0.4; cursor: default; }
+#assistant.busy .as-send { animation: as-pulse 1.1s ease-in-out infinite; }
+@keyframes as-pulse { 50% { opacity: 0.35; } }
+
 /* preview toggle — the header eye (geometry-producing nodes) */
 .prev-toggle {
   width: 13px; height: 13px; flex: none; cursor: pointer;
@@ -730,6 +794,9 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 #btnMute.muted { color: var(--faint); }
 #btnTune { width: auto !important; padding: 0 8px; font-size: 11px; color: var(--faint); }
 #btnTune:hover { color: var(--text); }
+#btnCam { width: auto !important; padding: 0 8px; font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+#btnCam:hover { color: var(--text); }
+#btnCam.active { color: #5eead4; border-color: rgba(94, 234, 212, 0.45); }
 
 /* audio node bodies — note / root pickers */
 .aud-sel {

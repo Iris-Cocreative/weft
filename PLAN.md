@@ -239,8 +239,9 @@ Lands *after* Phase 3 so the patches a model emits are small enough to read.
    measured per-item perf ceiling (~22ms/eval at defaults).
 6. ✅ **Small-model help channel** — `docs/RECIPES.md` (task → node-chain
    cookbook) + the Haiku `weft-guide` subagent (`~/.claude/agents/`) that reads
-   RECIPES + AUTHORING + CATALOG whole. Still open (deliberately): the in-app
-   "?" panel via an n8n proxy — ROADMAP track 2.
+   RECIPES + AUTHORING + CATALOG whole. The in-app surface shipped v0.10 as
+   the **weave assistant** (✦): chat → n8n → Claude, which not only answers
+   but edits the graph via validated ops — see docs/ASSISTANT.md.
 
 Exit met: describe → JSON → paste → *play*. Also fixed en route: NODE-CATALOG
 and nodes.html had silently omitted the Audio and Meta categories since v0.8.2.

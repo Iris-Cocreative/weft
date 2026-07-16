@@ -129,8 +129,14 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   reads RECIPES + LLM-AUTHORING + CATALOG whole). Patch *authoring* stays with
   big models via the `/weft-patch` skill (`~/.claude/skills/weft-patch/`),
   which validates output with `test/validate-patch.js` before delivering.
-  Still open: the second surface — an in-app "?" panel via an n8n proxy
-  webhook.
+  [shipped v0.10, superseded] The second surface arrived bigger than planned:
+  the **weave assistant** (`js/assistant.js`, ✦ on the loom tools) is an
+  in-app chat through an n8n webhook (`tools/n8n-weave-assistant.json`) that
+  doesn't just answer how-to — it receives the graph + selection + errors +
+  a cloth snapshot and *edits the loom* via validated, atomic, undoable graph
+  ops (docs/ASSISTANT.md). Dormant until a webhook URL + key are saved in the
+  browser. Still open on this thread: model-authored node *types* (packs),
+  and streaming replies.
 
 ## 3. Digital Pattern Language
 
@@ -252,6 +258,15 @@ is now in, so any of these can be picked up in a workshop pass):
   handles win over the marquee, shift+wheel scrubs the scroll sim (plain
   wheel still zooms), window-level pointermove takes over anchor drag/hover.
   Palette-dropped anchors pin their handle at the drop point, card beside it.
+- [shipped v0.10, 2026-07-16] **Playable-loom batch** (James's spec) —
+  **cloth camera**: ctrl+wheel zooms the render toward the cursor, ctrl+drag /
+  middle-drag pans, both views; view-only (patch evaluates at stage size,
+  mouse mapped through the inverse), dashed stage-bounds frame + HUD zoom
+  chip (click resets); **Turntable** node (time integrated from a rate —
+  slow / speed / reverse without jumps); **number → slider quick-add** (type
+  `66`, get a 0–100 int slider set to 66; decimals pick precision + range);
+  **modifier arrow-stepping** in node number fields (±1 / shift ±10 /
+  alt ±0.1).
 - [shipped 2026-07-15] **Workbench batch** (14 items, James's spec) —
   **collapsed nodes** (double-click a head → icon + gradient + ports only,
   `n.collapsed` persisted; made for Param nodes bundling wires); **Relay**

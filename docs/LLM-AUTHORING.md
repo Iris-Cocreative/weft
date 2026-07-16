@@ -101,6 +101,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `input/mouse` | Mouse | | X:number Y:number NX:number NY:number D:bool | px centered · normalized 0–1 · down |
 | `input/scroll` | Scroll | | Y:number N:number V:number | px · normalized · velocity |
 | `input/time` | Time | P:bool R:bool | T:number F:number | seconds · frame |
+| `input/turntable` | Turntable | R:number=1 Z:bool | T:number | integrated time: R scales/reverses the spin without jumps, Z rewinds |
 | `input/viewport` | Viewport | | W:number H:number | |
 
 ### Params

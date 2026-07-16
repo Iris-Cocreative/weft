@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.9 — LLM co-creation.** v0.1 (2026-07-12): editor,
+**Status: v0.10 — the playable loom + the weave assistant.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -178,6 +178,32 @@ extra plumbing. *Visualizer* example: one Track In listened to five
 ways — Cymatics sand reorganizing to the melody (Pitch In reading
 Track In, processor mode), 12 spectrum circles coloured by pitch via
 HSL, the goniometer, VL/VR meter dots, and the speaker — 127 nodes.
+v0.10 (2026-07-16, the playable loom + the weave assistant): **cloth
+camera** — ctrl+wheel zooms the render toward the cursor (0.1–12×),
+ctrl+drag / middle-drag pans, in split and merged view alike; strictly
+view-only (the patch still evaluates at stage size, the mouse maps through
+the inverse), so what the design computes never changes — a dashed teal
+frame marks the real stage bounds whenever the camera is engaged, a HUD
+chip shows the zoom % and resets on click, and the DOM overlay (Button /
+Element) rides the same transform. **Turntable** (`input/turntable`) —
+time as a record on a deck: R scales the spin (0.5 = half speed, negative
+plays backwards), and because the platter *integrates* rate×dt, twisting
+the rate bends time from where it is instead of teleporting; Z rewinds.
+**Number → slider quick-add** — type `66` into the double-click search and
+the first hit is a ready slider (0–100, int, set to 66); decimals set the
+precision and the next power of ten sets the range (6.6 → 0–10, prec 1).
+**Modifier arrow-stepping** — in any node number field, ↑/↓ steps ±1,
+shift ±10, alt ±0.1. **The weave assistant** (`js/assistant.js` + ✦ on the
+loom tools) — a chat panel that sends the message + full graph JSON +
+selected node ids + live eval errors + an optional cloth snapshot to an
+n8n webhook (`tools/n8n-weave-assistant.json`: key check → fetch the live
+LLM-AUTHORING spec → Claude → parse), and applies the model's answer as
+validated **graph ops** (add / set / delete / wire / unwire / replace) —
+atomic (one bad op rejects the list, errors echo back into the chat),
+one history step (Ctrl+Z reverts), auto-layout for coordless nodes.
+Ships dormant: webhook URL + shared key live only in localStorage
+(`weft:assistant`), so the public deploy carries no keys and no cost
+surface; setup guide `docs/ASSISTANT.md` — 128 nodes, 28 examples.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

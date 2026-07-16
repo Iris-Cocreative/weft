@@ -13,6 +13,12 @@ const Viewport = {
   draws: true, // global switch for the drawList (Display output) — off = previews only
   merged: false, // single-canvas view: the loom floats directly on the cloth
 
+  /* cloth camera — a view-only transform (pan px + zoom) over the render.
+   * The patch itself is untouched: it still evaluates at the stage size (W×H)
+   * and the mouse is mapped through the inverse, so zooming never changes what
+   * the design computes — only what you're looking at. */
+  cam: { x: 0, y: 0, z: 1 },
+
   init() {
     const canvas = document.getElementById('view');
     const g2 = canvas.getContext('2d');
@@ -51,9 +57,41 @@ const Viewport = {
     let scrollShow = 0, scrollLastY = 0;
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
+      if (e.ctrlKey) { Viewport.camZoomAt(e.clientX, e.clientY, e.deltaY); return; }
       scroll.y = LM.clamp(scroll.y + e.deltaY, 0, scroll.max);
       scrollShow = performance.now();
     }, { passive: false });
+
+    /* cloth camera — ctrl+wheel zooms toward the cursor, ctrl+drag or
+     * middle-drag pans, the HUD chip shows the level and resets on click.
+     * View-only: the stage (W×H) and every evaluated coordinate stay fixed;
+     * when the camera is engaged the stage bounds render as a dashed frame. */
+    const cam = Viewport.cam;
+    const camBtn = document.getElementById('btnCam');
+    const paintCam = () => {
+      if (camBtn) {
+        camBtn.textContent = Math.round(cam.z * 100) + '%';
+        camBtn.classList.toggle('active', Viewport.camActive());
+      }
+      // the DOM overlay (Button/Element nodes) rides the same transform as the render
+      domLayer.style.transform = Viewport.camActive()
+        ? 'translate(' + cam.x + 'px,' + cam.y + 'px) scale(' + cam.z + ')' : '';
+    };
+    Viewport.camActive = () => cam.z !== 1 || cam.x !== 0 || cam.y !== 0;
+    Viewport.camReset = () => { cam.x = 0; cam.y = 0; cam.z = 1; paintCam(); };
+    Viewport.camZoomAt = (clientX, clientY, deltaY) => {
+      // zoom toward the cursor: the cloth point under it stays put
+      const r = canvas.getBoundingClientRect();
+      const sx = clientX - r.left - r.width / 2, sy = clientY - r.top - r.height / 2;
+      const z2 = LM.clamp(cam.z * Math.exp(-deltaY * 0.0012), 0.1, 12);
+      cam.x = sx - (sx - cam.x) * (z2 / cam.z);
+      cam.y = sy - (sy - cam.y) * (z2 / cam.z);
+      cam.z = z2;
+      paintCam();
+    };
+    Viewport.camPan = (dx, dy) => { cam.x += dx; cam.y += dy; paintCam(); };
+    if (camBtn) camBtn.addEventListener('click', () => Viewport.camReset());
+    let camDrag = null;
 
     /* text measurement — supplied to computes as ctx.measureText (invariant #8:
      * identical contract in the export mount; h is a deterministic line box) */
@@ -136,10 +174,12 @@ const Viewport = {
       });
     }
 
+    /* client px → cloth coordinates, through the camera's inverse */
     const centered = (clientX, clientY, rect) => ({
-      x: clientX - rect.left - rect.width / 2,
-      y: clientY - rect.top - rect.height / 2
+      x: (clientX - rect.left - rect.width / 2 - cam.x) / cam.z,
+      y: (clientY - rect.top - rect.height / 2 - cam.y) / cam.z
     });
+    const hitR = () => 14 / cam.z; // anchor grab radius is screen-constant
 
     const anchors = () => App.graph.nodes.filter(n => n.type === 'params/anchor' && n.enabled !== false && n.preview !== false);
 
@@ -157,14 +197,21 @@ const Viewport = {
       anchorHot = null;
       if (!(e.target.closest && e.target.closest('.node, .port, #quickAdd, #ctxMenu, #typeKey, #loomTools, #palette, #toolbar'))) {
         for (const n of anchors()) {
-          if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) { anchorHot = n; break; }
+          if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < hitR()) { anchorHot = n; break; }
         }
       }
     });
     canvas.addEventListener('pointerdown', e => {
+      // ctrl+drag / middle-drag: pan the cloth camera, not the design
+      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+        camDrag = { lx: e.clientX, ly: e.clientY };
+        canvas.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        return;
+      }
       const p = centered(e.clientX, e.clientY, canvas.getBoundingClientRect());
       for (const n of anchors()) {
-        if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) {
+        if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < hitR()) {
           anchorDrag = n;
           canvas.setPointerCapture(e.pointerId);
           e.preventDefault();
@@ -175,6 +222,11 @@ const Viewport = {
       pressedBuf = true;
     });
     canvas.addEventListener('pointermove', e => {
+      if (camDrag) {
+        Viewport.camPan(e.clientX - camDrag.lx, e.clientY - camDrag.ly);
+        camDrag.lx = e.clientX; camDrag.ly = e.clientY;
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       const p = centered(e.clientX, e.clientY, rect);
       if (anchorDrag) {
@@ -184,10 +236,11 @@ const Viewport = {
       }
       anchorHot = null;
       for (const n of anchors()) {
-        if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) { anchorHot = n; break; }
+        if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < hitR()) { anchorHot = n; break; }
       }
     });
     window.addEventListener('pointerup', () => {
+      camDrag = null;
       if (anchorDrag) { anchorDrag = null; App.onGraphChanged(); }
       if (mouse.down) releasedBuf = true;
       mouse.down = false;
@@ -199,7 +252,7 @@ const Viewport = {
       down(e) {
         const p = centered(e.clientX, e.clientY, canvas.getBoundingClientRect());
         for (const n of anchors()) {
-          if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < 14) {
+          if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < hitR()) {
             anchorDrag = n;
             return 'anchor';
           }
@@ -246,29 +299,30 @@ const Viewport = {
     };
 
     const drawAnchors = () => {
+      const iz = 1 / cam.z; // handles stay screen-sized whatever the camera does
       for (const n of anchors()) {
         const x = n.values.x || 0, y = n.values.y || 0;
         const hot = n === anchorDrag || n === anchorHot;
         g2.beginPath();
-        g2.arc(x, y, 6.5, 0, Math.PI * 2);
+        g2.arc(x, y, 6.5 * iz, 0, Math.PI * 2);
         g2.fillStyle = 'rgba(11,14,20,0.85)';
         g2.fill();
         g2.strokeStyle = hot ? '#5eead4' : 'rgba(94,234,212,0.75)';
-        g2.lineWidth = hot ? 2 : 1.5;
+        g2.lineWidth = (hot ? 2 : 1.5) * iz;
         g2.stroke();
         g2.beginPath();
-        g2.moveTo(x - 10, y); g2.lineTo(x - 4, y);
-        g2.moveTo(x + 4, y); g2.lineTo(x + 10, y);
-        g2.moveTo(x, y - 10); g2.lineTo(x, y - 4);
-        g2.moveTo(x, y + 4); g2.lineTo(x, y + 10);
+        g2.moveTo(x - 10 * iz, y); g2.lineTo(x - 4 * iz, y);
+        g2.moveTo(x + 4 * iz, y); g2.lineTo(x + 10 * iz, y);
+        g2.moveTo(x, y - 10 * iz); g2.lineTo(x, y - 4 * iz);
+        g2.moveTo(x, y + 4 * iz); g2.lineTo(x, y + 10 * iz);
         g2.strokeStyle = hot ? '#5eead4' : 'rgba(94,234,212,0.45)';
-        g2.lineWidth = 1;
+        g2.lineWidth = iz;
         g2.stroke();
         if (hot) {
-          g2.font = '10px ui-monospace, Consolas, monospace';
+          g2.font = (10 * iz) + 'px ui-monospace, Consolas, monospace';
           g2.textAlign = 'left'; g2.textBaseline = 'bottom';
           g2.fillStyle = 'rgba(94,234,212,0.9)';
-          g2.fillText(Math.round(x) + ', ' + Math.round(y), x + 12, y - 8);
+          g2.fillText(Math.round(x) + ', ' + Math.round(y), x + 12 * iz, y - 8 * iz);
         }
       }
     };
@@ -286,10 +340,12 @@ const Viewport = {
       if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; }
 
       if (mx !== null && !anchorDrag) {
-        mouse.x = mx - rect.left - rect.width / 2;
-        mouse.y = my - rect.top - rect.height / 2;
-        mouse.nx = (mx - rect.left) / rect.width;
-        mouse.ny = (my - rect.top) / rect.height;
+        // cloth coordinates through the camera's inverse — a zoomed view never
+        // changes what the patch sees, so mouse-driven designs behave identically
+        mouse.x = (mx - rect.left - rect.width / 2 - cam.x) / cam.z;
+        mouse.y = (my - rect.top - rect.height / 2 - cam.y) / cam.z;
+        mouse.nx = mouse.x / rect.width + 0.5;
+        mouse.ny = mouse.y / rect.height + 0.5;
       }
 
       // latch buffered events into this frame, then reset the buffers
@@ -308,6 +364,7 @@ const Viewport = {
         tuneA4: (App.graph.meta && App.graph.meta.tuneA4) || 432
       };
       try { LM.evaluateGraph(App.graph, NODE_DEFS, ctx); } catch (e) { /* keep rendering */ }
+      Viewport.lastErrors = ctx.errors; // per-node eval errors, read by the assistant
       syncDom(ctx.domList);
       if (audioHost) audioHost.sync(ctx.audioList);
 
@@ -331,11 +388,29 @@ const Viewport = {
       g2.fillRect(0, 0, rect.width, rect.height);
       g2.save();
       g2.translate(rect.width / 2, rect.height / 2);
+      g2.translate(cam.x, cam.y);
+      g2.scale(cam.z, cam.z);
       if (Viewport.ghosts) drawGhosts(ctx, false);
       if (Viewport.draws) for (const it of ctx.drawList) {
         try { LM.drawItem(g2, it); } catch (e) { /* skip bad item */ }
       }
       if (Viewport.ghosts) drawGhosts(ctx, true);
+      // camera engaged: frame the stage so "where is the real viewport" stays visible
+      if (Viewport.camActive()) {
+        const iz = 1 / cam.z;
+        g2.save();
+        g2.strokeStyle = 'rgba(94,234,212,0.5)';
+        g2.lineWidth = iz;
+        g2.setLineDash([6 * iz, 5 * iz]);
+        g2.strokeRect(-rect.width / 2, -rect.height / 2, rect.width, rect.height);
+        g2.setLineDash([]);
+        g2.font = (10 * iz) + 'px ui-monospace, Consolas, monospace';
+        g2.textAlign = 'left'; g2.textBaseline = 'bottom';
+        g2.fillStyle = 'rgba(94,234,212,0.7)';
+        g2.fillText('stage ' + Math.round(rect.width) + '×' + Math.round(rect.height),
+          -rect.width / 2, -rect.height / 2 - 6 * iz);
+        g2.restore();
+      }
       drawAnchors();
       g2.restore();
 

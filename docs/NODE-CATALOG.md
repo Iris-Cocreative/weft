@@ -85,6 +85,19 @@ Seconds since start, frame count — P freezes it, R restarts it from zero
 | T | number | seconds |
 | F | number | frame |
 
+### `input/turntable` — Turntable
+
+Time as a record on a deck — R scales the spin (1 = realtime, 0.5 half-speed, 0 holds, negative plays backwards) and the platter integrates, so twisting the rate never jumps; Z rewinds to zero
+
+| in | type | default | note |
+|---|---|---|---|
+| R | number | `1` | rate (−1 = reverse) |
+| Z | bool | `false` | rewind (trigger) |
+
+| out | type | note |
+|---|---|---|
+| T | number | seconds |
+
 ### `input/viewport` — Viewport
 
 Canvas size in px (origin is the center)
@@ -1736,4 +1749,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-129 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+130 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

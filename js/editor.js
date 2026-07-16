@@ -556,6 +556,12 @@ const Editor = (() => {
     }
     // background left-drag: marquee (shift = add to selection)
     closeQA();
+    // merged view: ctrl+drag on the background pans the cloth camera
+    if (Viewport.merged && e.ctrlKey) {
+      e.preventDefault();
+      S.drag = { kind: 'clothpan', lx: e.clientX, ly: e.clientY };
+      return;
+    }
     // merged view: a background press also reaches the cloth — grabbing an
     // anchor handle wins over the marquee; otherwise the design sees the click
     if (Viewport.merged && Viewport.forward && Viewport.forward.down(e) === 'anchor') return;
@@ -611,6 +617,9 @@ const Editor = (() => {
       }
       S.sel = sel; S.selWire = null;
       updateSelection();
+    } else if (d.kind === 'clothpan') {
+      Viewport.camPan(e.clientX - d.lx, e.clientY - d.ly);
+      d.lx = e.clientX; d.ly = e.clientY;
     } else if (d.kind === 'rnode') {
       if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 4) d.moved = true;
     } else if (d.kind === 'wire') {
@@ -655,8 +664,13 @@ const Editor = (() => {
 
   function onWheel(e) {
     e.preventDefault();
-    // merged view: shift+wheel scrubs the cloth's scroll simulator instead of
+    // merged view: ctrl+wheel zooms the cloth camera (same gesture as over the
+    // cloth in split view); shift+wheel scrubs the scroll simulator instead of
     // zooming (browsers report a shifted wheel as deltaX)
+    if (Viewport.merged && e.ctrlKey) {
+      Viewport.camZoomAt(e.clientX, e.clientY, e.deltaY);
+      return;
+    }
     if (Viewport.merged && e.shiftKey && Viewport.forward) {
       Viewport.forward.wheel(e.deltaY || e.deltaX);
       return;
@@ -691,7 +705,24 @@ const Editor = (() => {
 
   /* ------------------------------ quick add ------------------------------ */
 
-  let qaPos = { x: 0, y: 0 }, qaIndex = 0, qaItems = [];
+  let qaPos = { x: 0, y: 0 }, qaIndex = 0, qaItems = [], qaNum = null;
+
+  /* typing a number instead of a node name offers a ready-made slider:
+   * value = what you typed, max = the next power of ten (66 → 0–100,
+   * 6.6 → 0–10 with one decimal), integers get integer rounding;
+   * negative numbers get a symmetric ±range so there's room to swing */
+  function sliderSpec(q) {
+    if (!/^-?(\d+\.?\d*|\.\d+)$/.test(q)) return null;
+    const num = parseFloat(q);
+    if (!Number.isFinite(num)) return null;
+    const decimals = (q.split('.')[1] || '').length;
+    const mag = Math.abs(num);
+    let max = mag ? Math.pow(10, Math.ceil(Math.log10(mag))) : 10;
+    if (max <= mag) max *= 10; // an exact power of ten still gets headroom
+    const spec = { min: num < 0 ? -max : 0, max, value: num, mode: decimals ? 'float' : 'int' };
+    if (decimals) spec.prec = decimals;
+    return spec;
+  }
 
   function openQA(e) {
     qaPos = worldPos(e);
@@ -707,14 +738,21 @@ const Editor = (() => {
   function closeQA() { qaEl.classList.add('hidden'); }
 
   function renderQA(q) {
+    qaNum = sliderSpec(q.trim());
     q = q.toLowerCase();
     qaItems = Object.values(NODE_DEFS)
       .filter(d => !d.hidden)
       .filter(d => !q || d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q) || d.id.includes(q))
       .sort((a, b) => a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
       .slice(0, 60);
+    if (qaNum) qaItems = [{ id: '__slider' }].concat(qaItems);
     qaIndex = 0;
     qaList.innerHTML = qaItems.map((d, i) => {
+      if (d.id === '__slider') {
+        return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="__slider" title="type a number, get a slider already set to it">
+          <span class="pal-icon" style="color:${CATS.Params}">${weftIconSVG('params/slider', 'Params') || ''}</span>slider ${qaNum.value}<span class="qa-cat">${qaNum.min}–${qaNum.max}</span>
+        </div>`;
+      }
       const icon = d.id === 'params/swatch' ? '<span class="icon-swatch"></span>'
         : (weftIconSVG(d.id, d.cat) || `<span class="dot" style="background:${CATS[d.cat]}"></span>`);
       return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="${d.id}" title="${d.desc || ''}">
@@ -725,6 +763,19 @@ const Editor = (() => {
 
   function qaCommit(type) {
     if (!type) return;
+    if (type === '__slider') {
+      const spec = qaNum;
+      closeQA();
+      if (!spec) return;
+      const n = addNode('params/slider', qaPos.x, qaPos.y);
+      if (n) {
+        Object.assign(n.values, spec);
+        Editor.rebuildNode(n.id);
+        selectOnly(n.id);
+        changed();
+      }
+      return;
+    }
     closeQA();
     const n = addNode(type, qaPos.x, qaPos.y);
     if (n) selectOnly(n.id);
@@ -1142,6 +1193,23 @@ const Editor = (() => {
       window.addEventListener('pointerup', onPointerUp);
       editorEl.addEventListener('wheel', onWheel, { passive: false });
       window.addEventListener('keydown', onKeyDown);
+
+      // number fields in node cards: arrows step ±1, shift ±10, alt ±0.1
+      editorEl.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        const t = e.target;
+        if (!t || t.tagName !== 'INPUT' || t.type !== 'number' || !t.closest('.node')) return;
+        e.preventDefault();
+        const dir = e.key === 'ArrowUp' ? 1 : -1;
+        const step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+        let v = (parseFloat(t.value) || 0) + dir * step;
+        v = Math.round(v * 1e6) / 1e6; // shed float dust from ±0.1 walks
+        if (t.min !== '' && v < +t.min) v = +t.min;
+        if (t.max !== '' && v > +t.max) v = +t.max;
+        t.value = v;
+        t.dispatchEvent(new Event('input', { bubbles: true }));
+        t.dispatchEvent(new Event('change', { bubbles: true }));
+      });
 
       editorEl.addEventListener('dblclick', e => {
         if (e.target.closest('.node, #quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
