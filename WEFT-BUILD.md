@@ -136,7 +136,8 @@ the `/weft-patch` skill and Haiku `weft-guide` subagent in `~/.claude/`.
 Thesis demo: `patches/kaleidoscope.{json,md}` — the hand-coded mandala art
 test (~200 lines) as **20 nodes / 32 wires**, four sliders, two Custom JS
 nodes carrying exactly the code-shaped parts; gaps logged (trails, radial
-paint, cross-product matching, measured perf ceiling). Also fixed:
+paint, cross-product matching, measured perf ceiling); also in the Examples
+dropdown as *Mandala* (25 examples). Also fixed:
 NODE-CATALOG + nodes.html had omitted Audio and Meta categories since
 v0.8.2 — 124 nodes.
 

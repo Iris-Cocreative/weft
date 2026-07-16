@@ -10,8 +10,9 @@ oscillating in a symmetry slice, a distance-threshold connection web, the slice
 replicated `symmetry × mirror` times, HSL hue cycling, HTML sliders for
 symmetry / speed / points, a trails toggle.
 
-**The patch:** `patches/kaleidoscope.json` — **20 nodes, 32 wires.** Load it
-via Open, or paste the JSON on the loom.
+**The patch:** `patches/kaleidoscope.json` — **20 nodes, 32 wires.** It also
+ships as the **Mandala** example in the Examples dropdown (same graph, inlined
+in `js/examples.js` so smoke keeps it honest).
 
 ## How the translation went (the knob-extraction pattern, live)
 
