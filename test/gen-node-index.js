@@ -71,19 +71,19 @@ const html = `<!doctype html>
     border:1px solid var(--line2); border-radius:8px; outline:none; font:inherit; font-size:14px; }
   #q:focus { border-color:#2dd4bf66; }
   section { margin-top:44px; }
-  .cat-head { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  /* section headers wear the loom livery: category gradient washing in from the left */
+  .cat-head { border:1px solid #1e2533; border-radius:13px; padding:12px 16px; margin-bottom:14px;
+    background:
+      linear-gradient(90deg, color-mix(in srgb, var(--cat, #6b7891) 40%, transparent) 0%, rgba(20,26,40,0) 50%),
+      #151b29; }
+  .cat-title { display:flex; align-items:center; gap:10px; }
   .cat-dot { width:13px; height:13px; border-radius:50%; flex:none; }
   .cat-name { font-size:16px; font-weight:400; }
   .cat-count { color:var(--faint); font-size:13px; }
-  .cat-sub { color:var(--muted); font-size:12.5px; max-width:72ch; margin:0 0 14px; }
+  .cat-sub { color:var(--muted); font-size:12.5px; max-width:72ch; margin:5px 0 0; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:10px; }
-  /* card livery mirrors the loom: category gradient washing in from the left */
-  .card { display:flex; flex-direction:column;
-    background:
-      linear-gradient(90deg, color-mix(in srgb, var(--cat, #6b7891) 40%, transparent) 0%, rgba(20,26,40,0) 50%),
-      #151b29;
-    border:1px solid #1e2533; border-radius:13px; padding:13px 14px 12px;
-    box-shadow:0 6px 18px rgba(0,0,0,0.3); }
+  .card { display:flex; flex-direction:column; background:var(--panel);
+    border:1px solid var(--line); border-radius:10px; padding:13px 14px 12px; }
   .card.hide { display:none; }
   .head { display:flex; align-items:center; gap:10px; }
   .head svg { width:30px; height:30px; flex:none; }
@@ -141,10 +141,11 @@ let html = '';
 for (const cat of ORDER) {
   const its = ITEMS.filter(d => d.cat === cat);
   if (!its.length) continue;
-  html += '<section data-cat="' + cat + '"><div class="cat-head"><span class="cat-dot" style="background:' + CATS[cat] + '"></span>' +
+  html += '<section data-cat="' + cat + '"><div class="cat-head" style="--cat:' + CATS[cat] + '">' +
+    '<div class="cat-title"><span class="cat-dot" style="background:' + CATS[cat] + '"></span>' +
     '<span class="cat-name">' + cat.toLowerCase() + '</span><span class="cat-count">' + its.length + ' nodes</span></div>' +
-    '<p class="cat-sub">' + (CATDESC[cat] || '') + '</p><div class="grid">' +
-    its.map(d => '<div class="card" style="--cat:' + CATS[d.cat] + '" data-s="' +
+    '<p class="cat-sub">' + (CATDESC[cat] || '') + '</p></div><div class="grid">' +
+    its.map(d => '<div class="card" data-s="' +
       (d.title + ' ' + d.id + ' ' + d.desc + ' ' + d.ins.concat(d.outs).map(p => p.l).join(' ')).toLowerCase().replace(/"/g, '') + '">' +
       '<div class="head" style="color:' + CATS[d.cat] + '">' + glyph(d) +
       '<div><div class="title" style="color:var(--ink)">' + d.title + '</div><div class="nid">' + d.id + '</div></div></div>' +
