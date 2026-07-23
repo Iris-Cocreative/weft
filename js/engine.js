@@ -174,6 +174,55 @@ const LM = {
     }
   },
 
+  /* uniform offset of a point list. closed: positive d = outward regardless of
+     winding. open: positive d = right-hand side of travel. miter joins with a
+     limit — no self-intersection cleanup, so offsets past a curve's reach fold. */
+  offsetPoly: (pts, closed, d) => {
+    const n = pts.length;
+    if (n < 2 || !d) return pts.map(p => ({ x: p.x, y: p.y }));
+    let dd = d;
+    if (closed) {
+      let area = 0;
+      for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; area += p.x * q.y - q.x * p.y; }
+      if (area < 0) dd = -d;   /* right normal points outward only for positive winding */
+    }
+    const nx = [], ny = [], m = closed ? n : n - 1;
+    for (let i = 0; i < m; i++) {
+      const p = pts[i], q = pts[(i + 1) % n];
+      const L = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+      nx.push((q.y - p.y) / L); ny.push(-(q.x - p.x) / L);
+    }
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const ia = closed ? (i - 1 + m) % m : Math.max(0, i - 1);
+      const ib = closed ? i : Math.min(m - 1, i);
+      const mx = nx[ia] + nx[ib], my = ny[ia] + ny[ib];
+      const den = Math.max(0.15, 1 + (nx[ia] * nx[ib] + ny[ia] * ny[ib]));
+      out.push({ x: pts[i].x + mx * dd / den, y: pts[i].y + my * dd / den });
+    }
+    return out;
+  },
+
+  /* offset geometry by d. circles and arcs stay exact (r + d); lines stay lines;
+     everything else samples through toPoly and offsets the polyline. */
+  offsetGeom: (g, d, res) => {
+    if (!g || !g.kind || !d) return g;
+    switch (g.kind) {
+      case 'circle': return { kind: 'circle', cx: g.cx, cy: g.cy, r: Math.max(0, g.r + d) };
+      case 'arc': return { kind: 'arc', cx: g.cx, cy: g.cy, r: Math.max(0, g.r + d), a0: g.a0, a1: g.a1 };
+      case 'line': {
+        const L = Math.hypot(g.b.x - g.a.x, g.b.y - g.a.y) || 1;
+        const ox = (g.b.y - g.a.y) / L * d, oy = -(g.b.x - g.a.x) / L * d;
+        return { kind: 'line', a: { x: g.a.x + ox, y: g.a.y + oy }, b: { x: g.b.x + ox, y: g.b.y + oy } };
+      }
+      default: {
+        const P = LM.toPoly(g, res || 96);
+        if (P.pts.length < 2) return g;
+        return { kind: 'poly', pts: LM.offsetPoly(P.pts, P.closed, d), closed: P.closed };
+      }
+    }
+  },
+
   /* hit test: inside a closed shape, or within pad px of an open curve/point */
   pointInGeom: (g, p, pad) => {
     if (!g || !p) return false;

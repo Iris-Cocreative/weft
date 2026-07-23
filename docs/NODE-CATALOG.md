@@ -1250,6 +1250,19 @@ Line between two points
 |---|---|---|
 | C | geometry |  |
 
+### `crv/offset` — Offset Curve
+
+Offset C by distance D: positive grows closed curves outward, negative shrinks. Circles/arcs/lines stay exact; other kinds become polylines (miter joins)
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| D | number | `10` | distance |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
 ### `crv/polygon` — Polygon
 
 Regular N-gon at P with circumradius R
@@ -1749,4 +1762,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-130 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+131 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.

@@ -194,6 +194,7 @@ and/or/xor/not).
 | `crv/interp` | V:point (list-in) C:closed | spline through the list |
 | `crv/divide` | C:geometry N | → P:point T:number — N+1 points along it |
 | `crv/eval` | C:geometry T=0.5 | → P:point — arc-length parameterized |
+| `crv/offset` | C:geometry D=10 | +D grows closed curves outward, −D shrinks; circles/arcs/lines stay exact, others → poly |
 
 ### Transform (G:geometry in → G out)
 `xf/move` (T:vector) · `xf/rotate` (A:radians, C:center) · `xf/scale` (F, C).

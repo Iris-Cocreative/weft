@@ -1230,6 +1230,13 @@ defNode('crv/eval', {
   }
 });
 
+defNode('crv/offset', {
+  title: 'Offset Curve', cat: 'Curve', desc: 'Offset C by distance D: positive grows closed curves outward, negative shrinks. Circles/arcs/lines stay exact; other kinds become polylines (miter joins)',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'D', type: 'number', default: 10, label: 'distance' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => a.C === undefined ? {} : ({ C: LM.offsetGeom(a.C, a.D) })
+});
+
 /* ============================== TRANSFORM ============================== */
 
 defNode('xf/move', {

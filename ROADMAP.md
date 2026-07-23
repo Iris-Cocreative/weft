@@ -362,6 +362,12 @@ Then:
 
 ## 6. Images, video & vector — where the web beats Grasshopper
 
+- ✅ **`crv/offset` — Offset Curve** (shipped 2026-07-22). Uniform offset:
+  circles/arcs/lines stay exact, other kinds sample through `toPoly` into a
+  miter-join polyline (`LM.offsetPoly`/`LM.offsetGeom`). Positive D = outward
+  on closed curves regardless of winding. Born from the CollabOS Steiner-chain
+  logo (even breathing gaps between tangent circles). Round joins +
+  self-intersection cleanup can ride the `path` kind when it lands.
 - **`path` geometry kind** (line/cubic/arc segments = an SVG `d`). One addition,
   three unlocks: real Béziers, **SVG import** (a pasted logo becomes geometry
   every node can bend), and a nearly-free SVG render target (track 8.2). Handle
