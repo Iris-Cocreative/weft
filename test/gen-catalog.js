@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const src = ['js/engine.js', 'js/nodes.js', 'js/icons.js']
+const src = ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/icons.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -22,7 +22,7 @@ const fmtDefault = v => {
   return '`' + JSON.stringify(v) + '`';
 };
 
-const order = ['Input', 'Params', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio', 'Meta'];
+const order = ['Input', 'Params', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', '3D', 'Display', 'Audio', 'Meta'];
 let md = `# Weft node catalog
 
 *Auto-generated from \`js/nodes.js\` by \`test/gen-catalog.js\` — do not edit by hand.*

@@ -14,11 +14,11 @@ const OUT = process.argv[2] || path.join(ROOT, 'docs', 'icons.html');
 // classic scripts, shared globals — eval them in one sandbox like the browser would
 const sandbox = { console };
 vm.createContext(sandbox);
-for (const f of ['js/engine.js', 'js/nodes.js', 'js/icons.js'])
+for (const f of ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/icons.js'])
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 const { WEFT_ICONS, NODE_DEFS, CATS } = vm.runInContext('({ WEFT_ICONS, NODE_DEFS, CATS })', sandbox);
 
-const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Meta'];
+const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', '3D', 'Display', 'Meta'];
 const items = [];
 for (const def of Object.values(NODE_DEFS)) {
   const inner = WEFT_ICONS[def.id];

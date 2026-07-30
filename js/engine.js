@@ -84,7 +84,7 @@ const LM = {
         if (typeof v === 'number') return v;
         if (typeof v === 'boolean') return v ? 1 : 0;
         if (typeof v === 'string') { const f = parseFloat(v); return isNaN(f) ? 0 : f; }
-        if (typeof v === 'object' && v.x !== undefined) return Math.hypot(v.x, v.y);
+        if (typeof v === 'object' && v.x !== undefined) return Math.hypot(v.x, v.y, v.z || 0);
         return 0;
       case 'bool':
         return !!v;
@@ -95,6 +95,14 @@ const LM = {
         if (typeof v === 'object' && v.x !== undefined) return { x: +v.x || 0, y: +v.y || 0 };
         if (typeof v === 'number') return { x: v, y: v };
         return { x: 0, y: 0 };
+      /* point3 is position AND direction — 3D has no point/vector split, and the
+         2D one is only semantic anyway. A 2D point arrives with z = 0. */
+      case 'point3':
+        if (typeof v === 'object' && v.x !== undefined) return { x: +v.x || 0, y: +v.y || 0, z: +v.z || 0 };
+        if (typeof v === 'number') return { x: v, y: v, z: v };
+        return { x: 0, y: 0, z: 0 };
+      /* camera is plain JSON {pos, target, up, fov, mode, zoom} and needs no
+         conversion — it falls through to the passthrough default, like geometry */
       case 'color':
         if (typeof v === 'object' && v.r !== undefined) return v;
         if (typeof v === 'string') return LM.hexToColor(v);
@@ -112,7 +120,10 @@ const LM = {
     if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) <= 1e-9;
     if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
     if (a.kind === undefined && b.kind === undefined && a.x !== undefined && b.x !== undefined)
-      return Math.abs(a.x - b.x) <= 1e-9 && Math.abs(a.y - b.y) <= 1e-9;
+      /* z included, or two point3s differing only in depth would compare equal
+         and sets/union would silently collapse a 3D lattice into a plane */
+      return Math.abs(a.x - b.x) <= 1e-9 && Math.abs(a.y - b.y) <= 1e-9 &&
+        Math.abs((a.z || 0) - (b.z || 0)) <= 1e-9;
     return JSON.stringify(a) === JSON.stringify(b);
   },
 
@@ -123,7 +134,9 @@ const LM = {
     if (typeof v === 'string') return v;
     if (v.kind === 'text') return '"' + v.text + '"';
     if (v.kind) return '‹' + v.kind + '›';
-    if (v.x !== undefined) return '(' + LM.fmt(v.x) + ', ' + LM.fmt(v.y) + ')';
+    if (v.pos !== undefined && v.target !== undefined) return '‹camera›';
+    if (v.x !== undefined) return '(' + LM.fmt(v.x) + ', ' + LM.fmt(v.y) +
+      (v.z === undefined ? '' : ', ' + LM.fmt(v.z)) + ')';
     if (v.r !== undefined) return LM.colorCss(v);
     return String(v);
   },
@@ -138,9 +151,17 @@ const LM = {
    * poly     {kind:'poly', pts, closed}
    * spline   {kind:'spline', pts, closed}   (catmull-rom through pts)
    * text     {kind:'text', text, x, y, size}
+   * poly3    {kind:'poly3', pts:[{x,y,z}], closed}      3D polyline
+   * mesh     {kind:'mesh', vs:[{x,y,z}], fs:[[i,j,k,…]]}  faces index into vs
+   *
+   * The two 3D kinds ride the same `geometry` port type (coerce passes geometry
+   * through untouched). In a 2D node they degrade to their FRONT ELEVATION —
+   * toPoly simply drops z — so bounds, hit tests and offsets all keep working
+   * rather than returning nothing. Real 3D work goes through LM.xform3 and the
+   * projection layer below; a projected mesh comes back as ordinary 2D polys.
    */
   isClosedGeom: g => !!g && (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rect' ||
-    ((g.kind === 'poly' || g.kind === 'spline') && g.closed)),
+    ((g.kind === 'poly' || g.kind === 'spline' || g.kind === 'poly3') && g.closed)),
 
   splinePts: (pts, closed, seg) => {
     seg = seg || 14;
@@ -193,6 +214,9 @@ const LM = {
         for (let i = 0; i < n; i++) { const a = LM.lerp(g.a0, g.a1, i / (n - 1)); pts.push({ x: g.cx + Math.cos(a) * g.r, y: g.cy + Math.sin(a) * g.r }); }
         return { pts, closed: false };
       }
+      /* the 3D kinds drop z — a 3D curve in a 2D node is its front elevation */
+      case 'poly3': return { pts: (g.pts || []).map(p => ({ x: p.x, y: p.y })), closed: !!g.closed };
+      case 'mesh': return { pts: (g.vs || []).map(p => ({ x: p.x, y: p.y })), closed: false };
       default: return { pts: [], closed: false };
     }
   },
@@ -800,8 +824,280 @@ const LM = {
       case 'text': { const p = ap({ x: g.x, y: g.y }); return { kind: 'text', text: g.text, x: p.x, y: p.y, size: (g.size || 24) * sf }; }
       case 'poly': return { kind: 'poly', pts: (g.pts || []).map(ap), closed: !!g.closed };
       case 'spline': return { kind: 'spline', pts: (g.pts || []).map(ap), closed: !!g.closed };
+      /* a 2D transform on 3D geometry acts on x/y and leaves z alone — Move and
+         Rotate stay predictable on a mesh instead of flattening it. Real 3D
+         transforms are LM.xform3 (the d3/move3 family). */
+      case 'poly3': return { kind: 'poly3', pts: (g.pts || []).map(p => { const q = ap(p); return { x: q.x, y: q.y, z: p.z || 0 }; }), closed: !!g.closed };
+      case 'mesh': return {
+        kind: 'mesh',
+        vs: (g.vs || []).map(p => { const q = ap(p); return { x: q.x, y: q.y, z: p.z || 0 }; }),
+        fs: (g.fs || []).map(f => f.slice())
+      };
       default: { const P = LM.toPoly(g, 64); return { kind: 'poly', pts: P.pts.map(ap), closed: P.closed }; }
     }
+  },
+
+  /* ---------- 3D: matrices, cameras, the software renderer ----------
+   * World axes extend the canvas rather than replacing it: x right, y DOWN,
+   * z away from the viewer. That is right-handed (right × down = away), so a 2D
+   * shape lifted to z = 0 projects upright and unmirrored, and the default
+   * camera sits in front of it at negative z. Angles are radians everywhere
+   * except a camera's field of view, which is degrees — that is how lenses are
+   * written, and Weft has Radians/Degrees nodes for the crossing.
+   *
+   * Matrices are 16-element ROW-major arrays applied to a column vector:
+   *   x' = m0·x + m1·y + m2·z + m3   (one row each for y, z, then w)
+   * mat4Mul(m, n) applies m FIRST, then n — left to right like the 2D matMul it
+   * mirrors. The projection matrices map camera space straight to SCREEN PIXELS
+   * rather than to NDC, with w = view depth: there is then no aspect term to get
+   * wrong and no second mapping step, and after a projection only x and y mean
+   * anything (depth is read off the view stage).
+   *
+   * Nothing down here touches ctx, the draw list or the renderer. Projection is
+   * an ordinary node emitting ordinary 2D geometry — which is the whole reason
+   * 3D costs the export contract and invariant #8 exactly nothing. */
+  mat4Identity: () => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+  mat4Move: (dx, dy, dz) => [1, 0, 0, dx, 0, 1, 0, dy, 0, 0, 1, dz, 0, 0, 0, 1],
+  mat4Scale: (sx, sy, sz) => [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1],
+  mat4Mul: (m, n) => {
+    const o = [];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      let s = 0;
+      for (let k = 0; k < 4; k++) s += n[r * 4 + k] * m[k * 4 + c];
+      o[r * 4 + c] = s;
+    }
+    return o;
+  },
+  /* rotation by a about the axis through the origin (Rodrigues, axis unitized) */
+  mat4RotAxis: (axis, a) => {
+    const u = LM.v3unit(axis && (axis.x || axis.y || axis.z) ? axis : { x: 0, y: 1, z: 0 });
+    const c = Math.cos(a), s = Math.sin(a), t = 1 - c;
+    return [
+      t * u.x * u.x + c, t * u.x * u.y - s * u.z, t * u.x * u.z + s * u.y, 0,
+      t * u.x * u.y + s * u.z, t * u.y * u.y + c, t * u.y * u.z - s * u.x, 0,
+      t * u.x * u.z - s * u.y, t * u.y * u.z + s * u.x, t * u.z * u.z + c, 0,
+      0, 0, 0, 1
+    ];
+  },
+  /* x first, then y, then z */
+  mat4RotEuler: (rx, ry, rz) => LM.mat4Mul(LM.mat4Mul(
+    LM.mat4RotAxis({ x: 1, y: 0, z: 0 }, rx),
+    LM.mat4RotAxis({ x: 0, y: 1, z: 0 }, ry)),
+    LM.mat4RotAxis({ x: 0, y: 0, z: 1 }, rz)),
+  /* apply to a point, dividing through by w. w is 1 for every affine matrix
+     here and the view depth for the projection ones, so one function does both */
+  mat4Apply: (m, p) => {
+    const z = p.z || 0;
+    const w = m[12] * p.x + m[13] * p.y + m[14] * z + m[15];
+    const iw = Math.abs(w) < 1e-9 ? 0 : 1 / w;
+    return {
+      x: (m[0] * p.x + m[1] * p.y + m[2] * z + m[3]) * iw,
+      y: (m[4] * p.x + m[5] * p.y + m[6] * z + m[7]) * iw,
+      z: (m[8] * p.x + m[9] * p.y + m[10] * z + m[11]) * iw
+    };
+  },
+  /* world → camera space: the camera ends at the origin looking down −z, so
+     everything in front of it has a negative z and depth is −z */
+  mat4LookAt: (eye, target, up) => {
+    let z = LM.v3sub(eye, target);
+    if (!(z.x || z.y || z.z)) z = { x: 0, y: 0, z: -1 };
+    z = LM.v3unit(z);
+    /* up parallel to the view direction: pick any perpendicular rather than
+       collapsing the basis to zero (a camera looking straight down still works) */
+    let x = LM.v3cross(up && up.x !== undefined ? up : { x: 0, y: -1, z: 0 }, z);
+    if (LM.v3len(x) < 1e-9) x = LM.v3cross({ x: 0, y: 0, z: 1 }, z);
+    if (LM.v3len(x) < 1e-9) x = LM.v3cross({ x: 1, y: 0, z: 0 }, z);
+    x = LM.v3unit(x);
+    const y = LM.v3cross(z, x);
+    return [
+      x.x, x.y, x.z, -LM.v3dot(x, eye),
+      y.x, y.y, y.z, -LM.v3dot(y, eye),
+      z.x, z.y, z.z, -LM.v3dot(z, eye),
+      0, 0, 0, 1
+    ];
+  },
+  /* camera space → screen px. Vertical fov in radians; h (the canvas height)
+     sets the pixel scale for BOTH axes, so nothing stretches and no aspect
+     ratio enters. w comes out as the view depth, ready for the divide. */
+  mat4Persp: (fov, h) => {
+    const k = (h / 2) / Math.tan(LM.clamp(fov, 0.02, 3.1) / 2);
+    return [k, 0, 0, 0, 0, -k, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0];
+  },
+  /* the same mapping with no divide: z px per world unit, w stays 1 */
+  mat4Ortho: z => [z, 0, 0, 0, 0, -z, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+
+  /* the camera value is plain JSON — {pos, target, up, fov (degrees),
+     mode:'persp'|'ortho', zoom, near} — and every field is optional. These
+     defaults frame the origin the way the 2D canvas already does. W is taken
+     for symmetry: the pixel scale comes from H alone, on purpose. */
+  camMats: (cam, W, H) => {
+    const c = cam && typeof cam === 'object' ? cam : {};
+    const p3 = (v, dx, dy, dz) => (v && typeof v === 'object' && v.x !== undefined)
+      ? { x: +v.x || 0, y: +v.y || 0, z: +v.z || 0 } : { x: dx, y: dy, z: dz };
+    const persp = c.mode !== 'ortho';
+    const fov = (c.fov === undefined ? 45 : c.fov) * Math.PI / 180;
+    return {
+      view: LM.mat4LookAt(p3(c.pos, 0, 0, -420), p3(c.target, 0, 0, 0), p3(c.up, 0, -1, 0)),
+      proj: persp ? LM.mat4Persp(fov, H || 600) : LM.mat4Ortho(Math.abs(c.zoom === undefined ? 1 : c.zoom) || 1),
+      eye: p3(c.pos, 0, 0, -420), persp: persp,
+      near: c.near === undefined ? 1 : Math.max(1e-3, c.near)
+    };
+  },
+
+  /* world point → {x, y} in screen px (centred origin, y down) plus z = the
+     view depth, bigger being farther. Hand in mats from LM.camMats to project a
+     whole list against one camera — same optional-table trick as curvePoint.
+     No near-plane culling here: a point behind the camera comes back with a
+     negative depth and a mirrored x/y. LM.render3 is what drops those. */
+  project3: (p, cam, W, H, mats) => {
+    const M = mats || LM.camMats(cam, W, H);
+    const v = LM.mat4Apply(M.view, p);
+    const s = LM.mat4Apply(M.proj, v);
+    return { x: s.x, y: s.y, z: -v.z };
+  },
+
+  /* Newell's normal: right for non-planar faces and any vertex count, and it
+     degrades to facing the default camera rather than to zero */
+  faceNormal3: pts => {
+    const n = pts.length;
+    let nx = 0, ny = 0, nz = 0;
+    for (let i = 0; i < n; i++) {
+      const a = pts[i], b = pts[(i + 1) % n], az = a.z || 0, bz = b.z || 0;
+      nx += (a.y - b.y) * (az + bz);
+      ny += (az - bz) * (a.x + b.x);
+      nz += (a.x - b.x) * (a.y + b.y);
+    }
+    const L = Math.hypot(nx, ny, nz);
+    return L < 1e-12 ? { x: 0, y: 0, z: -1 } : { x: nx / L, y: ny / L, z: nz / L };
+  },
+
+  meshNormal: (mesh, fi) => {
+    const vs = (mesh && mesh.vs) || [], pts = [];
+    for (const i of ((mesh && mesh.fs) || [])[fi] || []) if (vs[i]) pts.push(vs[i]);
+    return LM.faceNormal3(pts);
+  },
+
+  /* mesh → one record per face: its 3D points, unit normal and centroid */
+  meshFaces: mesh => {
+    const vs = (mesh && mesh.vs) || [], out = [];
+    for (const f of (mesh && mesh.fs) || []) {
+      const pts = [];
+      for (const i of f) if (vs[i]) pts.push({ x: vs[i].x, y: vs[i].y, z: vs[i].z || 0 });
+      if (pts.length < 3) continue;
+      let cx = 0, cy = 0, cz = 0;
+      for (const p of pts) { cx += p.x; cy += p.y; cz += p.z; }
+      out.push({
+        pts3: pts, normal: LM.faceNormal3(pts),
+        centroid: { x: cx / pts.length, y: cy / pts.length, z: cz / pts.length }
+      });
+    }
+    return out;
+  },
+
+  /* transform any geometry by a mat4. 2D kinds are lifted to z = 0 and come
+     back as poly3 — which is what lets Rotate3 act straight on a Circle. */
+  xform3: (g, m) => {
+    if (!g || typeof g !== 'object') return g;
+    const ap = p => LM.mat4Apply(m, p);
+    if (g.kind === undefined && g.x !== undefined) return ap(g);
+    if (g.kind === 'mesh') return { kind: 'mesh', vs: (g.vs || []).map(ap), fs: (g.fs || []).map(f => f.slice()) };
+    if (g.kind === 'poly3') return { kind: 'poly3', pts: (g.pts || []).map(ap), closed: !!g.closed };
+    if (g.kind === 'text') return g;   /* text has no 3D reading — pass it through */
+    const P = LM.toPoly(g, 96);
+    return { kind: 'poly3', pts: P.pts.map(ap), closed: P.closed };
+  },
+
+  /* geometry → flat 3D primitives ready to project:
+   *   {pts:[{x,y,z}], closed, face, normal}
+   * A mesh contributes one primitive per face; a closed loop (2D or poly3)
+   * counts as a face too, so it gets a normal and a shade; 2D kinds are lifted
+   * to z = 0; a bare point stays a single point; text has no 3D reading. */
+  prims3: g => {
+    if (!g || typeof g !== 'object') return [];
+    if (g.kind === undefined && g.x !== undefined)
+      return [{ pts: [{ x: g.x, y: g.y, z: g.z || 0 }], closed: false, face: false, normal: null }];
+    if (g.kind === 'mesh') {
+      const vs = g.vs || [], out = [];
+      for (const f of g.fs || []) {
+        const pts = [];
+        for (const i of f) if (vs[i]) pts.push({ x: vs[i].x, y: vs[i].y, z: vs[i].z || 0 });
+        if (pts.length < 3) continue;
+        out.push({ pts: pts, closed: true, face: true, normal: LM.faceNormal3(pts) });
+      }
+      return out;
+    }
+    if (g.kind === 'text') return [];
+    let pts, closed;
+    if (g.kind === 'poly3') {
+      pts = (g.pts || []).map(p => ({ x: p.x, y: p.y, z: p.z || 0 }));
+      closed = !!g.closed;
+    } else {
+      const P = LM.toPoly(g, 96);
+      pts = P.pts.map(p => ({ x: p.x, y: p.y, z: 0 }));
+      closed = P.closed;
+    }
+    if (!pts.length) return [];
+    if (pts.length === 1) return [{ pts: pts, closed: false, face: false, normal: null }];
+    const face = closed && pts.length >= 3;
+    return [{ pts: pts, closed: closed, face: face, normal: face ? LM.faceNormal3(pts) : null }];
+  },
+
+  /* vertex identity for edge dedup — 1/64 px, tight enough to keep distinct
+     vertices apart and loose enough to fuse the shared edges of two faces */
+  v3key: p => Math.round(p.x * 64) + ',' + Math.round(p.y * 64) + ',' + Math.round((p.z || 0) * 64),
+
+  /* the software renderer, in one place: a geometry LIST plus a camera → three
+   * index-aligned lists — screen geometry, shade 0..1, view depth — sorted back
+   * to front, so drawList insertion order IS the painter's algorithm.
+   *   mode  'shaded' faces only · 'wire' every unique edge · 'both' faces with
+   *         the front-facing edges laid over them
+   *   L     the direction the light comes FROM
+   * Shading is two-sided: the normal is turned toward the camera first, so open
+   * surfaces and reversed windings light like a solid's front faces instead of
+   * going black. Any primitive with a vertex at or behind the near plane is
+   * dropped rather than clipped — Weft paints, it does not rasterize. */
+  render3: (gs, cam, L, mode, W, H) => {
+    const M = LM.camMats(cam, W, H);
+    const lit = LM.v3unit(L && (L.x || L.y || L.z) ? L : { x: -0.4, y: -0.8, z: -0.5 });
+    const wantFaces = mode !== 'wire', wantWire = mode === 'wire' || mode === 'both';
+    const main = [], wires = [], seen = {};
+    for (const g of gs || []) for (const pr of LM.prims3(g)) {
+      const S = [], dep = [];
+      let ok = true, dsum = 0, cx = 0, cy = 0, cz = 0;
+      for (const p of pr.pts) {
+        const v = LM.mat4Apply(M.view, p);
+        if (-v.z <= M.near) { ok = false; break; }
+        const q = LM.mat4Apply(M.proj, v);
+        S.push({ x: q.x, y: q.y }); dep.push(-v.z); dsum += -v.z;
+        cx += p.x; cy += p.y; cz += p.z || 0;
+      }
+      if (!ok || !S.length) continue;
+      const n = S.length, d = dsum / n;
+      if (n === 1) { main.push({ g: S[0], d: d, s: 1 }); continue; }
+      /* an open curve or a point has no facing and no shade — it comes through
+         lit (S = 1), so a colour wired from S doesn't silently blacken it */
+      if (!pr.face) { main.push({ g: { kind: 'poly', pts: S, closed: !!pr.closed }, d: d, s: 1 }); continue; }
+      /* face against the eye, measured from its centroid — a vertex would
+         misjudge which way a big quad faces */
+      const front = LM.v3dot(pr.normal, LM.v3sub(M.eye, { x: cx / n, y: cy / n, z: cz / n })) >= 0;
+      const sh = LM.clamp(LM.v3dot(front ? pr.normal : LM.v3mul(pr.normal, -1), lit), 0, 1);
+      if (wantFaces) main.push({ g: { kind: 'poly', pts: S, closed: true }, d: d, s: sh });
+      /* wire alone shows every edge (a see-through frame); over faces only the
+         front ones, which is hidden-line removal for the price of a dot product */
+      if (wantWire && (front || !wantFaces)) for (let i = 0; i < S.length; i++) {
+        const j = (i + 1) % S.length;
+        const ka = LM.v3key(pr.pts[i]), kb = LM.v3key(pr.pts[j]);
+        const k = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+        if (seen[k]) continue;
+        seen[k] = 1;
+        wires.push({ g: { kind: 'line', a: S[i], b: S[j] }, d: (dep[i] + dep[j]) / 2, s: sh });
+      }
+    }
+    main.sort((p, q) => q.d - p.d);
+    wires.sort((p, q) => q.d - p.d);
+    const F = [], Sh = [], D = [];
+    for (const r of main.concat(wires)) { F.push(r.g); Sh.push(r.s); D.push(r.d); }
+    return { F: F, S: Sh, D: D };
   },
 
   /* ---------- canvas rendering ---------- */
@@ -814,6 +1110,21 @@ const LM = {
          angle — otherwise a reversed arc renders differently from how it
          hit-tests, bounds and offsets */
       case 'arc': g2.arc(g.cx, g.cy, Math.max(0, g.r), g.a0, g.a1, g.a1 < g.a0); break;
+      /* an unprojected mesh reads as its front elevation: one subpath per face,
+         z ignored. Wire it through d3/project for a camera, shading and depth. */
+      case 'mesh': {
+        const vs = g.vs || [];
+        for (const f of g.fs || []) {
+          let first = true;
+          for (const i of f) {
+            const v = vs[i];
+            if (!v) continue;
+            if (first) { g2.moveTo(v.x, v.y); first = false; } else g2.lineTo(v.x, v.y);
+          }
+          if (!first) g2.closePath();
+        }
+        break;
+      }
       default: {
         const P = LM.toPoly(g, 72);
         if (!P.pts.length) break;

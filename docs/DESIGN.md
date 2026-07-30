@@ -51,6 +51,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | Display | `#f009fc` |
 | Meta | `#8494ad` *(provisional slate — not yet through Figma; clusters also stack a card-shadow to say "there's more inside")* |
 | Audio | `#ff36a3` *(code-side decision 2026-07-16, not yet through Figma: "signal pink" — the open hue slot; replaced the provisional teal `#0fb5ba`, which sat on top of Params. Rose maximizes wire contrast against number-blue, the wire most often beside audio. CRT-phosphor teal `#5eead4` stays as the default beam colour on Scope / Vector Scope / Cymatics — instrument screens, not category identity)* |
+| 3D | `#00b8d4` **awaiting James / Figma** *(code draft 2026-07-30: cyan was the remaining open space on the wheel. Deliberately clear of Params teal `#2dd4bf` and of the geometry wire `#7057ff`, which runs into every 3D node. The category glyph — an isometric cube with its top face lit — is a code draft too, in `WEFT_CAT_ICONS`, not yet in Figma.)* |
 
 ### Type colours (`Line Types/*`, → `TYPE_COLORS` in nodes.js — ports AND wires)
 
@@ -61,8 +62,10 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | string | `#fbbb00` |
 | point | `#fb6c09` |
 | vector | `#8cff14` |
+| point3 | `#00b8d4` *(the 3D category hue, the way `audio` matches Audio — code draft, awaiting Figma)* |
+| camera | `#00e0a4` *(code draft — a quieter spring-green beside point3's cyan, so a camera wire reads as different from a position)* |
 | color | `#d730f8` |
-| geometry | `#7057ff` |
+| geometry | `#7057ff` *(3D geometry rides this wire too — `poly3` and `mesh` are geometry kinds, not new types)* |
 | any | `#8ea4c3` |
 | audio | `#ff36a3` *(matches the Audio category — handles, not samples)* |
 
@@ -75,6 +78,18 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 - **Fields**: 42px wide, `dark/150` bg, 1px `dark/400`, radius 3, Consolas 11 `white/80`. Hidden when the input is wired.
 - **Readouts**: per-output, inline, Consolas 11 `white/40` (`LM.fmt` first item + ×count).
 - **Selected**: border `Primary` + 7.5px glow at 33%. **Error**: same shape in `#ff3b41`.
+
+## Card livery beyond the loom
+
+The card recipe above (radius 13, 1px `dark/300`, category gradient washing in
+from the left over `dark/200`) is now the house pattern on three surfaces, not
+one: node cards on the loom, category headers in `nodes.html`, and example cards
+in the gallery modal. The gallery borrows its hue per example *family* from the
+node palette (`EXAMPLE_CAT_HUE` in `js/examples.js` names `CATS` keys rather
+than hex), so it rides the same wheel instead of forking it — Fundamentals wears
+Params teal, Lists & grids wears Sets purple, and so on. Its category chips
+reuse `.seg`/`.seg-b`/`.seg-b.on` from the node mode toggles, extended only with
+a wrapping variant (`.seg.wrap`) for the longer labels.
 
 ## Chromeless params
 
@@ -102,6 +117,11 @@ keep their ports overlaying the widget edges.
   normalize `Node Icons/SVG/` directly (classes → attributes, #fff →
   currentColor) so James's export folder is the single pipeline source.
 - **Example layouts** were tuned for the smaller pre-design cards; some overlap
-  slightly now — worth a spacing pass.
+  slightly now — worth a spacing pass. Still open after the gallery landed: the
+  fix needs real rendered DOM boxes (card height depends on port rows and the
+  literal widgets), which is how the 2026-07-14 audit caught Checker dispatch
+  and Scroll scene. Card coordinates are inert to evaluation and export, so this
+  is purely a legibility job — and the gallery thumbnails now make a bad layout
+  easy to spot from the browser.
 - `color-mix()` is used for the category wash (fine in Chrome/Edge/modern
   Safari/Firefox).

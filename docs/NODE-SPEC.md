@@ -83,6 +83,8 @@ should omit `ext`.
 | `string` | JS string | text field |
 | `point` | `{x, y}` | two number fields |
 | `vector` | `{x, y}` — structurally a point; semantically a direction/translation | two number fields |
+| `point3` | `{x, y, z}` — position *and* direction; 3D has no point/vector split | three number fields |
+| `camera` | `{pos, target, up, fov (degrees), mode:'persp'\|'ortho', zoom, near}` — every field optional | none |
 | `color` | `{r, g, b, a}` — rgb 0–255, a 0–1 | color picker + alpha |
 | `geometry` | see §5 | none |
 | `audio` | handle string — a descriptor id naming a live Web Audio node; samples never flow through wires | none |
@@ -91,8 +93,16 @@ should omit `ext`.
 **Coercion:** any output may wire into any input; values are coerced per item:
 number↔bool (0=false), string→number (parse), anything→string (formatted),
 number→point (`{x:v,y:v}`), point→number (magnitude), hex string→color,
-number→gray color. Geometry, `audio` and `any` pass through untouched. When no sensible
-coercion exists the result is a neutral value (0, `{x:0,y:0}`, white), never an exception.
+number→gray color. `point → point3` arrives with z = 0, `point3 → point` drops z,
+and `number → point3` fills all three components — which is why a single number
+wired into Scale3's factor scales uniformly. Geometry, `camera`, `audio` and `any`
+pass through untouched. When no sensible coercion exists the result is a neutral
+value (0, `{x:0,y:0}`, white), never an exception.
+
+Geometry previews on the cloth (the ghosts) are drawn for `geometry` and `point`
+outputs only. `point3` and `camera` deliberately get none: an unprojected 3D
+point has no screen position. Project it and the ghosts come back, because what
+`d3/project` emits is ordinary 2D geometry.
 
 ## 4. Lists — the core semantic
 
@@ -127,9 +137,23 @@ Plain JSON objects; `point` doubles as drawable geometry (renders as a dot).
 | `poly` | `{kind, pts:[{x,y}…], closed}` |
 | `spline` | `{kind, pts, closed}` — Catmull-Rom through pts |
 | `text` | `{kind, text, x, y, size}` |
+| `poly3` | `{kind, pts:[{x,y,z}…], closed}` — a 3D polyline; closed, it also counts as a face |
+| `mesh` | `{kind, vs:[{x,y,z}…], fs:[[i,j,k…]…]}` — faces index into vs, any vertex count per face |
 
-Angles are radians everywhere. **Coordinates are centered**: (0,0) is the
-middle of the canvas, +x right, +y down, units are CSS pixels.
+Angles are radians everywhere — the one exception is a camera's field of view,
+which is degrees, because that is how lenses are written. **Coordinates are
+centered**: (0,0) is the middle of the canvas, +x right, +y down, units are CSS
+pixels. The 3D world extends that rather than replacing it: +x right, +y **down**,
++z away from the viewer (right-handed), so a 2D shape lifted to z = 0 projects
+upright and the default camera sits in front of it at negative z.
+
+The two 3D kinds ride the same `geometry` port type, and in a 2D node they
+**degrade to their front elevation** — `toPoly` drops z, so bounds, hit tests,
+offsets and Draw all keep working instead of returning nothing (an unprojected
+mesh strokes its faces as a flat wireframe). A 2D transform applies to x/y and
+leaves z untouched. For real 3D work: `d3/move3`/`rotate3`/`scale3` (which lift a
+2D shape into `poly3`), and `d3/project`, which turns 3D geometry plus a camera
+into ordinary 2D `poly` and `line` geometry, already sorted back to front.
 
 Every kind is **parameterized by arc length** over `t = 0..1`, so a parameter
 means the same place on the curve whichever node produced it: Curve

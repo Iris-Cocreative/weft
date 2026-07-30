@@ -1371,5 +1371,373 @@ const EXAMPLES = {
     ['t1', 'T', 'mu', 'A'],
     ['mu', 'R', 'ro', 'A'],
     ['ro', 'G', 'dr', 'G']
+  ]),
+
+  /* The geometry pass (v0.11) — two circles drifting apart, and everything the
+   * new curve nodes can say about the pair: the lens where they overlap, the
+   * crescent left over, its mirror image, the two crossing points, the axis
+   * through them, and the lens area as a number on the canvas. None of this was
+   * expressible before Curve Intersection and Region Boolean existed. Three
+   * Draw nodes each take TWO wires into G — the merge is what keeps a family of
+   * shapes on one style instead of one Draw per shape. */
+  'Vesica': _EX([
+    ['t1', 'input/time', 30, 40],
+    ['mu', 'math/mul', 230, 40, { B: 0.5 }],
+    ['sn', 'math/sin', 430, 40],
+    ['rm', 'math/remap', 630, 40, { S0: -1, S1: 1, T0: 30, T1: 95 }],
+    ['ng', 'math/neg', 860, 40],
+    ['pb', 'vec/construct', 860, 200],
+    ['pa', 'vec/construct', 1060, 40],
+    ['ca', 'crv/circle', 1260, 40, { R: 110 }],
+    ['cb', 'crv/circle', 1260, 200, { R: 110 }],
+    ['ix', 'crv/intersect', 1480, 40],
+    ['rg1', 'crv/region', 1480, 240, { mode: 'intersection' }],
+    ['rg2', 'crv/region', 1480, 460, { mode: 'difference' }],
+    ['pl', 'crv/polyline', 1720, 40, { C: false }],
+    ['ar', 'crv/area', 1720, 240],
+    ['mi', 'xf/mirror', 1720, 460],
+    ['rd', 'math/round', 1920, 240],
+    ['tx', 'disp/text', 2120, 240, { P: { x: 0, y: 196 }, S: 13 }],
+    ['dwMark', 'disp/draw', 2360, 40, { S: { r: 251, g: 172, b: 0, a: 0.95 }, W: 1.4 }],
+    ['dwLens', 'disp/draw', 2360, 200, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.16 }, W: 1.6 }],
+    ['dwCres', 'disp/draw', 2360, 380, { S: { r: 129, g: 140, b: 248, a: 0.85 }, F: { r: 129, g: 140, b: 248, a: 0.1 }, W: 1.4 }],
+    ['dwCirc', 'disp/draw', 2360, 560, { S: { r: 110, g: 125, b: 160, a: 0.32 }, W: 1 }],
+    ['dwTx', 'disp/draw', 2360, 720, { S: { r: 130, g: 141, b: 163, a: 0.9 } }],
+    ['bg', 'disp/bg', 2360, 860, { C: { r: 9, g: 11, b: 17, a: 1 } }]
+  ], [
+    ['t1', 'T', 'mu', 'A'],
+    ['mu', 'R', 'sn', 'V'],
+    ['sn', 'R', 'rm', 'V'],
+    ['rm', 'R', 'ng', 'V'],
+    ['rm', 'R', 'pb', 'X'],
+    ['ng', 'R', 'pa', 'X'],
+    ['pa', 'P', 'ca', 'P'],
+    ['pb', 'P', 'cb', 'P'],
+    ['ca', 'C', 'ix', 'C1'],
+    ['cb', 'C', 'ix', 'C2'],
+    ['ca', 'C', 'rg1', 'A'],
+    ['cb', 'C', 'rg1', 'B'],
+    ['ca', 'C', 'rg2', 'A'],
+    ['cb', 'C', 'rg2', 'B'],
+    ['ix', 'P', 'pl', 'V'],
+    ['rg1', 'C', 'ar', 'C'],
+    ['ar', 'A', 'rd', 'V'],
+    ['rd', 'R', 'tx', 'T'],
+    ['rg2', 'C', 'mi', 'G'],
+    ['pl', 'C', 'dwMark', 'G'],
+    ['ix', 'P', 'dwMark', 'G'],
+    ['rg1', 'C', 'dwLens', 'G'],
+    ['rg2', 'C', 'dwCres', 'G'],
+    ['mi', 'G', 'dwCres', 'G'],
+    ['ca', 'C', 'dwCirc', 'G'],
+    ['cb', 'C', 'dwCirc', 'G'],
+    ['tx', 'G', 'dwTx', 'G']
+  ]),
+
+  /* Native 3D (v0.12) — nine hexagons on a ring, extruded into stones, laid flat
+   * by a quarter turn about x and then spun about y. A second, smaller ring comes
+   * from scaling the first about the origin, which shrinks its radius too.
+   *
+   * The whole 3D idiom is the last four nodes. Project takes the geometry as ONE
+   * list (both rings arrive on two wires into G), so its back-to-front sort is
+   * global and the near stones of one ring correctly hide the far stones of the
+   * other. It emits three parallel lists — screen faces, shade, depth — so the
+   * shade goes through Remap into Colour HSL and a SINGLE Draw paints all 144
+   * faces. No camera on ctx, no second renderer: what reaches the draw list is
+   * ordinary 2D geometry, which is why the export renders exactly this.
+   *
+   * Drag the cloth to orbit; the wheel pulls the camera back. Because the
+   * projection scales with the canvas height, the scene frames itself at any
+   * size — including the gallery thumbnail. */
+  'Henge': _EX([
+    ['t1', 'input/time', 30, 40],
+    ['sr', 'sets/series', 30, 200, { S: 0, N: 1, C: 9 }],
+    ['mu2', 'math/mul', 230, 40, { B: 0.35 }],
+    ['mu1', 'math/mul', 230, 200, { B: 0.6981317007977318 }],
+    ['pv', 'vec/polar', 430, 200, { R: 150 }],
+    ['pg', 'crv/polygon', 630, 200, { R: 40, N: 6 }],
+    ['ex', 'd3/extrude', 830, 200, { H: 70, C: true }],
+    ['rx', 'd3/rotate3', 1030, 200, { R: 1.5707963267948966, A: { x: 1, y: 0, z: 0 } }],
+    ['ry', 'd3/rotate3', 1230, 200, { A: { x: 0, y: 1, z: 0 } }],
+    ['ob', 'd3/orbit', 1430, 20, { T: { x: 0, y: 0, z: 0 }, D: 540, A: 0.55, E: 0.42, F: 42 }],
+    ['sc', 'd3/scale3', 1430, 400, { F: { x: 0.55, y: 0.55, z: 0.55 } }],
+    ['rz', 'd3/rotate3', 1630, 400, { R: 0.3490658503988659, A: { x: 0, y: 1, z: 0 } }],
+    ['pj', 'd3/project', 1850, 180, { mode: 'shaded' }],
+    ['rm', 'math/remap', 2070, 340, { S0: 0, S1: 1, T0: 0.09, T1: 0.66 }],
+    ['hs', 'disp/hsl', 2290, 340, { H: 0.53, S: 0.52 }],
+    ['dw', 'disp/draw', 2510, 180, { S: { r: 7, g: 11, b: 18, a: 0.6 }, W: 1 }],
+    ['bg', 'disp/bg', 2510, 400, { C: { r: 8, g: 10, b: 16, a: 1 } }]
+  ], [
+    ['sr', 'S', 'mu1', 'A'],
+    ['mu1', 'R', 'pv', 'A'],
+    ['pv', 'P', 'pg', 'P'],
+    ['pg', 'C', 'ex', 'G'],
+    ['ex', 'G', 'rx', 'G'],
+    ['t1', 'T', 'mu2', 'A'],
+    ['mu2', 'R', 'ry', 'R'],
+    ['rx', 'G', 'ry', 'G'],
+    ['ry', 'G', 'sc', 'G'],
+    ['sc', 'G', 'rz', 'G'],
+    ['ry', 'G', 'pj', 'G'],
+    ['rz', 'G', 'pj', 'G'],
+    ['ob', 'C', 'pj', 'C'],
+    ['pj', 'S', 'rm', 'V'],
+    ['rm', 'R', 'hs', 'L'],
+    ['pj', 'F', 'dw', 'G'],
+    ['hs', 'C', 'dw', 'F']
   ])
+};
+
+/* ---------------------------------------------------------------------------
+ * EXAMPLE_META — what the gallery knows about each example.
+ *
+ * Deliberately a PARALLEL object rather than fields on the graphs: EXAMPLES
+ * stays name → bare graph JSON, so App.setGraph, the share hash and
+ * test/smoke.js keep seeing exactly what they saw before. smoke.js checks the
+ * two key sets are identical, so they can't drift apart.
+ *
+ * The block comments above each graph are the long-form developer notes;
+ * blurb/teaches here are the distilled gallery copy drawn from them.
+ *
+ *   cat     one of EXAMPLE_CATS (chip order in the gallery)
+ *   blurb   one sentence — what you are looking at
+ *   teaches what this example is the best in the corpus at showing
+ *   tags    extra search words (name + blurb + tags + node types are the haystack)
+ *   needs   what the browser must grant before it fully comes alive:
+ *           'mic' | 'tab-audio' | 'gesture' (audio waits for a click) | 'scroll'
+ *   frames  frames to advance before snapping the thumbnail — springs, traces
+ *           and scopes look dead at t=0 and need a run-up
+ * ------------------------------------------------------------------------- */
+
+const EXAMPLE_CATS = [
+  'Fundamentals', 'Lists & grids', 'Geometry', '3D', 'State & interaction',
+  'Audio synthesis', 'Scopes & figures', 'Audio input', 'Custom JS & meta'
+];
+
+/* Chip and card hue per category — named as CATS keys rather than hex, so the
+ * gallery rides the node palette (js/nodes.js) instead of forking it. Each
+ * example family borrows the hue of the node category it leans on most. */
+const EXAMPLE_CAT_HUE = {
+  'Fundamentals': 'Params',
+  'Lists & grids': 'Sets',
+  'Geometry': 'Curve',
+  '3D': '3D',
+  'State & interaction': 'State',
+  'Audio synthesis': 'Audio',
+  'Scopes & figures': 'Display',
+  'Audio input': 'Input',
+  'Custom JS & meta': 'Meta'
+};
+
+const EXAMPLE_META = {
+  'Hexa graph': {
+    cat: 'State & interaction',
+    blurb: 'A breathing hexagon lattice — hover wakes it, springs ripple the radius, and six rotated Trace pens draw the motion as a mandala.',
+    teaches: 'One Spring node is hundreds of independent mass-machines, and a Trace pen turns any moving point into a seismograph trail.',
+    tags: ['grid', 'spring', 'trace', 'hotspot', 'mandala'],
+    needs: [], frames: 120
+  },
+  'Orbit study': {
+    cat: 'Fundamentals',
+    blurb: 'Time becomes an angle, the angle becomes a polar point, and a circle orbits with a tether line back to the centre.',
+    teaches: 'The shortest complete chain in Weft: input → maths → vector → curve → display.',
+    tags: ['time', 'polar', 'circle', 'first patch'],
+    needs: [], frames: 40
+  },
+  'Phyllotaxis': {
+    cat: 'Fundamentals',
+    blurb: 'A golden-angle spiral of circles, sized by an expression and coloured by index.',
+    teaches: 'One Series fans a single Circle node into hundreds — the index drives angle, radius, size and hue at once.',
+    tags: ['series', 'spiral', 'golden angle', 'hsl'],
+    needs: [], frames: 40
+  },
+  'Mouse field': {
+    cat: 'Lists & grids',
+    blurb: 'A grid of dots built from one Series with mod and floor, repelled and recoloured by the pointer.',
+    teaches: 'A flat list becomes a grid with mod/floor — and distance-to-cursor is just another parallel list.',
+    tags: ['series', 'grid', 'mouse', 'gradient'],
+    needs: [], frames: 30
+  },
+  'Noise blob': {
+    cat: 'Fundamentals',
+    blurb: 'A closed spline through polar points whose radii breathe with noise and time.',
+    teaches: 'Interpolated curves through a list of points — noise on the radius is all it takes to make a shape feel alive.',
+    tags: ['noise', 'spline', 'polar', 'organic'],
+    needs: [], frames: 40
+  },
+  'Checker dispatch': {
+    cat: 'Lists & grids',
+    blurb: 'One grid of points split into two families by a checkerboard pattern, breathing in opposite phase.',
+    teaches: 'Dispatch is the list-level if/else — and its sibling Iso field shows when you don’t need it at all.',
+    tags: ['dispatch', 'branching', 'grid', 'checkerboard'],
+    needs: [], frames: 40
+  },
+  'Iso field': {
+    cat: 'Lists & grids',
+    blurb: 'A 3-phase pulse across an isometric lattice, with no branching at all.',
+    teaches: 'Grid’s K colour class becomes a phase offset — 8 nodes where Checker dispatch needs 21.',
+    tags: ['grid', 'list matching', 'no branching', 'iso'],
+    needs: [], frames: 40
+  },
+  'Cursor wave': {
+    cat: 'Lists & grids',
+    blurb: 'Iso field plus the pointer: rings radiate from the cursor, and the field blooms under it while staying quiet far away.',
+    teaches: 'One Expression earns all four of its variables — distance drives both the phase and the amplitude of the same radius.',
+    tags: ['grid', 'mouse', 'expression', 'waves'],
+    needs: [], frames: 40
+  },
+  'Living lattice': {
+    cat: 'State & interaction',
+    blurb: 'A honeycomb that behaves like a material — the pointer pumps energy in, and a click drops a stone whose ring travels outward.',
+    teaches: 'Per-item state: one Spring is 300+ independent mass-machines, and a Hotspot on a viewport-sized rect makes the whole canvas an interface element.',
+    tags: ['spring', 'hotspot', 'honeycomb', 'hexagons', 'physics'],
+    needs: [], frames: 90
+  },
+  'Click toy': {
+    cat: 'State & interaction',
+    blurb: 'Three circles are three independent toggle buttons from one node chain, with a real DOM button to reset them.',
+    teaches: 'Hotspot, Latch and Counter are per-list-item state machines — one chain, three separate memories.',
+    tags: ['hotspot', 'latch', 'counter', 'button', 'dom'],
+    needs: [], frames: 40
+  },
+  'Scroll scene': {
+    cat: 'State & interaction',
+    blurb: 'Page scroll as the master parameter: the sun climbs, the sky warms, a windmill spins, the hint fades out.',
+    teaches: 'Scroll is an ordinary input wire — wheel over the cloth to scrub the editor’s simulated page.',
+    tags: ['scroll', 'scene', 'gradient', 'landing page'],
+    needs: ['scroll'], frames: 40
+  },
+  'Solar system': {
+    cat: 'Lists & grids',
+    blurb: 'The solar system as a dataflow — one Kepler machine, eight planets, real J2000 orbital elements from JPL.',
+    teaches: 'List matching at full scale: mean anomaly → true anomaly → radius, solved once and answered for eight bodies, from Text List data.',
+    tags: ['list matching', 'kepler', 'text list', 'data', 'orbits', 'planets'],
+    needs: [], frames: 40
+  },
+  'Feedback chase': {
+    cat: 'State & interaction',
+    blurb: 'A circle chases the pointer through a legal feedback loop — each axis is a lerp of last frame’s answer.',
+    teaches: 'Delay is the one sanctioned cycle: the circle IS the loop, with no Smooth node involved.',
+    tags: ['feedback', 'delay', 'loop', 'mouse'],
+    needs: [], frames: 60
+  },
+  'Seismograph': {
+    cat: 'State & interaction',
+    blurb: 'Move the pointer and watch it register twice — a Time Graph on the loom, a streaming Trace on the cloth.',
+    teaches: 'Two ways to see one signal over time: the inspector graph on the node, the drawn trail on the canvas.',
+    tags: ['trace', 'time graph', 'mouse', 'signal'],
+    needs: [], frames: 120
+  },
+  'Drone chord': {
+    cat: 'Audio synthesis',
+    blurb: 'Four sine voices in a 2:3:4:5 stack, swelling on a slow LFO that also breathes a circle.',
+    teaches: 'Audio wires carry handles into a live Web Audio graph — one list of ratios becomes four oscillators.',
+    tags: ['oscillator', 'harmonics', 'lfo', 'drone'],
+    needs: ['gesture'], frames: 40
+  },
+  'Theremin': {
+    cat: 'Audio synthesis',
+    blurb: 'Mouse X is pitch snapped to A minor pentatonic, mouse Y is volume, and the trace draws the snapped melody as a stairstep.',
+    teaches: 'The Scale node is what turns a continuous input into an instrument — quantization made visible.',
+    tags: ['scale', 'pentatonic', 'mouse', 'trace', 'instrument'],
+    needs: ['gesture'], frames: 120
+  },
+  'Scale board': {
+    cat: 'Audio synthesis',
+    blurb: 'The theremin grown into an instrument you can see — every note a labelled rung, with three real button drones underneath.',
+    teaches: 'Set Union dedupes the snapped notes into rungs, and one Element node list-matches into three actual HTML buttons.',
+    tags: ['scale', 'set union', 'dom', 'buttons', 'instrument'],
+    needs: ['gesture'], frames: 40
+  },
+  'Cymatics': {
+    cat: 'Scopes & figures',
+    blurb: 'Sand on a vibrating plate migrates to the quiet nodal lines of whatever frequency is playing.',
+    teaches: 'Sound made visible — slide the pitch and the whole figure reorganizes.',
+    tags: ['cymatics', 'nodal', 'frequency', 'pattern'],
+    needs: ['gesture'], frames: 60
+  },
+  'Oscilloscope': {
+    cat: 'Scopes & figures',
+    blurb: 'A real oscilloscope and a vectorscope — a sawtooth melting through a mouse-driven lowpass above, an XY figure below.',
+    teaches: 'The Scope node taps an audio wire and draws the actual samples, trigger-locked.',
+    tags: ['scope', 'vectorscope', 'filter', 'lissajous'],
+    needs: ['gesture'], frames: 60
+  },
+  'Rose window': {
+    cat: 'Scopes & figures',
+    blurb: 'A rose curve built from pure list math, turned into sound by Path to Audio and retraced by the vectorscope’s beam.',
+    teaches: 'A k-rose is two partials at the ratio (k+1):(k−1) in quadrature — the interval IS the flower.',
+    tags: ['rose', 'path to audio', 'vectorscope', 'harmony', 'petals'],
+    needs: ['gesture'], frames: 60
+  },
+  'Harmonograph': {
+    cat: 'Scopes & figures',
+    blurb: 'The vectorscope’s math twin, with no sound at all — two damped pendulums swing a pen.',
+    teaches: 'Frequency ratio and damping alone produce the whole family of figures; Time drifts the phase so the web revolves.',
+    tags: ['harmonograph', 'ratio', 'damping', 'pendulum', 'no audio'],
+    needs: [], frames: 60
+  },
+  'Shape song': {
+    cat: 'Scopes & figures',
+    blurb: 'A polygon’s outline becomes a looped stereo waveform — the beam retraces it 108 times a second, and it IS the sound you hear.',
+    teaches: 'Path to Audio makes geometry and timbre the same object: slide the sides and both change together.',
+    tags: ['path to audio', 'oscilloscope music', 'polygon'],
+    needs: ['gesture'], frames: 60
+  },
+  'Mic meter': {
+    cat: 'Audio input',
+    blurb: 'Microphone loudness as a number — a breathing circle and a scrolling trace of the room.',
+    teaches: 'The mic is an ordinary input: one number, smoothed, free to drive anything.',
+    tags: ['mic', 'loudness', 'trace', 'meter'],
+    needs: ['mic'], frames: 120
+  },
+  'Sing': {
+    cat: 'Audio input',
+    blurb: 'Sing a note and the graph sings it back in key — Pitch In hears you, Scale snaps it, an oscillator answers.',
+    teaches: 'Clarity from the pitch tracker gates the voice, so silence stays silent.',
+    tags: ['pitch', 'mic', 'scale', 'gate', 'voice'],
+    needs: ['mic', 'gesture'], frames: 40
+  },
+  'Music scope': {
+    cat: 'Audio input',
+    blurb: 'Play music into the vectorscope — share a tab with sound and the stereo field draws itself.',
+    teaches: 'A goniometer reads a mix at a glance: mono is a diagonal line, wide stereo blooms.',
+    tags: ['track in', 'goniometer', 'stereo', 'tab audio'],
+    needs: ['tab-audio', 'gesture'], frames: 60
+  },
+  'Visualizer': {
+    cat: 'Audio input',
+    blurb: 'The full rig — sand, spectrum, goniometer and meters, all listening to one shared music tab.',
+    teaches: 'One Track In, listened to five different ways — the wire fans out, nothing is duplicated.',
+    tags: ['track in', 'fft', 'spectrum', 'goniometer', 'tab audio'],
+    needs: ['tab-audio', 'gesture'], frames: 60
+  },
+  'Mandala': {
+    cat: 'Custom JS & meta',
+    blurb: 'Seeded particles in a symmetry slice, joined by a distance-threshold web, replicated around the centre.',
+    teaches: 'Two Custom JS nodes hold the genuinely code-shaped parts; everything else is sliders, seeded randoms and wires.',
+    tags: ['custom js', 'symmetry', 'particles', 'seeded random'],
+    needs: [], frames: 40
+  },
+  'Superformula': {
+    cat: 'Custom JS & meta',
+    blurb: 'A shape no native node knows, wrapped in one code node with its magic numbers promoted to sliders.',
+    teaches: 'The knob-extraction pattern: in “each” mode the code runs per angle and list-matches against single-valued knobs, exactly like a native node.',
+    tags: ['custom js', 'knob extraction', 'superformula'],
+    needs: [], frames: 40
+  },
+  'Vesica': {
+    cat: 'Geometry',
+    blurb: 'Two drifting circles and everything the curve nodes can say about the pair — the lens, the crescents, the crossing points, and the area as a number.',
+    teaches: 'Curve Intersection and Region Boolean cut shapes that were previously inexpressible, and three Draw nodes take two wires each so a family of shapes shares one style.',
+    tags: ['intersection', 'region boolean', 'mirror', 'area', 'multi-wire'],
+    needs: [], frames: 40
+  },
+  'Henge': {
+    cat: '3D',
+    blurb: 'Two rings of hexagonal stones, extruded from flat polygons and turning on a table you can grab and orbit.',
+    teaches: 'The whole 3D idiom in four nodes: Extrude a 2D curve, Project it with a camera, and wire the shade list through Colour HSL so one Draw paints all 144 faces in depth order.',
+    tags: ['3d', 'extrude', 'project', 'orbit camera', 'shading', 'painter’s algorithm'],
+    needs: [], frames: 60
+  }
 };

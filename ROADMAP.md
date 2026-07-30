@@ -317,6 +317,23 @@ is now in, so any of these can be picked up in a workshop pass):
   outputs right, each port a dot + letter + the same "label · type" text the
   loom shows on hover, and port labels are searchable. Note Pad glyph
   nudged up 0.5px — its bottom stroke was clipping at the viewBox edge.
+- [shipped 2026-07-29] **Example gallery** — the `Examples…` `<select>` became
+  a browsable modal: thumbnail, blurb, a "teaches" line, node/wire counts and
+  `needs` badges per card, live search over a precomputed haystack (name +
+  blurb + tags + every node type in the graph), and category chips reusing the
+  `.seg` mode-toggle livery. Cards wear the loom livery like nodes.html, so the
+  three surfaces read as one system. Three pieces made it cheap: a parallel
+  **`EXAMPLE_META`** in examples.js (the prose was already written, trapped in
+  block comments — `EXAMPLES` itself is untouched, and smoke check 18 enforces
+  key parity so they can't drift); **`App.loadExample(name)`** extracted from
+  the old select handler; and **`Viewport.makeCtx`**, which the live loop and
+  the new offscreen `App.renderThumb` now share — `LM.drawItem` never cared
+  which 2D context it was handed, so thumbnails needed no engine change at all.
+  Thumbnails step each graph 30–120 frames (per-example, `EXAMPLE_META.frames`)
+  because springs, traces and scopes are empty at t=0, and render one card per
+  animation frame so the modal stays interactive. The export modal's missing
+  Esc handler was fixed here too. Still open: the spacing pass DESIGN.md flags —
+  it needs real DOM boxes, the way the 2026-07-14 audit was done.
 
 ### Legibility pass — [next], James 2026-07-14
 
@@ -426,16 +443,42 @@ Then:
   and is the highest-leverage item on the plan for Webflow/Holos work, because it
   makes the *foundation* stop being Weft's problem.
 
-## 8. Third dimension
+## 8. Third dimension — ✅ SHIPPED v0.12 (2026-07-30), by a different route
 
-Staged, don't leap:
-1. **2.5D first**: z as a first-class number → scale/parallax/draw-order nodes.
-   Cheap, no new renderer, covers most "depth" wishes for web graphics.
-2. Renderer abstraction: drawList is already renderer-agnostic data — define a
-   render-target interface (Canvas2D today; SVG target is nearly free and gives
-   crisp export; WebGL later).
-3. True 3D = vendored three.js target + Vector3/Mesh/Camera node category.
-   Big; only when 2D feels saturated. (Community Globe engine experience applies.)
+The plan here used to be staged: 2.5D, then a renderer abstraction, then vendored
+three.js "only when 2D feels saturated". **We took a different route** (James's
+call): a *native software 3D pipeline*, shipped as the `js/nodes-3d.js` pack.
+
+It turned out to be a much better fit against the actual code, for one reason:
+**projection is an ordinary node.** `d3/project` takes 3D geometry plus a camera
+and emits ordinary 2D geometry, already depth-sorted. So none of the staging was
+needed — no renderer abstraction, no second render target, no `ctx` change, no
+new invariant, and the editor and an exported bundle render identically *by
+construction*, because all the work happens inside `LM.*` and `compute` (which
+serialize). Multiple cameras and multiple views in one patch are free.
+
+What that bought: `poly3` and `mesh` geometry kinds (degrading to their front
+elevation in any 2D node), the `point3` and `camera` port types, a mat4 + camera +
+software-renderer layer in `js/engine.js`, and 24 `d3/*` nodes — construct,
+cameras (including a drag-to-orbit one built on the existing `ctx.mouse`), six
+primitives, Extrude and Revolve as bridges from every existing curve node,
+3D transforms, and face analysis.
+
+Still open, in rough order of appetite:
+- **Depth fidelity.** The painter's algorithm sorts by face centroid, so large
+  interpenetrating faces can sort wrong, and a face with a vertex behind the
+  camera is dropped rather than clipped. A face-splitting sort mode (BSP-ish) or
+  an honest near-plane clip would fix both; neither needs new architecture.
+- **Two Draw nodes still can't interleave in depth** — the same rule 2D already
+  has. One Project → one Draw is the idiom; a Draw that accepted a depth key
+  would generalize it.
+- **Modelling depth**: Loft between `poly3` profiles, Mesh Boolean, Subdivide,
+  per-face materials beyond the single shade list.
+- **The renderer abstraction is still a good idea on its own merits** — an SVG
+  target for crisp export is nearly free from `drawList`, and is now completely
+  decoupled from 3D.
+- WebGL remains the answer only if a patch needs tens of thousands of faces.
+  (Community Globe engine experience applies.)
 
 ## 9. Horizon / unsorted
 

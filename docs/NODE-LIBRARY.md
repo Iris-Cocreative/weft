@@ -16,13 +16,14 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | Category | Prefix | Role in a patch | Count |
 |---|---|---|---|
 | **Input** | `input/` | The world flowing in — time, pointer, page, keys, interaction surfaces | 7 |
-| **Params** | `params/` | Values a human sets — sliders, toggles, swatches, containers, panels | 10 |
+| **Params** | `params/` | Values a human sets — sliders, toggles, swatches, containers, panels | 11 |
 | **State** | `state/` | Cross-frame memory — smoothing, springs, counters, latches, the Delay feedback edge | 9 |
 | **Maths** | `math/` | Numbers in, numbers out — pure, per-item; comparison & boolean logic | 31 |
 | **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 14 |
 | **Vector** | `vec/` | Points and vectors — position as data | 14 |
 | **Curve** | `crv/` | Geometry construction, interrogation and reshaping | 22 |
 | **Transform** | `xf/` | Moving geometry — affine maps and replication | 5 |
+| **3D** | `d3/` | The 3D pack (`js/nodes-3d.js`) — points, cameras, primitives, the Extrude/Revolve bridges from 2D, and Project, which turns a camera into flat geometry | 24 |
 | **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM), Trace, Cymatics, Harmonograph | 9 |
 | **Meta** | `meta/` | Composition — Cluster and its Port In / Port Out boundary markers (hidden from the palette) | 3 |
 | **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number + routable signal), Pitch In (autocorrelation pitch tracker for any wired audio, mic fallback → Hz/MIDI), Track In (computer audio via the share picker, stereo + L/R split), Scope (oscilloscope: waveform samples back onto the cloth), Vector Scope (XY / Lissajous), Bands (FFT spectrum → list of band levels), Mix (sum signals — epicycles), Path to Audio (geometry → looped stereo waveform — oscilloscope music) | 15 |
@@ -185,14 +186,51 @@ Still open:
   smooth 2D gradient field (Demo 3's output). In web terms: colour-field
   interpolation on canvas; gorgeous, later.
 - **System-dynamics pack** — Stock, Flow, Converter, Delay (Machinations/Loopy precedent) — phase 8.
-- **3D pack** — Vector3, Mesh, Camera — phase 7, three.js target.
+
+---
+
+## The 3D pack — shipped in v0.12 *(`js/nodes-3d.js`)*
+
+The first real node pack, and the proof that principle 1 works: a separate file
+calling `defNode` into the same registry, needing no change to the engine's
+evaluator, the exporter or the editor. The route is **native software 3D**, not
+the vendored three.js the roadmap had staged, because of one design decision —
+**projection is an ordinary node**. `d3/project` takes 3D geometry plus a camera
+and emits ordinary 2D geometry, already sorted back to front, so `ctx`, the draw
+list, the renderer and the export contract never learned about 3D at all.
+
+- **Construct** — Point3, Deconstruct3, PolyLine3, Grid3 (a lattice with per-item
+  `I`/`J`/`K` keys, principle 6 in three dimensions)
+- **Camera** — Camera (perspective | orthographic), Orbit Camera (drag to orbit,
+  wheel to pull back — built on the existing `ctx.mouse`/`ctx.scroll`, no new
+  channel), and both come back out as a plain-JSON `camera` value
+- **Project** — the hinge. Three parallel lists out: screen faces, shade 0..1,
+  view depth. Wire the shade through Colour HSL and **one** Draw paints the whole
+  shaded solid, because list matching does the per-face work
+- **Primitives** — Box, Sphere, Cylinder, Cone, Torus, Plane
+- **Bridges from 2D** — Extrude and Revolve. The most valuable nodes in the pack:
+  they turn every curve node in the library into a 3D modelling tool
+- **Transforms** — Move3, Rotate3, Scale3 (a bare number coerces to a uniform
+  factor, so there is no mode toggle to learn)
+- **Analysis** — Faces (mesh → face polys + normals + centroids), Dot/Cross/Unit/
+  Length/Amplitude in 3D
+
+Still open, and deliberately so: no z-buffer (the painter's algorithm sorts by
+face centroid, so large interpenetrating faces can sort wrong — subdivide, or use
+two Project → Draw pairs where the order is known), no near-plane clipping (a
+face with a vertex behind the camera is dropped, not cut), no textures, no
+per-face materials beyond the shade list. Candidates for a later pass: a Mesh
+Boolean, a Loft between poly3 profiles, Subdivide, and a Face Sort mode that
+splits rather than drops.
 
 ---
 
 ## Library principles
 
 1. **Small core, honest packs.** A node earns a place in core by being useful in
-   most patches. Domain nodes (charts, stocks/flows, 3D) live in packs.
+   most patches. Domain nodes (charts, stocks/flows, 3D) live in packs — the 3D
+   pack is the first one built, and it needed one `<script>` tag and no change to
+   the evaluator, the exporter or the editor.
 2. **GH names, GH single-letter ports.** Familiarity is a feature; the catalog
    is the contract.
 3. **Custom JS is the pressure valve.** Not every function becomes a node —

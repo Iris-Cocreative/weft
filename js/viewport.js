@@ -267,6 +267,28 @@ const Viewport = {
       }
     };
 
+    /* ---- the ctx contract, in one place ----
+     * Every compute sees this object (NODE-SPEC §6). It has three other copies
+     * that must stay identical (invariant #8): the export mount, smoke's mkCtx,
+     * and the meta/cluster child ctx. Having the live loop and the thumbnail
+     * renderer share ONE definition removes the drift risk between those two.
+     * `o` supplies the live channels; anything omitted falls back to a neutral
+     * default, which is exactly what an offscreen thumbnail wants. */
+    Viewport.makeCtx = (W, H, t, dt, frame, o) => {
+      o = o || {};
+      return {
+        t, dt, frame, W, H,
+        mouse: o.mouse || { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false },
+        keys: o.keys || { down: {}, pressed: {}, released: {} },
+        scroll: o.scroll || { y: 0, max: 3000, v: 0 },
+        measureText, defs: NODE_DEFS,
+        drawList: [], domList: [], audioList: [], bg: null, errors: {}, out: {},
+        domState: o.domState || {},
+        audioState: o.audioState || {},
+        tuneA4: o.tuneA4 || 432
+      };
+    };
+
     let t = 0, frame = 0, last = performance.now(), fpsA = 60, lastFps = 0;
 
     const drawGhosts = (ctx, wantSelected) => {
@@ -281,6 +303,10 @@ const Viewport = {
         const outs = ctx.out[n.id];
         if (!outs) continue;
         for (const o of (def.dynamic ? (n.values && n.values.outs) : def.outputs) || []) {
+          /* geometry and 2D points only — deliberately NOT point3 or camera: an
+             unprojected 3D point has no screen position to ghost at. Wire the 3D
+             work through d3/project and the ghosts come back automatically,
+             because what it emits is ordinary 2D geometry. */
           if (o.type !== 'geometry' && o.type !== 'point') continue;
           const L = outs[o.name] || [];
           for (const g of L) {
@@ -356,13 +382,11 @@ const Viewport = {
       scroll.v = scroll.v * 0.8 + ((scroll.y - scrollLastY) / Math.max(dt, 1e-3)) * 0.2;
       scrollLastY = scroll.y;
 
-      const ctx = {
-        t, dt: Viewport.playing ? dt : 0, frame: frame++, mouse, keys, scroll,
-        W: rect.width, H: rect.height, measureText, defs: NODE_DEFS,
-        drawList: [], domList: [], audioList: [], domState, bg: null, errors: {}, out: {},
+      const ctx = Viewport.makeCtx(rect.width, rect.height, t, Viewport.playing ? dt : 0, frame++, {
+        mouse, keys, scroll, domState,
         audioState: audioHost ? audioHost.state() : {},
-        tuneA4: (App.graph.meta && App.graph.meta.tuneA4) || 432
-      };
+        tuneA4: App.graph.meta && App.graph.meta.tuneA4
+      });
       try { LM.evaluateGraph(App.graph, NODE_DEFS, ctx); } catch (e) { /* keep rendering */ }
       Viewport.lastErrors = ctx.errors; // per-node eval errors, read by the assistant
       syncDom(ctx.domList);
