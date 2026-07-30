@@ -1290,7 +1290,7 @@ defNode('crv/offset', {
 });
 
 defNode('crv/intersect', {
-  title: 'Curve Intersection', cat: 'Curve', width: 176,
+  title: 'Curve Intersection', cat: 'Curve', width: 168,
   desc: 'Where two curves cross — points P plus the parameter on each curve (T1, T2), ready to feed back into Evaluate Curve. In self mode C2 is ignored and the node finds where C1 crosses itself',
   inputs: [{ name: 'C1', type: 'geometry' }, { name: 'C2', type: 'geometry' }],
   outputs: [
@@ -1308,7 +1308,8 @@ defNode('crv/intersect', {
     return { P: hits.map(h => h.pt), T1: hits.map(h => h.ta), T2: hits.map(h => h.tb) };
   },
   buildBody: (node, body, changed) =>
-    _modeSeg(node, body, changed, 'mode', [['curve × curve', 'pair'], ['self', 'self']], 'pair')
+    _modeSeg(node, body, changed, 'mode',
+      [['curves', 'pair', 'where C1 crosses C2'], ['self', 'self', 'where C1 crosses itself (C2 ignored)']], 'pair')
 });
 
 defNode('crv/closest', {
@@ -1492,7 +1493,7 @@ defNode('crv/fillet', {
 });
 
 defNode('crv/region', {
-  title: 'Region Boolean', cat: 'Curve', width: 190,
+  title: 'Region Boolean', cat: 'Curve', width: 176,
   desc: 'Union, intersection or difference (A minus B) of two closed regions. Weft geometry has no holes: a cutter sitting entirely inside A returns A unchanged',
   inputs: [{ name: 'A', type: 'geometry' }, { name: 'B', type: 'geometry' }],
   outputs: [{ name: 'C', type: 'geometry' }],
