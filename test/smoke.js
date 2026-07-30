@@ -748,8 +748,13 @@ for (const name of Object.keys(EXAMPLES)) {
   const same = A2.map(p => ({ x: p.x, y: p.y }));
   if (LM.clipPoly(A2, same, 'difference').length) failures.push('clipPoly: a shape minus itself must be empty, got slivers');
   if (Math.abs(area(LM.clipPoly(A2, same, 'union')[0]) - 10000) > 1) failures.push('clipPoly: a shape unioned with itself is itself');
+  /* two r=100 circles 100 apart: both discs minus the lens they share. The
+     96-gons come in a shade under the true circles, hence the 0.2% window. */
+  const lens = 2 * 10000 * Math.acos(0.5) - 50 * Math.sqrt(30000);
+  const wantU = 2 * Math.PI * 10000 - lens;
   const cu = LM.clipPoly(cA.pts, cB.pts, 'union');
-  if (cu.length !== 1 || Math.abs(area(cu[0]) - 18197) > 60) failures.push('clipPoly circles: union area ' + (cu[0] ? area(cu[0]).toFixed(0) : 'none') + ', want ~18197');
+  if (cu.length !== 1 || Math.abs(area(cu[0]) - wantU) > wantU * 0.002)
+    failures.push('clipPoly circles: union area ' + (cu[0] ? area(cu[0]).toFixed(0) : 'none') + ', want ~' + wantU.toFixed(0));
 }
 
 /* 19 — the curve analysis, transform and vector nodes */
