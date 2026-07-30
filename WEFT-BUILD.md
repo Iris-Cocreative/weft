@@ -387,6 +387,15 @@ Ctrl+C/Ctrl+V on the loom); authoring contract for humans and LLMs:
 - Right-click node → Duplicate/Delete; Ctrl+D duplicates; Shift-click multi-select
 - Scroll to zoom, drag background to pan; splitter resizes the preview
 - Panels show live data; error nodes get a red ring with the message on hover
+- **Examples** open a gallery modal (search, category chips, cards with
+  thumbnail + blurb + a "teaches" line + `needs` badges). The corpus itself is
+  unchanged — `EXAMPLES` is still name → bare graph, and a parallel
+  `EXAMPLE_META` carries everything the gallery shows, with smoke enforcing key
+  parity. Thumbnails are rendered offscreen by stepping each graph 30–120 frames
+  and painting its `drawList` onto a detached canvas: `LM.drawItem` was already
+  context-agnostic, so this needed no engine or renderer change. The live loop
+  and the thumbnail renderer build their ctx from one shared
+  `Viewport.makeCtx`.
 
 ## Case studies (the tool measured against real work)
 
