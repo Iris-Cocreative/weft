@@ -18,7 +18,7 @@ const file = process.argv[2];
 if (!file) { console.error('usage: node test/validate-patch.js patch.json'); process.exit(1); }
 
 const root = path.join(__dirname, '..');
-const src = ['js/engine.js', 'js/nodes.js', 'js/audio.js', 'js/export.js']
+const src = ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/export.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 const { LM, NODE_DEFS, WeftExport } = new Function(src + '\nreturn { LM, NODE_DEFS, WeftExport };')();

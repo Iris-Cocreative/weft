@@ -44,6 +44,7 @@ Definition of done for any change:
 |---|---|---|
 | `js/engine.js` | `LM` — evaluator, geometry, color, transforms, canvas render | **NO** |
 | `js/nodes.js` | `NODE_DEFS` — node library | only in `buildBody`/`postEval` |
+| `js/nodes-3d.js` | the 3D pack — `d3/*` defs into the same registry (`CATS['3D']` and the two extra port types stay in nodes.js) | only in `buildBody` |
 | `js/audio.js` | `WeftAudio` — Web Audio host, reconciles `ctx.audioList` (serialized into audio exports) | audio only, never at load |
 | `js/editor.js` | node canvas UI (pan/zoom, wires, quick-add) | yes |
 | `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim); owns `Viewport.makeCtx`, the one ctx literal the loop and thumbnails share | yes |
@@ -52,7 +53,13 @@ Definition of done for any change:
 | `js/app.js` | shell: palette, toolbar, persistence, modals, example gallery + offscreen thumbnails | yes |
 | `js/assistant.js` | weave assistant — chat panel → n8n webhook → validated graph ops (docs/ASSISTANT.md); dormant without a saved webhook config | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → audio → editor → viewport → export → examples → app → assistant.
+Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → editor → viewport → export → examples → app → assistant.
+
+A new node pack has to be registered in eight places, all one line each:
+`index.html`, the source lists in `test/smoke.js`, `test/gen-catalog.js`,
+`test/validate-patch.js`, `test/gen-node-index.js` and `test/gen-icon-preview.js`,
+plus the category order arrays in the two generators (and `catDesc` in
+`gen-node-index.js`) and the palette order in `js/app.js`.
 
 ## Invariants — do not break these
 
@@ -71,6 +78,12 @@ Load order (classic scripts, shared globals): engine → nodes → audio → edi
 4. **Geometry is plain JSON objects** (`{kind:'circle',...}` etc. — see engine.js
    header comment). New kinds must be handled in `toPoly`, `pathGeom`,
    `curvePoint` (or degrade via `toPoly`), `xformGeom`, and `drawItem`.
+   The 3D kinds `poly3` (`{pts:[{x,y,z}], closed}`) and `mesh`
+   (`{vs:[{x,y,z}], fs:[[i,j,k…]]}`) ride the same `geometry` port type and
+   **degrade to their front elevation** in any 2D node — `toPoly` drops z, and a
+   2D transform moves x/y and leaves z alone. Real 3D transforms are `LM.xform3`;
+   real 3D drawing goes through `d3/project`, which emits ordinary 2D geometry.
+   That is why 3D needed no renderer change, no ctx change and no new invariant.
 5. **Graphs are plain JSON**: `{format:1, nodes:[{id,type,x,y,values}], wires:[{id,from:[nid,port],to:[nid,port]}]}`.
    Never make loading strict — unknown node types must degrade gracefully
    (they already render as `?` nodes and mark an eval error, not a crash).
@@ -129,9 +142,11 @@ Load order (classic scripts, shared globals): engine → nodes → audio → edi
    (`{name, type, default, label?}` — single-letter names, GH style),
    `compute` (pure arrow, see invariant 1), optionally `listInputs`,
    `defaults`, `width`, `buildBody`, `postEval`.
-2. Types: `number | bool | string | point | color | geometry | audio | any`.
-   New types need: `TYPE_COLORS` entry, `LM.coerce` case, literal editor in
-   `editor.js buildLiteral` (or none), and a `LM.fmt` case.
+2. Types: `number | bool | string | point | vector | point3 | camera | color |
+   geometry | audio | any`. New types need: `TYPE_COLORS` entry, `LM.coerce`
+   case, literal editor in `editor.js buildLiteral` (or none), a `LM.fmt` case,
+   the legend order in `js/app.js buildTypeKey`, and the `meta/js` port dropdown.
+   Check `LM.setEq` too if the shape is comparable (point3 needed z there).
 3. Clamp unbounded counts/iterations (see Series: cap 10000).
 4. Run smoke test — it automatically exercises every def with its defaults.
 5. Manually: add the node in the editor, wire it, check literal editors, export.

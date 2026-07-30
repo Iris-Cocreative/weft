@@ -303,6 +303,10 @@ const Viewport = {
         const outs = ctx.out[n.id];
         if (!outs) continue;
         for (const o of (def.dynamic ? (n.values && n.values.outs) : def.outputs) || []) {
+          /* geometry and 2D points only — deliberately NOT point3 or camera: an
+             unprojected 3D point has no screen position to ghost at. Wire the 3D
+             work through d3/project and the ghosts come back automatically,
+             because what it emits is ordinary 2D geometry. */
           if (o.type !== 'geometry' && o.type !== 'point') continue;
           const L = outs[o.name] || [];
           for (const g of L) {

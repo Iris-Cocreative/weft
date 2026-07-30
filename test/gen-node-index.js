@@ -13,13 +13,13 @@ const OUT = process.argv[2] || path.join(ROOT, 'nodes.html');
 
 const sandbox = { console };
 vm.createContext(sandbox);
-for (const f of ['js/engine.js', 'js/nodes.js', 'js/icons.js'])
+for (const f of ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/icons.js'])
   vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), sandbox, { filename: f });
 const { WEFT_ICONS, WEFT_CAT_ICONS, NODE_DEFS, CATS, TYPE_COLORS } =
   vm.runInContext('({ WEFT_ICONS, WEFT_CAT_ICONS, NODE_DEFS, CATS, TYPE_COLORS })', sandbox);
 const logo = vm.runInContext('weftLogoSVG("nx")', sandbox);
 
-const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio', 'Meta'];
+const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', '3D', 'Display', 'Audio', 'Meta'];
 const catDesc = {
   Params: 'hand-set values and inspectors — sliders, toggles, swatches, points, and the pads and graphs that watch what flows through the wires.',
   Input: 'the outside world flowing in — mouse, time, keyboard, scroll, viewport, and hotspots that turn any geometry into interface.',
@@ -29,6 +29,7 @@ const catDesc = {
   Vector: 'points and vectors — construct them, split them, measure distance and angle, swing them polar.',
   Curve: 'drawable geometry — lines, circles, polygons, rects and arcs, plus the tools that divide and evaluate along them.',
   Transform: 'reshape geometry — move, rotate, scale; transforms stack, and lists of transforms fan one shape into many.',
+  '3D': 'native software 3D, shipped as a pack (js/nodes-3d.js) — points, cameras, primitives, and the Extrude and Revolve bridges that turn every curve node into a modelling tool. Project is the hinge: it takes a camera and emits ordinary 2D geometry already sorted back to front, so the renderer, the export and the ctx contract never learned about 3D at all.',
   Display: 'where the graph touches the cloth — strokes and fills, colour tools, text, backgrounds, streaming traces, real DOM elements.',
   Audio: 'sound as dataflow — pitch pickers, oscillators, filters and mixers whose wires carry handles into a live Web Audio graph, plus the mic, scopes and geometry-to-waveform bridges.',
   Meta: 'composition — clusters fold subgraphs into named, reusable nodes, and Custom JS wraps code that has no node yet, its magic numbers promoted to ports.'

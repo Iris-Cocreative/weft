@@ -51,6 +51,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | Display | `#f009fc` |
 | Meta | `#8494ad` *(provisional slate — not yet through Figma; clusters also stack a card-shadow to say "there's more inside")* |
 | Audio | `#ff36a3` *(code-side decision 2026-07-16, not yet through Figma: "signal pink" — the open hue slot; replaced the provisional teal `#0fb5ba`, which sat on top of Params. Rose maximizes wire contrast against number-blue, the wire most often beside audio. CRT-phosphor teal `#5eead4` stays as the default beam colour on Scope / Vector Scope / Cymatics — instrument screens, not category identity)* |
+| 3D | `#00b8d4` **awaiting James / Figma** *(code draft 2026-07-30: cyan was the remaining open space on the wheel. Deliberately clear of Params teal `#2dd4bf` and of the geometry wire `#7057ff`, which runs into every 3D node. The category glyph — an isometric cube with its top face lit — is a code draft too, in `WEFT_CAT_ICONS`, not yet in Figma.)* |
 
 ### Type colours (`Line Types/*`, → `TYPE_COLORS` in nodes.js — ports AND wires)
 
@@ -61,8 +62,10 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | string | `#fbbb00` |
 | point | `#fb6c09` |
 | vector | `#8cff14` |
+| point3 | `#00b8d4` *(the 3D category hue, the way `audio` matches Audio — code draft, awaiting Figma)* |
+| camera | `#00e0a4` *(code draft — a quieter spring-green beside point3's cyan, so a camera wire reads as different from a position)* |
 | color | `#d730f8` |
-| geometry | `#7057ff` |
+| geometry | `#7057ff` *(3D geometry rides this wire too — `poly3` and `mesh` are geometry kinds, not new types)* |
 | any | `#8ea4c3` |
 | audio | `#ff36a3` *(matches the Audio category — handles, not samples)* |
 

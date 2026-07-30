@@ -49,12 +49,15 @@ That patch is a breathing circle. Rules:
 
 ## 2. Types & coercion
 
-`number · bool · string · point {x,y} · vector {x,y} · color {r,g,b,a} (rgb
-0–255, a 0–1) · geometry · audio · any`
+`number · bool · string · point {x,y} · vector {x,y} · point3 {x,y,z} ·
+camera (plain JSON from `d3/camera`) · color {r,g,b,a} (rgb 0–255, a 0–1) ·
+geometry · audio · any`
 
 Any output can wire into any input — coercion does its best (number↔bool,
-number→point `{x:v,y:v}`, hex string→color, point→number magnitude…). Geometry,
-audio and any pass through untouched. Don't fight types; wire what reads well.
+number→point `{x:v,y:v}`, hex string→color, point→number magnitude, point→point3
+with z=0, point3→point dropping z, number→point3 filling all three…). Geometry,
+camera, audio and any pass through untouched. Don't fight types; wire what reads
+well.
 
 ## 3. Lists — the semantic that makes patches small
 
@@ -222,6 +225,25 @@ circle into an ellipse) · `xf/mirror` (A, B — the two ends of the mirror line
 `xf/tile` (V1 N1 V2 N2 → G plus I, J cell indices; identical copies only —
 varying cells are `vec/grid` + list matching).
 
+### 3D (`js/nodes-3d.js` — the pack; world axes are x right, y **down**, z away)
+| node | in | out | |
+|---|---|---|---|
+| `d3/project` | G:geometry(**list-in**) C:camera L:point3 | F:geometry S:number D:number | `values.mode` `'shaded'`\|`'wire'`\|`'both'`; F is 2D screen geometry **already sorted back to front**, S the shade 0..1, D the depth — three index-aligned lists |
+| `d3/camera` | P:pos T:target F:fov° Z:zoom U:up | C:camera | `values.mode` `'persp'`\|`'ortho'` |
+| `d3/orbit` | T:target D D:dist A:yaw E:pitch F:fov° | C:camera A E | drag the cloth to orbit, wheel to pull back; A/E are resting angles the drag adds to |
+| `d3/extrude` | G:2D-geometry H C:cap | G:mesh | centred on its own plane; open curves become ribbons |
+| `d3/revolve` | G:2D-profile N A:sweep-rad | G:mesh | about the world y axis; the profile's x is the radius |
+| `d3/box` `d3/sphere` `d3/cylinder` `d3/cone` `d3/torus` `d3/plane` | P:centre + sizes | G:mesh | height runs along y; Plane lies in xz |
+| `d3/move3` `d3/rotate3` `d3/scale3` | G + T / R:rad A:axis C / F:point3 C | G | a 2D shape lifts to `poly3`; Scale3's F takes a bare number as uniform |
+| `d3/point3` `d3/decon3` `d3/polyline3` `d3/grid3` | X Y Z / P / V(list-in) C / P S NX NY NZ | P:point3 / X Y Z / G / P I J K | Grid3's I/J/K are per-item keys |
+| `d3/faces` | G:mesh | F:geometry N:point3 C:point3 | face polys + normals + centroids |
+| `d3/dot3` `d3/cross3` `d3/unit3` `d3/len3` `d3/amp3` | A B / V / V A | D / C / V / L / V | the 3D vector family |
+
+**The 3D idiom, whole:** `something 2D → d3/extrude → d3/project → S through
+math/remap → disp/hsl → ONE disp/draw(G:F, F:colour)`. Never one Draw per face.
+Wire every mesh into the *same* Project so its depth sort is global. Remap the
+shade before colouring, or unlit faces come out black.
+
 ### Display
 | node | in | out | |
 |---|---|---|---|
@@ -349,12 +371,18 @@ tested for clicks *and* drawn, and every node in the chain runs per item.)
 4. Constants buried in `values` that should be sliders.
 5. Repeated node chains that one list would handle.
 6. Cycles without a `state/delay`.
-7. Degrees where radians belong (`math/rad` converts).
+7. Degrees where radians belong (`math/rad` converts). The one exception is a
+   camera's field of view, which *is* degrees.
 8. Forgetting `"weft": "patch"` — plain graphs also paste, but the marker is
    the convention for chat interchange.
 9. Coordinates invented for no reason — omit them.
 10. In Custom JS: naming a port `code`/`mode`/`ins`/`outs`/`title`/`graph`,
     or using `Math.random()` (breaks determinism and export replay).
+11. In 3D: a Draw per face instead of Project's shade list through one colour
+    node; a Project per mesh instead of every mesh into one (the depth sort is
+    per-Project); colouring straight from `S` with no Remap, so unlit faces go
+    black; expecting a ghost preview from a `point3` output (there isn't one —
+    project it first).
 
 ## 11. Delivery
 

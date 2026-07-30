@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.11 — the geometry pass.** v0.1 (2026-07-12): editor,
+**Status: v0.12 — native 3D.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -236,6 +236,38 @@ every other kind (Divide used to bunch its points), the 96-point distance
 table is built once per node instead of once per sample (Divide with N=500
 was O(N·96)), and a reversed arc no longer renders one way while
 hit-testing another — 143 nodes, 28 examples.
+v0.12 (2026-07-30, native 3D): the roadmap had 3D staged as *2.5D → renderer
+abstraction → vendored three.js, only when 2D saturates*. James called a
+different route, and it turned out to fit the actual code far better, for one
+reason: **projection is an ordinary node.** `d3/project` takes 3D geometry plus a
+camera and emits ordinary 2D geometry, so `ctx` never changed (none of invariant
+#8's coordinated edits), the renderer never changed (all 11 `drawList.push` sites
+untouched), and the editor and an exported bundle render identically *by
+construction* — everything happens inside `LM.*` and `compute`, which serialize.
+Multiple cameras in one patch are free. `js/engine.js` gained the layer under it:
+a row-major mat4 family, `mat4LookAt` / `mat4Persp` / `mat4Ortho` (which map
+camera space straight to screen **pixels**, so there is no aspect term to get
+wrong), `camMats`, `project3`, Newell face normals, `prims3`, and `render3` — the
+whole software renderer in one serializable function. Two geometry kinds ride the
+existing `geometry` wire (`poly3`, `mesh`) and **degrade to their front elevation**
+in any 2D node, so bounds, hit tests and offsets keep working on 3D input; two
+port types were added (`point3`, which is position *and* direction because 3D has
+no point/vector split, and `camera`, plain JSON). The nodes ship as the first real
+**pack**, `js/nodes-3d.js` — 24 `d3/*` defs calling `defNode` into the same
+registry, which needed one `<script>` tag and no change to the evaluator, the
+exporter or the editor. Project's three outputs are index-aligned lists — screen
+faces, shade 0..1, view depth — so the shade wires through Colour HSL and **one**
+Draw paints every face, with `drawList` insertion order doing the painter's
+algorithm; taking the geometry as a whole list is what makes that sort *global*
+across meshes rather than per-mesh. Extrude and Revolve are the valuable pair:
+they turn every curve node in the library into a 3D modelling tool. Shading is
+two-sided (the normal is turned toward the camera first) so open surfaces don't
+go black, and a face with a vertex behind the near plane is dropped rather than
+clipped — Weft paints, it does not rasterize. Orbit Camera accumulates a drag on
+`node._state` from the existing `ctx.mouse`/`ctx.scroll`, so steering 3D needed no
+new ctx channel either. New examples: Vesica (the geometry pass measured — lens,
+crescents, crossings, area) and Henge (two rings of extruded stones, orbitable,
+144 shaded faces from one Draw) — 168 nodes, 30 examples.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -264,11 +296,12 @@ weft/
   js/
     engine.js       LM — the pure runtime (evaluator, geometry, colors, transforms, render)
     nodes.js        NODE_DEFS — the node library (+ editor-only custom bodies)
+    nodes-3d.js     the 3D pack — d3/* defs into the same registry, no engine or editor change
     audio.js        WeftAudio — Web Audio host: reconciles ctx.audioList (serialized into audio exports)
     editor.js       node canvas: pan/zoom, drag, wires, quick-add, context menu
     viewport.js     live preview: evaluates graph every rAF, renders drawList
     export.js       WeftExport — compiles graph → standalone JS via fn.toString()
-    examples.js     EXAMPLES — 7 graphs, doubling as the test corpus
+    examples.js     EXAMPLES — 30 graphs, doubling as the test corpus, + the parallel EXAMPLE_META the gallery reads
     app.js          shell: palette, toolbar, autosave, export modal, splitter
     icons.js        node glyphs from Figma (editor-only, never exported)
   docs/DESIGN.md    design system: decision log + tokens (Figma = drawing source)

@@ -285,12 +285,21 @@ Brand *after* the tool has proven its shape, *before* the community arrives.
 
 ## Phase 7 — Depth & scale
 
-1. 2.5D: z as a number → parallax/scale/draw-order nodes.
+1. ~~2.5D: z as a number → parallax/scale/draw-order nodes.~~ **Overtaken.**
+   ✅ Full native 3D shipped instead, v0.12 (2026-07-30): the `js/nodes-3d.js`
+   pack, `poly3`/`mesh` kinds, `point3`/`camera` types, and a mat4 + camera +
+   software-renderer layer in the engine. The staging in this phase assumed 3D
+   needed a second renderer. It didn't: **projection is an ordinary node** that
+   emits ordinary 2D geometry, so items 1 and 4 collapsed into one step that
+   changed neither the renderer nor `ctx`. See ROADMAP §8 for what is still open
+   (depth fidelity, Loft/Boolean, per-face materials).
 2. Renderer abstraction; **SVG render target** (crisp, exportable, nearly free
    once the `path` kind exists — and for *interface* work it beats Canvas2D:
-   real text, real links, CSS-styleable, Webflow-embeddable).
+   real text, real links, CSS-styleable, Webflow-embeddable). Still wanted, and
+   now fully independent of 3D.
 3. Perf pass only if needed (dirty flags, OffscreenCanvas).
-4. three.js target + Vector3/Mesh/Camera pack — only when 2D saturates.
+4. ~~three.js target + Vector3/Mesh/Camera pack — only when 2D saturates.~~
+   Not needed — see item 1. WebGL only if a patch needs tens of thousands of faces.
 
 ## Phase 8 — Other domains (exploratory, may run parallel from Phase 6)
 

@@ -74,6 +74,44 @@ geometry that reaches no Draw node is invisible.
   `crv/incurve` (is this point inside?) · `crv/hull` (the rubber band round a
   point cloud).
 
+## 3D
+
+The whole idiom is four nodes, and the last one is an ordinary Draw:
+**something 3D → `d3/project` → a colour from its shade → one `disp/draw`.**
+Project emits ordinary 2D geometry already sorted back to front, so nothing
+downstream knows 3D happened.
+
+- **Turn any 2D shape into a solid** — `d3/extrude(G, H, C:cap)`. Every curve node
+  in the library is now a modelling tool: Polygon, Region Boolean, Offset,
+  Convex Hull, a spline through mouse-driven points — extrude any of them.
+  `d3/revolve(G, N, A)` spins a profile about the world y axis instead.
+- **Shade it** — `d3/project(G, C:camera, L:light → F, S, D)`, then
+  `S → math/remap(0..1 → 0.1..0.7) → disp/hsl(L) → disp/draw(F)`. F, S and D are
+  index-aligned lists, so list matching paints every face from one Draw. Remap
+  first: a bare Lambert shade puts unlit faces at 0, i.e. black.
+- **Let people turn it** — `d3/orbit(T, D, A:yaw E:pitch)`: drag the cloth to
+  orbit, wheel to pull back. A and E are the *resting* angles the drag adds to,
+  and they come back out as numbers, so other things can follow the view.
+- **Wire every mesh into ONE Project.** Its `G` takes the whole list, which is
+  what makes the depth sort global — two solids interleave correctly. Two Project
+  → Draw pairs paint in topological order instead (which is what you want for a
+  floor that is always behind everything).
+- **Wireframe** — the same Project, `values.mode:'wire'` (every unique edge once)
+  or `'both'` (faces with their front-facing edges over them).
+- **Per-face effects before the camera** — `d3/faces(G → F, N:normals, C:centroids)`.
+  Move each face along its own normal for an exploded view; drive a hue from a
+  centroid's height.
+- **A 2D shape lifted off the plane** — `d3/move3(G, T)` on any 2D geometry
+  returns `poly3`, so stacking flat layers in depth is one node.
+- **A lattice in space** — `d3/grid3(P, S, NX, NY, NZ → P, I, J, K)`; the three
+  index outputs are the per-item keys, exactly as `vec/grid`'s K is in 2D.
+- **Scale in 3D without a mode toggle** — `d3/scale3`'s factor is a `point3`, and
+  a bare number coerces to all three components, so one wire is uniform scaling
+  and three components is not.
+- **A 3D point you can see** — you can't, directly: `point3` outputs get no ghost
+  preview, because an unprojected point has no screen position. Send it through
+  Project (points come out as dots) or read it in a `params/panel`.
+
 ## Lists & fields
 
 - **N things in a row** — `sets/series(S:start N:step C:count → S) →

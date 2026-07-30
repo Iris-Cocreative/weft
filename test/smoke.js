@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const src = ['js/engine.js', 'js/nodes.js', 'js/audio.js', 'js/examples.js', 'js/export.js']
+const src = ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -889,6 +889,222 @@ for (const name of Object.keys(EXAMPLES)) {
       if (NEEDS.indexOf(nd) < 0) failures.push('EXAMPLE_META "' + n + '": unknown need "' + nd + '"');
     if (!(m.frames > 0 && m.frames <= 600))
       failures.push('EXAMPLE_META "' + n + '": frames must be 1..600, got ' + m.frames);
+  }
+}
+
+/* 21 — the 3D layer: kinds, types, matrices, projection */
+{
+  const near = (name, got, want, tol) => {
+    if (!(Math.abs(got - want) <= (tol === undefined ? 1e-9 : tol)))
+      failures.push('3D ' + name + ': expected ' + want + ' got ' + got);
+  };
+  const near3 = (name, got, wx, wy, wz, tol) => {
+    if (!got || !(Math.abs(got.x - wx) <= (tol || 1e-9) && Math.abs(got.y - wy) <= (tol || 1e-9) && Math.abs(got.z - wz) <= (tol || 1e-9)))
+      failures.push('3D ' + name + ': expected (' + wx + ', ' + wy + ', ' + wz + ') got ' + JSON.stringify(got));
+  };
+  const run = (type, args, values) => NODE_DEFS[type].compute(args, mkCtx(), { id: 'n', values: values || {} });
+
+  /* --- the new port types --- */
+  near3('coerce point → point3', LM.coerce({ x: 3, y: 4 }, 'point3'), 3, 4, 0);
+  near3('coerce number → point3', LM.coerce(2, 'point3'), 2, 2, 2);
+  const dropZ = LM.coerce({ x: 3, y: 4, z: 9 }, 'point');
+  if (dropZ.z !== undefined) failures.push('3D coerce point3 → point must drop z, got ' + JSON.stringify(dropZ));
+  near('coerce point3 → number is its length', LM.coerce({ x: 2, y: 3, z: 6 }, 'number'), 7);
+  if (LM.setEq({ x: 1, y: 2, z: 0 }, { x: 1, y: 2, z: 50 }))
+    failures.push('3D setEq: two point3s differing only in z must not compare equal (sets/union would flatten a lattice)');
+  if (!LM.setEq({ x: 1, y: 2 }, { x: 1, y: 2 })) failures.push('3D setEq: 2D points must still compare by x/y alone');
+  if (LM.fmt({ x: 1, y: 2, z: 3 }) !== '(1, 2, 3)') failures.push('3D fmt point3: got ' + LM.fmt({ x: 1, y: 2, z: 3 }));
+  if (LM.fmt({ x: 1, y: 2 }) !== '(1, 2)') failures.push('3D fmt must leave 2D points alone: got ' + LM.fmt({ x: 1, y: 2 }));
+  if (LM.fmt({ pos: { x: 0, y: 0, z: -9 }, target: { x: 0, y: 0, z: 0 } }) !== '‹camera›')
+    failures.push('3D fmt camera: got ' + LM.fmt({ pos: {}, target: {} }));
+
+  /* --- the new geometry kinds degrade to their front elevation --- */
+  const p3 = { kind: 'poly3', pts: [{ x: -10, y: 0, z: 500 }, { x: 10, y: 4, z: -500 }], closed: false };
+  const flat = LM.toPoly(p3);
+  if (flat.pts.length !== 2 || flat.pts[0].z !== undefined || flat.pts[1].x !== 10)
+    failures.push('3D toPoly poly3: expected the 2D front elevation, got ' + JSON.stringify(flat.pts));
+  const bx = run('d3/box', { P: { x: 0, y: 0, z: 0 }, W: 100, H: 100, D: 100 }).G;
+  if (bx.kind !== 'mesh' || bx.vs.length !== 8 || bx.fs.length !== 6)
+    failures.push('3D d3/box: expected an 8-vertex 6-face mesh, got ' + JSON.stringify(bx.fs && bx.fs.length));
+  const bb = LM.geomBounds(bx);
+  if (!bb || Math.abs(bb.w - 100) > 1e-9 || Math.abs(bb.h - 100) > 1e-9)
+    failures.push('3D geomBounds on a mesh: expected 100×100, got ' + JSON.stringify(bb));
+  const moved = LM.xformGeom(bx, LM.matMove(10, 0));
+  if (moved.kind !== 'mesh' || moved.vs[0].x !== -40 || moved.vs[0].z !== -50)
+    failures.push('3D xformGeom on a mesh: a 2D transform must move x/y and leave z, got ' + JSON.stringify(moved.vs[0]));
+  /* the box's first face is its front — outward is toward the viewer, −z */
+  near3('box front-face normal', LM.meshNormal(bx, 0), 0, 0, -1, 1e-9);
+  const mf = LM.meshFaces(bx);
+  if (mf.length !== 6) failures.push('3D meshFaces: expected 6 faces, got ' + mf.length);
+  else near3('box front-face centroid', mf[0].centroid, 0, 0, -50, 1e-9);
+  if (LM.prims3(bx).length !== 6) failures.push('3D prims3 mesh: expected one primitive per face');
+  const cPrim = LM.prims3({ kind: 'circle', cx: 0, cy: 0, r: 50 });
+  if (cPrim.length !== 1 || !cPrim[0].face) failures.push('3D prims3: a closed 2D curve must lift to a face at z = 0');
+  const ptPrim = LM.prims3({ x: 1, y: 2, z: 3 });
+  if (ptPrim.length !== 1 || ptPrim[0].face || ptPrim[0].pts[0].z !== 3)
+    failures.push('3D prims3: a bare point3 must stay a single point');
+
+  /* --- matrices --- */
+  near3('mat4Identity', LM.mat4Apply(LM.mat4Identity(), { x: 1, y: 2, z: 3 }), 1, 2, 3);
+  near3('mat4Move', LM.mat4Apply(LM.mat4Move(1, 2, 3), { x: 0, y: 0, z: 0 }), 1, 2, 3);
+  near3('mat4Scale', LM.mat4Apply(LM.mat4Scale(2, 3, 4), { x: 1, y: 1, z: 1 }), 2, 3, 4);
+  /* a quarter turn about y takes +x to −z (right-handed, y down, z away) */
+  near3('mat4RotAxis quarter turn about y', LM.mat4Apply(LM.mat4RotAxis({ x: 0, y: 1, z: 0 }, Math.PI / 2), { x: 10, y: 0, z: 0 }), 0, 0, -10, 1e-9);
+  /* mat4Mul(m, n) applies m first: move then scale doubles the offset too */
+  near3('mat4Mul move→scale', LM.mat4Apply(LM.mat4Mul(LM.mat4Move(10, 0, 0), LM.mat4Scale(2, 2, 2)), { x: 0, y: 0, z: 0 }), 20, 0, 0);
+  near3('mat4Mul scale→move', LM.mat4Apply(LM.mat4Mul(LM.mat4Scale(2, 2, 2), LM.mat4Move(10, 0, 0)), { x: 0, y: 0, z: 0 }), 10, 0, 0);
+  const lk = LM.mat4LookAt({ x: 0, y: 0, z: -420 }, { x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
+  near3('lookAt puts the origin in front of the camera', LM.mat4Apply(lk, { x: 0, y: 0, z: 0 }), 0, 0, -420);
+  /* up parallel to the view direction must not collapse the basis */
+  const down = LM.mat4LookAt({ x: 0, y: -300, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 });
+  const dv = LM.mat4Apply(down, { x: 0, y: 0, z: 0 });
+  if (!isFinite(dv.x) || !isFinite(dv.y) || Math.abs(dv.z + 300) > 1e-6)
+    failures.push('3D mat4LookAt straight down: degenerate up must still give a usable basis, got ' + JSON.stringify(dv));
+
+  /* --- projection: a 2D shape at z = 0 comes back upright and unmirrored --- */
+  const k = (600 / 2) / Math.tan(Math.PI / 8);      /* fov 45° over H = 600 */
+  const pr = LM.project3({ x: 100, y: 50, z: 0 }, null, 800, 600);
+  near('project3 x', pr.x, k * 100 / 420, 1e-6);
+  near('project3 y', pr.y, k * 50 / 420, 1e-6);
+  near('project3 depth', pr.z, 420, 1e-9);
+  if (!(pr.x > 0 && pr.y > 0)) failures.push('3D project3: the default camera must not mirror or flip the canvas');
+  near('project3 keeps the aspect (no stretch)', pr.x / pr.y, 2, 1e-9);
+  const orth = LM.project3({ x: 100, y: 50, z: 0 }, { mode: 'ortho', zoom: 2 }, 800, 600);
+  near3('project3 orthographic', orth, 200, 100, 420, 1e-9);
+  const behind = LM.camMats(null, 800, 600);
+  if (!(behind.near > 0)) failures.push('3D camMats: a near plane is required to cull what is behind the camera');
+
+  /* --- render3: parallel lists, global depth sort, two-sided shading --- */
+  const r1 = LM.render3([{ kind: 'circle', cx: 0, cy: 0, r: 60 }], null, null, 'shaded', 800, 600);
+  if (r1.F.length !== 1 || r1.S.length !== 1 || r1.D.length !== 1)
+    failures.push('3D render3: one closed curve is one face, got ' + r1.F.length + '/' + r1.S.length + '/' + r1.D.length);
+  else {
+    if (r1.F[0].kind !== 'poly' || !r1.F[0].closed) failures.push('3D render3 must emit ordinary closed 2D polys, got ' + JSON.stringify(r1.F[0].kind));
+    if (r1.F[0].pts.some(p => p.z !== undefined)) failures.push('3D render3: screen geometry must be flat 2D points');
+    near('render3 depth of a shape at z = 0', r1.D[0], 420, 1e-9);
+  }
+  /* two boxes whose depth ranges OVERLAP (370..470 and 410..510) — a per-mesh
+     sort would emit one solid then the other and could not stay monotonic, so
+     one monotonic list is the proof that the sort is global */
+  const boxA = run('d3/box', { P: { x: -80, y: 0, z: 0 }, W: 60, H: 60, D: 100 }).G;
+  const boxB = run('d3/box', { P: { x: 80, y: 0, z: 40 }, W: 60, H: 60, D: 100 }).G;
+  const two = LM.render3([boxA, boxB], null, null, 'shaded', 800, 600);
+  if (two.F.length !== 12 || two.S.length !== 12 || two.D.length !== 12)
+    failures.push('3D render3: two boxes are 12 faces in three aligned lists, got ' + two.F.length + '/' + two.S.length + '/' + two.D.length);
+  let sorted = true;
+  for (let i = 1; i < two.D.length; i++) if (two.D[i] > two.D[i - 1] + 1e-9) sorted = false;
+  if (!sorted) failures.push('3D render3: one global back-to-front order across both meshes — [' + two.D.map(d => Math.round(d)).join(',') + ']');
+  if (two.S.some(s => !(s >= 0 && s <= 1))) failures.push('3D render3: shade must stay in 0..1, got [' + two.S.join(',') + ']');
+  if (!two.S.some(s => s > 0.05)) failures.push('3D render3: two-sided shading should light something, got all black');
+  const wire = LM.render3([boxA], null, null, 'wire', 800, 600);
+  if (wire.F.length !== 12) failures.push('3D render3 wire: a box has 12 unique edges, got ' + wire.F.length);
+  else if (wire.F[0].kind !== 'line') failures.push('3D render3 wire: edges must be line geometry, got ' + wire.F[0].kind);
+  const both = LM.render3([boxA], null, null, 'both', 800, 600);
+  const bFaces = both.F.filter(g => g.kind === 'poly').length, bEdges = both.F.filter(g => g.kind === 'line').length;
+  if (bFaces !== 6) failures.push('3D render3 both: every face is still drawn, got ' + bFaces);
+  if (!(bEdges > 0 && bEdges < 12)) failures.push('3D render3 both: only the front-facing edges overlay the solid, got ' + bEdges + ' of 12');
+  if (both.F.slice(0, 6).some(g => g.kind !== 'poly'))
+    failures.push('3D render3 both: the faces must all precede the wire laid over them');
+  /* a camera behind the geometry drops it rather than turning it inside out */
+  if (LM.render3([{ kind: 'circle', cx: 0, cy: 0, r: 60 }], { pos: { x: 0, y: 0, z: 400 }, target: { x: 0, y: 0, z: 800 } }, null, 'shaded', 800, 600).F.length)
+    failures.push('3D render3: geometry behind the near plane must be dropped, not projected');
+
+  /* --- hotspots land on projected faces (so 3D faces are clickable) --- */
+  if (!LM.pointInGeom(r1.F[0], { x: 0, y: 0 }, 0))
+    failures.push('3D input/hotspot on projected output: pointInGeom should hit the centre of a projected face');
+
+  /* --- sets/* surgery works on meshes (they are only JSON) --- */
+  const uni = run('sets/union', { A: [boxA, boxB], B: [boxB] });
+  if ((uni.U || []).length !== 2)
+    failures.push('3D sets/union on meshes: expected 2 distinct meshes, got ' + (uni.U || []).length);
+
+  /* --- the bridges from 2D --- */
+  const ex = run('d3/extrude', { G: { kind: 'rect', cx: 0, cy: 0, w: 100, h: 60, rot: 0 }, H: 40, C: true }).G;
+  if (ex.kind !== 'mesh' || ex.vs.length !== 8 || ex.fs.length !== 6)
+    failures.push('3D d3/extrude: a rect should give a 6-face box, got ' + (ex.fs && ex.fs.length) + ' faces');
+  else {
+    const zs = ex.vs.map(v => v.z);
+    if (Math.min.apply(null, zs) !== -20 || Math.max.apply(null, zs) !== 20)
+      failures.push('3D d3/extrude: the solid must straddle its own plane, got z ' + Math.min.apply(null, zs) + '..' + Math.max.apply(null, zs));
+  }
+  const exOpen = run('d3/extrude', { G: { kind: 'line', a: { x: -50, y: 0 }, b: { x: 50, y: 0 } }, H: 40, C: true }).G;
+  if (exOpen.fs.length !== 1) failures.push('3D d3/extrude: an open curve extrudes to a ribbon with no caps, got ' + exOpen.fs.length + ' faces');
+  const rev = run('d3/revolve', { G: { kind: 'line', a: { x: 40, y: -50 }, b: { x: 40, y: 50 } }, N: 8, A: LM.TAU }).G;
+  if (rev.kind !== 'mesh' || rev.vs.length !== 16 || rev.fs.length !== 8)
+    failures.push('3D d3/revolve: a vertical line makes an 8-sided open tube, got ' + rev.vs.length + ' verts / ' + (rev.fs && rev.fs.length) + ' faces');
+  const revPart = run('d3/revolve', { G: { kind: 'line', a: { x: 40, y: -50 }, b: { x: 40, y: 50 } }, N: 8, A: Math.PI }).G;
+  if (revPart.vs.length !== 18) failures.push('3D d3/revolve: a part sweep must not wrap its last ring, got ' + revPart.vs.length + ' verts');
+
+  /* --- 3D transforms, including the lift from 2D --- */
+  const lifted = run('d3/move3', { G: { kind: 'circle', cx: 0, cy: 0, r: 30 }, T: { x: 0, y: 0, z: 100 } }).G;
+  if (lifted.kind !== 'poly3' || Math.abs(lifted.pts[0].z - 100) > 1e-9)
+    failures.push('3D d3/move3: a 2D shape must lift to poly3, got ' + lifted.kind);
+  const spun = run('d3/rotate3', { G: bx, R: Math.PI / 2, A: { x: 0, y: 1, z: 0 }, C: { x: 0, y: 0, z: 0 } }).G;
+  if (spun.kind !== 'mesh' || Math.abs(Math.abs(spun.vs[0].z) - 50) > 1e-6)
+    failures.push('3D d3/rotate3: a quarter turn about y should swap x and z, got ' + JSON.stringify(spun.vs[0]));
+  const sc3 = run('d3/scale3', { G: bx, F: LM.coerce(2, 'point3'), C: { x: 0, y: 0, z: 0 } }).G;
+  if (Math.abs(sc3.vs[0].x + 100) > 1e-9) failures.push('3D d3/scale3: a bare number must coerce to a uniform factor, got ' + JSON.stringify(sc3.vs[0]));
+
+  /* --- analysis + the vector family --- */
+  const fc = run('d3/faces', { G: bx });
+  if (fc.F.length !== 6 || fc.N.length !== 6 || fc.C.length !== 6)
+    failures.push('3D d3/faces: expected 6 faces with normals and centroids, got ' + fc.F.length);
+  else if (fc.F[0].kind !== 'poly3') failures.push('3D d3/faces: faces come back as poly3, got ' + fc.F[0].kind);
+  near('d3/dot3', run('d3/dot3', { A: { x: 1, y: 2, z: 3 }, B: { x: 4, y: 5, z: 6 } }).D, 32);
+  near3('d3/cross3', run('d3/cross3', { A: { x: 1, y: 0, z: 0 }, B: { x: 0, y: 1, z: 0 } }).C, 0, 0, 1);
+  near('d3/len3', run('d3/len3', { V: { x: 2, y: 3, z: 6 } }).L, 7);
+  near3('d3/unit3 of zero', run('d3/unit3', { V: { x: 0, y: 0, z: 0 } }).V, 0, 0, 0);
+  near3('d3/amp3', run('d3/amp3', { V: { x: 0, y: 0, z: 4 }, A: 10 }).V, 0, 0, 10);
+  const g3 = run('d3/grid3', { P: { x: 0, y: 0, z: 0 }, S: 10, NX: 2, NY: 2, NZ: 2 });
+  if (g3.P.length !== 8 || g3.I.join('') !== '01010101' || g3.K.join('') !== '00001111')
+    failures.push('3D d3/grid3: expected a 2×2×2 lattice with per-item keys, got ' + g3.P.length + ' [' + g3.I.join(',') + ']');
+
+  /* --- the orbit camera accumulates a drag on node._state --- */
+  {
+    const node = { id: 'ob', values: {} };
+    const args = { T: { x: 0, y: 0, z: 0 }, D: 400, A: 0, E: 0, F: 45 };
+    const drag = (x, y, phase) => {
+      const c = mkCtx();
+      c.mouse = { x: x, y: y, nx: 0.5, ny: 0.5, down: phase !== 'up', pressed: phase === 'down', released: phase === 'up' };
+      return NODE_DEFS['d3/orbit'].compute(args, c, node);
+    };
+    const rest = NODE_DEFS['d3/orbit'].compute(args, mkCtx(), node);
+    near3('d3/orbit at rest sits in front', rest.C.pos, 0, 0, -400, 1e-9);
+    drag(0, 0, 'down');
+    const swung = drag(100, 0, 'move');
+    if (!(swung.A < -0.4)) failures.push('3D d3/orbit: dragging right should swing the far side round, yaw ' + swung.A);
+    if (!(swung.C.pos.x < 0)) failures.push('3D d3/orbit: dragging right should move the camera to −x, got ' + swung.C.pos.x);
+    const tilted = drag(100, 100, 'move');
+    if (!(tilted.E > 0.4 && tilted.C.pos.y < 0)) failures.push('3D d3/orbit: dragging down should lift the camera, pitch ' + tilted.E);
+    drag(100, 100, 'up');
+    const held = NODE_DEFS['d3/orbit'].compute(args, mkCtx(), node);
+    if (Math.abs(held.A - tilted.A) > 1e-9) failures.push('3D d3/orbit: the angle must persist after the drag ends');
+  }
+
+  /* --- the whole 3D chain, wired up, drawn and exported --- */
+  {
+    const g = { nodes: [
+        { id: 'ci', type: 'crv/circle', values: { P: { x: 0, y: 0 }, R: 70 } },
+        { id: 'ex', type: 'd3/extrude', values: { H: 90 } },
+        { id: 'cm', type: 'd3/camera', values: {} },
+        { id: 'pj', type: 'd3/project', values: { mode: 'shaded' } },
+        { id: 'hs', type: 'disp/hsl', values: { H: 0.55, S: 0.5 } },
+        { id: 'dw', type: 'disp/draw', values: {} } ],
+      wires: [
+        { from: ['ci', 'C'], to: ['ex', 'G'] }, { from: ['ex', 'G'], to: ['pj', 'G'] },
+        { from: ['cm', 'C'], to: ['pj', 'C'] }, { from: ['pj', 'S'], to: ['hs', 'L'] },
+        { from: ['pj', 'F'], to: ['dw', 'G'] }, { from: ['hs', 'C'], to: ['dw', 'F'] } ] };
+    const c = mkCtx();
+    LM.evaluateGraph(g, NODE_DEFS, c);
+    if (Object.keys(c.errors).length) failures.push('3D chain: errored → ' + JSON.stringify(c.errors));
+    const F = (c.out.pj || {}).F || [], S = (c.out.pj || {}).S || [];
+    if (F.length < 3) failures.push('3D chain: an extruded circle should project as many faces, got ' + F.length);
+    if (F.length !== S.length) failures.push('3D chain: F and S must stay index-aligned, got ' + F.length + ' vs ' + S.length);
+    if (c.drawList.length !== F.length) failures.push('3D chain: one Draw should paint every face, got ' + c.drawList.length + ' of ' + F.length);
+    /* the shade list becomes a colour list, so no two faces share a fill by accident */
+    if (new Set(c.drawList.map(it => LM.colorCss(it.fill))).size < 3)
+      failures.push('3D chain: wiring S through Colour HSL should give the faces different fills');
+    try { new Function(WeftExport.buildJS(g)); } catch (e) { failures.push('3D chain export does not compile → ' + e.message); }
   }
 }
 

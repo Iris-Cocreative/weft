@@ -348,7 +348,7 @@ const App = {
   buildPalette() {
     const list = document.getElementById('paletteList');
     const search = document.getElementById('paletteSearch');
-    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', 'Display', 'Audio', 'Meta'];
+    const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', '3D', 'Display', 'Audio', 'Meta'];
 
     const render = q => {
       q = (q || '').toLowerCase();
@@ -434,7 +434,7 @@ const App = {
 
   buildTypeKey() {
     const body = document.querySelector('#typeKey .tk-body');
-    const order = ['number', 'point', 'vector', 'geometry', 'color', 'bool', 'string', 'audio', 'any'];
+    const order = ['number', 'point', 'vector', 'point3', 'camera', 'geometry', 'color', 'bool', 'string', 'audio', 'any'];
     body.innerHTML = order.map(t =>
       `<div class="tk-row"><span class="tk-line" style="background:${TYPE_COLORS[t]}"></span>${t}</div>`).join('') +
       `<div class="tk-note">wires take the colour of their source output</div>`;

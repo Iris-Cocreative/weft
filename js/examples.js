@@ -1371,6 +1371,120 @@ const EXAMPLES = {
     ['t1', 'T', 'mu', 'A'],
     ['mu', 'R', 'ro', 'A'],
     ['ro', 'G', 'dr', 'G']
+  ]),
+
+  /* The geometry pass (v0.11) — two circles drifting apart, and everything the
+   * new curve nodes can say about the pair: the lens where they overlap, the
+   * crescent left over, its mirror image, the two crossing points, the axis
+   * through them, and the lens area as a number on the canvas. None of this was
+   * expressible before Curve Intersection and Region Boolean existed. Three
+   * Draw nodes each take TWO wires into G — the merge is what keeps a family of
+   * shapes on one style instead of one Draw per shape. */
+  'Vesica': _EX([
+    ['t1', 'input/time', 30, 40],
+    ['mu', 'math/mul', 230, 40, { B: 0.5 }],
+    ['sn', 'math/sin', 430, 40],
+    ['rm', 'math/remap', 630, 40, { S0: -1, S1: 1, T0: 30, T1: 95 }],
+    ['ng', 'math/neg', 860, 40],
+    ['pb', 'vec/construct', 860, 200],
+    ['pa', 'vec/construct', 1060, 40],
+    ['ca', 'crv/circle', 1260, 40, { R: 110 }],
+    ['cb', 'crv/circle', 1260, 200, { R: 110 }],
+    ['ix', 'crv/intersect', 1480, 40],
+    ['rg1', 'crv/region', 1480, 240, { mode: 'intersection' }],
+    ['rg2', 'crv/region', 1480, 460, { mode: 'difference' }],
+    ['pl', 'crv/polyline', 1720, 40, { C: false }],
+    ['ar', 'crv/area', 1720, 240],
+    ['mi', 'xf/mirror', 1720, 460],
+    ['rd', 'math/round', 1920, 240],
+    ['tx', 'disp/text', 2120, 240, { P: { x: 0, y: 196 }, S: 13 }],
+    ['dwMark', 'disp/draw', 2360, 40, { S: { r: 251, g: 172, b: 0, a: 0.95 }, W: 1.4 }],
+    ['dwLens', 'disp/draw', 2360, 200, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.16 }, W: 1.6 }],
+    ['dwCres', 'disp/draw', 2360, 380, { S: { r: 129, g: 140, b: 248, a: 0.85 }, F: { r: 129, g: 140, b: 248, a: 0.1 }, W: 1.4 }],
+    ['dwCirc', 'disp/draw', 2360, 560, { S: { r: 110, g: 125, b: 160, a: 0.32 }, W: 1 }],
+    ['dwTx', 'disp/draw', 2360, 720, { S: { r: 130, g: 141, b: 163, a: 0.9 } }],
+    ['bg', 'disp/bg', 2360, 860, { C: { r: 9, g: 11, b: 17, a: 1 } }]
+  ], [
+    ['t1', 'T', 'mu', 'A'],
+    ['mu', 'R', 'sn', 'V'],
+    ['sn', 'R', 'rm', 'V'],
+    ['rm', 'R', 'ng', 'V'],
+    ['rm', 'R', 'pb', 'X'],
+    ['ng', 'R', 'pa', 'X'],
+    ['pa', 'P', 'ca', 'P'],
+    ['pb', 'P', 'cb', 'P'],
+    ['ca', 'C', 'ix', 'C1'],
+    ['cb', 'C', 'ix', 'C2'],
+    ['ca', 'C', 'rg1', 'A'],
+    ['cb', 'C', 'rg1', 'B'],
+    ['ca', 'C', 'rg2', 'A'],
+    ['cb', 'C', 'rg2', 'B'],
+    ['ix', 'P', 'pl', 'V'],
+    ['rg1', 'C', 'ar', 'C'],
+    ['ar', 'A', 'rd', 'V'],
+    ['rd', 'R', 'tx', 'T'],
+    ['rg2', 'C', 'mi', 'G'],
+    ['pl', 'C', 'dwMark', 'G'],
+    ['ix', 'P', 'dwMark', 'G'],
+    ['rg1', 'C', 'dwLens', 'G'],
+    ['rg2', 'C', 'dwCres', 'G'],
+    ['mi', 'G', 'dwCres', 'G'],
+    ['ca', 'C', 'dwCirc', 'G'],
+    ['cb', 'C', 'dwCirc', 'G'],
+    ['tx', 'G', 'dwTx', 'G']
+  ]),
+
+  /* Native 3D (v0.12) — nine hexagons on a ring, extruded into stones, laid flat
+   * by a quarter turn about x and then spun about y. A second, smaller ring comes
+   * from scaling the first about the origin, which shrinks its radius too.
+   *
+   * The whole 3D idiom is the last four nodes. Project takes the geometry as ONE
+   * list (both rings arrive on two wires into G), so its back-to-front sort is
+   * global and the near stones of one ring correctly hide the far stones of the
+   * other. It emits three parallel lists — screen faces, shade, depth — so the
+   * shade goes through Remap into Colour HSL and a SINGLE Draw paints all 144
+   * faces. No camera on ctx, no second renderer: what reaches the draw list is
+   * ordinary 2D geometry, which is why the export renders exactly this.
+   *
+   * Drag the cloth to orbit; the wheel pulls the camera back. Because the
+   * projection scales with the canvas height, the scene frames itself at any
+   * size — including the gallery thumbnail. */
+  'Henge': _EX([
+    ['t1', 'input/time', 30, 40],
+    ['sr', 'sets/series', 30, 200, { S: 0, N: 1, C: 9 }],
+    ['mu2', 'math/mul', 230, 40, { B: 0.35 }],
+    ['mu1', 'math/mul', 230, 200, { B: 0.6981317007977318 }],
+    ['pv', 'vec/polar', 430, 200, { R: 150 }],
+    ['pg', 'crv/polygon', 630, 200, { R: 40, N: 6 }],
+    ['ex', 'd3/extrude', 830, 200, { H: 70, C: true }],
+    ['rx', 'd3/rotate3', 1030, 200, { R: 1.5707963267948966, A: { x: 1, y: 0, z: 0 } }],
+    ['ry', 'd3/rotate3', 1230, 200, { A: { x: 0, y: 1, z: 0 } }],
+    ['ob', 'd3/orbit', 1430, 20, { T: { x: 0, y: 0, z: 0 }, D: 540, A: 0.55, E: 0.42, F: 42 }],
+    ['sc', 'd3/scale3', 1430, 400, { F: { x: 0.55, y: 0.55, z: 0.55 } }],
+    ['rz', 'd3/rotate3', 1630, 400, { R: 0.3490658503988659, A: { x: 0, y: 1, z: 0 } }],
+    ['pj', 'd3/project', 1850, 180, { mode: 'shaded' }],
+    ['rm', 'math/remap', 2070, 340, { S0: 0, S1: 1, T0: 0.09, T1: 0.66 }],
+    ['hs', 'disp/hsl', 2290, 340, { H: 0.53, S: 0.52 }],
+    ['dw', 'disp/draw', 2510, 180, { S: { r: 7, g: 11, b: 18, a: 0.6 }, W: 1 }],
+    ['bg', 'disp/bg', 2510, 400, { C: { r: 8, g: 10, b: 16, a: 1 } }]
+  ], [
+    ['sr', 'S', 'mu1', 'A'],
+    ['mu1', 'R', 'pv', 'A'],
+    ['pv', 'P', 'pg', 'P'],
+    ['pg', 'C', 'ex', 'G'],
+    ['ex', 'G', 'rx', 'G'],
+    ['t1', 'T', 'mu2', 'A'],
+    ['mu2', 'R', 'ry', 'R'],
+    ['rx', 'G', 'ry', 'G'],
+    ['ry', 'G', 'sc', 'G'],
+    ['sc', 'G', 'rz', 'G'],
+    ['ry', 'G', 'pj', 'G'],
+    ['rz', 'G', 'pj', 'G'],
+    ['ob', 'C', 'pj', 'C'],
+    ['pj', 'S', 'rm', 'V'],
+    ['rm', 'R', 'hs', 'L'],
+    ['pj', 'F', 'dw', 'G'],
+    ['hs', 'C', 'dw', 'F']
   ])
 };
 
@@ -1396,7 +1510,7 @@ const EXAMPLES = {
  * ------------------------------------------------------------------------- */
 
 const EXAMPLE_CATS = [
-  'Fundamentals', 'Lists & grids', 'State & interaction',
+  'Fundamentals', 'Lists & grids', 'Geometry', '3D', 'State & interaction',
   'Audio synthesis', 'Scopes & figures', 'Audio input', 'Custom JS & meta'
 ];
 
@@ -1406,6 +1520,8 @@ const EXAMPLE_CATS = [
 const EXAMPLE_CAT_HUE = {
   'Fundamentals': 'Params',
   'Lists & grids': 'Sets',
+  'Geometry': 'Curve',
+  '3D': '3D',
   'State & interaction': 'State',
   'Audio synthesis': 'Audio',
   'Scopes & figures': 'Display',
@@ -1609,5 +1725,19 @@ const EXAMPLE_META = {
     teaches: 'The knob-extraction pattern: in “each” mode the code runs per angle and list-matches against single-valued knobs, exactly like a native node.',
     tags: ['custom js', 'knob extraction', 'superformula'],
     needs: [], frames: 40
+  },
+  'Vesica': {
+    cat: 'Geometry',
+    blurb: 'Two drifting circles and everything the curve nodes can say about the pair — the lens, the crescents, the crossing points, and the area as a number.',
+    teaches: 'Curve Intersection and Region Boolean cut shapes that were previously inexpressible, and three Draw nodes take two wires each so a family of shapes shares one style.',
+    tags: ['intersection', 'region boolean', 'mirror', 'area', 'multi-wire'],
+    needs: [], frames: 40
+  },
+  'Henge': {
+    cat: '3D',
+    blurb: 'Two rings of hexagonal stones, extruded from flat polygons and turning on a table you can grab and orbit.',
+    teaches: 'The whole 3D idiom in four nodes: Extrude a 2D curve, Project it with a camera, and wire the shade list through Colour HSL so one Draw paints all 144 faces in depth order.',
+    tags: ['3d', 'extrude', 'project', 'orbit camera', 'shading', 'painter’s algorithm'],
+    needs: [], frames: 60
   }
 };

@@ -272,6 +272,8 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .lit input[type="text"] { width: 56px; }
 .lit input.pt { width: 42px; }
+/* point3 literals fit three components in the two-field slot */
+.lit input.pt3 { width: 29px; }
 .lit input.alpha { width: 36px; }
 .lit input:focus { border-color: var(--accent-dim); }
 .lit input[type="color"] {

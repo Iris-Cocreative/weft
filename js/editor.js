@@ -312,16 +312,24 @@ const Editor = (() => {
       i.addEventListener('input', upd);
       al.addEventListener('change', upd);
       holder.appendChild(i); holder.appendChild(al);
-    } else if (inp.type === 'point' || inp.type === 'vector') {
-      const p = cur() || { x: 0, y: 0 };
-      const ix = document.createElement('input');
-      const iy = document.createElement('input');
-      ix.type = iy.type = 'number'; ix.step = iy.step = 'any';
-      ix.className = iy.className = 'pt';
-      ix.value = p.x; iy.value = p.y; ix.title = 'x'; iy.title = 'y';
-      const upd = () => set({ x: parseFloat(ix.value) || 0, y: parseFloat(iy.value) || 0 });
-      ix.addEventListener('change', upd); iy.addEventListener('change', upd);
-      holder.appendChild(ix); holder.appendChild(iy);
+    } else if (inp.type === 'point' || inp.type === 'vector' || inp.type === 'point3') {
+      /* one narrow field per component — point3 just has a third, so the branch
+         is written per-component rather than per-type */
+      const keys = inp.type === 'point3' ? ['x', 'y', 'z'] : ['x', 'y'];
+      const p = cur() || { x: 0, y: 0, z: 0 };
+      const fields = keys.map(k => {
+        const i = document.createElement('input');
+        i.type = 'number'; i.step = 'any';
+        i.className = keys.length > 2 ? 'pt pt3' : 'pt';
+        i.value = p[k] || 0; i.title = k;
+        return i;
+      });
+      const upd = () => {
+        const v = {};
+        keys.forEach((k, n) => { v[k] = parseFloat(fields[n].value) || 0; });
+        set(v);
+      };
+      for (const f of fields) { f.addEventListener('change', upd); holder.appendChild(f); }
     }
   }
 

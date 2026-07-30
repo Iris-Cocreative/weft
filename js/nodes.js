@@ -10,12 +10,19 @@
 const CATS = {
   Input: '#03a514', Params: '#2dd4bf', State: '#c1362e', Maths: '#3b5dba', Sets: '#7831be',
   Vector: '#7cbe25', Curve: '#fbac00', Transform: '#ff6767', Display: '#f009fc', Meta: '#8494ad',
-  Audio: '#ff36a3' /* signal pink — the open slot on the wheel, far from number-blue wires */
+  Audio: '#ff36a3', /* signal pink — the open slot on the wheel, far from number-blue wires */
+  /* 3D nodes ship in the js/nodes-3d.js pack; the hue lives here with the rest
+   * of the palette so removing the pack can't strand it. Code draft — cyan was
+   * the open space, clear of Params teal and the geometry wire (docs/DESIGN.md) */
+  '3D': '#00b8d4'
 };
 const TYPE_COLORS = {
   number: '#3e9aff', bool: '#ff3b41', string: '#fbbb00', point: '#fb6c09',
   vector: '#8cff14', color: '#d730f8', geometry: '#7057ff', any: '#8ea4c3',
-  audio: '#ff36a3'
+  audio: '#ff36a3',
+  /* 3D geometry rides the `geometry` wire — these two are the extra values the
+   * 3D pack needs: a position/direction, and a camera */
+  point3: '#00b8d4', camera: '#00e0a4'
 };
 
 const NODE_DEFS = {};
@@ -206,6 +213,12 @@ defNode('params/vector', {
   inputs: [{ name: 'V', type: 'vector', default: { x: 0, y: 0 }, label: 'source (optional)' }],
   outputs: [{ name: 'V', type: 'vector' }],
   compute: a => ({ V: a.V })
+});
+defNode('params/point3', {
+  title: 'Point3', cat: 'Params', desc: _PARAM_DESC + ' (3D position or direction — a 2D point arrives with z = 0)',
+  inputs: [{ name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'source (optional)' }],
+  outputs: [{ name: 'P', type: 'point3' }],
+  compute: a => ({ P: a.P })
 });
 defNode('params/curve', {
   title: 'Curve', cat: 'Params', desc: _PARAM_DESC,
@@ -2600,7 +2613,7 @@ defNode('meta/js', {
         nm.addEventListener('pointerdown', e => e.stopPropagation());
         nm.addEventListener('change', () => { p.name = clean(nm.value, p); rebuild(); });
         const ty = _mk('select', 'js-type', row);
-        for (const t of ['number', 'bool', 'string', 'point', 'vector', 'color', 'geometry', 'audio', 'any']) {
+        for (const t of ['number', 'bool', 'string', 'point', 'vector', 'point3', 'camera', 'color', 'geometry', 'audio', 'any']) {
           const o = _mk('option', '', ty);
           o.value = t; o.textContent = t;
           if (p.type === t) o.selected = true;
@@ -2645,7 +2658,7 @@ defNode('meta/js', {
     'math/pi': 5, 'math/phi': 5,
     'math/cmp': 6, 'math/logic': 6,
     /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
-    'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/curve': 0, 'params/relay': 0,
+    'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/point3': 0, 'params/curve': 0, 'params/relay': 0,
     'params/slider': 1, 'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,
     'params/anchor': 2,
     'params/panel': 3, 'params/graph': 4, 'params/timegraph': 4,
