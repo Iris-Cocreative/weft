@@ -223,6 +223,18 @@ Pass-through container — wire a source through it, or set it directly; swap th
 |---|---|---|
 | P | point |  |
 
+### `params/point3` — Point3
+
+Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream (3D position or direction — a 2D point arrives with z = 0)
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | source (optional) |
+
+| out | type | note |
+|---|---|---|
+| P | point3 |  |
+
 ### `params/relay` — Relay
 
 Pass-through pill for organising wires — double-click any wire to drop one onto it
@@ -1571,6 +1583,362 @@ Scale geometry by factor F around center C. In non-uniform mode F is the X facto
 
 Node values (`values` keys, not ports): `{"mode":"uniform"}`
 
+## 3D
+
+### `d3/amp3` — Amplitude 3D
+
+Scale V to length A, keeping its direction
+
+| in | type | default | note |
+|---|---|---|---|
+| V | point3 | `{"x":1,"y":0,"z":0}` |  |
+| A | number | `1` | length |
+
+| out | type | note |
+|---|---|---|
+| V | point3 |  |
+
+### `d3/box` — Box
+
+A box centred at P, W wide, H tall, D deep
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| W | number | `140` |  |
+| H | number | `140` |  |
+| D | number | `140` |  |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/camera` — Camera
+
+A camera looking from P at T. Field of view is in degrees (a lens, not a rotation); zoom is px per unit and only bites in orthographic mode
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":220,"y":-180,"z":-380}` | position |
+| T | point3 | `{"x":0,"y":0,"z":0}` | target |
+| F | number | `45` | field of view (degrees) |
+| Z | number | `1` | zoom (orthographic only) |
+| U | point3 | `{"x":0,"y":-1,"z":0}` | up — screen up is −y |
+
+| out | type | note |
+|---|---|---|
+| C | camera |  |
+
+Node values (`values` keys, not ports): `{"mode":"persp"}`
+
+### `d3/cone` — Cone
+
+An N-sided cone at P, apex up along −y, base radius R
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| R | number | `80` | base radius |
+| H | number | `170` | height (along y) |
+| N | number | `20` | sides |
+| C | bool | `true` | base cap |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/cross3` — Cross Product 3D
+
+A × B — the vector perpendicular to both, by the right-hand rule. Unlike the 2D cross this really is a vector
+
+| in | type | default | note |
+|---|---|---|---|
+| A | point3 | `{"x":1,"y":0,"z":0}` |  |
+| B | point3 | `{"x":0,"y":1,"z":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| C | point3 |  |
+
+### `d3/cylinder` — Cylinder
+
+An N-sided cylinder at P, standing along y (H tall). Caps included — turn them off for a tube
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| R | number | `70` | radius |
+| H | number | `160` | height (along y) |
+| N | number | `20` | sides |
+| C | bool | `true` | caps |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/decon3` — Deconstruct3
+
+Split a 3D point into X, Y and Z
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| X | number |  |
+| Y | number |  |
+| Z | number |  |
+
+### `d3/dot3` — Dot Product 3D
+
+A · B in 3D — with unit vectors it is the cosine of the angle between them, which is where every shading trick starts
+
+| in | type | default | note |
+|---|---|---|---|
+| A | point3 | `{"x":1,"y":0,"z":0}` |  |
+| B | point3 | `{"x":1,"y":0,"z":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| D | number |  |
+
+### `d3/extrude` — Extrude
+
+Push any 2D geometry out along z into a mesh, centred on its own plane so it stays put. Closed curves get caps, open ones become ribbons — which makes every curve node in the library a 3D modelling tool
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | 2D profile |
+| H | number | `120` | height (along z) |
+| C | bool | `true` | cap the ends |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/faces` — Faces
+
+Explode a mesh into its faces, with each one’s unit normal and centroid — three parallel lists, for per-face effects that happen before the camera sees them
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | mesh |
+
+| out | type | note |
+|---|---|---|
+| F | geometry | face polygons |
+| N | point3 | unit normals |
+| C | point3 | centroids |
+
+### `d3/grid3` — Grid3
+
+A 3D point lattice, with the cell indices I, J and K beside it — the 3D sibling of Grid, and the same trick: the indices are what you drive everything else with
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| S | number | `60` | spacing |
+| NX | number | `4` | count along x |
+| NY | number | `4` | count along y |
+| NZ | number | `4` | count along z |
+
+| out | type | note |
+|---|---|---|
+| P | point3 |  |
+| I | number | x index |
+| J | number | y index |
+| K | number | z index |
+
+### `d3/len3` — Length 3D
+
+Length of V. (A point3 wired straight into a number port already coerces to this — the node is here for when you want to see it.)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | point3 | `{"x":1,"y":0,"z":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| L | number |  |
+
+### `d3/move3` — Move3
+
+Translate geometry by T in 3D. A 2D shape comes back as a 3D polyline, so this is also how you lift the canvas off z = 0
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  |  |
+| T | point3 | `{"x":0,"y":0,"z":0}` | translation |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/orbit` — Orbit Camera
+
+A camera you steer: drag the cloth to orbit T, wheel to pull in and out. A and E are the resting angles the drag adds to, and they come back out so other things can follow the view
+
+| in | type | default | note |
+|---|---|---|---|
+| T | point3 | `{"x":0,"y":0,"z":0}` | target |
+| D | number | `460` | distance |
+| A | number | `0.6` | yaw at rest (rad) |
+| E | number | `0.45` | pitch at rest (rad) |
+| F | number | `45` | field of view (degrees) |
+
+| out | type | note |
+|---|---|---|
+| C | camera |  |
+| A | number | yaw now |
+| E | number | pitch now |
+
+### `d3/plane` — Plane
+
+A flat W×D grid in the xz plane at P — the ground under everything. N cells a side, so each one can take its own shade. (For a wall in the canvas plane, a 2D Rectangle already projects as a face.)
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":110,"z":0}` | centre |
+| W | number | `420` | width (x) |
+| D | number | `420` | depth (z) |
+| N | number | `6` | cells a side |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/point3` — Point3
+
+A 3D point from X, Y and Z — y is down and z runs away from the viewer, matching the canvas
+
+| in | type | default | note |
+|---|---|---|---|
+| X | number | `0` |  |
+| Y | number | `0` |  |
+| Z | number | `0` |  |
+
+| out | type | note |
+|---|---|---|
+| P | point3 |  |
+
+### `d3/polyline3` — PolyLine3
+
+Straight segments through 3D points V — closed, it also counts as a face and takes a shade
+
+| in | type | default | note |
+|---|---|---|---|
+| V | point3 |  | vertices · receives whole list |
+| C | bool | `false` | closed |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/project` — Project
+
+Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a colour node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | geometry (whole list) · receives whole list |
+| C | camera |  |  |
+| L | point3 | `{"x":-0.4,"y":-0.8,"z":-0.5}` | direction the light comes from |
+
+| out | type | note |
+|---|---|---|
+| F | geometry | screen faces, back to front |
+| S | number | shade 0..1 |
+| D | number | view depth |
+
+Node values (`values` keys, not ports): `{"mode":"shaded"}`
+
+### `d3/revolve` — Revolve
+
+Spin a 2D profile about the world y axis into a mesh of revolution — the profile’s x is the radius, so keep it to one side of the axis. A < 360° leaves it open like a peeled fruit
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | 2D profile |
+| N | number | `24` | segments |
+| A | number | `6.283185307179586` | sweep (rad) |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/rotate3` — Rotate3
+
+Rotate geometry by R radians about the axis A through centre C. Default axis is y, so it spins like a turntable
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  |  |
+| R | number | `0` | angle (rad) |
+| A | point3 | `{"x":0,"y":1,"z":0}` | axis |
+| C | point3 | `{"x":0,"y":0,"z":0}` | centre |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/scale3` — Scale3
+
+Scale geometry about centre C. Wire a single number into F and it scales uniformly; give it three components and each axis goes its own way
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  |  |
+| F | point3 | `{"x":1,"y":1,"z":1}` | factor (a number scales uniformly) |
+| C | point3 | `{"x":0,"y":0,"z":0}` | centre |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/sphere` — Sphere
+
+A UV sphere at P: U segments round, V rings from pole to pole (the poles are along y, so it stands up on screen)
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| R | number | `90` | radius |
+| U | number | `18` | segments round |
+| V | number | `12` | rings |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/torus` — Torus
+
+A torus at P lying in the xz plane (the hole runs along y): R1 to the middle of the tube, R2 the tube itself
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| R1 | number | `100` | ring radius |
+| R2 | number | `34` | tube radius |
+| N | number | `28` | segments round the ring |
+| M | number | `12` | segments round the tube |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+
+### `d3/unit3` — Unit Vector 3D
+
+Normalize V to length 1 (a zero vector stays zero)
+
+| in | type | default | note |
+|---|---|---|---|
+| V | point3 | `{"x":1,"y":0,"z":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| V | point3 |  |
+
 ## Display
 
 ### `disp/bg` — Background
@@ -1984,4 +2352,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-146 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+146 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`
