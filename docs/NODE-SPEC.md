@@ -123,13 +123,23 @@ Plain JSON objects; `point` doubles as drawable geometry (renders as a dot).
 | `circle` | `{kind, cx, cy, r}` |
 | `ellipse` | `{kind, cx, cy, rx, ry, rot}` |
 | `rect` | `{kind, cx, cy, w, h, rot}` (centered) |
-| `arc` | `{kind, cx, cy, r, a0, a1}` (radians) |
+| `arc` | `{kind, cx, cy, r, a0, a1}` (radians) — sweeps from a0 to a1, backwards when a1 < a0 |
 | `poly` | `{kind, pts:[{x,y}…], closed}` |
 | `spline` | `{kind, pts, closed}` — Catmull-Rom through pts |
 | `text` | `{kind, text, x, y, size}` |
 
 Angles are radians everywhere. **Coordinates are centered**: (0,0) is the
 middle of the canvas, +x right, +y down, units are CSS pixels.
+
+Every kind is **parameterized by arc length** over `t = 0..1`, so a parameter
+means the same place on the curve whichever node produced it: Curve
+Intersection's `T1` feeds Evaluate Curve, Divide Curve spaces points evenly on
+an ellipse and on a spline alike. Closed curves wrap (`t = 1.2` is `t = 0.2`);
+open ones clamp.
+
+A **non-uniform Scale turns a circle into an ellipse** rather than a
+wrong circle, and an ellipse under any further affine stays an ellipse. Kinds
+without an exact image under a transform (arc, rect, spline) become `poly`.
 
 ## 6. Evaluation model
 

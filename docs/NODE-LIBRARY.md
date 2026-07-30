@@ -20,9 +20,9 @@ Status: `planned` (agreed, buildable now) · `phase N` (waits on a PLAN phase) �
 | **State** | `state/` | Cross-frame memory — smoothing, springs, counters, latches, the Delay feedback edge | 9 |
 | **Maths** | `math/` | Numbers in, numbers out — pure, per-item; comparison & boolean logic | 31 |
 | **Sets** | `sets/` | Making and reshaping *lists* — the loom itself | 14 |
-| **Vector** | `vec/` | Points and vectors — position as data | 12 |
-| **Curve** | `crv/` | Geometry construction and interrogation | 10 |
-| **Transform** | `xf/` | Moving geometry — affine maps | 3 |
+| **Vector** | `vec/` | Points and vectors — position as data | 14 |
+| **Curve** | `crv/` | Geometry construction, interrogation and reshaping | 22 |
+| **Transform** | `xf/` | Moving geometry — affine maps and replication | 5 |
 | **Display** | `disp/` | Pixels out — draw, text, color, background; Measure Text, Element (real DOM), Trace, Cymatics, Harmonograph | 9 |
 | **Meta** | `meta/` | Composition — Cluster and its Port In / Port Out boundary markers (hidden from the palette) | 3 |
 | **Audio** | `audio/` | Sound in & out (experiment) — pitch helpers (Note, Scale, tuned by `graph.meta.tuneA4`, 432 default), sources, processors, the speaker (master limiter + preview mute), Mic In (loudness → number + routable signal), Pitch In (autocorrelation pitch tracker for any wired audio, mic fallback → Hz/MIDI), Track In (computer audio via the share picker, stereo + L/R split), Scope (oscilloscope: waveform samples back onto the cloth), Vector Scope (XY / Lissajous), Bands (FFT spectrum → list of band levels), Mix (sum signals — epicycles), Path to Audio (geometry → looped stereo waveform — oscilloscope music) | 15 |
@@ -45,8 +45,8 @@ The proof is `patches/organic-nav-v2.md`: 92 flat nodes → one 28-node cluster.
 
 Still open from that harvest:
 
-- **Bezier** `crv/bezier` and **Join Curves** `crv/join` — needed once the `path`
-  kind lands (phase 5). Until then the nav's necks are circular fillets.
+- **Bezier** `crv/bezier` — needs the `path` kind (phase 5). Until then the
+  nav's necks are circular fillets. (Join Curves shipped in v0.11.)
 - **Active-index idiom** — "index of the item whose trigger last fired" costs 6
   nodes (clicks × indices → Mass Addition → Sample & Hold). Candidate node, but
   per principle 7 wait for a second patch to pay the same cost before adding it.
@@ -86,22 +86,24 @@ Still open from that harvest:
   the formula (a,b,c,d,x…); Weft's is fixed X,Y,Z,T. Port-count-follows-
   expression is the upgrade (Demo 4's polynomial needs 5 inputs).
 
-### Curve *(planned / phase 7 for the hard ones)*
+### Curve *(the geometry pass shipped in v0.11)*
 
-- **Length** `crv/length` — arc length of C. *(planned — trivial via toPoly)*
-- **Offset** `crv/offset` — polyline offset of C by distance D. *(planned — polygon-offset math, no dependencies)*
-- **Region Union / Intersection / Difference** — 2D boolean ops on closed regions. The geometric cousins of the set nodes; need real polygon clipping (Greiner–Hormann or vendored lib = deliberate decision, invariant #7). *(phase 7)*
-- **Fillet** `crv/fillet` — round polyline corners by radius R. *(phase 7)*
+Curve Intersection, Curve Closest Point, Point In Curve, Curve Length, Area,
+Bounding Box, Convex Hull, Join Curves, Trim, Fillet and Region Boolean all
+shipped together with the engine primitive layer they sit on (`segInt`,
+`polyInt`, `polySelfInt`, `closestOnPoly`, `resample`, `splitPoly`,
+`convexHull`, `filletPoly`, `clipPoly`). The "Greiner–Hormann or vendored lib"
+question was answered **written out**, per invariant #7.
 
-### Curve / Vector — harvested from the GH demo corpus *(planned)*
+Still open here:
 
-- **Curve Closest Point** `crv/closest` — nearest point on C to P, + distance.
-  The engine of GH's attractor patterns (Demos 5, 6); cheap via `LM.toPoly`.
-- **Point In Curve** `crv/incurve` — is P inside closed region C (bool).
-  `LM.pointInGeom` already exists for Hotspot — this just exposes it as data.
-- **Bounding Box** `crv/bbox` — rect bounds of geometry (whole-list mode via
-  listInput). Demo 6: measure shape → size grid to fit.
-- **Join Curves** `crv/join` — merge touching curves into one polyline.
+- **Bezier** `crv/bezier` — waits on the `path` kind (phase 5).
+- **Holes.** `clipPoly` cannot express a ring, so Region Boolean's difference
+  returns A unchanged when the cutter lands wholly inside it. A `holes` field on
+  the `poly` kind (drawn with a second sub-path, `evenodd` fill) is the honest
+  fix, and it is an invariant-#4 change — a deliberate decision, not a patch.
+- **Curve Frame / Perp Frame** — Evaluate Curve already emits V and N; a frame
+  node only earns its place once a `plane`/`matrix` value type exists.
 
 ### Text *(pull Format forward)*
 
@@ -109,14 +111,18 @@ Still open from that harvest:
   string out (GH Demos 1, 5: `{0:0.00} mm` → live labels). Cheap, and readouts
   + Panel + Text make it immediately useful — build alongside the set nodes.
 
-### Transform *(planned)*
+### Transform *(Mirror and Array shipped in v0.11)*
 
-- **Mirror** `xf/mirror` — reflect geometry across a line. Completes the affine family; symmetry is half of ornament.
-- **Array / Tile** `xf/tile` — replicate geometry across a region on two basis
-  vectors (GH's Linear/Rectangular Array). *Not* the way to build a repeating
-  background of *varying* cells — that's Grid + list matching (principle 6).
-  Tile is for genuinely identical copies, and it's the honest node for it. Keep
-  the two distinct in the docs or people will reach for the wrong one.
+Array emits **I** and **J** cell indices beside the geometry (principle 6), and
+its `desc` carries the warning that used to live here: Array is for genuinely
+identical copies, and a repeating background of *varying* cells is Grid + list
+matching. Keep the two distinct or people reach for the wrong one.
+
+Still open:
+
+- **Transform** `xf/xform` — apply a composed matrix. Blocked on a first-class
+  `matrix`/`plane` value type, which Weft has deliberately never had: chained
+  transforms are chained nodes. `LM.matMul` now exists for the day that changes.
 
 > **Do not build a "Pattern" node** that renders a tile to an offscreen canvas
 > and `createPattern`s it across the background (James's idea, 2026-07-14). It is
