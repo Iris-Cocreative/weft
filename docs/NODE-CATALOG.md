@@ -1984,4 +1984,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-131 node glyphs + 2 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (13): `vec/dot`, `vec/cross`, `crv/intersect`, `crv/closest`, `crv/incurve`, `crv/length`, `crv/area`, `crv/bbox`, `crv/hull`, `crv/join`, `crv/trim`, `crv/fillet`, `crv/region`
+146 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
