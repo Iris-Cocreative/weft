@@ -108,9 +108,12 @@ downstream knows 3D happened.
 - **Scale in 3D without a mode toggle** — `d3/scale3`'s factor is a `point3`, and
   a bare number coerces to all three components, so one wire is uniform scaling
   and three components is not.
-- **A 3D point you can see** — you can't, directly: `point3` outputs get no ghost
-  preview, because an unprojected point has no screen position. Send it through
-  Project (points come out as dots) or read it in a `params/panel`.
+- **Seeing 3D before you project it** — you don't. `point3` outputs get no ghost
+  preview, and neither do `mesh` or `poly3` ones: an unprojected 3D value has no
+  screen position, and ghosting it would lay every intermediate solid flat over
+  the scene you actually rendered. Send it through Project (points come out as
+  dots), wire the mesh into Draw on purpose for a flat front elevation, or read
+  the numbers in a `params/panel`.
 
 ## Lists & fields
 

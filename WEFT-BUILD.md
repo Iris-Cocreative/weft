@@ -235,7 +235,7 @@ engine warts went with the pass: an ellipse is sampled by arc length like
 every other kind (Divide used to bunch its points), the 96-point distance
 table is built once per node instead of once per sample (Divide with N=500
 was O(N·96)), and a reversed arc no longer renders one way while
-hit-testing another — 143 nodes, 28 examples.
+hit-testing another — 146 nodes, 28 examples.
 v0.12 (2026-07-30, native 3D): the roadmap had 3D staged as *2.5D → renderer
 abstraction → vendored three.js, only when 2D saturates*. James called a
 different route, and it turned out to fit the actual code far better, for one
@@ -267,7 +267,7 @@ clipped — Weft paints, it does not rasterize. Orbit Camera accumulates a drag 
 `node._state` from the existing `ctx.mouse`/`ctx.scroll`, so steering 3D needed no
 new ctx channel either. New examples: Vesica (the geometry pass measured — lens,
 crescents, crossings, area) and Henge (two rings of extruded stones, orbitable,
-144 shaded faces from one Draw) — 168 nodes, 30 examples.
+144 shaded faces from one Draw) — 171 nodes, 30 examples.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
