@@ -559,7 +559,10 @@ const LM = {
       }
       const f = clean[0], l = clean[clean.length - 1];
       if (clean.length > 1 && Math.abs(f.x - l.x) < 1e-9 && Math.abs(f.y - l.y) < 1e-9) clean.pop();
-      if (clean.length >= 3 && Math.abs(LM.polyArea(clean)) > 0.01) out.push(clean);
+      /* anything under a square pixel is either invisible or a sliver the
+         nudge invented — difference of two identical shapes must come back
+         empty, not as a hairline */
+      if (clean.length >= 3 && Math.abs(LM.polyArea(clean)) > 1) out.push(clean);
     }
     /* a union of two shapes that cross always has an outer ring; nothing back
        means the traversal lost the thread — better to nudge than to draw wrong */
