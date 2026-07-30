@@ -225,6 +225,24 @@ function _cleanClick(el, fn) {
   });
 }
 
+/* segmented mode toggle on node.values[key]; opts are [label, value, tooltip?].
+ * The pattern the library keeps reaching for (library principle 5). */
+function _modeSeg(node, body, changed, key, opts, dflt) {
+  const seg = _mk('div', 'seg', body);
+  for (const o of opts) {
+    const b = _mk('div', 'seg-b' + ((node.values[key] === undefined ? dflt : node.values[key]) === o[1] ? ' on' : ''), seg);
+    b.textContent = o[0];
+    if (o[2]) b.title = o[2];
+    _cleanClick(b, () => {
+      node.values[key] = o[1];
+      seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+      b.classList.add('on');
+      changed();
+    });
+  }
+  return seg;
+}
+
 /* editor-only: live shift state — shift-dragging any slider snaps to integers
  * (guarded so the headless tests, which have no window, still load this file) */
 let _weftShift = false;
@@ -1080,6 +1098,22 @@ defNode('vec/angle', {
   compute: a => ({ R: Math.atan2(a.B.y - a.A.y, a.B.x - a.A.x) })
 });
 
+defNode('vec/dot', {
+  title: 'Dot Product', cat: 'Vector',
+  desc: 'A · B — how much of A points along B. Zero means perpendicular; with unit vectors it is the cosine of the angle between them',
+  inputs: [{ name: 'A', type: 'vector', default: { x: 1, y: 0 } }, { name: 'B', type: 'vector', default: { x: 1, y: 0 } }],
+  outputs: [{ name: 'D', type: 'number' }],
+  compute: a => ({ D: LM.vdot(a.A, a.B) })
+});
+
+defNode('vec/cross', {
+  title: 'Cross Product', cat: 'Vector',
+  desc: 'A × B — in 2D this is a single number (the perp-dot): the signed area of the parallelogram, positive when B turns clockwise from A on the y-down canvas',
+  inputs: [{ name: 'A', type: 'vector', default: { x: 1, y: 0 } }, { name: 'B', type: 'vector', default: { x: 0, y: 1 } }],
+  outputs: [{ name: 'C', type: 'number' }],
+  compute: a => ({ C: LM.vcross(a.A, a.B) })
+});
+
 defNode('vec/grid', {
   title: 'Grid', cat: 'Vector', width: 156,
   desc: 'Point lattice filling a W×H region, square or isometric — wire Viewport into W/H for a grid that always fills the canvas',
@@ -1205,28 +1239,46 @@ defNode('crv/interp', {
 });
 
 defNode('crv/divide', {
-  title: 'Divide Curve', cat: 'Curve', desc: 'N division points along curve C (+ their parameters)',
-  inputs: [{ name: 'C', type: 'geometry' }, { name: 'N', type: 'number', default: 10, label: 'segments' }],
-  outputs: [{ name: 'P', type: 'point' }, { name: 'T', type: 'number', label: 'parameters' }],
-  compute: a => {
+  title: 'Divide Curve', cat: 'Curve', width: 168,
+  desc: 'Division points along curve C, evenly by arc length. N is the segment count, or the spacing in px in by-length mode. V is the unit tangent — T is already taken by the parameters, GH’s letter or not',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'N', type: 'number', default: 10, label: 'segments (px in by-length mode)' }],
+  outputs: [
+    { name: 'P', type: 'point' },
+    { name: 'T', type: 'number', label: 'parameters' },
+    { name: 'V', type: 'vector', label: 'unit tangent' }],
+  defaults: { mode: 'count' },
+  compute: (a, ctx, node) => {
     if (!a.C) return {};
-    const n = LM.clamp(Math.floor(a.N), 1, 5000);
-    const closed = LM.isClosedGeom(a.C);
-    const count = closed ? n : n + 1;
-    const P = [], T = [];
-    for (let i = 0; i < count; i++) { const t = i / n; P.push(LM.curvePoint(a.C, t)); T.push(t); }
-    return { P, T };
-  }
+    const tb = LM.curveTable(a.C, 96);
+    let n;
+    if (node.values.mode === 'length') n = LM.clamp(Math.round(LM.curveLength(a.C) / Math.max(0.5, Math.abs(a.N))), 1, 5000);
+    else n = LM.clamp(Math.floor(a.N), 1, 5000);
+    const count = LM.isClosedGeom(a.C) ? n : n + 1;
+    const P = [], T = [], V = [];
+    for (let i = 0; i < count; i++) {
+      const t = i / n;
+      P.push(LM.curvePoint(a.C, t, tb)); T.push(t); V.push(LM.tangentAt(a.C, t, tb));
+    }
+    return { P, T, V };
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [['by count', 'count'], ['by length', 'length']], 'count')
 });
 
 defNode('crv/eval', {
-  title: 'Evaluate Curve', cat: 'Curve', desc: 'Point on curve C at parameter T (0..1; wraps on closed curves)',
+  title: 'Evaluate Curve', cat: 'Curve',
+  desc: 'Point on curve C at parameter T (0..1 by arc length; wraps on closed curves), with the unit tangent V and the normal N beside it',
   inputs: [{ name: 'C', type: 'geometry' }, { name: 'T', type: 'number', default: 0.5 }],
-  outputs: [{ name: 'P', type: 'point' }],
+  outputs: [
+    { name: 'P', type: 'point' },
+    { name: 'V', type: 'vector', label: 'unit tangent' },
+    { name: 'N', type: 'vector', label: 'unit normal (tangent turned +90°)' }],
   compute: a => {
     if (!a.C) return {};
     const t = LM.isClosedGeom(a.C) ? LM.fract(a.T) : LM.clamp(a.T, 0, 1);
-    return { P: LM.curvePoint(a.C, t) };
+    const tb = LM.curveTable(a.C, 96);
+    const V = LM.tangentAt(a.C, t, tb);
+    return { P: LM.curvePoint(a.C, t, tb), V: V, N: LM.vperp(V) };
   }
 });
 
@@ -1235,6 +1287,226 @@ defNode('crv/offset', {
   inputs: [{ name: 'C', type: 'geometry' }, { name: 'D', type: 'number', default: 10, label: 'distance' }],
   outputs: [{ name: 'C', type: 'geometry' }],
   compute: a => a.C === undefined ? {} : ({ C: LM.offsetGeom(a.C, a.D) })
+});
+
+defNode('crv/intersect', {
+  title: 'Curve Intersection', cat: 'Curve', width: 176,
+  desc: 'Where two curves cross — points P plus the parameter on each curve (T1, T2), ready to feed back into Evaluate Curve. In self mode C2 is ignored and the node finds where C1 crosses itself',
+  inputs: [{ name: 'C1', type: 'geometry' }, { name: 'C2', type: 'geometry' }],
+  outputs: [
+    { name: 'P', type: 'point' },
+    { name: 'T1', type: 'number', label: 'parameter on C1' },
+    { name: 'T2', type: 'number', label: 'parameter on C2 (or the other pass on C1)' }],
+  defaults: { mode: 'pair' },
+  compute: (a, ctx, node) => {
+    if (!a.C1) return {};
+    const A = LM.toPoly(a.C1, 96);
+    let hits;
+    if (node.values.mode === 'self') hits = LM.polySelfInt(A.pts, A.closed);
+    else if (!a.C2) return {};
+    else { const B = LM.toPoly(a.C2, 96); hits = LM.polyInt(A.pts, A.closed, B.pts, B.closed); }
+    return { P: hits.map(h => h.pt), T1: hits.map(h => h.ta), T2: hits.map(h => h.tb) };
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [['curve × curve', 'pair'], ['self', 'self']], 'pair')
+});
+
+defNode('crv/closest', {
+  title: 'Curve Closest Point', cat: 'Curve',
+  desc: 'Nearest point on curve C to point P — the position, its curve parameter T, and the distance D. The engine of attractor patterns',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'P', type: 'point', default: { x: 0, y: 0 } }],
+  outputs: [{ name: 'P', type: 'point' }, { name: 'T', type: 'number', label: 'parameter' }, { name: 'D', type: 'number', label: 'distance' }],
+  compute: a => {
+    if (!a.C) return {};
+    const P = LM.toPoly(a.C, 96);
+    const cl = LM.closestOnPoly(P.pts, P.closed, a.P);
+    return cl ? { P: cl.pt, T: cl.t, D: cl.dist } : {};
+  }
+});
+
+defNode('crv/incurve', {
+  title: 'Point In Curve', cat: 'Curve',
+  desc: 'Is point P inside the closed region C? Open curves are never "inside" — close the curve first',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'P', type: 'point', default: { x: 0, y: 0 } }],
+  outputs: [{ name: 'B', type: 'bool', label: 'inside' }],
+  compute: a => a.C === undefined ? {} : ({ B: LM.pointInGeom(a.C, a.P, 0) })
+});
+
+defNode('crv/length', {
+  title: 'Curve Length', cat: 'Curve', desc: 'Arc length of curve C in px',
+  inputs: [{ name: 'C', type: 'geometry' }],
+  outputs: [{ name: 'L', type: 'number', label: 'length' }],
+  compute: a => a.C === undefined ? {} : ({ L: LM.curveLength(a.C) })
+});
+
+defNode('crv/area', {
+  title: 'Area', cat: 'Curve', desc: 'Enclosed area of curve C in px² and its area centroid. Open curves are treated as if closed',
+  inputs: [{ name: 'C', type: 'geometry' }],
+  outputs: [{ name: 'A', type: 'number', label: 'area' }, { name: 'C', type: 'point', label: 'centroid' }],
+  compute: a => {
+    if (!a.C) return {};
+    const P = LM.toPoly(a.C, 128);
+    return { A: Math.abs(LM.polyArea(P.pts)), C: LM.polyCentroid(P.pts) };
+  }
+});
+
+defNode('crv/bbox', {
+  title: 'Bounding Box', cat: 'Curve', width: 168,
+  desc: 'Axis-aligned bounds of geometry G — one box per item, or a single box around the whole list',
+  inputs: [{ name: 'G', type: 'geometry' }],
+  outputs: [
+    { name: 'B', type: 'geometry', label: 'bounding rect' },
+    { name: 'C', type: 'point', label: 'centre' },
+    { name: 'W', type: 'number', label: 'width' },
+    { name: 'H', type: 'number', label: 'height' }],
+  listInputs: ['G'],
+  defaults: { mode: 'each' },
+  compute: (a, ctx, node) => {
+    const gs = (a.G || []).filter(g => g);
+    if (!gs.length) return {};
+    const rect = b => ({ kind: 'rect', cx: b.x + b.w / 2, cy: b.y + b.h / 2, w: b.w, h: b.h, rot: 0 });
+    if (node.values.mode === 'all') {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const g of gs) {
+        const b = LM.geomBounds(g);
+        if (!b) continue;
+        if (b.x < x0) x0 = b.x; if (b.x + b.w > x1) x1 = b.x + b.w;
+        if (b.y < y0) y0 = b.y; if (b.y + b.h > y1) y1 = b.y + b.h;
+      }
+      if (!isFinite(x0)) return {};
+      const b = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      return { B: rect(b), C: { x: x0 + b.w / 2, y: y0 + b.h / 2 }, W: b.w, H: b.h };
+    }
+    const B = [], C = [], W = [], H = [];
+    for (const g of gs) {
+      const b = LM.geomBounds(g);
+      if (!b) continue;
+      B.push(rect(b)); C.push({ x: b.x + b.w / 2, y: b.y + b.h / 2 }); W.push(b.w); H.push(b.h);
+    }
+    return { B, C, W, H };
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [['per item', 'each'], ['whole list', 'all']], 'each')
+});
+
+defNode('crv/hull', {
+  title: 'Convex Hull', cat: 'Curve', desc: 'The tightest convex outline containing every point in P — the rubber band round the pins',
+  inputs: [{ name: 'P', type: 'point', label: 'points' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  listInputs: ['P'],
+  compute: a => {
+    const pts = (a.P || []).filter(p => p && p.x !== undefined);
+    if (pts.length < 2) return {};
+    return { C: { kind: 'poly', pts: LM.convexHull(pts), closed: true } };
+  }
+});
+
+defNode('crv/join', {
+  title: 'Join Curves', cat: 'Curve',
+  desc: 'Chain curves whose ends meet (within T px) into continuous polylines; a chain that closes on itself comes back closed. Already-closed curves pass through',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'T', type: 'number', default: 1, label: 'tolerance (px)' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  listInputs: ['C'],
+  compute: a => {
+    const tol = Math.max(0, a.T === undefined ? 1 : a.T);
+    const out = [], segs = [];
+    for (const g of (a.C || [])) {
+      if (!g) continue;
+      const P = LM.toPoly(g, 64);
+      if (P.pts.length < 2) continue;
+      if (P.closed) out.push({ kind: 'poly', pts: P.pts.map(p => ({ x: p.x, y: p.y })), closed: true });
+      else segs.push(P.pts.map(p => ({ x: p.x, y: p.y })));
+    }
+    const d = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+    const used = segs.map(() => false);
+    for (let i = 0; i < segs.length; i++) {
+      if (used[i]) continue;
+      used[i] = true;
+      let cur = segs[i].slice(), grew = true;
+      while (grew) {
+        grew = false;
+        for (let j = 0; j < segs.length; j++) {
+          if (used[j]) continue;
+          const s = segs[j], head = cur[0], tail = cur[cur.length - 1];
+          if (d(tail, s[0]) <= tol) cur = cur.concat(s.slice(1));
+          else if (d(tail, s[s.length - 1]) <= tol) cur = cur.concat(s.slice(0, -1).reverse());
+          else if (d(head, s[s.length - 1]) <= tol) cur = s.slice(0, -1).concat(cur);
+          else if (d(head, s[0]) <= tol) cur = s.slice(1).reverse().concat(cur);
+          else continue;
+          used[j] = true; grew = true;
+        }
+      }
+      const closed = cur.length > 3 && d(cur[0], cur[cur.length - 1]) <= tol;
+      if (closed) cur.pop();
+      out.push({ kind: 'poly', pts: cur, closed: closed });
+    }
+    return { C: out };
+  }
+});
+
+defNode('crv/trim', {
+  title: 'Trim', cat: 'Curve', width: 176,
+  desc: 'Cut curve C wherever cutter X crosses it and keep the pieces on one side — outside X, inside X, or every piece (split). Inside/outside need a closed cutter',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'X', type: 'geometry', label: 'cutter' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  defaults: { mode: 'outside' },
+  compute: (a, ctx, node) => {
+    if (!a.C || !a.X) return {};
+    const mode = node.values.mode || 'outside';
+    const P = LM.toPoly(a.C, 128), Q = LM.toPoly(a.X, 128);
+    if (P.pts.length < 2 || Q.pts.length < 2) return {};
+    const hits = LM.polyInt(P.pts, P.closed, Q.pts, Q.closed);
+    if (!hits.length) {
+      if (mode === 'split') return { C: a.C };
+      const inside = LM.pointInGeom(a.X, P.pts[0], 0);
+      return (mode === 'inside') === inside ? { C: a.C } : {};
+    }
+    const out = [];
+    for (const pc of LM.splitPoly(P.pts, P.closed, hits.map(h => h.ta))) {
+      if (mode !== 'split') {
+        const mid = LM.resample(pc, false, 3)[1];
+        if ((mode === 'inside') !== LM.pointInGeom(a.X, mid, 0)) continue;
+      }
+      out.push({ kind: 'poly', pts: pc, closed: false });
+    }
+    return { C: out };
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [['outside', 'outside'], ['inside', 'inside'], ['split', 'split']], 'outside')
+});
+
+defNode('crv/fillet', {
+  title: 'Fillet', cat: 'Curve',
+  desc: 'Round the corners of C with arcs of radius R. The radius is capped at half the shorter edge, so tight corners soften instead of folding',
+  inputs: [
+    { name: 'C', type: 'geometry' },
+    { name: 'R', type: 'number', default: 12, label: 'radius' },
+    { name: 'N', type: 'number', default: 8, label: 'segments per corner' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => {
+    if (!a.C) return {};
+    const P = LM.toPoly(a.C, 96);
+    if (P.pts.length < 3) return { C: a.C };
+    return { C: { kind: 'poly', pts: LM.filletPoly(P.pts, P.closed, Math.abs(a.R), a.N), closed: P.closed } };
+  }
+});
+
+defNode('crv/region', {
+  title: 'Region Boolean', cat: 'Curve', width: 190,
+  desc: 'Union, intersection or difference (A minus B) of two closed regions. Weft geometry has no holes: a cutter sitting entirely inside A returns A unchanged',
+  inputs: [{ name: 'A', type: 'geometry' }, { name: 'B', type: 'geometry' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  defaults: { mode: 'union' },
+  compute: (a, ctx, node) => {
+    if (!a.A || !a.B) return {};
+    const PA = LM.toPoly(a.A, 96), PB = LM.toPoly(a.B, 96);
+    if (PA.pts.length < 3 || PB.pts.length < 3) return {};
+    const res = LM.clipPoly(PA.pts, PB.pts, node.values.mode || 'union');
+    return { C: res.map(pts => ({ kind: 'poly', pts: pts, closed: true })) };
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode',
+      [['union', 'union'], ['inter', 'intersection', 'intersection'], ['diff', 'difference', 'difference (A minus B)']], 'union')
 });
 
 /* ============================== TRANSFORM ============================== */
@@ -1254,10 +1526,56 @@ defNode('xf/rotate', {
 });
 
 defNode('xf/scale', {
-  title: 'Scale', cat: 'Transform', desc: 'Scale geometry by factor F around center C',
-  inputs: [{ name: 'G', type: 'geometry' }, { name: 'F', type: 'number', default: 1 }, { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'center' }],
+  title: 'Scale', cat: 'Transform', width: 176,
+  desc: 'Scale geometry by factor F around center C. In non-uniform mode F is the X factor and Y is its own — a circle then honestly becomes an ellipse',
+  inputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'F', type: 'number', default: 1, label: 'factor (X when non-uniform)' },
+    { name: 'Y', type: 'number', default: 1, label: 'Y factor (non-uniform only)' },
+    { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'center' }],
   outputs: [{ name: 'G', type: 'geometry' }],
-  compute: a => a.G === undefined ? {} : ({ G: LM.xformGeom(a.G, LM.matScale(a.F, a.F, a.C)) })
+  defaults: { mode: 'uniform' },
+  compute: (a, ctx, node) => a.G === undefined ? {} :
+    ({ G: LM.xformGeom(a.G, LM.matScale(a.F, node.values.mode === 'xy' ? a.Y : a.F, a.C)) }),
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [['uniform', 'uniform'], ['non-uniform', 'xy']], 'uniform')
+});
+
+defNode('xf/mirror', {
+  title: 'Mirror', cat: 'Transform',
+  desc: 'Reflect geometry across the line through A and B. Symmetry is half of ornament — pair it with Merge to keep both halves',
+  inputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'A', type: 'point', default: { x: 0, y: -100 }, label: 'line start' },
+    { name: 'B', type: 'point', default: { x: 0, y: 100 }, label: 'line end' }],
+  outputs: [{ name: 'G', type: 'geometry' }],
+  compute: a => a.G === undefined ? {} : ({ G: LM.xformGeom(a.G, LM.matMirror(a.A, a.B)) })
+});
+
+defNode('xf/tile', {
+  title: 'Array', cat: 'Transform', width: 168,
+  desc: 'Replicate geometry N1 × N2 times along two basis vectors, with the cell indices I and J beside it. This is for genuinely identical copies — cells that vary are Grid + list matching, not this node',
+  inputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'V1', type: 'vector', default: { x: 60, y: 0 }, label: 'first basis' },
+    { name: 'N1', type: 'number', default: 3, label: 'count along V1' },
+    { name: 'V2', type: 'vector', default: { x: 0, y: 60 }, label: 'second basis' },
+    { name: 'N2', type: 'number', default: 1, label: 'count along V2' }],
+  outputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'I', type: 'number', label: 'index along V1' },
+    { name: 'J', type: 'number', label: 'index along V2' }],
+  compute: a => {
+    if (a.G === undefined) return {};
+    const n1 = LM.clamp(Math.floor(a.N1), 1, 2000), n2 = LM.clamp(Math.floor(a.N2), 1, 2000);
+    const G = [], I = [], J = [];
+    for (let j = 0; j < n2 && G.length < 5000; j++)
+      for (let i = 0; i < n1 && G.length < 5000; i++) {
+        G.push(LM.xformGeom(a.G, LM.matMove(a.V1.x * i + a.V2.x * j, a.V1.y * i + a.V2.y * j)));
+        I.push(i); J.push(j);
+      }
+    return { G, I, J };
+  }
 });
 
 /* ============================== DISPLAY ============================== */
@@ -1806,14 +2124,7 @@ defNode('audio/path', {
     if (!raw || raw.length < 2) return {};
     /* arc-length resample to a uniform closed 512-sample loop so the beam
      * moves at constant speed (and the tone stays clean) */
-    const seg = [];
-    let total = 0;
-    for (let i = 0; i < raw.length; i++) {
-      const q = raw[(i + 1) % raw.length];
-      const L = Math.hypot(q.x - raw[i].x, q.y - raw[i].y);
-      seg.push(L); total += L;
-    }
-    if (total < 1e-6) return {};
+    if (LM.polyLength(raw, true) < 1e-6) return {};
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const p of raw) {
       if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
@@ -1822,14 +2133,9 @@ defNode('audio/path', {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const half = Math.max(x1 - x0, y1 - y0) / 2 || 1;
     const N = 512, xs = [], ys = [];
-    let i = 0, acc = 0;
-    for (let k = 0; k < N; k++) {
-      const target = total * k / N;
-      while (i < seg.length - 1 && acc + seg[i] < target) { acc += seg[i]; i++; }
-      const p = raw[i], q = raw[(i + 1) % raw.length];
-      const f = seg[i] > 1e-9 ? (target - acc) / seg[i] : 0;
-      xs.push((p.x + (q.x - p.x) * f - cx) / half);
-      ys.push(-(p.y + (q.y - p.y) * f - cy) / half); /* cloth is y-down, scopes are y-up */
+    for (const p of LM.resample(raw, true, N)) {
+      xs.push((p.x - cx) / half);
+      ys.push(-(p.y - cy) / half); /* cloth is y-down, scopes are y-up */
     }
     let key = 0; /* cheap shape hash — the host only rebuilds buffers when this moves */
     for (let k = 0; k < N; k += 7) key = (key * 31 + ((xs[k] * 1e4) | 0) + ((ys[k] * 1e4) | 0)) | 0;
@@ -2350,11 +2656,16 @@ defNode('meta/js', {
     /* Vector: 1 points · 2 vectors · 3 measures */
     'vec/construct': 1, 'vec/deconstruct': 1, 'vec/polar': 1,
     'vec/vecxy': 2, 'vec/pt2vec': 2, 'vec/vec2pt': 2, 'vec/amp': 2, 'vec/unit': 2, 'vec/reverse': 2,
-    'vec/distance': 3, 'vec/angle': 3,
-    /* Curve: 1 primitives · 2 from points · 3 operations */
+    'vec/distance': 3, 'vec/angle': 3, 'vec/dot': 3, 'vec/cross': 3,
+    /* Curve: 1 primitives · 2 from points · 3 sampling · 4 analysis · 5 reshaping */
     'crv/line': 1, 'crv/circle': 1, 'crv/ellipse': 1, 'crv/rect': 1, 'crv/polygon': 1, 'crv/arc': 1,
-    'crv/polyline': 2, 'crv/interp': 2,
+    'crv/polyline': 2, 'crv/interp': 2, 'crv/hull': 2,
     'crv/divide': 3, 'crv/eval': 3,
+    'crv/intersect': 4, 'crv/closest': 4, 'crv/incurve': 4, 'crv/length': 4, 'crv/area': 4, 'crv/bbox': 4,
+    'crv/offset': 5, 'crv/join': 5, 'crv/trim': 5, 'crv/fillet': 5, 'crv/region': 5,
+    /* Transform: 1 affine · 2 replication */
+    'xf/move': 1, 'xf/rotate': 1, 'xf/scale': 1, 'xf/mirror': 1,
+    'xf/tile': 2,
     /* Audio: 0 pitch · 1 sources · 2 processors · 3 in/out */
     'audio/note': 0, 'audio/scale': 0,
     'audio/osc': 1, 'audio/noise': 1, 'audio/path': 1,
