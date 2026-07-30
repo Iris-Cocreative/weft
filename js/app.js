@@ -586,13 +586,26 @@ const App = {
     const modal = document.getElementById('exportModal');
     const code = document.getElementById('exportCode');
 
+    /* Esc closes, same as the gallery — the listener only lives while the modal
+     * is up, and capture-phase so it still fires from inside the textarea */
+    const close = () => {
+      modal.classList.add('hidden');
+      window.removeEventListener('keydown', onKey, true);
+    };
+    const onKey = e => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      close();
+    };
+
     document.getElementById('btnExport').addEventListener('click', () => {
       if (!App.graph.nodes.length) { App.flash('nothing to export — the canvas is empty'); return; }
       code.value = WeftExport.buildJS(App.graph);
       modal.classList.remove('hidden');
+      window.addEventListener('keydown', onKey, true);
     });
-    document.getElementById('exportClose').addEventListener('click', () => modal.classList.add('hidden'));
-    modal.addEventListener('pointerdown', e => { if (e.target === modal) modal.classList.add('hidden'); });
+    document.getElementById('exportClose').addEventListener('click', close);
+    modal.addEventListener('pointerdown', e => { if (e.target === modal) close(); });
 
     document.getElementById('exportCopy').addEventListener('click', () => {
       code.select();
