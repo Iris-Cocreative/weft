@@ -317,6 +317,23 @@ is now in, so any of these can be picked up in a workshop pass):
   outputs right, each port a dot + letter + the same "label · type" text the
   loom shows on hover, and port labels are searchable. Note Pad glyph
   nudged up 0.5px — its bottom stroke was clipping at the viewBox edge.
+- [shipped 2026-07-29] **Example gallery** — the `Examples…` `<select>` became
+  a browsable modal: thumbnail, blurb, a "teaches" line, node/wire counts and
+  `needs` badges per card, live search over a precomputed haystack (name +
+  blurb + tags + every node type in the graph), and category chips reusing the
+  `.seg` mode-toggle livery. Cards wear the loom livery like nodes.html, so the
+  three surfaces read as one system. Three pieces made it cheap: a parallel
+  **`EXAMPLE_META`** in examples.js (the prose was already written, trapped in
+  block comments — `EXAMPLES` itself is untouched, and smoke check 18 enforces
+  key parity so they can't drift); **`App.loadExample(name)`** extracted from
+  the old select handler; and **`Viewport.makeCtx`**, which the live loop and
+  the new offscreen `App.renderThumb` now share — `LM.drawItem` never cared
+  which 2D context it was handed, so thumbnails needed no engine change at all.
+  Thumbnails step each graph 30–120 frames (per-example, `EXAMPLE_META.frames`)
+  because springs, traces and scopes are empty at t=0, and render one card per
+  animation frame so the modal stays interactive. The export modal's missing
+  Esc handler was fixed here too. Still open: the spacing pass DESIGN.md flags —
+  it needs real DOM boxes, the way the 2026-07-14 audit was done.
 
 ### Legibility pass — [next], James 2026-07-14
 

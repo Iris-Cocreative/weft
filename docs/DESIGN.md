@@ -76,6 +76,18 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 - **Readouts**: per-output, inline, Consolas 11 `white/40` (`LM.fmt` first item + ×count).
 - **Selected**: border `Primary` + 7.5px glow at 33%. **Error**: same shape in `#ff3b41`.
 
+## Card livery beyond the loom
+
+The card recipe above (radius 13, 1px `dark/300`, category gradient washing in
+from the left over `dark/200`) is now the house pattern on three surfaces, not
+one: node cards on the loom, category headers in `nodes.html`, and example cards
+in the gallery modal. The gallery borrows its hue per example *family* from the
+node palette (`EXAMPLE_CAT_HUE` in `js/examples.js` names `CATS` keys rather
+than hex), so it rides the same wheel instead of forking it — Fundamentals wears
+Params teal, Lists & grids wears Sets purple, and so on. Its category chips
+reuse `.seg`/`.seg-b`/`.seg-b.on` from the node mode toggles, extended only with
+a wrapping variant (`.seg.wrap`) for the longer labels.
+
 ## Chromeless params
 
 Toggle (31×52 vertical pill, knob slides down = on) · Slider (min/max corners,
@@ -102,6 +114,11 @@ keep their ports overlaying the widget edges.
   normalize `Node Icons/SVG/` directly (classes → attributes, #fff →
   currentColor) so James's export folder is the single pipeline source.
 - **Example layouts** were tuned for the smaller pre-design cards; some overlap
-  slightly now — worth a spacing pass.
+  slightly now — worth a spacing pass. Still open after the gallery landed: the
+  fix needs real rendered DOM boxes (card height depends on port rows and the
+  literal widgets), which is how the 2026-07-14 audit caught Checker dispatch
+  and Scroll scene. Card coordinates are inert to evaluation and export, so this
+  is purely a legibility job — and the gallery thumbnails now make a bad layout
+  easy to spot from the browser.
 - `color-mix()` is used for the category wash (fine in Chrome/Edge/modern
   Safari/Firefox).

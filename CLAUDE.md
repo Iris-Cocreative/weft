@@ -46,10 +46,10 @@ Definition of done for any change:
 | `js/nodes.js` | `NODE_DEFS` — node library | only in `buildBody`/`postEval` |
 | `js/audio.js` | `WeftAudio` — Web Audio host, reconciles `ctx.audioList` (serialized into audio exports) | audio only, never at load |
 | `js/editor.js` | node canvas UI (pan/zoom, wires, quick-add) | yes |
-| `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim) | yes |
+| `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim); owns `Viewport.makeCtx`, the one ctx literal the loop and thumbnails share | yes |
 | `js/export.js` | graph → standalone JS compiler | no |
-| `js/examples.js` | `EXAMPLES` — doubles as test fixtures | no |
-| `js/app.js` | shell: palette, toolbar, persistence, modal | yes |
+| `js/examples.js` | `EXAMPLES` — doubles as test fixtures — plus the parallel `EXAMPLE_META` the gallery reads | no |
+| `js/app.js` | shell: palette, toolbar, persistence, modals, example gallery + offscreen thumbnails | yes |
 | `js/assistant.js` | weave assistant — chat panel → n8n webhook → validated graph ops (docs/ASSISTANT.md); dormant without a saved webhook config | yes |
 
 Load order (classic scripts, shared globals): engine → nodes → audio → editor → viewport → export → examples → app → assistant.
@@ -90,6 +90,10 @@ Load order (classic scripts, shared globals): engine → nodes → audio → edi
    `measureText`, `defs`) is
    supplied **identically** by `viewport.js` and the export mount — change one,
    change both, and update the ctx table in NODE-SPEC §6 and smoke's `mkCtx`.
+   Inside `viewport.js` there is exactly one ctx literal, `Viewport.makeCtx`:
+   the live loop passes the real mouse/keys/scroll/DOM/audio channels, and
+   `App.renderThumb` passes none, so an offscreen thumbnail gets neutral
+   defaults from the same definition. Build ctx through it, never by hand.
    Nodes needing real DOM elements declare them via `ctx.domList` and read back
    `ctx.domState`; only the hosts touch the DOM. Audio nodes likewise *declare*
    Web Audio nodes via `ctx.audioList` (handle strings flow through `audio`
@@ -138,6 +142,13 @@ Add to `js/examples.js` via `_EX(nodes, wires)`. Examples are the test corpus:
 every example must draw something at t=0, 0.5, 2 with no node errors (smoke
 enforces this). Prefer examples that showcase list matching — that's the soul
 of the tool. Lay nodes out left→right, ~200px column spacing.
+
+Then add the matching `EXAMPLE_META` entry in the same file — `cat` (from
+`EXAMPLE_CATS`), `blurb`, `teaches`, `tags`, `needs`, `frames`. Smoke check 18
+fails if the two key sets drift, so this is not optional. `frames` is how far
+the gallery steps the graph before snapping its thumbnail: 40 is fine for
+anything driven by time alone, 90–120 for springs, traces and scopes that are
+empty at t=0.
 
 ## Style
 

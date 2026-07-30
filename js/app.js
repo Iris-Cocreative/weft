@@ -312,6 +312,7 @@ const App = {
     App.bindKeys();
     App.bindSplitter();
     App.bindExport();
+    App.bindGallery();
 
     const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Hexa graph'])));
     App.setGraph(g);
@@ -442,38 +443,36 @@ const App = {
     });
   },
 
+  /* ------------------------------ examples ------------------------------ */
+
+  /* Load an example by name: dirty-check → back up the current graph → set →
+   * fit → flash. Resolves false if the user cancelled, so a caller (the
+   * gallery) can decide whether to stay open. */
+  async loadExample(name) {
+    if (!EXAMPLES[name]) { App.flash('no example named “' + name + '”'); return false; }
+    if (App._dirty && App.graph.nodes.length) {
+      const r = await App.ask({
+        title: 'unsaved changes',
+        body: 'the current graph isn’t saved to a file — loading “' + name + '” will replace it.',
+        buttons: [
+          { label: 'Save, then load', value: 'save', accent: true },
+          { label: 'Load without saving', value: 'discard' },
+          { label: 'Cancel', value: null }
+        ]
+      });
+      if (r === null) return false;
+      if (r === 'save') App.saveGraph();
+    }
+    try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
+    App.setGraph(JSON.parse(JSON.stringify(EXAMPLES[name])));
+    Editor.zoomToFit(false);
+    App.flash('loaded example: ' + name);
+    return true;
+  },
+
   /* ------------------------------ toolbar ------------------------------ */
 
   bindToolbar() {
-    const sel = document.getElementById('exampleSelect');
-    for (const name of Object.keys(EXAMPLES)) {
-      const o = document.createElement('option');
-      o.value = name; o.textContent = name;
-      sel.appendChild(o);
-    }
-    sel.addEventListener('change', async () => {
-      const name = sel.value;
-      sel.value = '';
-      if (!name) return;
-      if (App._dirty && App.graph.nodes.length) {
-        const r = await App.ask({
-          title: 'unsaved changes',
-          body: 'the current graph isn’t saved to a file — loading “' + name + '” will replace it.',
-          buttons: [
-            { label: 'Save, then load', value: 'save', accent: true },
-            { label: 'Load without saving', value: 'discard' },
-            { label: 'Cancel', value: null }
-          ]
-        });
-        if (r === null) return;
-        if (r === 'save') App.saveGraph();
-      }
-      try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
-      App.setGraph(JSON.parse(JSON.stringify(EXAMPLES[name])));
-      Editor.zoomToFit(false);
-      App.flash('loaded example: ' + name);
-    });
-
     document.getElementById('btnFitIcon').addEventListener('click', () => Editor.zoomToFit(false));
 
     const btnMerge = document.getElementById('btnMerge');
@@ -605,6 +604,193 @@ const App = {
     });
     document.getElementById('exportDlHtml').addEventListener('click', () => {
       App.download('weft-demo.html', WeftExport.buildDemoHTML(code.value, App.graph), 'text/html');
+    });
+  },
+
+  /* ------------------------------ thumbnails ------------------------------
+   * LM.drawItem takes any 2D context and knows nothing about #view — its other
+   * two call sites are the viewport loop and the export mount — so a thumbnail
+   * is just: step the graph forward N frames on a detached canvas, then paint
+   * the drawList it ended up with. No engine change, no renderer change.
+   *
+   * Known limits, handled rather than discovered:
+   *  - examples that read input/viewport adapt to whatever stage they are given;
+   *    fixed-radius ones do not. So we always evaluate at the full stage size
+   *    and scale the *paint* down — both kinds then frame like they do live.
+   *  - N frames (EXAMPLE_META.frames) because springs, traces, counters and
+   *    scopes are empty at t=0 and only look alive after a run-up.
+   *  - audio examples produce little without a live Web Audio graph, and the
+   *    mic / tab-share ones nothing at all — that is what `needs` badges mark.
+   *  - there is no DOM host here, so Button/Element nodes declare into
+   *    ctx.domList and simply go unpainted. */
+
+  THUMB_STAGE: { w: 960, h: 600 },
+  _thumbs: {},
+
+  renderThumb(graph, w, h, frames) {
+    const cv = document.createElement('canvas');
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.max(1, Math.round(w * dpr));
+    cv.height = Math.max(1, Math.round(h * dpr));
+    const g2 = cv.getContext('2d');
+    const S = App.THUMB_STAGE, dt = 1 / 60;
+    const tune = graph.meta && graph.meta.tuneA4;
+    let ctx = null;
+    /* cross-frame state lives on the node objects, so stepping the same graph
+     * accumulates springs and traces exactly the way the live loop does */
+    for (let f = 0; f < frames; f++) {
+      ctx = Viewport.makeCtx(S.w, S.h, f * dt, dt, f, { tuneA4: tune });
+      try { LM.evaluateGraph(graph, NODE_DEFS, ctx); } catch (e) { /* paint whatever drew */ }
+    }
+    g2.fillStyle = (ctx && ctx.bg) ? LM.colorCss(ctx.bg) : '#0b0e14';
+    g2.fillRect(0, 0, cv.width, cv.height);
+    if (ctx) {
+      g2.translate(cv.width / 2, cv.height / 2); // coordinates are centred (invariant 3)
+      const sc = Math.min(cv.width / S.w, cv.height / S.h);
+      g2.scale(sc, sc);
+      for (const it of ctx.drawList) {
+        try { LM.drawItem(g2, it); } catch (e) { /* skip bad item */ }
+      }
+    }
+    return cv.toDataURL('image/webp', 0.82);
+  },
+
+  /* cached by example name — the corpus never changes under us */
+  thumbFor(name) {
+    if (name in App._thumbs) return App._thumbs[name];
+    let url = '';
+    try {
+      const m = EXAMPLE_META[name] || {};
+      url = App.renderThumb(JSON.parse(JSON.stringify(EXAMPLES[name])), 480, 300, m.frames || 40);
+    } catch (e) { /* a thumbnail is never worth breaking the gallery for */ }
+    App._thumbs[name] = url;
+    return url;
+  },
+
+  /* ------------------------------ example gallery ------------------------------
+   * A third modal beside #askModal and #exportModal, same idiom — plus the Esc
+   * handler the export modal never got. */
+
+  bindGallery() {
+    const modal = document.getElementById('galleryModal');
+    const grid = document.getElementById('galleryGrid');
+    const scroll = modal.querySelector('.gal-scroll');
+    const search = document.getElementById('gallerySearch');
+    const chips = document.getElementById('galleryChips');
+    const empty = document.getElementById('galleryEmpty');
+    const names = Object.keys(EXAMPLES);
+    const esc = s => String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    let cat = 'all';
+
+    search.placeholder = 'search ' + names.length + ' examples…';
+
+    /* one card per example. data-s is the precomputed lowercase haystack —
+     * name + blurb + teaches + category + tags + every node type in the graph,
+     * so searching "spring" or "state/latch" both land (the trick from
+     * test/gen-node-index.js). */
+    grid.innerHTML = names.map(name => {
+      const m = EXAMPLE_META[name] || {};
+      const g = EXAMPLES[name];
+      const types = [...new Set(g.nodes.map(n => n.type))];
+      const hay = [name, m.blurb, m.teaches, m.cat, (m.tags || []).join(' '), types.join(' ')]
+        .join(' ').toLowerCase();
+      const needs = (m.needs || [])
+        .map(n => '<span class="gal-need">needs ' + esc(n) + '</span>').join('');
+      return '<div class="gal-card" role="button" tabindex="0" data-name="' + esc(name) + '"' +
+        ' data-cat="' + esc(m.cat || '') + '" data-s="' + esc(hay) + '"' +
+        ' style="--cat:' + (CATS[EXAMPLE_CAT_HUE[m.cat]] || '#6b7891') + '">' +
+        '<div class="gal-thumb"></div><div class="gal-body">' +
+          '<div class="gal-name">' + esc(name) + '</div>' +
+          '<div class="gal-blurb">' + esc(m.blurb) + '</div>' +
+          '<div class="gal-teach">' + esc(m.teaches) + '</div>' +
+          '<div class="gal-foot"><span class="gal-cat">' + esc(m.cat) + '</span>' +
+            '<span>' + g.nodes.length + ' nodes · ' + g.wires.length + ' wires</span>' +
+            needs +
+          '</div>' +
+        '</div></div>';
+    }).join('');
+
+    /* chips: all + every category that actually has examples (.seg livery) */
+    const cats = ['all'].concat(EXAMPLE_CATS.filter(c => names.some(n => (EXAMPLE_META[n] || {}).cat === c)));
+    chips.innerHTML = cats.map(c =>
+      '<div class="seg-b' + (c === 'all' ? ' on' : '') + '" data-cat="' + esc(c) + '">' +
+      esc(c === 'all' ? 'all' : c.toLowerCase()) + '</div>').join('');
+
+    /* thumbnails render one card per frame, visible ones first: 28 graphs
+     * stepped 40–120 frames each is seconds of evaluation, far too much for a
+     * single tick, and a filtered gallery may never need most of them */
+    let queue = [], pumping = false;
+    const pump = () => {
+      if (modal.classList.contains('hidden')) { queue = []; pumping = false; return; }
+      const el = queue.shift();
+      if (!el) { pumping = false; return; }
+      el.dataset.thumb = '1';
+      const url = App.thumbFor(el.dataset.name);
+      if (url) el.querySelector('.gal-thumb').style.backgroundImage = 'url(' + url + ')';
+      requestAnimationFrame(pump);
+    };
+    const paintThumbs = () => {
+      queue = [...grid.children].filter(c => !c.dataset.thumb && !c.classList.contains('hide'));
+      if (!pumping && queue.length) { pumping = true; requestAnimationFrame(pump); }
+    };
+
+    const apply = () => {
+      const q = search.value.toLowerCase().trim();
+      let any = false;
+      for (const c of grid.children) {
+        const hit = (cat === 'all' || c.dataset.cat === cat) && (!q || c.dataset.s.includes(q));
+        c.classList.toggle('hide', !hit);
+        if (hit) any = true;
+      }
+      empty.classList.toggle('hidden', any);
+      paintThumbs();
+    };
+
+    const close = () => {
+      modal.classList.add('hidden');
+      window.removeEventListener('keydown', onKey, true);
+    };
+    const onKey = e => {
+      if (e.key !== 'Escape') return;
+      // the ask dialog owns Esc while it is up, so a cancelled load keeps the gallery
+      if (!document.getElementById('askModal').classList.contains('hidden')) return;
+      e.stopPropagation();
+      close();
+    };
+    const open = () => {
+      modal.classList.remove('hidden');
+      window.addEventListener('keydown', onKey, true);
+      scroll.scrollTop = 0;
+      search.focus();
+      search.select();
+      paintThumbs();
+    };
+
+    document.getElementById('btnGallery').addEventListener('click', open);
+    document.getElementById('galleryClose').addEventListener('click', close);
+    modal.addEventListener('pointerdown', e => { if (e.target === modal) close(); });
+    search.addEventListener('input', apply);
+    chips.addEventListener('click', e => {
+      const b = e.target.closest('.seg-b');
+      if (!b) return;
+      cat = b.dataset.cat;
+      for (const s of chips.children) s.classList.toggle('on', s === b);
+      apply();
+    });
+    const pick = async card => {
+      if (await App.loadExample(card.dataset.name)) close();
+    };
+    grid.addEventListener('click', e => {
+      const card = e.target.closest('.gal-card');
+      if (card) pick(card);
+    });
+    grid.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.gal-card');
+      if (!card) return;
+      e.preventDefault();
+      pick(card);
     });
   },
 

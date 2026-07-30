@@ -861,3 +861,57 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   padding: 7px 10px; outline: none;
 }
 .ask-input:focus { border-color: var(--accent-dim); }
+
+/* ---------------- example gallery ----------------
+ * Cards wear the loom livery (docs/DESIGN.md): 13px radius, dark/300 border,
+ * category gradient washing in from the left — same recipe as nodes.html's
+ * .cat-head, so the three surfaces read as one system. */
+
+.modal-box.wide { width: min(1100px, 94vw); height: 86vh; }
+
+/* the category chips reuse .seg / .seg-b / .seg-b.on from the node mode
+ * toggles; wrapping + auto width is all a long label row needs */
+.seg.wrap { flex-wrap: wrap; gap: 3px; }
+.seg.wrap .seg-b { flex: 0 0 auto; padding: 4px 11px; font-size: 11px; }
+
+.gal-scroll { flex: 1; min-height: 0; overflow: auto; padding: 2px 4px 4px 2px; }
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: 10px; }
+
+.gal-card {
+  display: flex; flex-direction: column; overflow: hidden;
+  padding: 0 0 12px; cursor: pointer; text-align: left;
+  font: inherit; color: inherit;
+  border: 1px solid var(--dark-300); border-radius: 13px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--cat, #6b7891) 34%, transparent) 0%, rgba(20, 26, 40, 0) 52%),
+    var(--dark-200);
+  transition: border-color 0.14s ease, transform 0.14s ease;
+}
+.gal-card:hover, .gal-card:focus-visible {
+  border-color: var(--primary); transform: translateY(-1px); outline: none;
+}
+.gal-card.hide { display: none; }
+
+.gal-thumb {
+  width: 100%; aspect-ratio: 16 / 10; flex: none;
+  background: var(--dark-100) center / cover no-repeat;
+  border-bottom: 1px solid var(--dark-300);
+}
+
+.gal-body { display: flex; flex-direction: column; gap: 6px; padding: 11px 13px 0; }
+.gal-name { font: 14px var(--font-ui); color: var(--white-100); }
+.gal-blurb { font: 12px/1.5 var(--font-ui); color: var(--white-80); }
+.gal-teach {
+  font: 11.5px/1.5 var(--font-ui); color: var(--white-40);
+  border-left: 2px solid var(--dark-400); padding-left: 8px;
+}
+.gal-foot {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 2px;
+  font: 10px var(--font-val); color: var(--white-40);
+}
+.gal-foot .gal-cat { color: var(--cat, var(--white-80)); font: 10px var(--font-ui); }
+.gal-need {
+  padding: 1px 6px; border-radius: 5px; font: 10px var(--font-ui);
+  border: 1px solid #7a5a1e; color: #f0b429;
+}
+.gal-empty { margin: 34px 0 0; text-align: center; color: var(--white-40); font-size: 12px; }

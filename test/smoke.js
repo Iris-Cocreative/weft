@@ -628,6 +628,28 @@ for (const name of Object.keys(EXAMPLES)) {
   if (!(moved / before.length > 0.3)) failures.push('cymatics: R edge should re-throw the sand (mean move ' + (moved / before.length).toFixed(3) + ')');
 }
 
+/* 18 — EXAMPLE_META parity: the gallery's metadata can never drift from the corpus */
+{
+  for (const n of Object.keys(EXAMPLES))
+    if (!(n in EXAMPLE_META)) failures.push('EXAMPLE_META: no entry for example "' + n + '"');
+  for (const c of EXAMPLE_CATS)
+    if (!CATS[EXAMPLE_CAT_HUE[c]]) failures.push('EXAMPLE_CAT_HUE: category "' + c + '" has no node-palette hue');
+  const NEEDS = ['mic', 'tab-audio', 'gesture', 'scroll'];
+  for (const n of Object.keys(EXAMPLE_META)) {
+    if (!(n in EXAMPLES)) { failures.push('EXAMPLE_META: entry "' + n + '" has no example'); continue; }
+    const m = EXAMPLE_META[n];
+    if (EXAMPLE_CATS.indexOf(m.cat) < 0) failures.push('EXAMPLE_META "' + n + '": unknown cat "' + m.cat + '"');
+    if (!m.blurb) failures.push('EXAMPLE_META "' + n + '": no blurb');
+    if (!m.teaches) failures.push('EXAMPLE_META "' + n + '": no teaches line');
+    if (!Array.isArray(m.tags)) failures.push('EXAMPLE_META "' + n + '": tags must be an array');
+    if (!Array.isArray(m.needs)) failures.push('EXAMPLE_META "' + n + '": needs must be an array');
+    else for (const nd of m.needs)
+      if (NEEDS.indexOf(nd) < 0) failures.push('EXAMPLE_META "' + n + '": unknown need "' + nd + '"');
+    if (!(m.frames > 0 && m.frames <= 600))
+      failures.push('EXAMPLE_META "' + n + '": frames must be 1..600, got ' + m.frames);
+  }
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 
