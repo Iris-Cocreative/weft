@@ -1028,6 +1028,19 @@ Point from X and Y
 |---|---|---|
 | P | point |  |
 
+### `vec/cross` — Cross Product
+
+A × B — in 2D this is a single number (the perp-dot): the signed area of the parallelogram, positive when B turns clockwise from A on the y-down canvas
+
+| in | type | default | note |
+|---|---|---|---|
+| A | vector | `{"x":1,"y":0}` |  |
+| B | vector | `{"x":0,"y":1}` |  |
+
+| out | type | note |
+|---|---|---|
+| C | number |  |
+
 ### `vec/deconstruct` — Deconstruct
 
 Split point into X and Y
@@ -1049,6 +1062,19 @@ Distance between points A and B
 |---|---|---|---|
 | A | point | `{"x":0,"y":0}` |  |
 | B | point | `{"x":0,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| D | number |  |
+
+### `vec/dot` — Dot Product
+
+A · B — how much of A points along B. Zero means perpendicular; with unit vectors it is the cosine of the angle between them
+
+| in | type | default | note |
+|---|---|---|---|
+| A | vector | `{"x":1,"y":0}` |  |
+| B | vector | `{"x":1,"y":0}` |  |
 
 | out | type | note |
 |---|---|---|
@@ -1169,6 +1195,36 @@ Arc at P from angle A0 to A1 (radians)
 |---|---|---|
 | C | geometry |  |
 
+### `crv/area` — Area
+
+Enclosed area of curve C in px² and its area centroid. Open curves are treated as if closed
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+
+| out | type | note |
+|---|---|---|
+| A | number | area |
+| C | point | centroid |
+
+### `crv/bbox` — Bounding Box
+
+Axis-aligned bounds of geometry G — one box per item, or a single box around the whole list
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | receives whole list |
+
+| out | type | note |
+|---|---|---|
+| B | geometry | bounding rect |
+| C | point | centre |
+| W | number | width |
+| H | number | height |
+
+Node values (`values` keys, not ports): `{"mode":"each"}`
+
 ### `crv/circle` — Circle
 
 Circle at P with radius R
@@ -1182,19 +1238,78 @@ Circle at P with radius R
 |---|---|---|
 | C | geometry |  |
 
-### `crv/divide` — Divide Curve
+### `crv/hull` — Convex Hull
 
-N division points along curve C (+ their parameters)
+The tightest convex outline containing every point in P — the rubber band round the pins
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point |  | points · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
+### `crv/closest` — Curve Closest Point
+
+Nearest point on curve C to point P — the position, its curve parameter T, and the distance D. The engine of attractor patterns
 
 | in | type | default | note |
 |---|---|---|---|
 | C | geometry |  |  |
-| N | number | `10` | segments |
+| P | point | `{"x":0,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| P | point |  |
+| T | number | parameter |
+| D | number | distance |
+
+### `crv/intersect` — Curve Intersection
+
+Where two curves cross — points P plus the parameter on each curve (T1, T2), ready to feed back into Evaluate Curve. In self mode C2 is ignored and the node finds where C1 crosses itself
+
+| in | type | default | note |
+|---|---|---|---|
+| C1 | geometry |  |  |
+| C2 | geometry |  |  |
+
+| out | type | note |
+|---|---|---|
+| P | point |  |
+| T1 | number | parameter on C1 |
+| T2 | number | parameter on C2 (or the other pass on C1) |
+
+Node values (`values` keys, not ports): `{"mode":"pair"}`
+
+### `crv/length` — Curve Length
+
+Arc length of curve C in px
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+
+| out | type | note |
+|---|---|---|
+| L | number | length |
+
+### `crv/divide` — Divide Curve
+
+Division points along curve C, evenly by arc length. N is the segment count, or the spacing in px in by-length mode. V is the unit tangent — T is already taken by the parameters, GH’s letter or not
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| N | number | `10` | segments (px in by-length mode) |
 
 | out | type | note |
 |---|---|---|
 | P | point |  |
 | T | number | parameters |
+| V | vector | unit tangent |
+
+Node values (`values` keys, not ports): `{"mode":"count"}`
 
 ### `crv/ellipse` — Ellipse
 
@@ -1213,7 +1328,7 @@ Ellipse at P with radii RX, RY, rotation A
 
 ### `crv/eval` — Evaluate Curve
 
-Point on curve C at parameter T (0..1; wraps on closed curves)
+Point on curve C at parameter T (0..1 by arc length; wraps on closed curves), with the unit tangent V and the normal N beside it
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1223,6 +1338,22 @@ Point on curve C at parameter T (0..1; wraps on closed curves)
 | out | type | note |
 |---|---|---|
 | P | point |  |
+| V | vector | unit tangent |
+| N | vector | unit normal (tangent turned +90°) |
+
+### `crv/fillet` — Fillet
+
+Round the corners of C with arcs of radius R. The radius is capped at half the shorter edge, so tight corners soften instead of folding
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| R | number | `12` | radius |
+| N | number | `8` | segments per corner |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
 
 ### `crv/interp` — Interpolate
 
@@ -1232,6 +1363,19 @@ Smooth curve through points V
 |---|---|---|---|
 | V | point |  | vertices · receives whole list |
 | C | bool | `false` | closed |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
+### `crv/join` — Join Curves
+
+Chain curves whose ends meet (within T px) into continuous polylines; a chain that closes on itself comes back closed. Already-closed curves pass through
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  | receives whole list |
+| T | number | `1` | tolerance (px) |
 
 | out | type | note |
 |---|---|---|
@@ -1262,6 +1406,19 @@ Offset C by distance D: positive grows closed curves outward, negative shrinks. 
 | out | type | note |
 |---|---|---|
 | C | geometry |  |
+
+### `crv/incurve` — Point In Curve
+
+Is point P inside the closed region C? Open curves are never "inside" — close the curve first
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| P | point | `{"x":0,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| B | bool | inside |
 
 ### `crv/polygon` — Polygon
 
@@ -1306,7 +1463,69 @@ Rectangle centered at P
 |---|---|---|
 | C | geometry |  |
 
+### `crv/region` — Region Boolean
+
+Union, intersection or difference (A minus B) of two closed regions. Weft geometry has no holes: a cutter sitting entirely inside A returns A unchanged
+
+| in | type | default | note |
+|---|---|---|---|
+| A | geometry |  |  |
+| B | geometry |  |  |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
+Node values (`values` keys, not ports): `{"mode":"union"}`
+
+### `crv/trim` — Trim
+
+Cut curve C wherever cutter X crosses it and keep the pieces on one side — outside X, inside X, or every piece (split). Inside/outside need a closed cutter
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| X | geometry |  | cutter |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
+Node values (`values` keys, not ports): `{"mode":"outside"}`
+
 ## Transform
+
+### `xf/tile` — Array
+
+Replicate geometry N1 × N2 times along two basis vectors, with the cell indices I and J beside it. This is for genuinely identical copies — cells that vary are Grid + list matching, not this node
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  |  |
+| V1 | vector | `{"x":60,"y":0}` | first basis |
+| N1 | number | `3` | count along V1 |
+| V2 | vector | `{"x":0,"y":60}` | second basis |
+| N2 | number | `1` | count along V2 |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+| I | number | index along V1 |
+| J | number | index along V2 |
+
+### `xf/mirror` — Mirror
+
+Reflect geometry across the line through A and B. Symmetry is half of ornament — pair it with Merge to keep both halves
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  |  |
+| A | point | `{"x":0,"y":-100}` | line start |
+| B | point | `{"x":0,"y":100}` | line end |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
 
 ### `xf/move` — Move
 
@@ -1337,17 +1556,20 @@ Rotate geometry by angle A (radians) around center C
 
 ### `xf/scale` — Scale
 
-Scale geometry by factor F around center C
+Scale geometry by factor F around center C. In non-uniform mode F is the X factor and Y is its own — a circle then honestly becomes an ellipse
 
 | in | type | default | note |
 |---|---|---|---|
 | G | geometry |  |  |
-| F | number | `1` |  |
+| F | number | `1` | factor (X when non-uniform) |
+| Y | number | `1` | Y factor (non-uniform only) |
 | C | point | `{"x":0,"y":0}` | center |
 
 | out | type | note |
 |---|---|---|
 | G | geometry |  |
+
+Node values (`values` keys, not ports): `{"mode":"uniform"}`
 
 ## Display
 
@@ -1762,4 +1984,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-131 node glyphs + 2 category fallback(s) in `js/icons.js`. Full coverage.
+131 node glyphs + 2 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (13): `vec/dot`, `vec/cross`, `crv/intersect`, `crv/closest`, `crv/incurve`, `crv/length`, `crv/area`, `crv/bbox`, `crv/hull`, `crv/join`, `crv/trim`, `crv/fillet`, `crv/region`
