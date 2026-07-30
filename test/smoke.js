@@ -628,6 +628,248 @@ for (const name of Object.keys(EXAMPLES)) {
   if (!(moved / before.length > 0.3)) failures.push('cymatics: R edge should re-throw the sand (mean move ' + (moved / before.length).toFixed(3) + ')');
 }
 
+/* 18 — geometry primitives: vectors, matrices, polyline analysis */
+{
+  const near = (name, got, want, tol) => {
+    if (!(Math.abs(got - want) <= (tol === undefined ? 1e-9 : tol)))
+      failures.push('geom ' + name + ': expected ' + want + ' got ' + got);
+  };
+  const nearPt = (name, got, wx, wy, tol) => {
+    if (!got || !(Math.abs(got.x - wx) <= (tol || 1e-9) && Math.abs(got.y - wy) <= (tol || 1e-9)))
+      failures.push('geom ' + name + ': expected (' + wx + ', ' + wy + ') got ' + JSON.stringify(got));
+  };
+  const sq = (cx, cy, s) => [{ x: cx - s, y: cy - s }, { x: cx + s, y: cy - s }, { x: cx + s, y: cy + s }, { x: cx - s, y: cy + s }];
+  const area = p => Math.abs(LM.polyArea(p));
+
+  near('vdot', LM.vdot({ x: 3, y: 4 }, { x: 2, y: 1 }), 10);
+  near('vcross', LM.vcross({ x: 1, y: 0 }, { x: 0, y: 1 }), 1);
+  nearPt('vunit', LM.vunit({ x: 0, y: -8 }), 0, -1);
+  nearPt('vunit of zero', LM.vunit({ x: 0, y: 0 }), 0, 0);
+  nearPt('vperp', LM.vperp({ x: 1, y: 0 }), 0, 1);
+  const c3 = LM.v3cross({ x: 1, y: 0, z: 0 }, { x: 0, y: 1, z: 0 });
+  if (c3.z !== 1 || c3.x !== 0 || c3.y !== 0) failures.push('geom v3cross: expected +z, got ' + JSON.stringify(c3));
+  near('v3len', LM.v3len({ x: 2, y: 3, z: 6 }), 7);
+
+  /* matMul composes left to right: move then scale doubles the offset too */
+  nearPt('matMul move→scale', LM.matApply(LM.matMul(LM.matMove(10, 0), LM.matScale(2, 2, { x: 0, y: 0 })), { x: 0, y: 0 }), 20, 0);
+  nearPt('matMul scale→move', LM.matApply(LM.matMul(LM.matScale(2, 2, { x: 0, y: 0 }), LM.matMove(10, 0)), { x: 0, y: 0 }), 10, 0);
+  nearPt('matMirror vertical', LM.matApply(LM.matMirror({ x: 0, y: -1 }, { x: 0, y: 1 }), { x: 10, y: 5 }), -10, 5);
+  nearPt('matMirror diagonal', LM.matApply(LM.matMirror({ x: 0, y: 0 }, { x: 1, y: 1 }), { x: 10, y: 0 }), 0, 10, 1e-9);
+  const mc = LM.xformGeom({ kind: 'circle', cx: 10, cy: 0, r: 5 }, LM.matMirror({ x: 0, y: -1 }, { x: 0, y: 1 }));
+  if (mc.kind !== 'circle' || Math.abs(mc.r - 5) > 1e-9) failures.push('xformGeom: a mirrored circle must stay a circle, got ' + JSON.stringify(mc));
+  const sc = LM.xformGeom({ kind: 'circle', cx: 0, cy: 0, r: 10 }, LM.matScale(3, 1, { x: 0, y: 0 }));
+  if (sc.kind !== 'ellipse' || Math.abs(sc.rx - 30) > 1e-9 || Math.abs(sc.ry - 10) > 1e-9)
+    failures.push('xformGeom: a non-uniform scale must degrade a circle to an ellipse, got ' + JSON.stringify(sc));
+  const me = LM.xformGeom({ kind: 'ellipse', cx: 0, cy: 0, rx: 10, ry: 4, rot: 0.5 }, LM.matMove(5, 5));
+  if (me.kind !== 'ellipse' || Math.abs(me.rx - 10) > 1e-9 || Math.abs(me.rot - 0.5) > 1e-9)
+    failures.push('xformGeom: a moved ellipse must stay itself, got ' + JSON.stringify(me));
+
+  const hit = LM.segInt({ x: -1, y: 0 }, { x: 1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 });
+  nearPt('segInt cross', hit && hit.pt, 0, 0);
+  near('segInt ta', hit && hit.ta, 0.5);
+  if (LM.segInt({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 })) failures.push('geom segInt: parallel segments must not report a hit');
+  if (LM.segInt({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 5, y: -1 }, { x: 5, y: 1 })) failures.push('geom segInt: hits past the segment end must not count');
+
+  const cA = LM.toPoly({ kind: 'circle', cx: 0, cy: 0, r: 100 }, 96);
+  const cB = LM.toPoly({ kind: 'circle', cx: 100, cy: 0, r: 100 }, 96);
+  const xs = LM.polyInt(cA.pts, true, cB.pts, true);
+  if (xs.length !== 2) failures.push('geom polyInt: two overlapping circles cross twice, got ' + xs.length);
+  else {
+    nearPt('polyInt hit', xs[0].pt, 50, 86.6, 1);
+    near('polyInt param on A', xs[0].ta, 1 / 6, 0.01);   /* 60° round the first circle */
+    near('polyInt param on B', xs[0].tb, 1 / 3, 0.01);   /* 120° round the second */
+  }
+  if (LM.polyInt(cA.pts, true, LM.toPoly({ kind: 'circle', cx: 500, cy: 0, r: 10 }, 96).pts, true).length)
+    failures.push('geom polyInt: disjoint circles must not cross');
+  const fig8 = [{ x: -50, y: -50 }, { x: 50, y: 50 }, { x: 50, y: -50 }, { x: -50, y: 50 }];
+  const self = LM.polySelfInt(fig8, true);
+  if (self.length !== 1) failures.push('geom polySelfInt: a bow tie crosses itself once, got ' + self.length);
+  else nearPt('polySelfInt hit', self[0].pt, 0, 0, 1e-9);
+
+  near('polyLength square', LM.polyLength(sq(0, 0, 50), true), 400);
+  near('polyLength open', LM.polyLength(sq(0, 0, 50), false), 300);
+  near('polyArea square', LM.polyArea(sq(0, 0, 50)), 10000);
+  nearPt('polyCentroid square', LM.polyCentroid(sq(7, -3, 50)), 7, -3, 1e-9);
+  const cl = LM.closestOnPoly([{ x: -100, y: 0 }, { x: 100, y: 0 }], false, { x: 0, y: 20 });
+  nearPt('closestOnPoly pt', cl.pt, 0, 0);
+  near('closestOnPoly t', cl.t, 0.5);
+  near('closestOnPoly dist', cl.dist, 20);
+  const rs = LM.resample([{ x: 0, y: 0 }, { x: 30, y: 0 }, { x: 30, y: 40 }], false, 3);
+  nearPt('resample midpoint', rs[1], 30, 5);   /* half of a 70px path */
+  if (LM.resample(sq(0, 0, 50), true, 8).length !== 8) failures.push('geom resample: closed resample must not repeat the seam');
+
+  /* arc-length parameterization: equal steps of t must be equal steps of
+     distance, on every kind — this is what makes a parameter portable */
+  const el = { kind: 'ellipse', cx: 0, cy: 0, rx: 100, ry: 60, rot: 0 };
+  const walk = [];
+  for (let i = 0; i < 32; i++) walk.push(LM.curvePoint(el, i / 32));
+  let dmin = Infinity, dmax = 0;
+  for (let i = 0; i < 32; i++) {
+    const q = walk[(i + 1) % 32], d = Math.hypot(q.x - walk[i].x, q.y - walk[i].y);
+    if (d < dmin) dmin = d;
+    if (d > dmax) dmax = d;
+  }
+  if (dmax / dmin > 1.08) failures.push('geom ellipse: Divide should space points by arc length, spread ' + (dmax / dmin).toFixed(2));
+  nearPt('tangent on a circle', LM.tangentAt({ kind: 'circle', cx: 0, cy: 0, r: 10 }, 0), 0, 1);
+  nearPt('tangent on a line', LM.tangentAt({ kind: 'line', a: { x: 0, y: 0 }, b: { x: 0, y: -4 } }, 0.5), 0, -1);
+  nearPt('tangent on a poly', LM.tangentAt({ kind: 'poly', pts: [{ x: 0, y: 0 }, { x: 10, y: 0 }], closed: false }, 0.5), 1, 0, 1e-6);
+  const tb = LM.curveTable({ kind: 'poly', pts: sq(0, 0, 50), closed: true }, 96);
+  nearPt('curveTable start', LM.tableAt(tb, 0), -50, -50);
+  nearPt('curveTable quarter', LM.tableAt(tb, 0.25), 50, -50);
+  if (LM.curveTable({ kind: 'circle', cx: 0, cy: 0, r: 1 })) failures.push('geom curveTable: analytic kinds need no table');
+
+  const hull = LM.convexHull([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 5 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 5, y: 1 }]);
+  if (hull.length !== 4 || Math.abs(area(hull) - 100) > 1e-9)
+    failures.push('geom convexHull: expected the 4-corner square, got ' + JSON.stringify(hull));
+
+  const cut = LM.splitPoly([{ x: -100, y: 0 }, { x: 100, y: 0 }], false, [0.5]);
+  if (cut.length !== 2 || Math.abs(cut[0][1].x) > 1e-9) failures.push('geom splitPoly open: expected two halves, got ' + JSON.stringify(cut));
+  if (LM.splitPoly(sq(0, 0, 50), true, [0.125, 0.625]).length !== 2) failures.push('geom splitPoly closed: two cuts make two pieces');
+  if (LM.splitPoly(sq(0, 0, 50), true, [0.125]).length !== 1) failures.push('geom splitPoly closed: one cut opens the loop');
+
+  const fil = LM.filletPoly(sq(0, 0, 50), true, 20, 6);
+  if (!(area(fil) < 10000 && area(fil) > 9000)) failures.push('geom filletPoly: rounding should shave the corners, area ' + area(fil).toFixed(0));
+  if (LM.filletPoly(sq(0, 0, 50), true, 0, 6).length !== 4) failures.push('geom filletPoly: radius 0 must pass through');
+
+  /* polygon booleans */
+  const A2 = sq(0, 0, 50), B2 = sq(50, 50, 50);
+  const boo = (op, want) => {
+    const r = LM.clipPoly(A2, B2, op);
+    const got = r.reduce((s, p) => s + area(p), 0);
+    if (r.length !== 1 || Math.abs(got - want) > 1) failures.push('clipPoly ' + op + ': expected one region of ' + want + ', got ' + r.length + ' × ' + got.toFixed(0));
+  };
+  boo('union', 17500); boo('intersection', 2500); boo('difference', 7500);
+  const far = sq(500, 500, 20);
+  if (LM.clipPoly(A2, far, 'union').length !== 2) failures.push('clipPoly: disjoint union keeps both regions');
+  if (LM.clipPoly(A2, far, 'intersection').length) failures.push('clipPoly: disjoint intersection is empty');
+  if (LM.clipPoly(A2, far, 'difference').length !== 1) failures.push('clipPoly: disjoint difference is A');
+  const inner = sq(0, 0, 10);
+  if (Math.abs(area(LM.clipPoly(A2, inner, 'intersection')[0]) - 400) > 1) failures.push('clipPoly: nested intersection is the inner shape');
+  const same = A2.map(p => ({ x: p.x, y: p.y }));
+  if (LM.clipPoly(A2, same, 'difference').length) failures.push('clipPoly: a shape minus itself must be empty, got slivers');
+  if (Math.abs(area(LM.clipPoly(A2, same, 'union')[0]) - 10000) > 1) failures.push('clipPoly: a shape unioned with itself is itself');
+  /* two r=100 circles 100 apart: both discs minus the lens they share. The
+     96-gons come in a shade under the true circles, hence the 0.2% window. */
+  const lens = 2 * 10000 * Math.acos(0.5) - 50 * Math.sqrt(30000);
+  const wantU = 2 * Math.PI * 10000 - lens;
+  const cu = LM.clipPoly(cA.pts, cB.pts, 'union');
+  if (cu.length !== 1 || Math.abs(area(cu[0]) - wantU) > wantU * 0.002)
+    failures.push('clipPoly circles: union area ' + (cu[0] ? area(cu[0]).toFixed(0) : 'none') + ', want ~' + wantU.toFixed(0));
+}
+
+/* 19 — the curve analysis, transform and vector nodes */
+{
+  const near = (name, got, want, tol) => {
+    if (!(Math.abs(got - want) <= (tol === undefined ? 1e-9 : tol)))
+      failures.push('node ' + name + ': expected ' + want + ' got ' + got);
+  };
+  const nearPt = (name, got, wx, wy) => {
+    if (!got || !(Math.abs(got.x - wx) <= 1e-9 && Math.abs(got.y - wy) <= 1e-9))
+      failures.push('node ' + name + ': expected (' + wx + ', ' + wy + ') got ' + JSON.stringify(got));
+  };
+  const run = (type, args, values) => NODE_DEFS[type].compute(args, mkCtx(), { id: 'n', values: values || {} });
+  const circle = (cx, r) => ({ kind: 'circle', cx: cx, cy: 0, r: r });
+
+  const ix = run('crv/intersect', { C1: circle(0, 100), C2: circle(100, 100) });
+  if (ix.P.length !== 2) failures.push('node crv/intersect: expected 2 points, got ' + ix.P.length);
+  else {
+    near('crv/intersect x', ix.P[0].x, 50, 1);
+    near('crv/intersect T1', ix.T1[0], 1 / 6, 0.01);
+    near('crv/intersect T2', ix.T2[0], 1 / 3, 0.01);
+  }
+  const sx = run('crv/intersect', { C1: { kind: 'poly', pts: [{ x: -50, y: -50 }, { x: 50, y: 50 }, { x: 50, y: -50 }, { x: -50, y: 50 }], closed: true } }, { mode: 'self' });
+  if (sx.P.length !== 1) failures.push('node crv/intersect self: a bow tie crosses once, got ' + sx.P.length);
+
+  const cp = run('crv/closest', { C: circle(0, 100), P: { x: 200, y: 0 } });
+  near('crv/closest distance', cp.D, 100, 0.2);
+  near('crv/closest x', cp.P.x, 100, 0.2);
+  if (run('crv/incurve', { C: circle(0, 100), P: { x: 10, y: 0 } }).B !== true) failures.push('node crv/incurve: inside not detected');
+  if (run('crv/incurve', { C: circle(0, 100), P: { x: 300, y: 0 } }).B !== false) failures.push('node crv/incurve: outside reported as inside');
+  near('crv/length circle', run('crv/length', { C: circle(0, 100) }).L, Math.PI * 200, 1e-9);
+  const ar = run('crv/area', { C: { kind: 'rect', cx: 5, cy: 7, w: 100, h: 40, rot: 0 } });
+  near('crv/area rect', ar.A, 4000);
+  near('crv/area centroid', ar.C.x, 5, 1e-9);
+
+  const bbEach = run('crv/bbox', { G: [circle(-100, 20), circle(100, 20)] }, { mode: 'each' });
+  if (bbEach.W.length !== 2 || Math.abs(bbEach.W[0] - 40) > 1) failures.push('node crv/bbox per item: expected two 40px boxes, got ' + JSON.stringify(bbEach.W));
+  const bbAll = run('crv/bbox', { G: [circle(-100, 20), circle(100, 20)] }, { mode: 'all' });
+  if (Math.abs(bbAll.W - 240) > 1) failures.push('node crv/bbox whole list: expected one 240px box, got ' + bbAll.W);
+
+  const hl = run('crv/hull', { P: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 20, y: 5 }, { x: 40, y: 40 }, { x: 0, y: 40 }] });
+  if (!hl.C || hl.C.pts.length !== 4) failures.push('node crv/hull: expected a 4-corner hull');
+
+  const jn = run('crv/join', {
+    C: [{ kind: 'line', a: { x: 0, y: 0 }, b: { x: 50, y: 0 } }, { kind: 'line', a: { x: 100, y: 0 }, b: { x: 50, y: 0 } }],
+    T: 1
+  });
+  if (jn.C.length !== 1 || jn.C[0].pts.length !== 3) failures.push('node crv/join: two touching lines make one 3-point polyline, got ' + JSON.stringify(jn.C));
+
+  const line = { kind: 'line', a: { x: -200, y: 0 }, b: { x: 200, y: 0 } };
+  const tOut = run('crv/trim', { C: line, X: circle(0, 100) }, { mode: 'outside' });
+  if (tOut.C.length !== 2) failures.push('node crv/trim outside: a line through a circle leaves two tails, got ' + tOut.C.length);
+  const tIn = run('crv/trim', { C: line, X: circle(0, 100) }, { mode: 'inside' });
+  if (tIn.C.length !== 1 || Math.abs(LM.polyLength(tIn.C[0].pts, false) - 200) > 2)
+    failures.push('node crv/trim inside: expected one 200px chord, got ' + JSON.stringify(tIn.C.map(g => g.pts.length)));
+  if (run('crv/trim', { C: line, X: circle(0, 100) }, { mode: 'split' }).C.length !== 3)
+    failures.push('node crv/trim split: expected three pieces');
+
+  const rg = m => {
+    /* half-overlapping squares whose corners sit exactly on each other's edges
+       — the degenerate case the nudge-and-retry exists for */
+    const r = run('crv/region', { A: { kind: 'rect', cx: 0, cy: 0, w: 100, h: 100, rot: 0 }, B: { kind: 'rect', cx: 50, cy: 0, w: 100, h: 100, rot: 0 } }, { mode: m });
+    return (r.C || []).reduce((s, g) => s + Math.abs(LM.polyArea(g.pts)), 0);
+  };
+  near('crv/region union', rg('union'), 15000, 1);
+  near('crv/region intersection', rg('intersection'), 5000, 1);
+  near('crv/region difference', rg('difference'), 5000, 1);
+
+  const fl = run('crv/fillet', { C: { kind: 'rect', cx: 0, cy: 0, w: 100, h: 100, rot: 0 }, R: 20, N: 6 });
+  if (!(Math.abs(LM.polyArea(fl.C.pts)) < 10000)) failures.push('node crv/fillet: rounding must shrink the square');
+
+  const mi = run('xf/mirror', { G: circle(50, 10), A: { x: 0, y: -100 }, B: { x: 0, y: 100 } });
+  near('xf/mirror', mi.G.cx, -50);
+  const tl = run('xf/tile', { G: circle(0, 5), V1: { x: 20, y: 0 }, N1: 3, V2: { x: 0, y: 20 }, N2: 2 });
+  if (tl.G.length !== 6 || tl.I.join(',') !== '0,1,2,0,1,2' || tl.J.join(',') !== '0,0,0,1,1,1')
+    failures.push('node xf/tile: expected a 3×2 array with cell keys, got ' + tl.G.length + ' [' + tl.I.join(',') + ']');
+  near('xf/tile last cell', tl.G[5].cx, 40);
+
+  const su = run('xf/scale', { G: circle(0, 10), F: 3, Y: 1, C: { x: 0, y: 0 } }, { mode: 'uniform' });
+  if (su.G.kind !== 'circle' || su.G.r !== 30) failures.push('node xf/scale uniform: expected r30 circle, got ' + JSON.stringify(su.G));
+  const sn = run('xf/scale', { G: circle(0, 10), F: 3, Y: 1, C: { x: 0, y: 0 } }, { mode: 'xy' });
+  if (sn.G.kind !== 'ellipse' || sn.G.rx !== 30 || sn.G.ry !== 10) failures.push('node xf/scale non-uniform: expected a 30×10 ellipse, got ' + JSON.stringify(sn.G));
+
+  const ev = run('crv/eval', { C: circle(0, 100), T: 0 });
+  nearPt('crv/eval P', ev.P, 100, 0);
+  nearPt('crv/eval tangent', ev.V, 0, 1);
+  nearPt('crv/eval normal', ev.N, -1, 0);
+  const dv = run('crv/divide', { C: circle(0, 100), N: 4 }, { mode: 'count' });
+  if (dv.P.length !== 4 || dv.V.length !== 4) failures.push('node crv/divide: a closed curve divides into N points, got ' + dv.P.length);
+  const dl = run('crv/divide', { C: circle(0, 100), N: 100 }, { mode: 'length' });
+  if (Math.abs(dl.P.length - Math.round(Math.PI * 200 / 100)) > 0) failures.push('node crv/divide by length: expected ' + Math.round(Math.PI * 2) + ' points, got ' + dl.P.length);
+
+  near('vec/dot', run('vec/dot', { A: { x: 3, y: 4 }, B: { x: 2, y: 1 } }).D, 10);
+  near('vec/cross', run('vec/cross', { A: { x: 1, y: 0 }, B: { x: 0, y: 1 } }).C, 1);
+
+  /* the whole family, wired up and exported */
+  const g = { nodes: [
+      { id: 'c1', type: 'crv/circle', values: { P: { x: -40, y: 0 }, R: 80 } },
+      { id: 'c2', type: 'crv/circle', values: { P: { x: 40, y: 0 }, R: 80 } },
+      { id: 'ix', type: 'crv/intersect', values: {} },
+      { id: 'rg', type: 'crv/region', values: { mode: 'intersection' } },
+      { id: 'mr', type: 'xf/mirror', values: {} },
+      { id: 'dw', type: 'disp/draw', values: {} } ],
+    wires: [
+      { from: ['c1', 'C'], to: ['ix', 'C1'] }, { from: ['c2', 'C'], to: ['ix', 'C2'] },
+      { from: ['c1', 'C'], to: ['rg', 'A'] }, { from: ['c2', 'C'], to: ['rg', 'B'] },
+      { from: ['rg', 'C'], to: ['mr', 'G'] }, { from: ['mr', 'G'], to: ['dw', 'G'] } ] };
+  const c = mkCtx();
+  LM.evaluateGraph(g, NODE_DEFS, c);
+  if (Object.keys(c.errors).length) failures.push('geometry chain: errored → ' + JSON.stringify(c.errors));
+  if ((c.out.ix.P || []).length !== 2) failures.push('geometry chain: two circles should cross twice, got ' + (c.out.ix.P || []).length);
+  if (!c.drawList.length) failures.push('geometry chain: nothing reached the draw list');
+  try { new Function(WeftExport.buildJS(g)); } catch (e) { failures.push('geometry chain export does not compile → ' + e.message); }
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

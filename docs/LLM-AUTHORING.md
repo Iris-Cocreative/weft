@@ -180,8 +180,10 @@ and/or/xor/not).
 | `vec/vecxy` | X Y | V:vector | |
 | `vec/vec2pt` | A B U:unit | V:vector L | |
 | `vec/pt2vec` | P | V | · `vec/unit` V→V · `vec/amp` V A→V · `vec/reverse` V→V |
+| `vec/dot` | A B | D:number | A·B — 0 means perpendicular |
+| `vec/cross` | A B | C:number | 2D cross is a scalar (the perp-dot) |
 
-### Curve (all emit C:geometry)
+### Curve — construction (all emit C:geometry)
 | node | in | |
 |---|---|---|
 | `crv/circle` | P R=60 | |
@@ -192,12 +194,33 @@ and/or/xor/not).
 | `crv/arc` | P R A0 A1 | radians |
 | `crv/polyline` | V:point (list-in) C:closed | straight segments through the list |
 | `crv/interp` | V:point (list-in) C:closed | spline through the list |
-| `crv/divide` | C:geometry N | → P:point T:number — N+1 points along it |
-| `crv/eval` | C:geometry T=0.5 | → P:point — arc-length parameterized |
-| `crv/offset` | C:geometry D=10 | +D grows closed curves outward, −D shrinks; circles/arcs/lines stay exact, others → poly |
+| `crv/hull` | P:point (list-in) | the convex outline round the points |
+
+### Curve — sampling, analysis, reshaping
+Every curve is arc-length parameterized over `t = 0..1`, so a `T` from one node
+means the same place on the curve in every other.
+
+| node | in | out | |
+|---|---|---|---|
+| `crv/eval` | C T=0.5 | P:point V:tangent N:normal | |
+| `crv/divide` | C N=10 | P:point T:number V:tangent | `values.mode` `'count'`\|`'length'` (N = px spacing) |
+| `crv/intersect` | C1 C2 | P:point T1 T2 | `values.mode` `'pair'`\|`'self'`; T1/T2 feed `crv/eval` |
+| `crv/closest` | C P:point | P:point T D:distance | the attractor engine |
+| `crv/incurve` | C P:point | B:bool | closed curves only |
+| `crv/length` | C | L | · `crv/area` C → A:number C:centroid |
+| `crv/bbox` | G (list-in) | B:rect C:centre W H | `values.mode` `'each'`\|`'all'` |
+| `crv/offset` | C D=10 | C | +D grows closed curves outward; circles/arcs/lines stay exact, others → poly |
+| `crv/join` | C (list-in) T=1 | C | chains curves whose ends meet within T px |
+| `crv/trim` | C X:cutter | C | `values.mode` `'outside'`\|`'inside'`\|`'split'` |
+| `crv/fillet` | C R=12 N=8 | C | rounds corners, radius capped at half the shorter edge |
+| `crv/region` | A B | C | `values.mode` `'union'`\|`'intersection'`\|`'difference'`; no holes |
 
 ### Transform (G:geometry in → G out)
-`xf/move` (T:vector) · `xf/rotate` (A:radians, C:center) · `xf/scale` (F, C).
+`xf/move` (T:vector) · `xf/rotate` (A:radians, C:center) ·
+`xf/scale` (F, Y, C — `values.mode` `'uniform'`\|`'xy'`; non-uniform turns a
+circle into an ellipse) · `xf/mirror` (A, B — the two ends of the mirror line) ·
+`xf/tile` (V1 N1 V2 N2 → G plus I, J cell indices; identical copies only —
+varying cells are `vec/grid` + list matching).
 
 ### Display
 | node | in | out | |

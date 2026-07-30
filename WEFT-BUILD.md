@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.10 — the playable loom + the weave assistant.** v0.1 (2026-07-12): editor,
+**Status: v0.11 — the geometry pass.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -204,6 +204,38 @@ one history step (Ctrl+Z reverts), auto-layout for coordless nodes.
 Ships dormant: webhook URL + shared key live only in localStorage
 (`weft:assistant`), so the public deploy carries no keys and no cost
 surface; setup guide `docs/ASSISTANT.md` — 128 nodes, 28 examples.
+v0.11 (2026-07-30, the geometry pass): the library could draw curves and
+move them, but it could not **ask questions about them** — there was no dot
+product, no cross product, no matrix compose, and no curve intersection
+anywhere in the engine, which is the primitive Trim, Region Boolean and
+offset cleanup all stand on. `js/engine.js` grew a polyline-analysis layer
+underneath the node library — `segInt` / `polyInt` / `polySelfInt`,
+`closestOnPoly`, `resample`, `splitPoly`, `polyLength` / `polyArea` /
+`polyCentroid`, `convexHull`, `filletPoly`, `clipPoly` — plus the 2D and 3D
+vector families, `matIdentity` / `matMul` / `matMirror` / `matSvd`, and an
+arc-length curve layer (`curveTable`, `tableAt`, `tangentAt`, `curveLength`).
+Several of those were already in the codebase as inlined duplicates and were
+extracted rather than written. **Region Boolean is Greiner–Hormann written
+out, not vendored** (invariant #7): degenerate contacts — a vertex sitting
+exactly on the other outline, which breaks the algorithm's entry/exit
+alternation — are dodged by nudging the clip polygon a ten-thousandth of a
+pixel and retrying, and anything under a square pixel is dropped, so a shape
+minus itself comes back empty instead of as a hairline. Holes are the honest
+limit: Weft geometry cannot express a ring, so a cutter entirely inside A
+returns A. New nodes: Curve Intersection (curve × curve **or** self), Curve
+Closest Point, Point In Curve, Curve Length, Area, Bounding Box (per item or
+whole list), Convex Hull, Join Curves, Trim (outside / inside / split),
+Fillet, Region Boolean, Mirror, Array (with I / J cell keys, principle 6),
+Dot Product and Cross Product. Existing nodes grew ports rather than
+siblings: Evaluate Curve emits the tangent V and normal N, Divide Curve
+emits V and gains a by-length mode, Scale gains a Y factor and a
+non-uniform mode — and a non-uniformly scaled circle now honestly becomes an
+*ellipse* instead of averaging its two radii into a wrong circle. Three
+engine warts went with the pass: an ellipse is sampled by arc length like
+every other kind (Divide used to bunch its points), the 96-point distance
+table is built once per node instead of once per sample (Divide with N=500
+was O(N·96)), and a reversed arc no longer renders one way while
+hit-testing another — 143 nodes, 28 examples.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
@@ -267,7 +299,7 @@ weft/
 - **Evaluate every frame.** No dirty tracking — graphs are small, and time/mouse
   change every frame anyway. 60–130 fps with the examples.
 
-### Node library (124) — Grasshopper-matched names
+### Node library (143) — Grasshopper-matched names
 
 - **Input**: Time, Mouse, Viewport · interaction: Hotspot, Button, Keyboard, Scroll
 - **State** (per-list-item memory, resets on load): Smooth, Spring, Counter,
@@ -290,11 +322,18 @@ weft/
   node: declared ports, per-item or whole-list body, `LM` in scope (graphs run
   code — Expression's trust boundary)
 - **Vector**: Construct Point, Deconstruct, Distance, Point Polar, Angle,
+  Dot Product, Cross Product (2D — the scalar perp-dot),
   Grid (square/iso point lattice; outputs column, row, and the lattice's
   canonical colour class K — see NODE-LIBRARY principle 6)
-- **Curve**: Line, Circle, Ellipse, Rectangle, Polygon, PolyLine, Interpolate (spline),
-  Divide Curve, Evaluate Curve
-- **Transform**: Move, Rotate, Scale
+- **Curve**: construction — Line, Circle, Ellipse, Rectangle, Polygon, PolyLine,
+  Interpolate (spline), Convex Hull · sampling — Divide Curve (by count or by
+  length; emits parameters *and* tangents), Evaluate Curve (point, tangent,
+  normal) · analysis — Curve Intersection (curve × curve or self), Curve
+  Closest Point, Point In Curve, Curve Length, Area, Bounding Box (per item or
+  whole list) · reshaping — Offset, Join, Trim (outside/inside/split), Fillet,
+  Region Boolean (union/intersection/difference)
+- **Transform**: Move, Rotate, Scale (uniform or non-uniform), Mirror,
+  Array (identical copies on two basis vectors, with I/J cell keys)
 - **Display**: Draw, Text, Colour HSL, Gradient, Background, Measure Text
   (host `ctx.measureText`), Element (a real DOM element — `<a>`, heading,
   anything — placed by geometry bounds; hover/focus/click flow back as data)
@@ -310,8 +349,15 @@ weft/
 
 Plain objects: point `{x,y}`, `line`, `circle`, `ellipse`, `rect`, `arc`,
 `poly`, `spline` (catmull-rom), `text`. `LM.toPoly` converts anything to a
-polyline; `LM.curvePoint(g,t)` gives arc-length parameterized points;
-`LM.xformGeom` applies affine matrices (rect/ellipse degrade to polys when warped).
+polyline, and the whole analysis layer works on that plain point list — sample
+once, then intersect, split, offset, hull, fillet or clip it. Every kind is
+parameterized by **arc length** over `t = 0..1` (`LM.curvePoint`,
+`LM.tangentAt`, both taking an optional `LM.curveTable` so a node that samples
+N times builds the distance table once), which is what lets Curve
+Intersection's `T1` mean the same thing to Evaluate Curve. `LM.xformGeom`
+applies affine matrices: circles and ellipses survive exactly (a non-uniform
+scale turns a circle into an ellipse via a 2×2 SVD), rect/arc/spline degrade
+to polys when warped.
 
 ### Export contract
 

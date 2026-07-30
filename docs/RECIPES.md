@@ -36,10 +36,43 @@ geometry that reaches no Draw node is invisible.
   `vec/construct` → `crv/polyline(V, C:true)`.
 - **A shape no node knows** — wrap the formula in `meta/js` ("each" mode), θ in,
   point out, knobs promoted to input ports fed by sliders. See LLM-AUTHORING §7.
-- **Points along any curve** — `crv/divide(C, N → P, T)`; one point at t:
-  `crv/eval(C, T)`.
+- **Points along any curve** — `crv/divide(C, N → P, T, V)`; one point at t:
+  `crv/eval(C, T → P, V, N)`. V is the unit tangent, N the normal — wire N into
+  `vec/amp` and add it to P to push points off the curve, or into `math/atan2`
+  to turn things along it. `values.mode:'length'` on Divide spaces by px instead
+  of by count.
 - **Concentric / nested copies** — `sets/series → xf/scale(F)` — one shape wired
   once, scaled per item.
+- **Symmetry** — `xf/mirror(G, A, B)` reflects across the line A→B; wire the
+  original and the reflection into one `disp/draw` (or `sets/merge`) to keep
+  both halves. Two mirrors at an angle give you a kaleidoscope.
+- **A row or field of identical copies** — `xf/tile(G, V1, N1, V2, N2 → G, I, J)`.
+  Only for *identical* copies: if the cells differ, use `vec/grid` + list
+  matching instead (that is the whole point of principle 6).
+
+## Curve surgery
+
+- **Where do these two curves cross?** — `crv/intersect(C1, C2 → P, T1, T2)`.
+  T1/T2 are parameters, so they feed straight back into `crv/eval` — that is how
+  you get the tangent *at* a crossing. `values.mode:'self'` finds where one
+  curve crosses itself (the cleanup `crv/offset` cannot do for you).
+- **Cut a curve with another** — `crv/trim(C, X)`, mode `outside` / `inside` /
+  `split`. Inside and outside need a closed cutter; `split` just hands you every
+  piece.
+- **Add, subtract and overlap shapes** — `crv/region(A, B)`, mode
+  `union` / `intersection` / `difference`. Closed regions only, and there are no
+  holes: a cutter entirely inside A returns A untouched.
+- **Round the corners** — `crv/fillet(C, R, N)`. Works on any curve, since
+  everything becomes a polyline first.
+- **Glue segments into one curve** — `crv/join(C, T)` chains curves whose ends
+  meet within T px; a chain that closes comes back closed.
+- **Attractors** — `crv/closest(C, P → P, T, D)`; wire D into
+  `math/remap` and out into a radius, hue or width. One curve, a grid of points,
+  and the whole field responds.
+- **Measure a shape** — `crv/length` · `crv/area` (area + centroid) ·
+  `crv/bbox` (per item, or one box round the whole list) ·
+  `crv/incurve` (is this point inside?) · `crv/hull` (the rubber band round a
+  point cloud).
 
 ## Lists & fields
 

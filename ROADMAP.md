@@ -362,12 +362,37 @@ Then:
 
 ## 6. Images, video & vector — where the web beats Grasshopper
 
+- ✅ **Geometry primitives, curve analysis & transforms** (shipped v0.11,
+  2026-07-30 — Track A of the 3D/geometry/examples plan). The hole this filled:
+  the engine had no dot product, no cross product, no matrix compose and **no
+  curve intersection at all** — the primitive every reshaping operation sits on.
+  `js/engine.js` gained a polyline-analysis layer (`segInt`, `polyInt`,
+  `polySelfInt`, `closestOnPoly`, `resample`, `splitPoly`, `polyLength`/`Area`/
+  `Centroid`, `convexHull`, `filletPoly`, `clipPoly`), 2D and 3D vector
+  families, `matIdentity`/`matMul`/`matMirror`/`matSvd`, and an arc-length
+  `curveTable`/`tableAt`/`tangentAt`/`curveLength` layer. On top: Curve
+  Intersection (with a self mode), Closest Point, Point In Curve, Length, Area,
+  Bounding Box, Convex Hull, Join, Trim, Fillet, Region Boolean, Mirror, Array,
+  Dot and Cross — plus tangent/normal outputs on Evaluate and Divide, a
+  by-length mode on Divide, and a non-uniform mode on Scale.
+  **`clipPoly` is Greiner–Hormann written out, not vendored** (invariant #7),
+  which settles the question `docs/NODE-LIBRARY.md` had been holding open.
+  Three long-standing engine warts went with it: an ellipse is now sampled by
+  arc length like every other kind (Divide used to bunch points on it), the
+  96-point table is built once per node instead of once per sample, and a
+  reversed arc no longer renders one way while hit-testing another.
+  Known gap: **no holes** — Region Boolean's difference returns A unchanged when
+  the cutter sits wholly inside it. The fix is a `holes` field on `poly` drawn
+  as a second sub-path with `evenodd`; that is an invariant-#4 decision and it
+  belongs with the `path` kind below.
 - ✅ **`crv/offset` — Offset Curve** (shipped 2026-07-22). Uniform offset:
   circles/arcs/lines stay exact, other kinds sample through `toPoly` into a
   miter-join polyline (`LM.offsetPoly`/`LM.offsetGeom`). Positive D = outward
   on closed curves regardless of winding. Born from the CollabOS Steiner-chain
-  logo (even breathing gaps between tangent circles). Round joins +
-  self-intersection cleanup can ride the `path` kind when it lands.
+  logo (even breathing gaps between tangent circles). Round joins can ride the
+  `path` kind when it lands; self-intersection cleanup is no longer blocked on
+  it — `LM.polySelfInt` now finds the folds, and Curve Intersection's self mode
+  exposes them, so the offset node could prune its own loops.
 - **`path` geometry kind** (line/cubic/arc segments = an SVG `d`). One addition,
   three unlocks: real Béziers, **SVG import** (a pasted logo becomes geometry
   every node can bend), and a nearly-free SVG render target (track 8.2). Handle
