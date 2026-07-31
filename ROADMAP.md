@@ -49,7 +49,8 @@ Diagnosis in `patches/organic-nav.md`; boundary argument in
 - [shipped v0.8] **Delay** (`state/delay`) — feedback def: contributes no
   edges to the topo sort, reads last frame off `node._fbIns`. Cycles through it
   are legal at connect time and in the evaluator. Invariant #8 amended.
-  *Feedback chase* example locks it in the corpus.
+  Locked in the corpus by smoke check 22 (the *Feedback chase* example that
+  first carried it was retired in the 2026-07-31 curation).
 - [shipped v0.8] **Altitude nodes** — Comparison (mode-toggled), Logic,
   Select, Mass Addition (+ partial results), Text List, Measure Text
   (`ctx.measureText` from both hosts).
@@ -324,7 +325,7 @@ is now in, so any of these can be picked up in a workshop pass):
   `.seg` mode-toggle livery. Cards wear the loom livery like nodes.html, so the
   three surfaces read as one system. Three pieces made it cheap: a parallel
   **`EXAMPLE_META`** in examples.js (the prose was already written, trapped in
-  block comments — `EXAMPLES` itself is untouched, and smoke check 18 enforces
+  block comments — `EXAMPLES` itself is untouched, and smoke check 20 enforces
   key parity so they can't drift); **`App.loadExample(name)`** extracted from
   the old select handler; and **`Viewport.makeCtx`**, which the live loop and
   the new offscreen `App.renderThumb` now share — `LM.drawItem` never cared
@@ -333,9 +334,14 @@ is now in, so any of these can be picked up in a workshop pass):
   because springs, traces and scopes are empty at t=0, and render one card per
   animation frame so the modal stays interactive. The export modal's missing
   Esc handler was closed in a follow-up (2026-07-30) once the browser pass
-  caught that the entry above had claimed it prematurely. Still open: the
-  spacing pass DESIGN.md flags — it needs real DOM boxes, the way the
-  2026-07-14 audit was done.
+  caught that the entry above had claimed it prematurely. The corpus itself was
+  curated 2026-07-31 (James's call after seeing the gallery live): 30 → 21,
+  dropping the very-simple and thumbnail-sparse entries — Orbit study, Mouse
+  field, Checker dispatch, Feedback chase, Seismograph, Drone chord, Theremin,
+  Mic meter, Music scope — each covered by a stronger survivor (Cursor wave,
+  Iso field, Scale board, Sing, Visualizer), with Feedback chase's Delay-cycle
+  lock moved into smoke check 22. Still open: the spacing pass DESIGN.md
+  flags — it needs real DOM boxes, the way the 2026-07-14 audit was done.
 
 ### Legibility pass — [next], James 2026-07-14
 

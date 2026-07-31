@@ -1108,6 +1108,28 @@ for (const name of Object.keys(EXAMPLES)) {
   }
 }
 
+/* 22 — the sanctioned cycle: a lerp fed back through Delay converges frame by
+ * frame. This lock used to live in the Feedback chase example; the 2026-07-31
+ * curation retired the example, so the semantics are pinned here instead. */
+{
+  const g = { nodes: [
+      { id: 'dl', type: 'state/delay', values: { I: 0 } },
+      { id: 'lp', type: 'math/lerp', values: { B: 100, T: 0.5 } } ],
+    wires: [
+      { from: ['dl', 'V'], to: ['lp', 'A'] },
+      { from: ['lp', 'R'], to: ['dl', 'V'] } ] };
+  const seen = [];
+  for (let f = 0; f < 3; f++) {
+    const c = mkCtx(f / 60);
+    LM.evaluateGraph(g, NODE_DEFS, c);
+    if (Object.keys(c.errors).length) { failures.push('delay cycle: errored → ' + JSON.stringify(c.errors)); break; }
+    seen.push(((c.out.lp || {}).R || [])[0]);
+  }
+  if (seen.join(',') !== '50,75,87.5')
+    failures.push('delay cycle: lerp through Delay should converge 50, 75, 87.5 — got [' + seen.join(', ') + ']');
+  try { new Function(WeftExport.buildJS(g)); } catch (e) { failures.push('delay cycle export does not compile → ' + e.message); }
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

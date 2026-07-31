@@ -212,29 +212,6 @@ const EXAMPLES = {
     ]
   },
 
-  /* time → angle → polar point → orbiting circle, tether line, center dot */
-  'Orbit study': _EX([
-    ['n1', 'input/time', 30, 60],
-    ['n2', 'params/slider', 30, 200, { min: 0, max: 4, value: 1.2 }],
-    ['n3', 'math/mul', 300, 100],
-    ['n4', 'params/slider', 30, 360, { min: 0, max: 300, value: 140 }],
-    ['n5', 'vec/polar', 500, 140],
-    ['n6', 'params/slider', 30, 520, { min: 1, max: 80, value: 18 }],
-    ['n7', 'crv/circle', 740, 100],
-    ['n8', 'crv/line', 500, 360],
-    ['n9', 'disp/draw', 960, 100, { W: 2 }],
-    ['n10', 'disp/draw', 740, 340, { S: { r: 110, g: 130, b: 170, a: 0.45 }, W: 1 }],
-    ['n11', 'crv/circle', 740, 520, { R: 5 }],
-    ['n12', 'disp/draw', 960, 480, { F: { r: 255, g: 255, b: 255, a: 1 }, W: 1 }]
-  ], [
-    ['n1', 'T', 'n3', 'A'], ['n2', 'N', 'n3', 'B'],
-    ['n3', 'R', 'n5', 'A'], ['n4', 'N', 'n5', 'R'],
-    ['n5', 'P', 'n7', 'P'], ['n6', 'N', 'n7', 'R'],
-    ['n7', 'C', 'n9', 'G'],
-    ['n5', 'P', 'n8', 'B'], ['n8', 'C', 'n10', 'G'],
-    ['n11', 'C', 'n12', 'G']
-  ]),
-
   /* series → golden-angle spiral of circles, sized by expression, coloured by index */
   'Phyllotaxis': _EX([
     ['n1', 'params/slider', 30, 40, { min: 1, max: 400, value: 220 }],
@@ -269,45 +246,6 @@ const EXAMPLES = {
     ['n16', 'C', 'n19', 'G'], ['n18', 'C', 'n19', 'F']
   ]),
 
-  /* grid of dots built from one Series (mod/floor), repelled + recoloured by the mouse */
-  'Mouse field': _EX([
-    ['n1', 'params/slider', 30, 40, { min: 1, max: 40, value: 16 }],
-    ['n2', 'params/slider', 30, 200, { min: 1, max: 30, value: 10 }],
-    ['n3', 'math/mul', 240, 100],
-    ['n4', 'sets/series', 440, 40],
-    ['n5', 'math/mod', 660, 40],
-    ['n6', 'math/div', 660, 200],
-    ['n7', 'math/floor', 860, 200],
-    ['n8', 'params/slider', 30, 360, { min: 4, max: 120, value: 42 }],
-    ['n9', 'math/expr', 900, 40, { expr: '(X - (Y - 1) / 2) * Z' }],
-    ['n10', 'math/expr', 1080, 200, { expr: '(X - (Y - 1) / 2) * Z' }],
-    ['n11', 'vec/construct', 1320, 100],
-    ['n12', 'input/mouse', 440, 400],
-    ['n13', 'vec/construct', 660, 420],
-    ['n14', 'vec/distance', 900, 380],
-    ['n15', 'math/remap', 1120, 380, { S0: 0, S1: 260, T0: 16, T1: 2 }],
-    ['n16', 'crv/circle', 1540, 220],
-    ['n18', 'math/remap', 1120, 620, { S0: 0, S1: 320, T0: 0, T1: 1 }],
-    ['n19', 'disp/gradient', 1340, 620, { A: { r: 250, g: 204, b: 21, a: 1 }, B: { r: 96, g: 165, b: 250, a: 0.85 } }],
-    ['n17', 'disp/draw', 1760, 300, { S: { r: 0, g: 0, b: 0, a: 0 } }]
-  ], [
-    ['n1', 'N', 'n3', 'A'], ['n2', 'N', 'n3', 'B'],
-    ['n3', 'R', 'n4', 'C'],
-    ['n4', 'S', 'n5', 'A'], ['n1', 'N', 'n5', 'B'],
-    ['n4', 'S', 'n6', 'A'], ['n1', 'N', 'n6', 'B'],
-    ['n6', 'R', 'n7', 'V'],
-    ['n5', 'R', 'n9', 'X'], ['n1', 'N', 'n9', 'Y'], ['n8', 'N', 'n9', 'Z'],
-    ['n7', 'R', 'n10', 'X'], ['n2', 'N', 'n10', 'Y'], ['n8', 'N', 'n10', 'Z'],
-    ['n9', 'R', 'n11', 'X'], ['n10', 'R', 'n11', 'Y'],
-    ['n12', 'X', 'n13', 'X'], ['n12', 'Y', 'n13', 'Y'],
-    ['n11', 'P', 'n14', 'A'], ['n13', 'P', 'n14', 'B'],
-    ['n14', 'D', 'n15', 'V'],
-    ['n11', 'P', 'n16', 'P'], ['n15', 'R', 'n16', 'R'],
-    ['n14', 'D', 'n18', 'V'],
-    ['n18', 'R', 'n19', 'T'],
-    ['n16', 'C', 'n17', 'G'], ['n19', 'C', 'n17', 'F']
-  ]),
-
   /* a closed spline through polar points whose radii breathe with noise + time */
   'Noise blob': _EX([
     ['n1', 'params/slider', 30, 40, { min: 3, max: 64, value: 18 }],
@@ -329,50 +267,6 @@ const EXAMPLES = {
     ['n3', 'R', 'n8', 'A'], ['n7', 'R', 'n8', 'R'],
     ['n8', 'P', 'n9', 'V'],
     ['n9', 'C', 'n10', 'G']
-  ]),
-
-  /* one grid of points split into two families by a checkerboard pattern
-   * through Dispatch (the list-level if/else) — the families breathe in
-   * opposite phase */
-  'Checker dispatch': _EX([
-    ['c1', 'params/slider', 30, 40, { min: 2, max: 24, value: 12 }],
-    ['c2', 'params/slider', 30, 200, { min: 2, max: 24, value: 7 }],
-    ['c3', 'params/slider', 30, 360, { min: 12, max: 100, value: 52 }],
-    ['c4', 'input/time', 30, 520],
-    ['c5', 'math/mul', 250, 100],
-    ['c6', 'math/sin', 250, 520],
-    ['c7', 'sets/series', 460, 100],
-    ['c8', 'math/remap', 460, 480, { S0: -1, S1: 1, T0: 6, T1: 19 }],
-    ['c9', 'math/remap', 460, 690, { S0: -1, S1: 1, T0: 19, T1: 6 }],
-    ['c10', 'math/mod', 680, 40],
-    ['c11', 'math/div', 680, 200],
-    ['c12', 'math/floor', 880, 200],
-    ['c13', 'math/expr', 1080, 40, { expr: '(X - (Y - 1) / 2) * Z' }],
-    ['c14', 'math/expr', 1080, 200, { expr: '(X - (Y - 1) / 2) * Z' }],
-    ['c15', 'math/expr', 1080, 380, { expr: '(X + Y) % 2' }],
-    ['c16', 'vec/construct', 1300, 100],
-    ['c17', 'sets/dispatch', 1500, 200],
-    ['c18', 'crv/circle', 1720, 80],
-    ['c19', 'crv/circle', 1720, 320],
-    ['c20', 'disp/draw', 1940, 80, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 94, g: 234, b: 212, a: 0.9 } }],
-    ['c21', 'disp/draw', 1940, 320, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 244, g: 114, b: 182, a: 0.9 } }]
-  ], [
-    ['c1', 'N', 'c5', 'A'], ['c2', 'N', 'c5', 'B'],
-    ['c5', 'R', 'c7', 'C'],
-    ['c7', 'S', 'c10', 'A'], ['c1', 'N', 'c10', 'B'],
-    ['c7', 'S', 'c11', 'A'], ['c1', 'N', 'c11', 'B'],
-    ['c11', 'R', 'c12', 'V'],
-    ['c10', 'R', 'c13', 'X'], ['c1', 'N', 'c13', 'Y'], ['c3', 'N', 'c13', 'Z'],
-    ['c12', 'R', 'c14', 'X'], ['c2', 'N', 'c14', 'Y'], ['c3', 'N', 'c14', 'Z'],
-    ['c10', 'R', 'c15', 'X'], ['c12', 'R', 'c15', 'Y'],
-    ['c13', 'R', 'c16', 'X'], ['c14', 'R', 'c16', 'Y'],
-    ['c16', 'P', 'c17', 'L'], ['c15', 'R', 'c17', 'P'],
-    ['c4', 'T', 'c6', 'V'],
-    ['c6', 'R', 'c8', 'V'], ['c6', 'R', 'c9', 'V'],
-    ['c17', 'A', 'c18', 'P'], ['c8', 'R', 'c18', 'R'],
-    ['c17', 'B', 'c19', 'P'], ['c9', 'R', 'c19', 'R'],
-    ['c18', 'C', 'c20', 'G'],
-    ['c19', 'C', 'c21', 'G']
   ]),
 
   /* The same idea as Checker dispatch, done right — and the reason Grid exists.
@@ -756,126 +650,6 @@ const EXAMPLES = {
     ['c3', 'G', 'c4', 'G']
   ]),
 
-  /* a legal feedback loop: each axis is  lerp(last frame's answer, mouse, ease)
-   * wired back through a Delay — the cycle the editor used to refuse.
-   * The circle IS the loop: no Smooth node, just raw feedback */
-  'Feedback chase': _EX([
-    ['f1', 'input/mouse', 30, 60],
-    ['f2', 'params/slider', 30, 320, { min: 0.01, max: 0.5, value: 0.12 }],
-    ['f3', 'math/lerp', 470, 60],
-    ['f4', 'state/delay', 250, 130],
-    ['f5', 'math/lerp', 470, 300],
-    ['f6', 'state/delay', 250, 390],
-    ['f7', 'vec/construct', 690, 170],
-    ['f8', 'crv/circle', 910, 130, { R: 26 }],
-    ['f9', 'disp/draw', 1130, 130, { S: { r: 94, g: 234, b: 212, a: 0.95 }, W: 2 }],
-    ['f10', 'vec/construct', 690, 400],
-    ['f11', 'crv/circle', 910, 360, { R: 4 }],
-    ['f12', 'disp/draw', 1130, 330, { F: { r: 230, g: 237, b: 250, a: 0.8 }, S: { r: 0, g: 0, b: 0, a: 0 } }]
-  ], [
-    ['f4', 'V', 'f3', 'A'], ['f1', 'X', 'f3', 'B'], ['f2', 'N', 'f3', 'T'],
-    ['f3', 'R', 'f4', 'V'],
-    ['f6', 'V', 'f5', 'A'], ['f1', 'Y', 'f5', 'B'], ['f2', 'N', 'f5', 'T'],
-    ['f5', 'R', 'f6', 'V'],
-    ['f3', 'R', 'f7', 'X'], ['f5', 'R', 'f7', 'Y'],
-    ['f7', 'P', 'f8', 'P'],
-    ['f8', 'C', 'f9', 'G'],
-    ['f1', 'X', 'f10', 'X'], ['f1', 'Y', 'f10', 'Y'],
-    ['f10', 'P', 'f11', 'P'],
-    ['f11', 'C', 'f12', 'G']
-  ]),
-
-  /* move the mouse and watch it register twice: Time Graph seismographs the
-   * scaled x/y on the loom, Trace streams the same two lines across the cloth
-   * from an anchor pen, swatch-coloured. A white dot marks the pointer. */
-  'Seismograph': _EX([
-    ['s1', 'input/mouse', 30, 120],
-    ['s2', 'math/mul', 250, 60, { B: 0.25 }],
-    ['s3', 'math/mul', 250, 220, { B: 0.25 }],
-    ['s4', 'params/timegraph', 470, 40],
-    ['s5', 'params/swatch', 250, 380, { hex: '#5eead4' }],
-    ['s6', 'params/swatch', 250, 500, { hex: '#f472b6' }],
-    ['s7', 'params/anchor', 30, 420, { x: 150, y: -60 }],
-    ['s8', 'vec/vecxy', 250, 620, { X: -70, Y: 0 }],
-    ['s9', 'disp/trace', 700, 300, { L: 300 }],
-    ['s10', 'vec/construct', 470, 620],
-    ['s11', 'crv/circle', 700, 640, { R: 4 }],
-    ['s12', 'disp/draw', 920, 620, { F: { r: 230, g: 237, b: 250, a: 0.9 }, S: { r: 0, g: 0, b: 0, a: 0 } }]
-  ], [
-    ['s1', 'X', 's2', 'A'], ['s1', 'Y', 's3', 'A'],
-    ['s2', 'R', 's4', 'V'], ['s3', 'R', 's4', 'V'],
-    ['s2', 'R', 's9', 'V'], ['s3', 'R', 's9', 'V'],
-    ['s5', 'C', 's9', 'C'], ['s6', 'C', 's9', 'C'],
-    ['s7', 'P', 's9', 'P'],
-    ['s8', 'V', 's9', 'D'],
-    ['s1', 'X', 's10', 'X'], ['s1', 'Y', 's10', 'Y'],
-    ['s10', 'P', 's11', 'P'],
-    ['s11', 'C', 's12', 'G']
-  ]),
-
-  /* Audio: four sine voices in a 2:3:4:5 stack, swelling on a slow LFO that
-   * also breathes a circle — sound starts after the first click (browser rule). */
-  'Drone chord': _EX([
-    ['a1', 'sets/series', 30, 40, { S: 110, N: 55, C: 4 }],
-    ['a2', 'audio/osc', 250, 40, { wave: 'sine' }],
-    ['a3', 'input/time', 30, 300],
-    ['a4', 'math/mul', 250, 320, { B: 0.6 }],
-    ['a5', 'math/sin', 450, 320],
-    ['a6', 'math/remap', 650, 280, { S0: -1, S1: 1, T0: 0.04, T1: 0.16 }],
-    ['a7', 'audio/gain', 470, 40],
-    ['a8', 'audio/out', 690, 40],
-    ['a9', 'math/remap', 650, 480, { S0: -1, S1: 1, T0: 44, T1: 92 }],
-    ['a10', 'crv/circle', 880, 440],
-    ['a11', 'disp/draw', 1100, 440, { S: { r: 94, g: 234, b: 212, a: 0.9 }, W: 2 }],
-    ['a12', 'disp/bg', 1100, 620]
-  ], [
-    ['a1', 'S', 'a2', 'F'],
-    ['a2', 'A', 'a7', 'In'],
-    ['a6', 'R', 'a7', 'G'],
-    ['a7', 'A', 'a8', 'In'],
-    ['a3', 'T', 'a4', 'A'],
-    ['a4', 'R', 'a5', 'V'],
-    ['a5', 'R', 'a6', 'V'],
-    ['a5', 'R', 'a9', 'V'],
-    ['a9', 'R', 'a10', 'R'],
-    ['a10', 'C', 'a11', 'G']
-  ]),
-
-  /* Audio: mouse X = pitch snapped to A minor pentatonic (the Scale node is
-   * what makes it an instrument), mouse Y = volume. The trace draws the
-   * snapped melody as a stairstep — quantization made visible. */
-  'Theremin': _EX([
-    ['t1', 'input/mouse', 30, 40],
-    ['t2', 'math/remap', 250, 40, { S0: 0, S1: 1, T0: 45, T1: 81 }],
-    ['t3', 'audio/scale', 470, 40, { root: 9, scale: 'pentatonic' }],
-    ['t4', 'audio/osc', 690, 40, { wave: 'sine' }],
-    ['t5', 'math/remap', 250, 280, { S0: 0, S1: 1, T0: 0.3, T1: 0 }],
-    ['t6', 'audio/gain', 690, 240],
-    ['t7', 'audio/out', 910, 40],
-    ['t8', 'vec/construct', 250, 480],
-    ['t9', 'math/remap', 470, 320, { S0: 0, S1: 0.3, T0: 6, T1: 26 }],
-    ['t10', 'crv/circle', 470, 480],
-    ['t11', 'disp/draw', 690, 480, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.18 }, W: 2 }],
-    ['t12', 'math/remap', 690, 320, { S0: 45, S1: 81, T0: 60, T1: -60 }],
-    ['t13', 'disp/trace', 910, 320, { P: { x: 0, y: 170 }, D: { x: -140, y: 0 }, L: 500, W: 2 }],
-    ['t14', 'disp/bg', 910, 520]
-  ], [
-    ['t1', 'NX', 't2', 'V'],
-    ['t2', 'R', 't3', 'V'],
-    ['t3', 'F', 't4', 'F'],
-    ['t4', 'A', 't6', 'In'],
-    ['t1', 'NY', 't5', 'V'],
-    ['t5', 'R', 't6', 'G'],
-    ['t6', 'A', 't7', 'In'],
-    ['t1', 'X', 't8', 'X'], ['t1', 'Y', 't8', 'Y'],
-    ['t8', 'P', 't10', 'P'],
-    ['t5', 'R', 't9', 'V'],
-    ['t9', 'R', 't10', 'R'],
-    ['t10', 'C', 't11', 'G'],
-    ['t3', 'M', 't12', 'V'],
-    ['t12', 'R', 't13', 'V']
-  ]),
-
   /* The theremin grown into an instrument you can see: every note of A
    * pentatonic drawn as a labelled rung (Series → Scale → Set Union dedupes
    * the snapped notes), a marker riding the rung you're playing, and three
@@ -1099,26 +873,6 @@ const EXAMPLES = {
     ['p5', 'A', 'p6', 'In']
   ]),
 
-  /* Microphone loudness as a number — a breathing circle and a scrolling
-   * trace of the room. The browser asks mic permission when this loads. */
-  'Mic meter': _EX([
-    ['m1', 'audio/mic', 30, 40],
-    ['m2', 'state/smooth', 250, 40, { S: 10 }],
-    ['m3', 'math/remap', 470, 40, { S0: 0, S1: 1, T0: 14, T1: 190 }],
-    ['m4', 'crv/circle', 690, 40],
-    ['m5', 'disp/draw', 910, 40, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.15 }, W: 2 }],
-    ['m6', 'math/remap', 470, 220, { S0: 0, S1: 1, T0: 0, T1: -150 }],
-    ['m7', 'disp/trace', 690, 220, { P: { x: 0, y: 170 }, D: { x: -120, y: 0 }, L: 600, W: 2 }],
-    ['m8', 'disp/bg', 910, 320]
-  ], [
-    ['m1', 'V', 'm2', 'V'],
-    ['m2', 'R', 'm3', 'V'],
-    ['m3', 'R', 'm4', 'R'],
-    ['m4', 'C', 'm5', 'G'],
-    ['m2', 'R', 'm6', 'V'],
-    ['m6', 'R', 'm7', 'V']
-  ]),
-
   /* Sing a note and the graph sings it back in key — Pitch In hears the
    * frequency, Scale snaps the fractional MIDI to A pentatonic, an
    * oscillator plays the snapped note, gated by tracker clarity so silence
@@ -1152,37 +906,6 @@ const EXAMPLES = {
     ['s1', 'F', 's11', 'V'],
     ['s11', 'R', 's12', 'T'],
     ['s12', 'G', 's13', 'G']
-  ]),
-
-  /* Play music on the vectorscope — a goniometer. Add the node, click once,
-   * share a tab with sound ("also share audio"!) and the stereo field draws
-   * itself: mono = a diagonal line, wide stereo = a blooming figure. The
-   * scope below shows the waveform, the two dots breathe with each
-   * channel's loudness; Track In A also routes to the speaker. */
-  'Music scope': _EX([
-    ['t1', 'audio/track', 30, 40],
-    ['t2', 'audio/xyscope', 470, 40, { S: 300, P: { x: 0, y: -50 } }],
-    ['t3', 'audio/scope', 470, 380, { P: { x: 0, y: 150 }, W: 460, H: 90, T: 30 }],
-    ['t4', 'audio/gain', 250, 340, { G: 0.8 }],
-    ['t5', 'audio/out', 250, 520],
-    ['t7', 'math/remap', 30, 380, { S0: 0, S1: 1, T0: 3, T1: 46 }],
-    ['t8', 'math/remap', 30, 540, { S0: 0, S1: 1, T0: 3, T1: 46 }],
-    ['t9', 'crv/circle', 250, 660, { P: { x: -120, y: 235 } }],
-    ['t10', 'crv/circle', 470, 660, { P: { x: 120, y: 235 } }],
-    ['t11', 'disp/draw', 690, 660, { S: { r: 255, g: 54, b: 163, a: 0.9 }, F: { r: 255, g: 54, b: 163, a: 0.25 }, W: 1.5 }],
-    ['t6', 'disp/bg', 910, 660]
-  ], [
-    ['t1', 'L', 't2', 'X'],
-    ['t1', 'R', 't2', 'Y'],
-    ['t1', 'A', 't4', 'In'],
-    ['t4', 'A', 't5', 'In'],
-    ['t4', 'A', 't3', 'In'],
-    ['t1', 'VL', 't7', 'V'],
-    ['t1', 'VR', 't8', 'V'],
-    ['t7', 'R', 't9', 'R'],
-    ['t8', 'R', 't10', 'R'],
-    ['t9', 'C', 't11', 'G'],
-    ['t10', 'C', 't11', 'G']
   ]),
 
   /* The full rig — share a music tab and the whole surface listens:
@@ -1545,26 +1268,12 @@ const EXAMPLE_META = {
     tags: ['grid', 'spring', 'trace', 'hotspot', 'mandala'],
     needs: [], frames: 120
   },
-  'Orbit study': {
-    cat: 'Fundamentals',
-    blurb: 'Time becomes an angle, the angle becomes a polar point, and a circle orbits with a tether line back to the centre.',
-    teaches: 'The shortest complete chain in Weft: input → maths → vector → curve → display.',
-    tags: ['time', 'polar', 'circle', 'first patch'],
-    needs: [], frames: 40
-  },
   'Phyllotaxis': {
     cat: 'Fundamentals',
     blurb: 'A golden-angle spiral of circles, sized by an expression and coloured by index.',
     teaches: 'One Series fans a single Circle node into hundreds — the index drives angle, radius, size and hue at once.',
     tags: ['series', 'spiral', 'golden angle', 'hsl'],
     needs: [], frames: 40
-  },
-  'Mouse field': {
-    cat: 'Lists & grids',
-    blurb: 'A grid of dots built from one Series with mod and floor, repelled and recoloured by the pointer.',
-    teaches: 'A flat list becomes a grid with mod/floor — and distance-to-cursor is just another parallel list.',
-    tags: ['series', 'grid', 'mouse', 'gradient'],
-    needs: [], frames: 30
   },
   'Noise blob': {
     cat: 'Fundamentals',
@@ -1573,17 +1282,10 @@ const EXAMPLE_META = {
     tags: ['noise', 'spline', 'polar', 'organic'],
     needs: [], frames: 40
   },
-  'Checker dispatch': {
-    cat: 'Lists & grids',
-    blurb: 'One grid of points split into two families by a checkerboard pattern, breathing in opposite phase.',
-    teaches: 'Dispatch is the list-level if/else — and its sibling Iso field shows when you don’t need it at all.',
-    tags: ['dispatch', 'branching', 'grid', 'checkerboard'],
-    needs: [], frames: 40
-  },
   'Iso field': {
     cat: 'Lists & grids',
     blurb: 'A 3-phase pulse across an isometric lattice, with no branching at all.',
-    teaches: 'Grid’s K colour class becomes a phase offset — 8 nodes where Checker dispatch needs 21.',
+    teaches: 'Grid’s K colour class becomes a phase offset — the whole dispatch pattern in 8 nodes, with no branching.',
     tags: ['grid', 'list matching', 'no branching', 'iso'],
     needs: [], frames: 40
   },
@@ -1621,34 +1323,6 @@ const EXAMPLE_META = {
     teaches: 'List matching at full scale: mean anomaly → true anomaly → radius, solved once and answered for eight bodies, from Text List data.',
     tags: ['list matching', 'kepler', 'text list', 'data', 'orbits', 'planets'],
     needs: [], frames: 40
-  },
-  'Feedback chase': {
-    cat: 'State & interaction',
-    blurb: 'A circle chases the pointer through a legal feedback loop — each axis is a lerp of last frame’s answer.',
-    teaches: 'Delay is the one sanctioned cycle: the circle IS the loop, with no Smooth node involved.',
-    tags: ['feedback', 'delay', 'loop', 'mouse'],
-    needs: [], frames: 60
-  },
-  'Seismograph': {
-    cat: 'State & interaction',
-    blurb: 'Move the pointer and watch it register twice — a Time Graph on the loom, a streaming Trace on the cloth.',
-    teaches: 'Two ways to see one signal over time: the inspector graph on the node, the drawn trail on the canvas.',
-    tags: ['trace', 'time graph', 'mouse', 'signal'],
-    needs: [], frames: 120
-  },
-  'Drone chord': {
-    cat: 'Audio synthesis',
-    blurb: 'Four sine voices in a 2:3:4:5 stack, swelling on a slow LFO that also breathes a circle.',
-    teaches: 'Audio wires carry handles into a live Web Audio graph — one list of ratios becomes four oscillators.',
-    tags: ['oscillator', 'harmonics', 'lfo', 'drone'],
-    needs: ['gesture'], frames: 40
-  },
-  'Theremin': {
-    cat: 'Audio synthesis',
-    blurb: 'Mouse X is pitch snapped to A minor pentatonic, mouse Y is volume, and the trace draws the snapped melody as a stairstep.',
-    teaches: 'The Scale node is what turns a continuous input into an instrument — quantization made visible.',
-    tags: ['scale', 'pentatonic', 'mouse', 'trace', 'instrument'],
-    needs: ['gesture'], frames: 120
   },
   'Scale board': {
     cat: 'Audio synthesis',
@@ -1692,26 +1366,12 @@ const EXAMPLE_META = {
     tags: ['path to audio', 'oscilloscope music', 'polygon'],
     needs: ['gesture'], frames: 60
   },
-  'Mic meter': {
-    cat: 'Audio input',
-    blurb: 'Microphone loudness as a number — a breathing circle and a scrolling trace of the room.',
-    teaches: 'The mic is an ordinary input: one number, smoothed, free to drive anything.',
-    tags: ['mic', 'loudness', 'trace', 'meter'],
-    needs: ['mic'], frames: 120
-  },
   'Sing': {
     cat: 'Audio input',
     blurb: 'Sing a note and the graph sings it back in key — Pitch In hears you, Scale snaps it, an oscillator answers.',
     teaches: 'Clarity from the pitch tracker gates the voice, so silence stays silent.',
     tags: ['pitch', 'mic', 'scale', 'gate', 'voice'],
     needs: ['mic', 'gesture'], frames: 40
-  },
-  'Music scope': {
-    cat: 'Audio input',
-    blurb: 'Play music into the vectorscope — share a tab with sound and the stereo field draws itself.',
-    teaches: 'A goniometer reads a mix at a glance: mono is a diagonal line, wide stereo blooms.',
-    tags: ['track in', 'goniometer', 'stereo', 'tab audio'],
-    needs: ['tab-audio', 'gesture'], frames: 60
   },
   'Visualizer': {
     cat: 'Audio input',
