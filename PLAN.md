@@ -182,8 +182,9 @@ unreadable at 92 nodes does not get better by generating them faster.**
 2. ✅ **The feedback edge** — `state/delay`, a `feedback: true` def the sort
    cuts: no out-edges contributed, inputs captured post-frame on `node._fbIns`.
    Editor's connect-time cycle check whitelists paths through it. Invariant #8
-   amended. The *Feedback chase* example (lerp→delay loop) locks the semantics
-   into the test corpus.
+   amended. The semantics are locked into the test corpus by smoke check 22
+   (a lerp→delay loop; carried by the *Feedback chase* example until the
+   2026-07-31 curation retired it).
 3. ✅ **Altitude nodes** — Comparison (`= ≠ < ≤ > ≥` mode toggle), Logic
    (and/or/xor/not), Select (list-level ternary), Mass Addition (+ partial
    results), Text List, Measure Text via `ctx.measureText` from both hosts (no
