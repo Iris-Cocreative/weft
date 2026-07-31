@@ -332,8 +332,10 @@ is now in, so any of these can be picked up in a workshop pass):
   Thumbnails step each graph 30–120 frames (per-example, `EXAMPLE_META.frames`)
   because springs, traces and scopes are empty at t=0, and render one card per
   animation frame so the modal stays interactive. The export modal's missing
-  Esc handler was fixed here too. Still open: the spacing pass DESIGN.md flags —
-  it needs real DOM boxes, the way the 2026-07-14 audit was done.
+  Esc handler was closed in a follow-up (2026-07-30) once the browser pass
+  caught that the entry above had claimed it prematurely. Still open: the
+  spacing pass DESIGN.md flags — it needs real DOM boxes, the way the
+  2026-07-14 audit was done.
 
 ### Legibility pass — [next], James 2026-07-14
 
