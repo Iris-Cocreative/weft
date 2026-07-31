@@ -100,9 +100,13 @@ pass through untouched. When no sensible coercion exists the result is a neutral
 value (0, `{x:0,y:0}`, white), never an exception.
 
 Geometry previews on the cloth (the ghosts) are drawn for `geometry` and `point`
-outputs only. `point3` and `camera` deliberately get none: an unprojected 3D
-point has no screen position. Project it and the ghosts come back, because what
-`d3/project` emits is ordinary 2D geometry.
+outputs only, and within `geometry` the 3D kinds (`mesh`, `poly3`) are skipped
+too. `point3` and `camera` get none either. The rule behind all three: an
+unprojected 3D value has no screen position, and guessing one paints every
+intermediate solid in a chain flat over the scene you actually rendered. Project
+it and the previews come back, because what `d3/project` emits is ordinary 2D
+geometry. Wiring a mesh straight into Draw still shows its front elevation —
+that is you asking, rather than the editor assuming.
 
 ## 4. Lists — the core semantic
 

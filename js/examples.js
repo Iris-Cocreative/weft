@@ -1,9 +1,12 @@
 'use strict';
-/* Weft example graphs — each is a plain graph JSON, deep-cloned before loading. */
+/* Weft example graphs — each is a plain graph JSON, deep-cloned before loading.
+ * A node entry is [id, type, x, y, values?, flags?]; flags merge onto the node,
+ * which is how an example carries `preview: false` or `collapsed: true` without
+ * being written out as raw JSON the way Hexa graph is. */
 function _EX(nodes, wires) {
   return {
     format: 1,
-    nodes: nodes.map(a => ({ id: a[0], type: a[1], x: a[2], y: a[3], values: a[4] || {} })),
+    nodes: nodes.map(a => Object.assign({ id: a[0], type: a[1], x: a[2], y: a[3], values: a[4] || {} }, a[5] || {})),
     wires: wires.map(a => ({ from: [a[0], a[1]], to: [a[2], a[3]] }))
   };
 }
@@ -1446,20 +1449,25 @@ const EXAMPLES = {
    * faces. No camera on ctx, no second renderer: what reaches the draw list is
    * ordinary 2D geometry, which is why the export renders exactly this.
    *
-   * Drag the cloth to orbit; the wheel pulls the camera back. Because the
-   * projection scales with the canvas height, the scene frames itself at any
-   * size — including the gallery thumbnail. */
+   * Drag the cloth to orbit; the wheel pulls the camera back. The projection's
+   * pixel scale comes from the canvas HEIGHT (a vertical field of view, the
+   * usual convention), so the scene keeps its proportions at any size — but a
+   * tall narrow cloth crops it at the sides, which is why the camera sits far
+   * enough back to clear the editor's portrait preview pane as well as the
+   * squarer gallery thumbnail. */
   'Henge': _EX([
     ['t1', 'input/time', 30, 40],
     ['sr', 'sets/series', 30, 200, { S: 0, N: 1, C: 9 }],
     ['mu2', 'math/mul', 230, 40, { B: 0.35 }],
     ['mu1', 'math/mul', 230, 200, { B: 0.6981317007977318 }],
-    ['pv', 'vec/polar', 430, 200, { R: 150 }],
-    ['pg', 'crv/polygon', 630, 200, { R: 40, N: 6 }],
+    /* the flat ring and its hexagons are scaffolding for Extrude — their 2D
+       ghosts would otherwise hang in the air beside the solids they became */
+    ['pv', 'vec/polar', 430, 200, { R: 150 }, { preview: false }],
+    ['pg', 'crv/polygon', 630, 200, { R: 40, N: 6 }, { preview: false }],
     ['ex', 'd3/extrude', 830, 200, { H: 70, C: true }],
     ['rx', 'd3/rotate3', 1030, 200, { R: 1.5707963267948966, A: { x: 1, y: 0, z: 0 } }],
     ['ry', 'd3/rotate3', 1230, 200, { A: { x: 0, y: 1, z: 0 } }],
-    ['ob', 'd3/orbit', 1430, 20, { T: { x: 0, y: 0, z: 0 }, D: 540, A: 0.55, E: 0.42, F: 42 }],
+    ['ob', 'd3/orbit', 1430, 20, { T: { x: 0, y: 0, z: 0 }, D: 860, A: 0.55, E: 0.42, F: 42 }],
     ['sc', 'd3/scale3', 1430, 400, { F: { x: 0.55, y: 0.55, z: 0.55 } }],
     ['rz', 'd3/rotate3', 1630, 400, { R: 0.3490658503988659, A: { x: 0, y: 1, z: 0 } }],
     ['pj', 'd3/project', 1850, 180, { mode: 'shaded' }],

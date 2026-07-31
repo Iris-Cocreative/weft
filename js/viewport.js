@@ -311,6 +311,13 @@ const Viewport = {
           const L = outs[o.name] || [];
           for (const g of L) {
             if (!g || typeof g !== 'object') continue;
+            /* ...and the 3D geometry kinds are the same case as point3, one level
+               down: a mesh has no screen position until a camera gives it one.
+               Ghosting them paints every intermediate solid in a 3D chain flat
+               over the projected scene — on Henge that was 45 wireframes on top
+               of the render. Draw still shows a mesh as its front elevation if
+               you ask for it; the ghost pass just stops guessing. */
+            if (g.kind === 'mesh' || g.kind === 'poly3') continue;
             try {
               LM.drawItem(g2, {
                 geom: g,
