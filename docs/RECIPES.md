@@ -92,6 +92,14 @@ downstream knows 3D happened.
 - **Let people turn it** — `d3/orbit(T, D, A:yaw E:pitch)`: drag the cloth to
   orbit, wheel to pull back. A and E are the *resting* angles the drag adds to,
   and they come back out as numbers, so other things can follow the view.
+- **Framing follows the canvas shape, so pick the distance last.** The pixel
+  scale comes from the canvas *height* (a vertical field of view), so the same
+  camera fills a squat canvas and overflows a tall narrow one. Rule of thumb: for
+  a model of world half-extent `R`, a distance of about `4R` clears the editor's
+  portrait preview pane and about `2.5R` fills a landscape thumbnail — and if you
+  need both, take the larger. Henge is `R = 190` at `D = 860`. There is no
+  fit-to-bounds node yet (ROADMAP §8); until there is, tune `D` against the
+  narrowest canvas the patch has to survive.
 - **Wire every mesh into ONE Project.** Its `G` takes the whole list, which is
   what makes the depth sort global — two solids interleave correctly. Two Project
   → Draw pairs paint in topological order instead (which is what you want for a

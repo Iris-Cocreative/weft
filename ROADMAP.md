@@ -474,6 +474,30 @@ Still open, in rough order of appetite:
 - **Two Draw nodes still can't interleave in depth** — the same rule 2D already
   has. One Project → one Draw is the idiom; a Draw that accepted a depth key
   would generalize it.
+- **A camera cannot frame itself.** The projection's pixel scale comes from the
+  canvas *height* alone (a vertical field of view, the usual convention), so what
+  a 3D patch fills depends on the canvas aspect ratio, and the author has to hand-
+  tune the distance for whichever shape they care about most. Measured on Henge
+  (world half-extent 190) against the two canvases the app actually uses — the
+  672×926 portrait preview pane and the 960×600 gallery thumbnail stage:
+
+  | camera distance | thumbnail fill | pane fill |
+  |---|---|---|
+  | 540 | 61% | 134% — clipped |
+  | 740 | 42% | 92% |
+  | 860 *(shipped)* | 35% | 78% |
+  | 1040 | 29% | 64% |
+
+  There is no distance that fills the landscape thumbnail *and* clears the
+  portrait pane; the usable band is roughly 740–1000, and Henge sits at the safe
+  end of it because the splitter can make the pane narrower still. This cost two
+  sessions a tuning round and a chased metric, which is the tell that the library
+  is missing a node rather than that the author was careless (NODE-LIBRARY
+  principle 6, in its "variation is data" form: the framing *is* data the graph
+  could compute). Cheapest fix that would end it: a **Fit** input or mode on
+  `d3/camera`/`d3/orbit` that takes geometry and solves the distance from its
+  projected bounds and `ctx.W`/`ctx.H` — everything it needs is already in the
+  compute's hands, so it is a node, not an engine change.
 - **Modelling depth**: Loft between `poly3` profiles, Mesh Boolean, Subdivide,
   per-face materials beyond the single shade list.
 - **The renderer abstraction is still a good idea on its own merits** — an SVG
