@@ -533,7 +533,9 @@ Still open, in rough order of appetite:
   Track In stereo L/R + VL/VR levels (true stereo needs the voice pipeline
   off), Pitch In processor input, Mic In routable, **Bands FFT node**
   (`audio/fft` — the band read-back is done). Done in v0.13 (2026-08-04):
-  **Delay** (`audio/delay` — native DelayNode echo with feedback + wet/dry mix;
+  **Delay** (`audio/delay` — native DelayNode echo with feedback, wet/dry mix
+  and a C clear trigger that swaps in a fresh silent buffer; loop-length
+  changes glide tape-style, 0.25s time constant;
   feedback 1 IS a loop pedal, see the Loop pedal example), **Echo**
   (`state/echo` — the data twin: any value delayed T seconds + a trail list
   for motion blur), **Key** (`audio/key` — root+scale as wireable numbers;

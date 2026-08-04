@@ -2077,19 +2077,23 @@ defNode('audio/filter', {
 
 defNode('audio/delay', {
   title: 'Delay', cat: 'Audio',
-  desc: 'Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1 = repeats forever: a loop pedal). M mixes dry against the echoes (0 = dry only, 1 = echoes only). Per list item, like every audio node.',
+  desc: 'Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1 = repeats forever: a loop pedal). M mixes dry against the echoes (0 = dry only, 1 = echoes only). A C trigger empties the buffer instantly. Per list item, like every audio node.',
   inputs: [
     { name: 'In', type: 'audio', label: 'audio in' },
     { name: 'T', type: 'number', default: 0.35, label: 'delay s' },
     { name: 'F', type: 'number', default: 0.4, label: 'feedback 0..1' },
-    { name: 'M', type: 'number', default: 0.5, label: 'mix 0..1' }],
+    { name: 'M', type: 'number', default: 0.5, label: 'mix 0..1' },
+    { name: 'C', type: 'bool', default: false, label: 'clear (trigger)' }],
   outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
   compute: (a, ctx, node) => {
     const id = node.id + ':' + (ctx.i || 0);
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { gen: 0 };
+    if (a.C) s.gen++;
     if (ctx.audioList) ctx.audioList.push({
       id, kind: 'delay', time: LM.clamp(+a.T || 0, 0.001, 10),
       fb: LM.clamp(+a.F || 0, 0, 1), mix: LM.clamp(+a.M || 0, 0, 1),
-      src: typeof a.In === 'string' ? [a.In] : []
+      gen: s.gen, src: typeof a.In === 'string' ? [a.In] : []
     });
     return { A: id };
   }

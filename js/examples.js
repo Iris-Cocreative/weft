@@ -752,23 +752,32 @@ const EXAMPLES = {
 
   /* A loop pedal: space toggles recording, and the mic pours into a Delay
    * whose feedback is 1 — whatever enters the loop circles forever, and each
-   * new recording pass overdubs on top of what's already going round. The
-   * slider is the loop length (drag it live and the loop re-pitches like
-   * tape). The Scope shows the loop; wear headphones or the speakers will
-   * overdub themselves into the loop acoustically. */
+   * new recording pass overdubs on top of what's already going round. C
+   * clears the loop (the Delay's clear trigger swaps in a fresh silent
+   * buffer). The slider is the loop length (drag it live and the loop glides
+   * tape-style — but clear first if you want a clean start). While recording,
+   * a red dot pulses 8 times per loop interval: one Expression node,
+   * sin(2π·T·8/len), into the alpha of an HSL red. The Scope shows the loop;
+   * wear headphones or the speakers will overdub themselves acoustically. */
   'Loop pedal': _EX([
     ['l1', 'input/keyboard', 30, 40],
     ['l2', 'state/latch', 250, 40],
     ['l3', 'sets/select', 470, 40, { T: 1, F: 0 }],
+    ['l14', 'input/keyboard', 30, 460, { K: 'c' }],
     ['l4', 'audio/mic', 250, 260],
     ['l5', 'audio/gain', 690, 260],
     ['l6', 'params/slider', 470, 460, { min: 0.5, max: 8, value: 2, label: 'loop seconds' }],
     ['l7', 'audio/delay', 910, 260, { F: 1, M: 1 }],
     ['l8', 'audio/out', 1350, 260],
     ['l9', 'audio/scope', 1130, 40, { W: 460, H: 140, T: 60, P: { x: 0, y: -130 } }],
-    ['l10', 'sets/select', 470, 600, { T: '● recording', F: 'space = record on / off' }],
-    ['l11', 'disp/text', 690, 600, { S: 16, P: { x: 0, y: 150 } }],
+    ['l10', 'sets/select', 470, 600, { T: 'recording', F: 'space = record · c = clear' }],
+    ['l11', 'disp/text', 690, 600, { S: 16, P: { x: 12, y: 150 } }],
     ['l12', 'disp/draw', 910, 600, { S: { r: 230, g: 237, b: 250, a: 0.8 } }],
+    ['l15', 'math/expr', 250, 780, { expr: '0.5 + 0.5*sin(6.2832*T*8/X)' }],
+    ['l16', 'sets/select', 470, 780, { F: 0.12 }],
+    ['l17', 'disp/hsl', 690, 780, { H: 0, S: 0.85, L: 0.55 }],
+    ['l18', 'crv/circle', 690, 940, { R: 8, P: { x: -96, y: 156 } }],
+    ['l19', 'disp/draw', 910, 780, { W: 1.5 }],
     ['l13', 'disp/bg', 1350, 600]
   ], [
     ['l1', 'P', 'l2', 'T'],
@@ -777,11 +786,19 @@ const EXAMPLES = {
     ['l3', 'L', 'l5', 'G'],
     ['l5', 'A', 'l7', 'In'],
     ['l6', 'N', 'l7', 'T'],
+    ['l14', 'P', 'l7', 'C'],
     ['l7', 'A', 'l8', 'In'],
     ['l7', 'A', 'l9', 'In'],
     ['l2', 'B', 'l10', 'P'],
     ['l10', 'L', 'l11', 'T'],
-    ['l11', 'G', 'l12', 'G']
+    ['l11', 'G', 'l12', 'G'],
+    ['l6', 'N', 'l15', 'X'],
+    ['l15', 'R', 'l16', 'T'],
+    ['l2', 'B', 'l16', 'P'],
+    ['l16', 'L', 'l17', 'A'],
+    ['l18', 'C', 'l19', 'G'],
+    ['l17', 'C', 'l19', 'S'],
+    ['l17', 'C', 'l19', 'F']
   ]),
 
   /* A real oscilloscope AND a vectorscope. Top: the Scope node taps the
@@ -1415,8 +1432,8 @@ const EXAMPLE_META = {
   },
   'Loop pedal': {
     cat: 'Audio input',
-    blurb: 'Space toggles recording; the mic pours into a feedback-1 Delay and circles forever — sing a layer, then sing over it.',
-    teaches: 'Delay with feedback 1 IS a loop pedal: a Latch gates the audio in, one slider is the loop length, and dragging it re-pitches the loop like tape.',
+    blurb: 'Space toggles recording, c clears; the mic pours into a feedback-1 Delay and circles forever — sing a layer, then sing over it.',
+    teaches: 'Delay with feedback 1 IS a loop pedal: a Latch gates the audio in, one slider is the loop length, and the record dot pulses 8× per loop from a single Expression node.',
     tags: ['looper', 'loop pedal', 'delay', 'echo', 'mic', 'overdub'],
     needs: ['mic', 'gesture'], frames: 40
   },

@@ -276,9 +276,13 @@ rate, so a delay is a different machine in each and the port vocabulary
 (`T` seconds, feedback/trail) is what they share. **Delay** (`audio/delay`) is
 a native DelayNode with a feedback gain looping it onto itself and a wet/dry
 mix — and feedback 1 *is* a loop pedal, which the new Loop pedal example plays
-straight: space latches the mic into the loop, the slider is the loop length,
-dragging it re-pitches like tape (the master limiter is the safety net; a true
-record/overdub looper would need an AudioWorklet and stays on the roadmap).
+straight: space latches the mic into the loop, c clears it (Delay's C trigger —
+the host swaps a fresh silent delay in behind the stable input/output gains, so
+downstream wiring never notices), the slider is the loop length (changes glide
+tape-style on a 0.25s time constant), and a red dot pulses 8× per loop interval
+— one Expression node, `sin(2π·T·8/len)`, into the alpha of an HSL red (the
+master limiter is the safety net; a true record/overdub looper would need an
+AudioWorklet and stays on the roadmap).
 **Echo** (`state/echo`) is the data twin: any value as it was T seconds ago
 off a `node._state` ring buffer, plus a trail output (last N samples spread
 across the window) for motion blur. **Key** (`audio/key`) fixes a real

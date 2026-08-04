@@ -93,6 +93,7 @@ const WeftAudio = {
         dl.connect(wet); wet.connect(o);
         i.connect(dry); dry.connect(o);
         e.main = i; e.in = i; e.out = o; e.dl = dl; e.fb = fb; e.wet = wet; e.dry = dry;
+        e.gen = d.gen;
       } else if (d.kind === 'path') {
         /* looped waveform playback (Path to Audio). The unity gain is the
          * stable connection point — the buffer source swaps behind it
@@ -199,7 +200,24 @@ const WeftAudio = {
         setP(e, 'f', m.frequency, d.freq); setP(e, 'q', m.Q, d.q);
       } else if (d.kind === 'out') setP(e, 'v', m.gain, d.vol);
       else if (d.kind === 'delay') {
-        setP(e, 't', e.dl.delayTime, d.time);
+        if (d.gen !== e.gen) {
+          /* clear: swap a fresh (silent) delay + feedback pair in behind the
+           * stable input/output gains — wiring untouched, old buffer dropped */
+          e.gen = d.gen;
+          try { e.main.disconnect(e.dl); } catch (err) { }
+          try { e.dl.disconnect(); } catch (err) { }
+          try { e.fb.disconnect(); } catch (err) { }
+          const dl = actx.createDelay(10); dl.delayTime.value = d.time;
+          const fb = actx.createGain(); fb.gain.value = d.fb;
+          e.main.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(e.wet);
+          e.dl = dl; e.fb = fb; e.last = {};
+        }
+        if (e.last.t === undefined || Math.abs(e.last.t - d.time) >= EPS) {
+          /* loop-length changes glide slowly (tape-style) — the default 20ms
+           * smoothing clicks and chirps on a big delayTime jump */
+          e.last.t = d.time;
+          e.dl.delayTime.setTargetAtTime(d.time, actx.currentTime, 0.25);
+        }
         setP(e, 'f', e.fb.gain, d.fb);
         setP(e, 'w', e.wet.gain, d.mix);
         setP(e, 'y', e.dry.gain, 1 - d.mix);

@@ -2139,7 +2139,7 @@ Spectrum analyser — splits the signal wired into In across N frequency bands (
 
 ### `audio/delay` — Delay
 
-Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1 = repeats forever: a loop pedal). M mixes dry against the echoes (0 = dry only, 1 = echoes only). Per list item, like every audio node.
+Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1 = repeats forever: a loop pedal). M mixes dry against the echoes (0 = dry only, 1 = echoes only). A C trigger empties the buffer instantly. Per list item, like every audio node.
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2147,6 +2147,7 @@ Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1
 | T | number | `0.35` | delay s |
 | F | number | `0.4` | feedback 0..1 |
 | M | number | `0.5` | mix 0..1 |
+| C | bool | `false` | clear (trigger) |
 
 | out | type | note |
 |---|---|---|
