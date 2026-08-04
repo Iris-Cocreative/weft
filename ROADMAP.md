@@ -532,8 +532,15 @@ Still open, in rough order of appetite:
   click), Cymatics anti-collapse rework + reset input. Done in v0.9.2/3:
   Track In stereo L/R + VL/VR levels (true stereo needs the voice pipeline
   off), Pitch In processor input, Mic In routable, **Bands FFT node**
-  (`audio/fft` — the band read-back is done; remaining audio follow-ups:
-  ADSR, sequencer, DelayNode echo, panner, cluster id prefixing).*
+  (`audio/fft` — the band read-back is done). Done in v0.13 (2026-08-04):
+  **Delay** (`audio/delay` — native DelayNode echo with feedback + wet/dry mix;
+  feedback 1 IS a loop pedal, see the Loop pedal example), **Echo**
+  (`state/echo` — the data twin: any value delayed T seconds + a trail list
+  for motion blur), **Key** (`audio/key` — root+scale as wireable numbers;
+  `audio/scale` grew R/S inputs, -1 = picker, so one Key controls every Scale
+  node — Scale board rewired to show it). Remaining audio follow-ups: ADSR,
+  sequencer, panner, real looper node (AudioWorklet record/overdub — the
+  Delay-based loop pedal covers the ambient case), cluster id prefixing.*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
 - Graph gallery / community sharing — share links exist as of v0.9; a gallery

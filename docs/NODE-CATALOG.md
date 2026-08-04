@@ -311,6 +311,21 @@ V from the previous frame — contributes no edge to the evaluation order, so wi
 |---|---|---|
 | V | any | V last frame |
 
+### `state/echo` — Echo
+
+V as it was T seconds ago — the data twin of the audio Delay. L is the trail: the last N samples spread evenly across the window, newest first (wire a point through and draw the trail as motion blur).
+
+| in | type | default | note |
+|---|---|---|---|
+| V | any |  |  |
+| T | number | `0.35` | delay s |
+| N | number | `12` | trail samples |
+
+| out | type | note |
+|---|---|---|
+| R | any | V delayed T |
+| L | any | trail (newest first) |
+
 ### `state/edge` — Edge
 
 Turns a continuous bool into triggers: R fires when B rises, F when it falls
@@ -2122,6 +2137,21 @@ Spectrum analyser — splits the signal wired into In across N frequency bands (
 | B | number | band levels 0..1 (list) |
 | R | bool | signal wired |
 
+### `audio/delay` — Delay
+
+Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1 = repeats forever: a loop pedal). M mixes dry against the echoes (0 = dry only, 1 = echoes only). Per list item, like every audio node.
+
+| in | type | default | note |
+|---|---|---|---|
+| In | audio |  | audio in |
+| T | number | `0.35` | delay s |
+| F | number | `0.4` | feedback 0..1 |
+| M | number | `0.5` | mix 0..1 |
+
+| out | type | note |
+|---|---|---|
+| A | audio | audio |
+
 ### `audio/filter` — Filter
 
 Biquad filter — pick the mode on the node; cutoff F Hz, resonance Q (per list item)
@@ -2150,6 +2180,17 @@ Scale a signal’s volume — per list item, so a list of voices gets a gain eac
 | out | type | note |
 |---|---|---|
 | A | audio | audio |
+
+### `audio/key` — Key
+
+A musical key as data — pick root and scale ONCE, wire R and S into any number of Scale nodes (or compute them from anything). Root is 0–11 semitones above C; scale is 0 major, 1 minor, 2 pentatonic, 3 chromatic.
+
+| out | type | note |
+|---|---|---|
+| R | number | root 0-11 |
+| S | number | scale 0-3 |
+
+Node values (`values` keys, not ports): `{"root":9,"scale":"pentatonic"}`
 
 ### `audio/mic` — Mic In
 
@@ -2248,11 +2289,13 @@ Hears the note — a pitch tracker for any signal: wire audio into In (an oscill
 
 ### `audio/scale` — Scale
 
-Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument
+Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument. Wire a Key node into R and S to control the key from one place (-1 = use the pickers).
 
 | in | type | default | note |
 |---|---|---|---|
 | V | number | `57` | value (midi note, fractional ok) |
+| R | number | `-1` | root 0-11 (-1 = use picker) |
+| S | number | `-1` | scale 0-3 (-1 = use picker) |
 
 | out | type | note |
 |---|---|---|
@@ -2352,4 +2395,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-146 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`
+149 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`

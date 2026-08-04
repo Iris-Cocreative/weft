@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.12 — native 3D.** v0.1 (2026-07-12): editor,
+**Status: v0.13 — time as a material (Delay / Echo / Key).** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -268,6 +268,26 @@ clipped — Weft paints, it does not rasterize. Orbit Camera accumulates a drag 
 new ctx channel either. New examples: Vesica (the geometry pass measured — lens,
 crescents, crossings, area) and Henge (two rings of extruded stones, orbitable,
 144 shaded faces from one Draw) — 171 nodes, 30 examples.
+
+v0.13 (2026-08-04, time as a material): three siblings that delay a signal, one
+per domain, deliberately NOT one dual-purpose node — audio wires carry handle
+strings and DSP runs at 48kHz in the host, data wires carry values at frame
+rate, so a delay is a different machine in each and the port vocabulary
+(`T` seconds, feedback/trail) is what they share. **Delay** (`audio/delay`) is
+a native DelayNode with a feedback gain looping it onto itself and a wet/dry
+mix — and feedback 1 *is* a loop pedal, which the new Loop pedal example plays
+straight: space latches the mic into the loop, the slider is the loop length,
+dragging it re-pitches like tape (the master limiter is the safety net; a true
+record/overdub looper would need an AudioWorklet and stays on the roadmap).
+**Echo** (`state/echo`) is the data twin: any value as it was T seconds ago
+off a `node._state` ring buffer, plus a trail output (last N samples spread
+across the window) for motion blur. **Key** (`audio/key`) fixes a real
+authoring pain James hit on Scale board: the key lived in three separate Scale
+pickers. Root and scale are now plain wireable numbers (root 0–11, scale
+0 major / 1 minor / 2 pentatonic / 3 chromatic), `audio/scale` grew R/S inputs
+(-1 = fall back to the picker, the Note precedent, so old graphs are
+untouched), and Scale board now changes key in one place — which also means
+interactions can *compute* the key. 174 nodes, 22 examples (Loop pedal new).
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

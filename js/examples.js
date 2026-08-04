@@ -654,8 +654,12 @@ const EXAMPLES = {
    * pentatonic drawn as a labelled rung (Series → Scale → Set Union dedupes
    * the snapped notes), a marker riding the rung you're playing, and three
    * REAL <button> drones (one Element node, list-matched ×3) latching
-   * A2 / E3 / A3 under everything. Buttons on the interface itself. */
+   * A2 / E3 / A3 under everything. Buttons on the interface itself.
+   * One Key node feeds root+scale to both pentatonic Scale nodes — change
+   * the key in ONE place and the board and the theremin follow (the drone
+   * snapper stays chromatic on purpose: drones land on exact notes). */
   'Scale board': _EX([
+    ['k1', 'audio/key', 30, 190, { root: 9, scale: 'pentatonic' }],
     ['s1', 'sets/series', 30, 40, { S: 57, N: 1, C: 25 }],
     ['s2', 'audio/scale', 250, 40, { root: 9, scale: 'pentatonic' }],
     ['s3', 'sets/union', 470, 40],
@@ -695,6 +699,8 @@ const EXAMPLES = {
     ['d14', 'audio/gain', 1350, 1080],
     ['b1', 'disp/bg', 1570, 770]
   ], [
+    ['k1', 'R', 's2', 'R'], ['k1', 'S', 's2', 'S'],
+    ['k1', 'R', 'v3', 'R'], ['k1', 'S', 'v3', 'S'],
     ['s1', 'S', 's2', 'V'],
     ['s2', 'M', 's3', 'A'], ['s2', 'M', 's3', 'B'],
     ['s3', 'U', 's4', 'V'],
@@ -742,6 +748,40 @@ const EXAMPLES = {
     ['c3', 'A', 'c4', 'In'],
     ['c4', 'A', 'c5', 'In'],
     ['c2', 'F', 'c6', 'F']
+  ]),
+
+  /* A loop pedal: space toggles recording, and the mic pours into a Delay
+   * whose feedback is 1 — whatever enters the loop circles forever, and each
+   * new recording pass overdubs on top of what's already going round. The
+   * slider is the loop length (drag it live and the loop re-pitches like
+   * tape). The Scope shows the loop; wear headphones or the speakers will
+   * overdub themselves into the loop acoustically. */
+  'Loop pedal': _EX([
+    ['l1', 'input/keyboard', 30, 40],
+    ['l2', 'state/latch', 250, 40],
+    ['l3', 'sets/select', 470, 40, { T: 1, F: 0 }],
+    ['l4', 'audio/mic', 250, 260],
+    ['l5', 'audio/gain', 690, 260],
+    ['l6', 'params/slider', 470, 460, { min: 0.5, max: 8, value: 2, label: 'loop seconds' }],
+    ['l7', 'audio/delay', 910, 260, { F: 1, M: 1 }],
+    ['l8', 'audio/out', 1350, 260],
+    ['l9', 'audio/scope', 1130, 40, { W: 460, H: 140, T: 60, P: { x: 0, y: -130 } }],
+    ['l10', 'sets/select', 470, 600, { T: '● recording', F: 'space = record on / off' }],
+    ['l11', 'disp/text', 690, 600, { S: 16, P: { x: 0, y: 150 } }],
+    ['l12', 'disp/draw', 910, 600, { S: { r: 230, g: 237, b: 250, a: 0.8 } }],
+    ['l13', 'disp/bg', 1350, 600]
+  ], [
+    ['l1', 'P', 'l2', 'T'],
+    ['l2', 'B', 'l3', 'P'],
+    ['l4', 'A', 'l5', 'In'],
+    ['l3', 'L', 'l5', 'G'],
+    ['l5', 'A', 'l7', 'In'],
+    ['l6', 'N', 'l7', 'T'],
+    ['l7', 'A', 'l8', 'In'],
+    ['l7', 'A', 'l9', 'In'],
+    ['l2', 'B', 'l10', 'P'],
+    ['l10', 'L', 'l11', 'T'],
+    ['l11', 'G', 'l12', 'G']
   ]),
 
   /* A real oscilloscope AND a vectorscope. Top: the Scope node taps the
@@ -1327,8 +1367,8 @@ const EXAMPLE_META = {
   'Scale board': {
     cat: 'Audio synthesis',
     blurb: 'The theremin grown into an instrument you can see — every note a labelled rung, with three real button drones underneath.',
-    teaches: 'Set Union dedupes the snapped notes into rungs, and one Element node list-matches into three actual HTML buttons.',
-    tags: ['scale', 'set union', 'dom', 'buttons', 'instrument'],
+    teaches: 'One Key node feeds root and scale to every Scale node at once — change the key in one place. Set Union dedupes the snapped notes into rungs, and one Element node list-matches into three actual HTML buttons.',
+    tags: ['scale', 'key', 'set union', 'dom', 'buttons', 'instrument'],
     needs: ['gesture'], frames: 40
   },
   'Cymatics': {
@@ -1371,6 +1411,13 @@ const EXAMPLE_META = {
     blurb: 'Sing a note and the graph sings it back in key — Pitch In hears you, Scale snaps it, an oscillator answers.',
     teaches: 'Clarity from the pitch tracker gates the voice, so silence stays silent.',
     tags: ['pitch', 'mic', 'scale', 'gate', 'voice'],
+    needs: ['mic', 'gesture'], frames: 40
+  },
+  'Loop pedal': {
+    cat: 'Audio input',
+    blurb: 'Space toggles recording; the mic pours into a feedback-1 Delay and circles forever — sing a layer, then sing over it.',
+    teaches: 'Delay with feedback 1 IS a loop pedal: a Latch gates the audio in, one slider is the loop length, and dragging it re-pitches the loop like tape.',
+    tags: ['looper', 'loop pedal', 'delay', 'echo', 'mic', 'overdub'],
     needs: ['mic', 'gesture'], frames: 40
   },
   'Visualizer': {

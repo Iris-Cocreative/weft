@@ -77,6 +77,22 @@ const WeftAudio = {
         const g = actx.createGain(); g.gain.value = d.vol;
         g.connect(master);
         e.main = g; e.in = g;
+      } else if (d.kind === 'delay') {
+        /* echo: a dry leg beside a delayed wet leg, with a feedback gain
+         * looping the delay onto itself (fb = 1 holds a loop forever — the
+         * master limiter is the safety net). Input gain is the stable
+         * connection point, output gain is what routes onward */
+        const i = actx.createGain(); i.gain.value = 1;
+        const dl = actx.createDelay(10);
+        dl.delayTime.value = d.time;
+        const fb = actx.createGain(); fb.gain.value = d.fb;
+        const wet = actx.createGain(); wet.gain.value = d.mix;
+        const dry = actx.createGain(); dry.gain.value = 1 - d.mix;
+        const o = actx.createGain(); o.gain.value = 1;
+        i.connect(dl); dl.connect(fb); fb.connect(dl);
+        dl.connect(wet); wet.connect(o);
+        i.connect(dry); dry.connect(o);
+        e.main = i; e.in = i; e.out = o; e.dl = dl; e.fb = fb; e.wet = wet; e.dry = dry;
       } else if (d.kind === 'path') {
         /* looped waveform playback (Path to Audio). The unity gain is the
          * stable connection point — the buffer source swaps behind it
@@ -182,7 +198,12 @@ const WeftAudio = {
         if (m.type !== d.mode) m.type = d.mode;
         setP(e, 'f', m.frequency, d.freq); setP(e, 'q', m.Q, d.q);
       } else if (d.kind === 'out') setP(e, 'v', m.gain, d.vol);
-      else if (d.kind === 'path') {
+      else if (d.kind === 'delay') {
+        setP(e, 't', e.dl.delayTime, d.time);
+        setP(e, 'f', e.fb.gain, d.fb);
+        setP(e, 'w', e.wet.gain, d.mix);
+        setP(e, 'y', e.dry.gain, 1 - d.mix);
+      } else if (d.kind === 'path') {
         if (d.key !== e.key) {
           e.key = d.key;
           try { if (e.srcNode) { e.srcNode.stop(); e.srcNode.disconnect(); } } catch (err) { }
@@ -313,6 +334,10 @@ const WeftAudio = {
       try { if (e.anL) e.anL.disconnect(); } catch (err) { }
       try { if (e.anR) e.anR.disconnect(); } catch (err) { }
       try { if (e.z) e.z.disconnect(); } catch (err) { }
+      try { if (e.fb) e.fb.disconnect(); } catch (err) { } // break the delay's feedback cycle so it can collect
+      try { if (e.dl) e.dl.disconnect(); } catch (err) { }
+      try { if (e.wet) e.wet.disconnect(); } catch (err) { }
+      try { if (e.dry) e.dry.disconnect(); } catch (err) { }
       try { if (e.split) e.split.disconnect(); } catch (err) { }
       try { if (e.srcSplit) e.srcSplit.disconnect(e.main); } catch (err) { }
       try { if (e.out && e.out !== e.main) e.out.disconnect(); } catch (err) { }

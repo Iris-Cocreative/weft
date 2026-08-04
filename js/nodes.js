@@ -1891,10 +1891,51 @@ defNode('audio/note', {
   }
 });
 
+defNode('audio/key', {
+  title: 'Key', cat: 'Audio', width: 168,
+  desc: 'A musical key as data — pick root and scale ONCE, wire R and S into any number of Scale nodes (or compute them from anything). Root is 0–11 semitones above C; scale is 0 major, 1 minor, 2 pentatonic, 3 chromatic.',
+  inputs: [],
+  outputs: [
+    { name: 'R', type: 'number', label: 'root 0-11' },
+    { name: 'S', type: 'number', label: 'scale 0-3' }],
+  defaults: { root: 9, scale: 'pentatonic' },
+  compute: (a, ctx, node) => {
+    const v = node.values || {};
+    const modes = { major: 0, minor: 1, pentatonic: 2, chromatic: 3 };
+    return {
+      R: LM.clamp(Math.round(v.root || 0), 0, 11),
+      S: modes[v.scale] !== undefined ? modes[v.scale] : 2
+    };
+  },
+  buildBody: (node, body, changed) => {
+    const sel = _mk('select', 'aud-sel', body);
+    ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].forEach((nm, i) => {
+      const o = _mk('option', '', sel);
+      o.value = i; o.textContent = nm + ' root';
+    });
+    sel.value = String(node.values.root || 0);
+    sel.addEventListener('change', () => { node.values.root = +sel.value; changed(); });
+    const seg = _mk('div', 'seg', body);
+    [['major', 'maj'], ['minor', 'min'], ['pentatonic', 'pent'], ['chromatic', 'chr']].forEach(w => {
+      const b = _mk('div', 'seg-b' + ((node.values.scale || 'pentatonic') === w[0] ? ' on' : ''), seg);
+      b.textContent = w[1]; b.title = w[0];
+      _cleanClick(b, () => {
+        node.values.scale = w[0];
+        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
+    });
+  }
+});
+
 defNode('audio/scale', {
   title: 'Scale', cat: 'Audio', width: 168,
-  desc: 'Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument',
-  inputs: [{ name: 'V', type: 'number', default: 57, label: 'value (midi note, fractional ok)' }],
+  desc: 'Snap a continuous value to the nearest note of a scale — wire anything (mouse, noise, time) into V as a MIDI-ish number and get an in-key frequency out; the difference between a theremin and an instrument. Wire a Key node into R and S to control the key from one place (-1 = use the pickers).',
+  inputs: [
+    { name: 'V', type: 'number', default: 57, label: 'value (midi note, fractional ok)' },
+    { name: 'R', type: 'number', default: -1, label: 'root 0-11 (-1 = use picker)' },
+    { name: 'S', type: 'number', default: -1, label: 'scale 0-3 (-1 = use picker)' }],
   outputs: [{ name: 'F', type: 'number', label: 'frequency Hz' }, { name: 'M', type: 'number', label: 'snapped midi' }],
   defaults: { root: 9, scale: 'pentatonic' }, /* A minor pentatonic — hard to sound bad */
   compute: (a, ctx, node) => {
@@ -1902,9 +1943,13 @@ defNode('audio/scale', {
       major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10],
       pentatonic: [0, 3, 5, 7, 10], chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     };
+    const modes = ['major', 'minor', 'pentatonic', 'chromatic'];
     const v = node.values || {};
-    const set = scales[v.scale] || scales.pentatonic;
-    const root = LM.clamp(Math.round(v.root || 0), 0, 11);
+    const sr = Math.round(+a.R), ss = Math.round(+a.S);
+    const set = (isFinite(ss) && ss >= 0) ? scales[modes[LM.clamp(ss, 0, 3)]]
+      : (scales[v.scale] || scales.pentatonic);
+    const root = (isFinite(sr) && sr >= 0) ? LM.clamp(sr, 0, 11)
+      : LM.clamp(Math.round(v.root || 0), 0, 11);
     const V = LM.clamp(+a.V || 0, 0, 127);
     const m0 = Math.round(V);
     let best = m0, bd = Infinity;
@@ -2027,6 +2072,26 @@ defNode('audio/filter', {
         changed();
       });
     });
+  }
+});
+
+defNode('audio/delay', {
+  title: 'Delay', cat: 'Audio',
+  desc: 'Echo — the signal repeats after T seconds, each repeat scaled by feedback F (1 = repeats forever: a loop pedal). M mixes dry against the echoes (0 = dry only, 1 = echoes only). Per list item, like every audio node.',
+  inputs: [
+    { name: 'In', type: 'audio', label: 'audio in' },
+    { name: 'T', type: 'number', default: 0.35, label: 'delay s' },
+    { name: 'F', type: 'number', default: 0.4, label: 'feedback 0..1' },
+    { name: 'M', type: 'number', default: 0.5, label: 'mix 0..1' }],
+  outputs: [{ name: 'A', type: 'audio', label: 'audio' }],
+  compute: (a, ctx, node) => {
+    const id = node.id + ':' + (ctx.i || 0);
+    if (ctx.audioList) ctx.audioList.push({
+      id, kind: 'delay', time: LM.clamp(+a.T || 0, 0.001, 10),
+      fb: LM.clamp(+a.F || 0, 0, 1), mix: LM.clamp(+a.M || 0, 0, 1),
+      src: typeof a.In === 'string' ? [a.In] : []
+    });
+    return { A: id };
   }
 });
 
@@ -2448,6 +2513,37 @@ defNode('state/delay', {
     const p = node._fbIns;
     if (p && p.V && p.V.length) return { V: p.V };
     return { V: (a.I && a.I.length) ? a.I : [] };
+  }
+});
+
+defNode('state/echo', {
+  title: 'Echo', cat: 'State',
+  desc: 'V as it was T seconds ago — the data twin of the audio Delay. L is the trail: the last N samples spread evenly across the window, newest first (wire a point through and draw the trail as motion blur).',
+  inputs: [
+    { name: 'V', type: 'any' },
+    { name: 'T', type: 'number', default: 0.35, label: 'delay s' },
+    { name: 'N', type: 'number', default: 12, label: 'trail samples' }],
+  outputs: [
+    { name: 'R', type: 'any', label: 'V delayed T' },
+    { name: 'L', type: 'any', label: 'trail (newest first)' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { ts: [], vs: [] };
+    const T = LM.clamp(+a.T || 0, 0, 10);
+    const N = Math.round(LM.clamp(+a.N || 1, 1, 120));
+    const t = ctx.t || 0;
+    if (s.ts.length && t < s.ts[s.ts.length - 1]) { s.ts.length = 0; s.vs.length = 0; } // time ran backwards — start over
+    if (s.ts.length && s.ts[s.ts.length - 1] === t) s.vs[s.vs.length - 1] = a.V;
+    else { s.ts.push(t); s.vs.push(a.V); }
+    while (s.ts.length > 1 && (s.ts[0] < t - T - 0.25 || s.ts.length > 900)) { s.ts.shift(); s.vs.shift(); }
+    const at = tt => { // newest sample at or before tt (the oldest kept until history fills)
+      let lo = 0, hi = s.ts.length - 1, r = 0;
+      while (lo <= hi) { const mid = (lo + hi) >> 1; if (s.ts[mid] <= tt) { r = mid; lo = mid + 1; } else hi = mid - 1; }
+      return s.vs[r];
+    };
+    const trail = []; // the 1e-6 keeps float jitter from landing one sample early at exact boundaries
+    for (let k = 0; k < N; k++) trail.push(at(t - (N > 1 ? T * k / (N - 1) : 0) + 1e-6));
+    return { R: at(t - T + 1e-6), L: trail };
   }
 });
 
