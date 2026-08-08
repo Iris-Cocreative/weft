@@ -418,9 +418,27 @@ Then:
   `path` kind when it lands; self-intersection cleanup is no longer blocked on
   it — `LM.polySelfInt` now finds the folds, and Curve Intersection's self mode
   exposes them, so the offset node could prune its own loops.
+- ✅ **`params/svg` — Vector In + `xf/kaleido` — Kaleidoscope** (shipped
+  2026-08-08). SVG import landed *ahead of* the `path` kind as a deliberate v1:
+  the file is parsed editor-only in `buildBody` (offscreen mount; per-subpath
+  arc-length sampling via cumulative-prefix lengths, so relative `m` subpaths
+  neither merge nor grow phantom seam segments; `getScreenCTM` flattens nested
+  transforms), RDP-simplified — with a degenerate-chord guard, because a closed
+  loop anchors first == last and the zero cross-product silently collapsed
+  every closed shape to two points — normalized to the unit box, and stored as
+  plain polylines + per-path fill/stroke colours in `node.values`. Graph JSON,
+  share links and exports therefore carry the artwork with **no asset manifest
+  needed**, and the compute is a pure scale-by-S map. Holes remain the honest
+  limit (a ring imports as two same-fill outlines); true Béziers still belong
+  to the `path` kind below — when it lands, re-import upgrades the fidelity.
+  **Kaleidoscope** is the dihedral partner of Mirror + Array: whole-list input,
+  N wedges around C, alternate wedges reflected-then-rotated so neighbours
+  share mirrored edges, K = wedge index (principle 6). The Phase-4 mandala
+  verdict called kaleidoscope replication "genuinely code"; it is now one
+  node. Example: *Rosette*.
 - **`path` geometry kind** (line/cubic/arc segments = an SVG `d`). One addition,
-  three unlocks: real Béziers, **SVG import** (a pasted logo becomes geometry
-  every node can bend), and a nearly-free SVG render target (track 8.2). Handle
+  three unlocks: real Béziers, ~~SVG import~~ (shipped above as polylines —
+  the kind upgrades its fidelity), and a nearly-free SVG render target (track 8.2). Handle
   in `toPoly`/`pathGeom`/`curvePoint`/`xformGeom`/`drawItem` per invariant #4.
   organic-nav's necks are circular fillets *only* because there is no way to say
   "cubic".

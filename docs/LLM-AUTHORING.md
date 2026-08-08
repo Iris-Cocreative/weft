@@ -123,6 +123,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/graph` | Graph Data | X Y A:point B:point (list-in X,Y) | X Y | on-node plot |
 | `params/timegraph` | Time Graph | V:number (list-in) | V:number | rolling trace |
 | `params/relay` | Relay | V:any (list-in) | V:any | wire organiser |
+| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; polylines centred on (0,0), long side scaled to S px; F/K are fill/stroke per path) |
 
 ### State (memory per list item; resets on load)
 | node | title | in | out | |
@@ -223,7 +224,11 @@ means the same place on the curve in every other.
 `xf/scale` (F, Y, C — `values.mode` `'uniform'`\|`'xy'`; non-uniform turns a
 circle into an ellipse) · `xf/mirror` (A, B — the two ends of the mirror line) ·
 `xf/tile` (V1 N1 V2 N2 → G plus I, J cell indices; identical copies only —
-varying cells are `vec/grid` + list matching).
+varying cells are `vec/grid` + list matching) ·
+`xf/kaleido` (G **list-in** N=6 M:mirror=true C:centre → G plus K wedge index;
+the whole input — every wired item — replicated into N wedges around C, with
+alternate wedges reflected so neighbours share mirrored edges; keep the motif
+*off* the centre and off the wedge axes or mirrored copies coincide).
 
 ### 3D (`js/nodes-3d.js` — the pack; world axes are x right, y **down**, z away)
 | node | in | out | |

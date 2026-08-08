@@ -1273,6 +1273,43 @@ const EXAMPLES = {
     ['rm', 'R', 'hs', 'L'],
     ['pj', 'F', 'dw', 'G'],
     ['hs', 'C', 'dw', 'F']
+  ]),
+
+  /* Rosette (2026-08-08) — Vector In + Kaleidoscope. The leaf is a baked SVG
+   * import (exactly what params/svg stores after "load svg…"), moved off
+   * centre and slowly rotated; Kaleidoscope takes the whole two-path motif
+   * into every wedge, mirroring alternates, and K colours by wedge. */
+  'Rosette': _EX([
+    ['sv', 'params/svg', 30, 40, {
+      name: 'leaf',
+      paths: [{ "pts": [[0, -0.5], [0.0527, -0.4333], [0.0901, -0.3667], [0.1209, -0.3], [0.1459, -0.2333], [0.1649, -0.1667], [0.1777, -0.1], [0.1842, -0.0333], [0.1842, 0.0333], [0.1777, 0.1], [0.1649, 0.1667], [0.1459, 0.2333], [0.1209, 0.3], [0.0901, 0.3667], [0.0527, 0.4333], [0, 0.5], [-0.0527, 0.4333], [-0.0901, 0.3667], [-0.1209, 0.3], [-0.1459, 0.2333], [-0.1649, 0.1667], [-0.1777, 0.1], [-0.1842, 0.0333], [-0.1842, -0.0333], [-0.1777, -0.1], [-0.1649, -0.1667], [-0.1459, -0.2333], [-0.1209, -0.3], [-0.0901, -0.3667], [-0.0527, -0.4333]], "closed": true, "fill": { "r": 110, "g": 220, "b": 160, "a": 1 }, "stroke": { "r": 255, "g": 255, "b": 255, "a": 0 } },
+      { "pts": [[0, 0.44], [0.012, 0.15], [0, -0.2], [0, -0.42]], "closed": false, "fill": { "r": 255, "g": 255, "b": 255, "a": 0 }, "stroke": { "r": 16, "g": 60, "b": 42, "a": 1 } }],
+      S: 150
+    }],
+    ['t1', 'input/time', 30, 380, {}],
+    ['mv', 'xf/move', 260, 40, { T: { x: 62, y: -118 } }],
+    ['mu', 'math/mul', 260, 400, { B: 0.15 }, { collapsed: true }],
+    ['rt', 'xf/rotate', 470, 40, {}],
+    ['sl', 'params/slider', 440, 320, { min: 2, max: 24, value: 8, mode: 'int', label: 'wedges' }],
+    ['ka', 'xf/kaleido', 700, 40, {}],
+    ['dv', 'math/div', 930, 340, {}, { collapsed: true }],
+    ['rm', 'math/remap', 1030, 320, { S0: 0, S1: 1, T0: 0.3, T1: 0.85 }],
+    ['hs', 'disp/hsl', 1250, 320, { S: 0.6, L: 0.62, A: 0.85 }],
+    ['dw', 'disp/draw', 1250, 40, { S: { r: 255, g: 255, b: 255, a: 0.45 }, W: 1 }],
+    ['bg', 'disp/bg', 1480, 200, { C: { r: 10, g: 13, b: 19, a: 1 } }]
+  ], [
+    ['sv', 'G', 'mv', 'G'],
+    ['mv', 'G', 'rt', 'G'],
+    ['t1', 'T', 'mu', 'A'],
+    ['mu', 'R', 'rt', 'A'],
+    ['rt', 'G', 'ka', 'G'],
+    ['sl', 'N', 'ka', 'N'],
+    ['ka', 'G', 'dw', 'G'],
+    ['ka', 'K', 'dv', 'A'],
+    ['sl', 'N', 'dv', 'B'],
+    ['dv', 'R', 'rm', 'V'],
+    ['rm', 'R', 'hs', 'H'],
+    ['hs', 'C', 'dw', 'F']
   ])
 };
 
@@ -1471,5 +1508,12 @@ const EXAMPLE_META = {
     teaches: 'The whole 3D idiom in four nodes: Extrude a 2D curve, Project it with a camera, and wire the shade list through Colour HSL so one Draw paints all 144 faces in depth order.',
     tags: ['3d', 'extrude', 'project', 'orbit camera', 'shading', 'painter’s algorithm'],
     needs: [], frames: 60
+  },
+  'Rosette': {
+    cat: 'Geometry',
+    blurb: 'A leaf loaded from an SVG, slowly turning inside an eight-wedge kaleidoscope — mirrored wedges breathe toward each other as it spins.',
+    teaches: 'Vector In makes any SVG file geometry every node can bend, and Kaleidoscope takes its whole input — all paths at once — into every wedge, with K colouring by wedge.',
+    tags: ['svg', 'vector', 'kaleidoscope', 'mirror', 'symmetry', 'import'],
+    needs: [], frames: 40
   }
 };

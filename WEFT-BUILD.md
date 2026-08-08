@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.13 — time as a material (Delay / Echo / Key).** v0.1 (2026-07-12): editor,
+**Status: v0.14 — the vector import + the kaleidoscope (Vector In / Kaleidoscope).** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -293,6 +293,30 @@ pickers. Root and scale are now plain wireable numbers (root 0–11, scale
 untouched), and Scale board now changes key in one place — which also means
 interactions can *compute* the key. 174 nodes, 22 examples (Loop pedal new).
 
+v0.14 (2026-08-08, the vector import + the kaleidoscope): **Vector In**
+(`params/svg`) — load an SVG file and its outlines become geometry every node
+can bend. Deliberately shipped *ahead of* the roadmap's `path` kind: the file
+is parsed editor-only in `buildBody` (offscreen mount; per-subpath arc-length
+sampling via cumulative-prefix lengths so relative `m` subpaths neither merge
+nor grow phantom seams; `getScreenCTM` flattens nested transforms and viewBox),
+RDP-simplified — with a degenerate-chord guard, since a closed loop anchors
+first == last and the zero cross-product was silently collapsing every closed
+shape to two points — normalized to the unit box, and stored as plain polylines
+plus per-path fill/stroke colours in `node.values`. So graph JSON, share links
+and exports carry the artwork with no asset pipeline, and the compute is a pure
+scale-by-S map (invariant 1 untouched; a list wired into S becomes concentric
+copies by ordinary list matching). Holes are the honest limit — a ring imports
+as two same-fill outlines. **Kaleidoscope** (`xf/kaleido`) — the dihedral
+partner to Mirror and Array: takes its input as a *whole list* (the entire
+motif, however many paths), replicates it into N wedges around centre C, and
+with M on reflects alternate wedges across the centre axis then rotates them
+one extra step, so neighbouring wedges share mirrored edges like a real
+kaleidoscope; K is the wedge index beside each copy (principle 6 — colour by
+wedge). The Phase-4 mandala verdict listed kaleidoscope replication among the
+"genuinely code" parts; it is now one node. Example *Rosette* — a baked leaf
+import turning inside an eight-wedge kaleidoscope, hue by K — 176 nodes,
+23 examples.
+
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
 (must pass before finishing any change).
@@ -363,9 +387,9 @@ weft/
   Latch, Sample & Hold, Timer, Previous Value, Edge, **Delay** (the legal
   feedback edge — cycles through it are allowed)
 - **Params**: Number Slider (typed: int/decimal/odd/even + label), Boolean
-  Toggle, Button (momentary), Colour Swatch, Text List, Relay (wire
-  organiser — double-click a wire), Panel (inspect or type values),
-  Graph Data (on-node plot)
+  Toggle, Button (momentary), Colour Swatch, Text List, Vector In (SVG file →
+  polyline geometry + per-path colours), Relay (wire organiser — double-click
+  a wire), Panel (inspect or type values), Graph Data (on-node plot)
 - **Maths**: Addition, Subtraction, Multiplication, Division, Modulus, Power, Min, Max,
   ArcTangent 2, Negative, Absolute, Round, Floor, Ceiling, Square Root, Sine, Cosine,
   Tangent, Radians, Degrees, Pi, Remap Numbers, Clamp, Lerp, Smooth Step,
@@ -390,7 +414,8 @@ weft/
   whole list) · reshaping — Offset, Join, Trim (outside/inside/split), Fillet,
   Region Boolean (union/intersection/difference)
 - **Transform**: Move, Rotate, Scale (uniform or non-uniform), Mirror,
-  Array (identical copies on two basis vectors, with I/J cell keys)
+  Array (identical copies on two basis vectors, with I/J cell keys),
+  Kaleidoscope (whole input × N mirrored wedges, with the wedge index K)
 - **Display**: Draw, Text, Colour HSL, Gradient, Background, Measure Text
   (host `ctx.measureText`), Element (a real DOM element — `<a>`, heading,
   anything — placed by geometry bounds; hover/focus/click flow back as data)

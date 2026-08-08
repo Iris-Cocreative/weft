@@ -45,7 +45,17 @@ geometry that reaches no Draw node is invisible.
   once, scaled per item.
 - **Symmetry** — `xf/mirror(G, A, B)` reflects across the line A→B; wire the
   original and the reflection into one `disp/draw` (or `sets/merge`) to keep
-  both halves. Two mirrors at an angle give you a kaleidoscope.
+  both halves.
+- **Kaleidoscope / rosette / mandala ring** — `xf/kaleido(G, N, M, C → G, K)`:
+  the whole input (all wired items) lands in every one of N wedges, alternates
+  mirrored when M is on. Keep the motif off centre (`xf/move` first) or the
+  copies coincide; `K/N → disp/hsl(H)` colours by wedge; rotate the motif with
+  Time *before* the node and mirrored wedges counter-rotate into each other.
+  M off = plain rotational symmetry. Example: *Rosette*.
+- **Bring in a logo / drawing** — `params/svg` (Vector In): the human clicks
+  "load svg…" on the node; outlines come out as polylines centred on (0,0)
+  scaled to S px, with per-path fill F and stroke K colours for Draw. From
+  there it is ordinary geometry — offset it, divide it, extrude it, kaleido it.
 - **A row or field of identical copies** — `xf/tile(G, V1, N1, V2, N2 → G, I, J)`.
   Only for *identical* copies: if the cells differ, use `vec/grid` + list
   matching instead (that is the whole point of principle 6).

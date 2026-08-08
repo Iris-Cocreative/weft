@@ -653,6 +653,188 @@ defNode('params/textlist', {
   }
 });
 
+/* editor-only: Ramer–Douglas–Peucker — sampled SVG outlines shed the points a
+ * straight run doesn't need before they're stored in the graph JSON */
+function _rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  const keep = new Uint8Array(pts.length); keep[0] = keep[pts.length - 1] = 1;
+  const stack = [[0, pts.length - 1]];
+  while (stack.length) {
+    const seg = stack.pop(), i0 = seg[0], i1 = seg[1];
+    const A = pts[i0], B = pts[i1];
+    const dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy);
+    let dm = -1, im = -1;
+    for (let i = i0 + 1; i < i1; i++) {
+      /* a degenerate chord (closed loop: first == last) measures distance to
+       * the anchor point — against the zero vector every cross product is 0
+       * and the whole loop would collapse to its two coincident endpoints */
+      const d = L < 1e-9
+        ? Math.hypot(pts[i].x - A.x, pts[i].y - A.y)
+        : Math.abs((pts[i].x - A.x) * dy - (pts[i].y - A.y) * dx) / L;
+      if (d > dm) { dm = d; im = i; }
+    }
+    if (dm > eps) { keep[im] = 1; stack.push([i0, im], [im, i1]); }
+  }
+  return pts.filter((p, i) => keep[i]);
+}
+
+/* editor-only: a computed style colour ("rgb(…)" / "rgba(…)" / "none") as a
+ * Weft colour object; paint servers (gradients) fall back to mid-grey */
+function _svgColor(s) {
+  if (!s || s === 'none') return { r: 255, g: 255, b: 255, a: 0 };
+  const m = /rgba?\(([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\)/.exec(s);
+  if (!m) return { r: 190, g: 190, b: 190, a: 1 };
+  const a = m[4] === undefined ? 1 : (m[4].indexOf('%') >= 0 ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+  return { r: +m[1], g: +m[2], b: +m[3], a: isNaN(a) ? 1 : LM.clamp(a, 0, 1) };
+}
+
+/* editor-only: SVG text → normalized polyline paths for params/svg.
+ * The file is mounted offscreen (getPointAtLength / getScreenCTM need layout),
+ * every visible shape is arc-length sampled in its own coordinate system, run
+ * through its CTM into root user space, simplified, and normalized so the
+ * drawing is centred on (0,0) with its long side = 1 — compute just scales.
+ * Multi-subpath `d`s are sampled per subpath (cumulative-prefix lengths keep
+ * relative `m` commands honest), so no phantom connecting segments appear. */
+function _svgImport(text) {
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const root = doc.querySelector('svg');
+  if (!root || doc.querySelector('parsererror')) return { error: 'not readable as svg' };
+  const host = document.createElement('div');
+  host.style.cssText = 'position:absolute;left:-99999px;top:0;';
+  document.body.appendChild(host);
+  host.appendChild(root);
+  try {
+    const rootM = root.getScreenCTM();
+    const inv = rootM && rootM.inverse();
+    const meas = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    root.appendChild(meas);
+    const subs = [];
+    for (const el of root.querySelectorAll('path,rect,circle,ellipse,line,polyline,polygon')) {
+      if (el === meas) continue;
+      const cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      const elM = el.getScreenCTM();
+      const m = inv && elM ? inv.multiply(elM) : null;
+      const fill = _svgColor(cs.fill), stroke = _svgColor(cs.stroke);
+      if (el.tagName.toLowerCase() === 'path') {
+        const chunks = (el.getAttribute('d') || '').split(/(?=[Mm])/).filter(s => s.trim());
+        let prev = 0;
+        for (let i = 0; i < chunks.length; i++) {
+          const d = chunks.slice(0, i + 1).join(' ');
+          meas.setAttribute('d', d);
+          const L = meas.getTotalLength();
+          /* the seam nudge: at exactly `prev`, getPointAtLength returns the END
+           * of the previous subpath, which would spike the first sample */
+          if (L - prev > 1e-6)
+            subs.push({ d, a: prev && prev + Math.min(1e-3, (L - prev) / 1e4), b: L, closed: /[zZ][\s]*$/.test(chunks[i]), m, fill, stroke });
+          prev = L;
+        }
+      } else if (el.getTotalLength) {
+        const L = el.getTotalLength();
+        if (L > 1e-6)
+          subs.push({ el, a: 0, b: L, closed: /^(rect|circle|ellipse|polygon)$/i.test(el.tagName), m, fill, stroke });
+      }
+    }
+    if (!subs.length) return { error: 'no drawable shapes found' };
+    const sample = (s, n) => {
+      let tgt = s.el;
+      if (!tgt) { meas.setAttribute('d', s.d); tgt = meas; }
+      const pts = [];
+      for (let i = 0; i <= n; i++) {
+        const p = tgt.getPointAtLength(s.a + (s.b - s.a) * i / n);
+        pts.push(s.m
+          ? { x: s.m.a * p.x + s.m.c * p.y + s.m.e, y: s.m.b * p.x + s.m.d * p.y + s.m.f }
+          : { x: p.x, y: p.y });
+      }
+      return pts;
+    };
+    /* pass 1 — coarse bbox, so density and simplification tolerance can be
+     * relative to the drawing rather than to arbitrary SVG user units */
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const s of subs)
+      for (const p of sample(s, 24)) {
+        if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+        if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
+      }
+    const maxDim = Math.max(x1 - x0, y1 - y0);
+    if (!isFinite(maxDim) || maxDim <= 0) return { error: 'svg has no extent' };
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    /* pass 2 — real sampling, ~360 samples across the long side, capped */
+    let counts = subs.map(s => {
+      const sc = s.m ? (Math.hypot(s.m.a, s.m.b) + Math.hypot(s.m.c, s.m.d)) / 2 : 1;
+      return LM.clamp(Math.round((s.b - s.a) * sc / maxDim * 360), 8, 1200);
+    });
+    const total = counts.reduce((a, b) => a + b, 0), CAP = 24000;
+    if (total > CAP) counts = counts.map(n => Math.max(8, Math.floor(n * CAP / total)));
+    const eps = maxDim / 1600;
+    const paths = subs.map((s, i) => {
+      let pts = _rdp(sample(s, counts[i]), eps);
+      if (s.closed && pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) <= eps * 2)
+        pts = pts.slice(0, -1);
+      return {
+        pts: pts.map(p => [Math.round((p.x - cx) / maxDim * 1e4) / 1e4, Math.round((p.y - cy) / maxDim * 1e4) / 1e4]),
+        closed: !!s.closed, fill: s.fill, stroke: s.stroke
+      };
+    }).filter(p => p.pts.length > 1);
+    return { paths };
+  } finally {
+    host.remove();
+  }
+}
+
+defNode('params/svg', {
+  title: 'Vector In', cat: 'Params', width: 176,
+  desc: 'Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; holes draw as separate outlines',
+  inputs: [{ name: 'S', type: 'number', default: 200, label: 'size (px, long side)' }],
+  outputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'F', type: 'color', label: 'fill per path' },
+    { name: 'K', type: 'color', label: 'stroke per path' },
+    { name: 'N', type: 'number', label: 'path count' }],
+  defaults: { name: '', paths: [] },
+  compute: (a, ctx, node) => {
+    const ps = node.values.paths;
+    if (!ps || !ps.length) return {};
+    const s = a.S === undefined ? 200 : a.S;
+    const G = [], F = [], K = [];
+    for (const p of ps) {
+      G.push({ kind: 'poly', pts: p.pts.map(q => ({ x: q[0] * s, y: q[1] * s })), closed: !!p.closed });
+      F.push(p.fill || { r: 255, g: 255, b: 255, a: 0 });
+      K.push(p.stroke || { r: 255, g: 255, b: 255, a: 0 });
+    }
+    return { G, F, K, N: G.length };
+  },
+  buildBody: (node, body, changed) => {
+    const vb = _mk('div', 'vin', body);
+    const btn = _mk('div', 'vin-btn', vb);
+    btn.textContent = 'load svg…';
+    const lbl = _mk('div', 'vin-lbl', vb);
+    const paint = () => {
+      const ps = node.values.paths || [];
+      lbl.textContent = ps.length
+        ? (node.values.name || 'svg') + ' — ' + ps.length + (ps.length === 1 ? ' path' : ' paths')
+        : 'no file loaded';
+    };
+    paint();
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.svg,image/svg+xml'; inp.style.display = 'none';
+    vb.appendChild(inp);
+    _cleanClick(btn, () => inp.click());
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      f.text().then(txt => {
+        const r = _svgImport(txt);
+        if (r.error) { lbl.textContent = r.error; return; }
+        node.values.paths = r.paths;
+        node.values.name = f.name.replace(/\.svg$/i, '');
+        paint(); changed();
+      });
+      inp.value = '';
+    });
+  }
+});
+
 /* ============================== MATHS ============================== */
 
 function defBinary(id, title, fn, desc) {
@@ -1589,6 +1771,42 @@ defNode('xf/tile', {
         I.push(i); J.push(j);
       }
     return { G, I, J };
+  }
+});
+
+defNode('xf/kaleido', {
+  title: 'Kaleidoscope', cat: 'Transform', width: 176,
+  desc: 'The whole input — every wired item — replicated N times around centre C. With M on, alternate copies are mirrored so neighbouring wedges reflect each other like a real kaleidoscope; K is the wedge index beside each copy',
+  inputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'N', type: 'number', default: 6, label: 'wedges' },
+    { name: 'M', type: 'bool', default: true, label: 'mirror alternate wedges' },
+    { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'centre' }],
+  outputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'K', type: 'number', label: 'wedge index' }],
+  listInputs: ['G'],
+  compute: a => {
+    const gs = (a.G || []).filter(g => g !== undefined && g !== null);
+    if (!gs.length) return {};
+    const n = LM.clamp(Math.floor(a.N === undefined ? 6 : a.N), 1, 120);
+    const c = (a.C && a.C.x !== undefined) ? a.C : { x: 0, y: 0 };
+    const th = LM.TAU / n;
+    /* mirrored wedge s maps the source onto [s·θ, (s+1)·θ] reversed: reflect
+     * across the axis through C, then rotate one extra step — adjacent wedges
+     * then share their edges, which is what makes it read as a kaleidoscope */
+    const mir = LM.matMirror(c, { x: c.x + 1, y: c.y });
+    const G = [], K = [];
+    for (let s = 0; s < n && G.length < 6000; s++) {
+      const m = (a.M !== false && s % 2)
+        ? LM.matMul(mir, LM.matRot((s + 1) * th, c))
+        : LM.matRot(s * th, c);
+      for (const g of gs) {
+        if (G.length >= 6000) break;
+        G.push(LM.xformGeom(g, m)); K.push(s);
+      }
+    }
+    return { G, K };
   }
 });
 

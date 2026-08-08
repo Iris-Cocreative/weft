@@ -281,6 +281,23 @@ Pass-through container — wire a source through it, or set it directly; swap th
 |---|---|---|
 | V | vector |  |
 
+### `params/svg` — Vector In
+
+Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; holes draw as separate outlines
+
+| in | type | default | note |
+|---|---|---|---|
+| S | number | `200` | size (px, long side) |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+| F | color | fill per path |
+| K | color | stroke per path |
+| N | number | path count |
+
+Node values (`values` keys, not ports): `{"name":"","paths":[]}`
+
 ## State
 
 ### `state/counter` — Counter
@@ -1540,6 +1557,22 @@ Replicate geometry N1 × N2 times along two basis vectors, with the cell indices
 | I | number | index along V1 |
 | J | number | index along V2 |
 
+### `xf/kaleido` — Kaleidoscope
+
+The whole input — every wired item — replicated N times around centre C. With M on, alternate copies are mirrored so neighbouring wedges reflect each other like a real kaleidoscope; K is the wedge index beside each copy
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | receives whole list |
+| N | number | `6` | wedges |
+| M | bool | `true` | mirror alternate wedges |
+| C | point | `{"x":0,"y":0}` | centre |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+| K | number | wedge index |
+
 ### `xf/mirror` — Mirror
 
 Reflect geometry across the line through A and B. Symmetry is half of ornament — pair it with Merge to keep both halves
@@ -2396,4 +2429,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-149 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`
+151 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`

@@ -414,6 +414,21 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   background: conic-gradient(from 90deg, #f00, #f5710c, #fdd41f, #15e134, #38dfe1, #390dea, #ff00fa, #f00);
 }
 
+/* --- Vector In (params/svg): load button + filename readout --- */
+.vin { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.vin-btn {
+  text-align: center; padding: 4px 6px; border-radius: 7px; cursor: pointer;
+  background: var(--dark-100); border: 1px solid var(--dark-300);
+  color: var(--white-40); font: 10px var(--font-ui); user-select: none;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.vin-btn:hover { color: var(--white-80); border-color: var(--white-40); }
+.vin-lbl {
+  text-align: center; color: var(--white-40);
+  font: 10px var(--font-val); user-select: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 /* --- segmented mode switch (vec/grid; reusable for any mode-toggle def) --- */
 .seg {
   display: flex; gap: 2px; padding: 2px; width: 100%;
