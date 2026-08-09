@@ -176,6 +176,9 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .wire { fill: none; stroke-width: 2; opacity: 0.9; }
 .wire.selected { stroke: var(--accent) !important; stroke-width: 3; filter: drop-shadow(0 0 4px rgba(94, 234, 212, 0.6)); }
 .wire.temp { stroke-dasharray: 6 5; opacity: 0.8; }
+/* dead branch: reaches no sink (and no inspector) — a whisper, not an alarm.
+ * Deliberately NOT the .disabled look: bypass and dead-end are different facts. */
+.wire.dead { filter: saturate(0.25); opacity: 0.4; }
 .wire-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
 
 #nodes { position: absolute; left: 0; top: 0; }
@@ -639,6 +642,11 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 /* disabled node: data passes through untouched */
 .node.disabled { opacity: 0.45; }
 .node.disabled .node-head { text-decoration: line-through; text-decoration-color: var(--faint); }
+
+/* dead node: its value reaches no sink — desaturated but legible, so a patch
+ * mid-construction reads quiet rather than broken (distinct from .disabled) */
+.node.dead { filter: saturate(0.25); }
+.node.dead:hover, .node.dead.selected { filter: saturate(0.6); }
 
 /* clusters — a folded subgraph; the stacked-card shadow says "there's more inside" */
 .node.cluster {

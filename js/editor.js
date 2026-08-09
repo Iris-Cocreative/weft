@@ -414,6 +414,12 @@ const Editor = (() => {
   function drawWiresNow() {
     const NS = 'http://www.w3.org/2000/svg';
     svgEl.innerHTML = '';
+    // dead-branch dimming: alive = reaches an export sink or an inspector
+    // (def.inspect — Panel / Graph Data / Time Graph live through postEval).
+    // Recomputed here because every topology mutation funnels through
+    // drawWires(); the walk is O(nodes + wires), cheap even mid-drag.
+    const alive = LM.sinkReachable(S.graph, NODE_DEFS, (n, d) => !!d.inspect);
+    for (const [id, el] of S.els) el.classList.toggle('dead', !alive.has(id));
     for (const w of S.graph.wires) {
       const p1 = portPos(w.from[0], 'out', w.from[1]);
       const p2 = portPos(w.to[0], 'in', w.to[1]);
@@ -421,7 +427,7 @@ const Editor = (() => {
 
       const path = document.createElementNS(NS, 'path');
       path.setAttribute('d', d);
-      path.setAttribute('class', 'wire' + (S.selWire === w.id ? ' selected' : ''));
+      path.setAttribute('class', 'wire' + (S.selWire === w.id ? ' selected' : '') + (alive.has(w.to[0]) ? '' : ' dead'));
       path.setAttribute('stroke', outputTypeColor(w.from));
       svgEl.appendChild(path);
 
@@ -1164,6 +1170,7 @@ const Editor = (() => {
         n.enabled = n.enabled === false ? true : false;
         const el = S.els.get(nodeId);
         if (el) el.classList.toggle('disabled', n.enabled === false);
+        drawWires(); // a bypassed sink changes the dead-branch set
         changed();
       }
       if (act === 'prev') {

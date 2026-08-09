@@ -435,7 +435,7 @@ defNode('params/relay', {
 });
 
 defNode('params/graph', {
-  title: 'Graph Data', cat: 'Params', width: 200, bare: true,
+  title: 'Graph Data', cat: 'Params', width: 200, bare: true, inspect: true,
   desc: 'Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data, or wire two corner points A (min x,y) and B (max x,y) to pin it.',
   inputs: [
     { name: 'X', type: 'number' }, { name: 'Y', type: 'number' },
@@ -517,7 +517,7 @@ defNode('params/graph', {
 });
 
 defNode('params/timegraph', {
-  title: 'Time Graph', cat: 'Params', width: 200, bare: true,
+  title: 'Time Graph', cat: 'Params', width: 200, bare: true, inspect: true,
   desc: 'Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines)',
   inputs: [{ name: 'V', type: 'number' }],
   outputs: [{ name: 'V', type: 'number' }],
@@ -618,7 +618,7 @@ defNode('params/anchor', {
 });
 
 defNode('params/panel', {
-  title: 'Note Pad', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200, bare: true,
+  title: 'Note Pad', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200, bare: true, inspect: true,
   inputs: [{ name: 'V', type: 'any' }], outputs: [{ name: 'V', type: 'any' }],
   listInputs: ['V'],
   defaults: { text: 'hello weft' },

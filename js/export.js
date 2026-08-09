@@ -19,32 +19,15 @@
 const WeftExport = (() => {
 
   /* a node earns its keep by writing to an output channel; everything upstream
-   * of one survives, the rest never reached the screen in the first place */
-  const SINK_RE = /ctx\.(drawList|domList|audioList|bg)\b/;
-  function isSink(n) {
-    if (n.enabled === false) return false;   /* passthrough only — kept if downstream needs it */
-    if (n.type === 'input/hotspot') return true;   /* the mount reads H for the cursor */
-    const d = NODE_DEFS[n.type];
-    if (!d) return false;
-    return !!d.dynamic || SINK_RE.test(d.compute.toString());
-  }
-
+   * of one survives, the rest never reached the screen in the first place.
+   * The walk lives in the engine (LM.sinkReachable) so the editor can dim
+   * with the same set; no extra sink predicate here — exports stay strict. */
   function pruneGraph(graph) {
-    const nodes = graph.nodes || [], wires = graph.wires || [];
-    const feeds = {};
-    for (const w of wires) (feeds[w.to[0]] = feeds[w.to[0]] || []).push(w.from[0]);
-    const keep = new Set();
-    const stack = nodes.filter(isSink).map(n => n.id);
-    while (stack.length) {
-      const id = stack.pop();
-      if (keep.has(id)) continue;
-      keep.add(id);
-      for (const src of feeds[id] || []) stack.push(src);
-    }
+    const keep = LM.sinkReachable(graph, NODE_DEFS);
     return {
       meta: graph.meta,
-      nodes: nodes.filter(n => keep.has(n.id)),
-      wires: wires.filter(w => keep.has(w.from[0]) && keep.has(w.to[0]))
+      nodes: (graph.nodes || []).filter(n => keep.has(n.id)),
+      wires: (graph.wires || []).filter(w => keep.has(w.from[0]) && keep.has(w.to[0]))
     };
   }
 

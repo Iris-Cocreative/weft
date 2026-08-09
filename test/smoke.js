@@ -1168,6 +1168,7 @@ for (const name of Object.keys(EXAMPLES)) {
   if (js.indexOf('orphan') >= 0) failures.push('exporter: node with no path to a sink not pruned');
   if (js.indexOf('params/slider') >= 0) failures.push('exporter: def of a pruned node not dropped');
   if (js.indexOf('clipPolyOnce') >= 0) failures.push('exporter: unused LM helpers not shaken out');
+  if (js.indexOf('sinkReachable') >= 0) failures.push('exporter: sinkReachable is editor/exporter machinery and must never ship in a bundle');
   if (js.indexOf('keydown') >= 0) failures.push('exporter: keyboard runtime included though nothing reads keys');
   if (js.indexOf('weft-btn') >= 0) failures.push('exporter: DOM layer included though nothing declares DOM');
   if (js.indexOf('scrollY') >= 0) failures.push('exporter: scroll tracking included though nothing reads scroll');

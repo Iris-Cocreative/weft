@@ -1232,6 +1232,39 @@ const LM = {
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   },
 
+  /* ---------- sink reachability ----------
+   * Which nodes can reach a sink: a node whose compute writes an output
+   * channel (draw / DOM / audio / bg), a dynamic def (its subgraph may draw),
+   * or the hotspot cursor. Walks the wire graph backwards from every sink and
+   * returns the Set of surviving node ids. The exporter prunes with exactly
+   * this set; the editor dims outside it. extraSink(node, def) widens the sink
+   * test (the editor counts inspector defs — see def.inspect — as sinks; the
+   * exporter must not, so its answer never changes). Disabled nodes are never
+   * sinks themselves but survive when something downstream needs them. */
+  sinkReachable: (graph, defs, extraSink) => {
+    const nodes = graph.nodes || [], wires = graph.wires || [];
+    const sinkRe = /ctx\.(drawList|domList|audioList|bg)\b/;
+    const isSink = n => {
+      if (n.enabled === false) return false;
+      if (n.type === 'input/hotspot') return true;
+      const d = defs[n.type];
+      if (!d) return false;
+      if (extraSink && extraSink(n, d)) return true;
+      return !!d.dynamic || sinkRe.test(d.compute.toString());
+    };
+    const feeds = {};
+    for (const w of wires) (feeds[w.to[0]] = feeds[w.to[0]] || []).push(w.from[0]);
+    const keep = new Set();
+    const stack = nodes.filter(isSink).map(n => n.id);
+    while (stack.length) {
+      const id = stack.pop();
+      if (keep.has(id)) continue;
+      keep.add(id);
+      for (const src of feeds[id] || []) stack.push(src);
+    }
+    return keep;
+  },
+
   /* ---------- the dataflow evaluator ----------
    * Every port value is a LIST. Longest-list matching (Grasshopper style):
    * the node's compute runs once per index, shorter lists repeat their last
