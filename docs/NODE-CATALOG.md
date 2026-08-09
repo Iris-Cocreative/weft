@@ -119,6 +119,16 @@ A point pinned to the cloth (render canvas) — drag its handle there directly
 
 Node values (`values` keys, not ports): `{"x":0,"y":0}`
 
+### `params/angle` — Angle
+
+A direction dial — outputs the angle in radians or degrees; shift snaps to 15°
+
+| out | type | note |
+|---|---|---|
+| A | number |  |
+
+Node values (`values` keys, not ports): `{"deg":0,"out":"rad"}`
+
 ### `params/toggle` — Boolean Toggle
 
 True / false switch
@@ -174,6 +184,16 @@ Plots the data flowing through it — X alone draws the values over an automatic
 |---|---|---|
 | X | number |  |
 | Y | number |  |
+
+### `params/knob` — Knob
+
+Rotary number — drag around the dial, shift snaps to integers; double-click for label, range and rounding
+
+| out | type | note |
+|---|---|---|
+| N | number |  |
+
+Node values (`values` keys, not ports): `{"min":0,"max":10,"value":5}`
 
 ### `params/panel` — Note Pad
 
@@ -2474,4 +2494,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-154 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`
+156 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`

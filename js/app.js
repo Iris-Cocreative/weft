@@ -90,12 +90,14 @@ const App = {
   },
   setSetting(key, on) {
     try { localStorage.setItem('weft:set-' + key, on ? '1' : '0'); } catch (e) {}
+    // wire strokes read settings at build time — repaint so toggles show immediately
+    if (typeof Editor !== 'undefined' && Editor.redrawWires) Editor.redrawWires();
   },
 
   SETTINGS: [
     { key: 'angle-sliders', label: 'angle sliders', hint: 'typing 90 / 180 / 360 makes a degree slider wired into a Radians node', def: true },
     { key: 'smallint-sliders', label: '0–12 sliders', hint: 'typing a small integer makes a 0–12 integer slider', def: true },
-    { key: 'live-colour-wires', label: 'live colour wires', hint: 'colour wires take the colour flowing through them', def: false }
+    { key: 'live-colour-wires', label: 'live colour wires', hint: 'colour wires take the colour flowing through them', def: true }
   ],
 
   bindSettings() {
@@ -820,7 +822,9 @@ const App = {
     let url = '';
     try {
       const m = EXAMPLE_META[name] || {};
-      url = App.renderThumb(JSON.parse(JSON.stringify(EXAMPLES[name])), 480, 300, m.frames || 40);
+      // a curated still (m.img) beats a rendered frame when the example's charm
+      // is interactive and no single t captures it
+      url = m.img || App.renderThumb(JSON.parse(JSON.stringify(EXAMPLES[name])), 480, 300, m.frames || 40);
     } catch (e) { /* a thumbnail is never worth breaking the gallery for */ }
     App._thumbs[name] = url;
     return url;

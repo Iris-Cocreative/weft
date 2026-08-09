@@ -257,6 +257,20 @@ is now in, so any of these can be picked up in a workshop pass):
   tagline removed (rethink pending); default-1 ports arrow-step 0.1; ask
   dialog above the gallery. Still open from this pass: multi-document
   editing (tabs) — deliberately out of scope, noted below.
+- [shipped v0.17.1, 2026-08-09] **Test-note fixes + dials** — Note Pad /
+  Text List resize runaway fixed (sizes flow one way: grip → box →
+  `max-content` card); wire tints cached per wire id so node drags keep
+  them (live colour wires now defaults ON); relay dblclick actually fixed
+  (manual double-click detection by wire id — the SVG rebuild between
+  clicks meant no element ever saw both); slider refinement (18px value,
+  value-aligned 1-2-5 smart ticks, zero mark + zero-anchored fill on
+  crossing ranges, output dot level with the hairline, selection = one
+  outline + two pills); new **Knob** and **Angle** params (`params/knob`,
+  `params/angle` — 181 defs); drawn checkboxes (bool colour / accent);
+  cloth camera pan discoverable (alt-drag added, ⌂ on the % chip, status
+  bar hint); corpus 15 (one Superformula, Oscilloscope out, Hexa's dead
+  vec/grid pruned, Iso-field card uses a curated still via
+  `EXAMPLE_META.img`).
 - [idea] multi-document editing — several graphs open at once (tabs or a
   window-per-file via the FS-API handles). The v0.17 save overhaul laid
   the plumbing (per-file handles); the UI is the open question.
@@ -371,6 +385,9 @@ is now in, so any of these can be picked up in a workshop pass):
   **Stonehenge** (ruin-as-arithmetic: Cull Pattern + Shift List). Retired:
   Cursor wave, Scroll scene, Visualizer, Sing, Rosette, old Iso field,
   Cymatics, Harmonograph, Shape song, Rose window, Henge.
+  **v0.17.1 trim**: 18 → 15 — one Superformula (the ember II), Oscilloscope
+  retired, Hexa graph's dead vec/grid pruned, Iso-field's card wears a
+  curated still (`EXAMPLE_META.img`).
 
 ### Legibility pass — [next], James 2026-07-14
 

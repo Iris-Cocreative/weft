@@ -70,7 +70,8 @@ const Viewport = {
     const camBtn = document.getElementById('btnCam');
     const paintCam = () => {
       if (camBtn) {
-        camBtn.textContent = Math.round(cam.z * 100) + '%';
+        // the ⌂ makes the chip read as "click to come home", not just a readout
+        camBtn.textContent = Math.round(cam.z * 100) + '%' + (Viewport.camActive() ? ' ⌂' : '');
         camBtn.classList.toggle('active', Viewport.camActive());
       }
       // the DOM overlay (Button/Element nodes) rides the same transform as the render
@@ -220,8 +221,8 @@ const Viewport = {
       }
     });
     canvas.addEventListener('pointerdown', e => {
-      // ctrl+drag / middle-drag: pan the cloth camera, not the design
-      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+      // ctrl+drag, alt+drag or middle-drag: pan the cloth camera, not the design
+      if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.altKey))) {
         camDrag = { lx: e.clientX, ly: e.clientY };
         canvas.setPointerCapture(e.pointerId);
         e.preventDefault();

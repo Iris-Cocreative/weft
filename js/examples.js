@@ -23,7 +23,6 @@ const EXAMPLES = {
       {"id":"h1","type":"input/viewport","x":30,"y":40,"values":{}},
       {"id":"h2","type":"params/slider","x":30,"y":180,"values":{"min":26,"max":90,"value":90}},
       {"id":"h3","type":"input/mouse","x":30,"y":340,"values":{}},
-      {"id":"h4","type":"vec/grid","x":260,"y":40,"values":{"iso":true},"preview":false},
       {"id":"h5","type":"vec/construct","x":248,"y":338,"values":{}},
       {"id":"h6","type":"crv/rect","x":260,"y":479,"values":{}},
       {"id":"h7","type":"params/slider","x":260,"y":680,"values":{"min":120,"max":900,"value":430}},
@@ -100,9 +99,6 @@ const EXAMPLES = {
       {"id":"n98","type":"params/swatch","x":2886,"y":-24,"values":{"hex":"#000914","a":1}}
     ],
     wires: [
-      {"id":"w1","from":["h1","W"],"to":["h4","W"]},
-      {"id":"w2","from":["h1","H"],"to":["h4","H"]},
-      {"id":"w3","from":["h2","N"],"to":["h4","S"]},
       {"id":"w4","from":["h3","X"],"to":["h5","X"]},
       {"id":"w5","from":["h3","Y"],"to":["h5","Y"]},
       {"id":"w7","from":["h5","P"],"to":["h8","B"]},
@@ -11237,50 +11233,6 @@ const EXAMPLES = {
       }
     ]
   },
-  'Oscilloscope': _EX([
-    ['o1', 'params/slider', 30, 40, { min: 55, max: 440, value: 110 }],
-    ['o2', 'audio/osc', 250, 40, { wave: 'sawtooth' }],
-    ['o3', 'input/mouse', 30, 220],
-    ['o4', 'math/remap', 250, 220, { S0: 0, S1: 1, T0: 200, T1: 6000 }],
-    ['o5', 'audio/filter', 470, 40, { mode: 'lowpass', Q: 4 }],
-    ['o6', 'math/remap', 250, 400, { S0: 0, S1: 1, T0: 0.25, T1: 0 }],
-    ['o7', 'audio/gain', 690, 40],
-    ['o8', 'audio/out', 910, 40],
-    ['o9', 'audio/scope', 690, 260, { W: 480, H: 150, T: 18, P: { x: 0, y: -175 } }],
-    ['o10', 'disp/bg', 910, 420],
-    ['x1', 'audio/osc', 250, 580, { wave: 'sine' }],
-    ['x2', 'params/slider', 30, 660, { min: 1, max: 4, value: 3 }],
-    ['x3', 'math/round', 250, 720],
-    ['x4', 'math/mul', 470, 660],
-    ['x5', 'audio/osc', 690, 660, { wave: 'sine', D: 1 }], /* 1 cent sharp: the phase drifts, so the figure slowly tumbles */
-    ['x6', 'audio/xyscope', 910, 580, { S: 280, T: 30, P: { x: 0, y: 105 } }]
-  ], [
-    ['o1', 'N', 'o2', 'F'],
-    ['o2', 'A', 'o5', 'In'],
-    ['o3', 'NX', 'o4', 'V'],
-    ['o4', 'R', 'o5', 'F'],
-    ['o5', 'A', 'o7', 'In'],
-    ['o3', 'NY', 'o6', 'V'],
-    ['o6', 'R', 'o7', 'G'],
-    ['o7', 'A', 'o8', 'In'],
-    ['o5', 'A', 'o9', 'In'],
-    ['o1', 'N', 'x1', 'F'],
-    ['o1', 'N', 'x4', 'A'],
-    ['x2', 'N', 'x3', 'V'],
-    ['x3', 'R', 'x4', 'B'],
-    ['x4', 'R', 'x5', 'F'],
-    ['x1', 'A', 'x6', 'X'],
-    ['x5', 'A', 'x6', 'Y']
-  ]),
-
-  /* The interval-as-flower figures from audio vectorscopes (looma-style):
-   * a rose r = cos(k·θ) is BUILT from pure list math — Range sweeps θ,
-   * cos/sin/multiply shape 512 points per frame, PolyLine closes the petal
-   * curve — then Path to Audio turns the outline into sound and the Vector
-   * Scope's beam retraces it. Petals: k=2 → 4-leaf clover, k=4 → 8-petal
-   * flower, odd k → k petals. In audio terms a k-rose is two partials at
-   * the ratio (k+1):(k−1) in quadrature — the interval IS the flower.
-   * Unwire Round for fractional k: the rose stops closing and precesses. */
   'Mandala': {
     format: 1,
     nodes: [
@@ -12438,46 +12390,6 @@ const EXAMPLES = {
     ]
   },
   'Superformula': _EX([
-    ['s1', 'params/slider', 30, 40, { min: 2, max: 16, value: 6, mode: 'int', label: 'symmetry' }],
-    ['s2', 'params/slider', 30, 150, { min: 0.1, max: 2, value: 0.3, label: 'pinch' }],
-    ['s3', 'params/slider', 30, 260, { min: 0.1, max: 5, value: 1.7, label: 'edge' }],
-    ['s4', 'params/slider', 30, 370, { min: 40, max: 220, value: 130, mode: 'int', label: 'size' }],
-    ['rg', 'sets/range', 30, 480, { A: 0, B: 6.2832, N: 256 }],
-    ['js', 'meta/js', 280, 150, {
-      title: 'superformula', mode: 'each',
-      ins: [
-        { name: 'T', type: 'number', default: 0 },
-        { name: 'M', type: 'number', default: 6 },
-        { name: 'N1', type: 'number', default: 0.3 },
-        { name: 'N2', type: 'number', default: 1.7 },
-        { name: 'R', type: 'number', default: 130 }
-      ],
-      outs: [{ name: 'P', type: 'point' }],
-      code: 'const q = M * T / 4;\nconst f = Math.abs(Math.cos(q)), g = Math.abs(Math.sin(q));\nconst r = R * Math.pow(Math.pow(f, N2) + Math.pow(g, N2), -1 / N1);\nreturn { P: { x: r * Math.cos(T), y: r * Math.sin(T) } };'
-    }],
-    ['pl', 'crv/polyline', 560, 150, { C: true }],
-    ['t1', 'input/time', 560, 330],
-    ['mu', 'math/mul', 740, 330, { B: 0.05 }],
-    ['ro', 'xf/rotate', 920, 150],
-    ['dr', 'disp/draw', 1140, 150, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 129, g: 140, b: 248, a: 0.12 }, W: 2 }],
-    ['bg', 'disp/bg', 1140, 330]
-  ], [
-    ['rg', 'R', 'js', 'T'],
-    ['s1', 'N', 'js', 'M'],
-    ['s2', 'N', 'js', 'N1'],
-    ['s3', 'N', 'js', 'N2'],
-    ['s4', 'N', 'js', 'R'],
-    ['js', 'P', 'pl', 'V'],
-    ['pl', 'C', 'ro', 'G'],
-    ['t1', 'T', 'mu', 'A'],
-    ['mu', 'R', 'ro', 'A'],
-    ['ro', 'G', 'dr', 'G']
-  ]),
-
-  /* Superformula variants — same code node, different personalities. II fans
-   * one shape into three breathing ember layers; III is two counter-rotating
-   * indigo/teal shells. Layer variation is pure list matching. */
-  'Superformula II': _EX([
     ['s1', 'params/slider', 30, 40, { min: 2, max: 16, value: 5, mode: 'int', label: 'symmetry' }],
     ['s4', 'params/slider', 30, 150, { min: 60, max: 220, value: 150, mode: 'int', label: 'size' }],
     ['rg', 'sets/range', 30, 260, { A: 0, B: 6.2832, N: 256 }],
@@ -12533,62 +12445,6 @@ const EXAMPLES = {
     ['gr', 'C', 'dr', 'S']
   ]),
 
-  'Superformula III': _EX([
-    ['s1', 'params/slider', 30, 40, { min: 4, max: 24, value: 12, mode: 'int', label: 'petals' }],
-    ['s4', 'params/slider', 30, 150, { min: 60, max: 220, value: 140, mode: 'int', label: 'size' }],
-    ['rg', 'sets/range', 30, 260, { A: 0, B: 6.2832, N: 256 }],
-    ['js', 'meta/js', 280, 130, {
-      title: 'superformula', mode: 'each',
-      ins: [
-        { name: 'T', type: 'number', default: 0 },
-        { name: 'M', type: 'number', default: 12 },
-        { name: 'N1', type: 'number', default: 0.85 },
-        { name: 'N2', type: 'number', default: 3.2 },
-        { name: 'R', type: 'number', default: 140 }
-      ],
-      outs: [{ name: 'P', type: 'point' }],
-      code: 'const q = M * T / 4;\nconst f = Math.abs(Math.cos(q)), g = Math.abs(Math.sin(q));\nconst r = R * Math.pow(Math.pow(f, N2) + Math.pow(g, N2), -1 / N1);\nreturn { P: { x: r * Math.cos(T), y: r * Math.sin(T) } };'
-    }],
-    ['pl', 'crv/polyline', 560, 130, { C: true }],
-    ['sr', 'sets/series', 560, 400, { S: 0, N: 1, C: 2 }],
-    ['rd', 'math/remap', 740, 400, { S0: 0, S1: 1, T0: 1, T1: -1 }],
-    ['t1', 'input/time', 560, 540],
-    ['mt', 'math/mul', 740, 540, { B: 0.08 }],
-    ['ml', 'math/mul', 920, 400],
-    ['ro', 'xf/rotate', 920, 130],
-    ['rs', 'math/remap', 1100, 400, { S0: 0, S1: 1, T0: 1, T1: 0.62 }],
-    ['sc', 'xf/scale', 1100, 130],
-    ['rc', 'math/remap', 920, 560, { S0: 0, S1: 1, T0: 0, T1: 1 }],
-    ['gr', 'disp/gradient', 1100, 560, { A: { r: 99, g: 102, b: 241, a: 0.95 }, B: { r: 94, g: 234, b: 212, a: 0.95 } }],
-    ['dr', 'disp/draw', 1320, 130, { F: { r: 99, g: 102, b: 241, a: 0.1 }, W: 1.5 }],
-    ['bg', 'disp/bg', 1320, 330, { C: { r: 7, g: 10, b: 18, a: 1 } }]
-  ], [
-    ['rg', 'R', 'js', 'T'],
-    ['s1', 'N', 'js', 'M'],
-    ['s4', 'N', 'js', 'R'],
-    ['js', 'P', 'pl', 'V'],
-    ['pl', 'C', 'ro', 'G'],
-    ['sr', 'S', 'rd', 'V'],
-    ['t1', 'T', 'mt', 'A'],
-    ['rd', 'R', 'ml', 'A'],
-    ['mt', 'R', 'ml', 'B'],
-    ['ml', 'R', 'ro', 'A'],
-    ['ro', 'G', 'sc', 'G'],
-    ['sr', 'S', 'rs', 'V'],
-    ['rs', 'R', 'sc', 'F'],
-    ['sc', 'G', 'dr', 'G'],
-    ['sr', 'S', 'rc', 'V'],
-    ['rc', 'R', 'gr', 'T'],
-    ['gr', 'C', 'dr', 'S']
-  ]),
-
-  /* The geometry pass (v0.11) — two circles drifting apart, and everything the
-   * new curve nodes can say about the pair: the lens where they overlap, the
-   * crescent left over, its mirror image, the two crossing points, the axis
-   * through them, and the lens area as a number on the canvas. None of this was
-   * expressible before Curve Intersection and Region Boolean existed. Three
-   * Draw nodes each take TWO wires into G — the merge is what keeps a family of
-   * shapes on one style instead of one Draw per shape. */
   'Intersections': {
     "format": 2,
     "nodes": [
@@ -17472,6 +17328,7 @@ const EXAMPLE_META = {
   },
   'Iso-field': {
     cat: 'Lists & grids',
+    img: 'assets/iso-field.png',
     blurb: 'A line field folded through two kaleidoscopes — the pointer bends the weave and the mirrors carry it around the ring.',
     teaches: 'Kaleidoscope takes whole lists: one bundle of lines becomes an isometric field, and Smooth turns the pointer into a soft brush.',
     tags: ['kaleidoscope', 'lines', 'field', 'mouse', 'iso'],
@@ -17512,13 +17369,6 @@ const EXAMPLE_META = {
     tags: ['tabs', 'hotspot', 'delay', 'select', 'cymatics', 'harmonograph', 'rose', 'interval', 'ui'],
     needs: ['gesture'], frames: 110
   },
-  'Oscilloscope': {
-    cat: 'Scopes & figures',
-    blurb: 'A real oscilloscope and a vectorscope — a sawtooth melting through a mouse-driven lowpass above, an XY figure below.',
-    teaches: 'The Scope node taps an audio wire and draws the actual samples, trigger-locked.',
-    tags: ['scope', 'vectorscope', 'filter', 'lissajous'],
-    needs: ['gesture'], frames: 60
-  },
   'Loop pedal': {
     cat: 'Audio input',
     blurb: 'Space or the rec button toggles recording, c or clear empties the loop; the mic pours into a feedback-1 Delay and circles forever — with a click track to keep you honest.',
@@ -17542,23 +17392,9 @@ const EXAMPLE_META = {
   },
   'Superformula': {
     cat: 'Custom JS & meta',
-    blurb: 'A shape no native node knows, wrapped in one code node with its magic numbers promoted to sliders.',
-    teaches: 'The knob-extraction pattern: in “each” mode the code runs per angle and list-matches against single-valued knobs, exactly like a native node.',
-    tags: ['custom js', 'knob extraction', 'superformula'],
-    needs: [], frames: 40
-  },
-  'Superformula II': {
-    cat: 'Custom JS & meta',
-    blurb: 'The same code node pushed to embers — three nested layers breathe their pinch with time and grade from ember orange to magenta.',
+    blurb: 'One superformula in a Custom JS node, pushed to embers — three nested layers breathe their pinch with time and grade from ember orange to magenta.',
     teaches: 'Layer variation is list matching: one three-step Series fans the shape into three scales, three spins and three colours through a single Gradient node.',
     tags: ['custom js', 'superformula', 'layers', 'gradient', 'ember'],
-    needs: [], frames: 60
-  },
-  'Superformula III': {
-    cat: 'Custom JS & meta',
-    blurb: 'A twelve-petal night bloom — two counter-rotating superformula shells in indigo and teal.',
-    teaches: 'Two items are enough for choreography: a two-step Series remapped to +1/−1 drives opposite spins and complementary colours off the same wires.',
-    tags: ['custom js', 'superformula', 'counter-rotation', 'bloom'],
     needs: [], frames: 60
   },
   'Intersections': {

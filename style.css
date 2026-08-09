@@ -246,7 +246,6 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   font: 11.5px var(--font-ui); color: var(--text);
 }
 .set-row:hover { background: var(--dark-150); }
-.set-row input { accent-color: var(--accent); }
 
 /* ---------------- canvas annotations (graph format 2) ---------------- */
 
@@ -420,7 +419,24 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   width: 26px; height: 17px; padding: 0; border: 1px solid var(--dark-400);
   border-radius: 3px; background: none; cursor: pointer;
 }
-.lit input[type="checkbox"] { accent-color: var(--accent-dim); }
+/* checkboxes are drawn, not native: a quiet rounded square that fills with its
+ * context colour when checked — bool literals wear the bool wire colour,
+ * settings wear the accent */
+.lit input[type="checkbox"], .set-row input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: none;
+  width: 15px; height: 15px; cursor: pointer; position: relative;
+  border: 1px solid var(--dark-400); border-radius: 4px; background: var(--dark-150);
+  transition: background 0.12s, border-color 0.12s;
+}
+.lit input[type="checkbox"]:hover, .set-row input[type="checkbox"]:hover { border-color: var(--white-40); }
+.lit input[type="checkbox"]::after, .set-row input[type="checkbox"]::after {
+  content: ''; position: absolute; left: 3.5px; top: 3.5px; width: 7px; height: 4px;
+  border-left: 1.5px solid var(--bg); border-bottom: 1.5px solid var(--bg);
+  transform: rotate(-45deg); opacity: 0;
+}
+.lit input[type="checkbox"]:checked { background: var(--type-bool); border-color: var(--type-bool); }
+.set-row input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+.lit input[type="checkbox"]:checked::after, .set-row input[type="checkbox"]:checked::after { opacity: 1; }
 
 /* hide number input spinners inside nodes */
 .node input[type="number"]::-webkit-outer-spin-button,
@@ -432,7 +448,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 /* --- Number Slider "Hairline" (design doc 1a, 2026-08-09) ---
  * the number is the widget: big mono value, 2px rule + ticks, faint end marks.
  * The widget wears the wire colour of its output type (number). */
-.sl { width: 100%; padding: 2px 0; position: relative; }
+.sl { width: 100%; padding: 3px 11px 4px; position: relative; }
 .sl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; }
 .sl-label {
   min-height: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -441,20 +457,29 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .sl-val {
   flex: 1; min-width: 0; text-align: right;
   background: transparent; border: 1px solid transparent; border-radius: 3px;
-  color: var(--type-number); font: 22px/1 var(--font-val); letter-spacing: -0.02em;
+  color: var(--type-number); font: 18px/1 var(--font-val); letter-spacing: -0.02em;
   outline: none;
 }
 .sl-track { position: relative; margin-top: 8px; height: 16px; display: flex; align-items: center; cursor: ew-resize; touch-action: none; }
 .sl-rule { position: relative; width: 100%; height: 2px; border-radius: 1px; background: var(--dark-400); }
+/* ticks are value-aligned, painted by the node (--tkg/--tko minor gap/offset,
+ * --tkG/--tkO major) — a 1px line at the left edge of a tile, repeated */
 .sl-rule::before {  /* minor ticks, hanging under the rule */
   content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 4px;
-  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.20) 0 1px, transparent 1px 10px);
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.20) 0 1px, transparent 1px);
+  background-size: var(--tkg, 10px) 100%; background-position: var(--tko, 0px) 0;
 }
 .sl-rule::after {   /* major ticks */
   content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 7px;
-  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.34) 0 1px, transparent 1px 50px);
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.34) 0 1px, transparent 1px);
+  background-size: var(--tkG, 50px) 100%; background-position: var(--tkO, 0px) 0;
 }
 .sl-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 1px; background: var(--type-number); }
+.sl-zero { position: absolute; top: -3px; width: 1px; height: 9px; background: rgba(255, 255, 255, 0.55); }
+.sl-zero::after {
+  content: attr(data-n); position: absolute; top: 9px; left: -2px;
+  font: 8px var(--font-val); color: rgba(255, 255, 255, 0.38);
+}
 .sl-thumb {
   position: absolute; top: 50%; width: 9px; height: 9px; margin-left: -4.5px;
   transform: translateY(-50%); border-radius: 50%;
@@ -468,17 +493,23 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .sl-ends input:last-child { text-align: right; }
 .sl-ends input:hover, .sl-ends input:focus { border-color: var(--dark-400); background: var(--dark-150); color: var(--white-80); }
 
-/* selected sliders resize from either edge (1a spec: 140–300px) */
-.sl-grip-l, .sl-grip-r { position: absolute; top: 0; bottom: 0; width: 7px; display: none; cursor: ew-resize; z-index: 3; }
-.sl-grip-l { left: -4px; }
-.sl-grip-r { right: -4px; }
+/* selected sliders resize from either edge (1a spec: 140–300px) — one pill per
+ * side, riding ON the selection outline so it doesn't read as a second line */
+.sl-grip-l, .sl-grip-r { position: absolute; top: 0; bottom: 0; width: 11px; display: none; cursor: ew-resize; z-index: 3; }
+.sl-grip-l { left: -9px; }
+.sl-grip-r { right: -9px; }
 .node.selected .sl-grip-l, .node.selected .sl-grip-r { display: block; }
 .node.selected .sl-grip-l::after, .node.selected .sl-grip-r::after {
-  content: ''; position: absolute; top: calc(50% - 10px); width: 4px; height: 20px;
-  border-radius: 2px; background: var(--accent); opacity: 0.85;
+  content: ''; position: absolute; top: calc(50% - 15px); width: 3px; height: 14px;
+  border-radius: 2px; background: var(--accent);
 }
-.sl-grip-l::after { left: 0; }
-.sl-grip-r::after { right: 0; }
+.sl-grip-l::after { left: 4px; }
+.sl-grip-r::after { right: 4px; }
+
+/* the slider's output dot leaves the card's vertical centre and sits level
+ * with the hairline itself, clear of the track's end */
+.node.bare:has(.sl) .col-outs { justify-content: flex-start; }
+.node.bare:has(.sl) .col-outs .row.out { margin-top: 36px; }
 
 /* slider options popover (double-click): label, rounding mode, precision */
 .sl-opts {
@@ -491,6 +522,23 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .sl-opt-cap { flex: none; width: 52px; font-size: 10px; color: var(--dim); }
 .sl-opt-row input { flex: 1; min-width: 0; }
 .sl-val:hover, .sl-val:focus { border-color: var(--dark-400); background: var(--dark-150); }
+
+/* --- Knob / Angle: rotary dials in the number wire colour --- */
+.kn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px 8px; }
+.kn-label { text-align: center; align-self: stretch; }
+.dial { width: 64px; height: 64px; flex: none; touch-action: none; cursor: crosshair; overflow: visible; }
+.dial-track { fill: none; stroke: var(--dark-400); stroke-width: 2; stroke-linecap: round; }
+.dial-fill { fill: none; stroke: var(--type-number); stroke-width: 2; stroke-linecap: round; }
+.dial-ind { fill: var(--type-number); filter: drop-shadow(0 0 4px rgba(62, 154, 255, 0.7)); }
+.dial-tick { stroke: rgba(255, 255, 255, 0.30); stroke-width: 1; }
+.dial-needle { stroke: var(--type-number); stroke-width: 2; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(62, 154, 255, 0.5)); }
+.dial-hub { fill: var(--type-number); }
+.node-body input.sl-val.kn-val { width: 100%; flex: none; text-align: center; font-size: 15px; }
+.an-foot { display: flex; align-items: baseline; justify-content: center; }
+.node-body input.sl-val.an-val { width: 46px; flex: none; text-align: right; font-size: 15px; }
+.an-deg { color: var(--white-40); font: 12px var(--font-val); }
+.an-seg { margin-top: 3px; }
+.an-seg .seg-b { padding: 2px 9px; font-size: 10px; }
 
 /* --- Boolean Toggle: vertical pill in the bool wire colour (Figma 2026-07-15) —
  * off: outlined pill, light knob resting at the bottom
@@ -557,7 +605,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 
 /* --- Note Pad (params/panel): quiet dark sheet, corner-grip resizable --- */
 .np {
-  width: 100%; min-height: 44px;
+  min-width: 120px; max-width: 420px; min-height: 44px; max-height: 400px;
   background: var(--dark-100); border: 1px solid var(--dark-300); border-radius: 8px;
   padding: 6px 9px;
   display: flex; flex-direction: column;
@@ -833,6 +881,9 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .node.bare.selected, .node.bare.error { box-shadow: none; }
 .node.bare.selected .node-body > * { outline: 1px solid var(--primary); outline-offset: 3px; }
+/* …but never the resize grips — outlining those full-height strips paints
+ * stray vertical lines beside the real selection box */
+.node.bare.selected .node-body > .sl-grip-l, .node.bare.selected .node-body > .sl-grip-r { outline: none; }
 .node.bare .node-rows { padding: 0; }
 .node.bare .node-cols { position: absolute; inset: 0; pointer-events: none; }
 .node.bare .col-ins, .node.bare .col-outs {
@@ -920,7 +971,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .node-body input.sl-val:hover, .node-body input.sl-val:focus {
   border-color: var(--dark-400); background: var(--dark-150);
 }
-.node-body input.sl-val { color: var(--type-number); font: 22px/1 var(--font-val); }
+.node-body input.sl-val { color: var(--type-number); font: 18px/1 var(--font-val); }
 .node-body .sl-ends input { color: rgba(255, 255, 255, 0.22); font: 9px var(--font-val); }
 
 #ctxMenu {

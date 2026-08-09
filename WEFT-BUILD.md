@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17 — the polish pass (Hairline slider, real file overwrite, hand-rolled colour picker) + example corpus v3 (18 curated, incl. Seeing Sound + Stonehenge).** v0.1 (2026-07-12): editor,
+**Status: v0.17.1 — polish-pass fixes (resize runaway, persistent wire tints, relay dblclick), slider smart ticks + zero mark, Knob & Angle params, cloth-camera pan discoverability; corpus at 15.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -407,6 +407,34 @@ rose's petal count and the pendulum ratio), and Henge became **Stonehenge**
 roll; Shift List ∧ itself places the surviving lintel run). Retired to git
 history: Cursor wave, Scroll scene, Visualizer, Sing, Rosette, old Iso
 field, Cymatics, Harmonograph, Shape song, Rose window, Henge.
+
+v0.17.1 (2026-08-09): **James's same-day test notes.** Three real bugs:
+the Note Pad / Text List **resize runaway** (the card width was written
+back from measurements while the box width followed the card — sizes now
+flow one way, grip → box → `max-content` card, and only the native grip
+persists `values.w/h`); colour-wire tint **reverting to magenta on node
+drags** (tints now cached in `S.wireTint` by wire id and reapplied on every
+rebuild — and **live colour wires defaults on**); the relay dblclick
+genuinely not firing (selecting the wire rebuilds the SVG between the two
+clicks, so no element ever received both — replaced with manual
+double-click detection keyed on the wire id, plus `preventDefault` so the
+second click stops selecting page text). *Slider refinement*: value down to
+18px, **value-aligned smart ticks** (smallest 1-2-5 step ≥7px apart, majors
+at the next nice multiple, painted as CSS-var tile gradients, recomputed on
+range/width changes), a **zero mark** + zero-anchored fill when the range
+crosses zero, the output dot moved level with the hairline (clear of the
+track's end), and the selection cleaned to one outline + two grip pills
+(the old rule outlined the full-height grip strips — the "extra vertical
+lines"). *New params*: **Knob** (270° rotary, same rounding/label options
+as the slider) and **Angle** (direction dial, deg readout, rad/deg output —
+rad is what Rotate expects). Checkboxes are drawn, not native (bool
+literals wear the bool wire colour, settings the accent). *Cloth camera
+discoverability*: alt-drag joins ctrl/middle-drag for pan, the % chip grows
+a ⌂ when engaged, and the status bar names the gestures. *Corpus*: 15
+examples — Superformula II is now the one Superformula (I and III retired),
+Oscilloscope retired, Hexa graph's dead vec/grid pruned, and Iso-field's
+gallery card shows a curated still (`EXAMPLE_META.img` beats a rendered
+frame when the charm is interactive).
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

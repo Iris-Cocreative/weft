@@ -7,6 +7,8 @@ const Editor = (() => {
     pan: { x: 60, y: 40 }, zoom: 1,
     sel: new Set(), selWire: null, selNote: null,
     wirePaths: new Map(),    // wireId -> svg path (live-colour tint)
+    wireTint: new Map(),     // wireId -> last seen hex — survives wire rebuilds (node drags)
+    lastWireClick: null,     // {id,t,x,y} — manual dblclick detection across SVG rebuilds
     idc: 1, widc: 1, tidc: 1, gidc: 1,
     els: new Map(),          // nodeId -> element
     noteEls: new Map(),      // noteId -> element
@@ -453,6 +455,7 @@ const Editor = (() => {
     // drawWires(); the walk is O(nodes + wires), cheap even mid-drag.
     const alive = LM.sinkReachable(S.graph, NODE_DEFS, (n, d) => !!d.inspect);
     for (const [id, el] of S.els) el.classList.toggle('dead', !alive.has(id));
+    const liveTint = typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true);
     for (const w of S.graph.wires) {
       // folded groups: wires between two members vanish with them; wires
       // crossing the boundary terminate on the frame edge
@@ -465,7 +468,7 @@ const Editor = (() => {
       const path = document.createElementNS(NS, 'path');
       path.setAttribute('d', d);
       path.setAttribute('class', 'wire' + (S.selWire === w.id ? ' selected' : '') + (alive.has(w.to[0]) ? '' : ' dead'));
-      path.setAttribute('stroke', outputTypeColor(w.from));
+      path.setAttribute('stroke', (liveTint && S.wireTint.get(w.id)) || outputTypeColor(w.from));
       S.wirePaths.set(w.id, path); // addressable for the live-colour tint
       svgEl.appendChild(path);
 
@@ -478,10 +481,20 @@ const Editor = (() => {
       hit.addEventListener('pointerleave', () => path.classList.remove('hover'));
       hit.addEventListener('pointerdown', e => {
         e.stopPropagation();
+        e.preventDefault(); // a double-click must not start a page text selection
+        // double-click detection by wire id, not by element: selecting the wire
+        // rebuilds the SVG between the two clicks, so the second click lands on
+        // a replacement path and a native dblclick can never fire here
+        const now = performance.now(), lc = S.lastWireClick;
+        if (lc && lc.id === w.id && now - lc.t < 450 && Math.hypot(e.clientX - lc.x, e.clientY - lc.y) < 8) {
+          S.lastWireClick = null;
+          insertRelayOnWire(w, worldPos(e));
+          return;
+        }
+        S.lastWireClick = { id: w.id, t: now, x: e.clientX, y: e.clientY };
         S.selWire = w.id; S.sel.clear(); S.selNote = null;
         updateSelection(); drawWires();
       });
-      hit.addEventListener('dblclick', e => { e.stopPropagation(); insertRelayOnWire(w, worldPos(e)); });
       svgEl.appendChild(hit);
     }
     paintRelayPorts();
@@ -1755,7 +1768,7 @@ const Editor = (() => {
 
     setGraph(g) {
       S.graph = g;
-      S.sel.clear(); S.selWire = null; S.lastErr.clear();
+      S.sel.clear(); S.selWire = null; S.lastErr.clear(); S.wireTint.clear();
       S.idc = 1; S.widc = 1;
       for (const n of g.nodes) {
         const m = /^n(\d+)$/.exec(n.id);
@@ -1837,14 +1850,18 @@ const Editor = (() => {
       }
       // colour wires take the colour flowing through them (optional setting) —
       // same 150ms cadence as the readouts, only wires whose type is colour
-      if (readouts && typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', false)) {
+      if (readouts && typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true)) {
         for (const w of S.graph.wires) {
           const path = S.wirePaths.get(w.id);
           if (!path) continue;
           if (outputTypeColor(w.from) !== TYPE_COLORS.color) continue;
           const L = (ctx.out[w.from[0]] || {})[w.from[1]];
           const c = L && L[0];
-          if (c && typeof c === 'object' && 'r' in c) path.setAttribute('stroke', LM.colorToHex(c));
+          if (c && typeof c === 'object' && 'r' in c) {
+            const hex = LM.colorToHex(c);
+            S.wireTint.set(w.id, hex); // drawWiresNow reapplies this on rebuild
+            path.setAttribute('stroke', hex);
+          }
         }
       }
     },

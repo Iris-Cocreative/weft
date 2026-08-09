@@ -86,6 +86,8 @@ const WEFT_ICONS = {
   /* ---- code drafts — params ---- */
   'params/curve': '<path d="M3.5 21.5C11 21.5 9 5.5 16.5 5.5C21 5.5 22.5 9.5 23.5 12.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><circle cx="3.5" cy="21.5" r="1.2" fill="currentColor"/><circle cx="23.5" cy="12.5" r="1.2" fill="currentColor"/>',
   'params/textlist': '<circle cx="4.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="4.5" cy="13.5" r="1.2" fill="currentColor"/><circle cx="4.5" cy="20.5" r="1.2" fill="currentColor"/><path d="M9 6.5H23.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M9 13.5H23.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M9 20.5H23.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
+  'params/knob': '<path d="M6.5 20.5A9.9 9.9 0 1 1 20.5 20.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" fill="none"/><path d="M13.5 13.5L19 8" stroke="currentColor" stroke-linecap="round"/><circle cx="13.5" cy="13.5" r="1.5" fill="currentColor"/>',
+  'params/angle': '<circle cx="13.5" cy="13.5" r="10" stroke="currentColor" stroke-miterlimit="10" fill="none"/><path d="M13.5 13.5H23" stroke="currentColor" stroke-linecap="round"/><path d="M13.5 13.5L19.5 6" stroke="currentColor" stroke-linecap="round"/><path d="M18.5 11.2A5.5 5.5 0 0 0 17 9.2" stroke="currentColor" stroke-linecap="round" fill="none"/>',
 
   /* ---- code drafts — maths II ---- */
   'math/min': '<path d="M4.5 7.5L13.5 19.5L22.5 7.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13.5" cy="23" r="1.5" fill="currentColor"/>',

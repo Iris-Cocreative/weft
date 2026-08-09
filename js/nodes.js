@@ -297,18 +297,45 @@ defNode('params/slider', {
     const track = _mk('div', 'sl-track', sl);
     const rule = _mk('div', 'sl-rule', track);
     const fillEl = _mk('div', 'sl-fill', rule);
+    const zeroEl = _mk('div', 'sl-zero', rule);
+    zeroEl.dataset.n = '0';
+    zeroEl.style.display = 'none'; // paintTicks shows it when the range crosses zero
     const thumb = _mk('div', 'sl-thumb', rule);
     const ends = _mk('div', 'sl-ends', sl);
     const mn = _numInput('sl-min', v.min, ends); mn.title = 'min';
     const mx = _numInput('sl-max', v.max, ends); mx.title = 'max';
     const paintLabel = () => { lab.textContent = v.label || ''; };
+    /* ticks live on real values: the smallest 1-2-5 step whose ticks sit at
+     * least 7px apart, majors at the next nice multiple — recomputed whenever
+     * the range or the node width changes, so they stay honest, not decorative */
+    const paintTicks = () => {
+      const W = rule.offsetWidth;
+      if (!W) return;
+      const lo = Math.min(v.min, v.max), span = Math.abs(v.max - v.min) || 1;
+      const steps = [];
+      for (let k = -3; k <= 7; k++) for (const m of [1, 2, 5]) steps.push(m * Math.pow(10, k));
+      const s = steps.find(st => W * st / span >= 7) || span;
+      const M = steps.find(st => st >= 3.99 * s && Math.round(st / s) * s === st) || s * 10;
+      const px = x => (x - lo) / span * W;
+      sl.style.setProperty('--tkg', (W * s / span) + 'px');
+      sl.style.setProperty('--tko', px(Math.ceil(lo / s - 1e-9) * s) + 'px');
+      sl.style.setProperty('--tkG', (W * M / span) + 'px');
+      sl.style.setProperty('--tkO', px(Math.ceil(lo / M - 1e-9) * M) + 'px');
+      zeroEl.style.display = (v.min < 0 && v.max > 0) ? '' : 'none';
+      zeroEl.style.left = LM.clamp(px(0) / W, 0, 1) * 100 + '%';
+    };
     const fill = () => {
       const span = (v.max - v.min) || 1;
       const p = LM.clamp((v.value - v.min) / span, 0, 1) * 100;
-      fillEl.style.width = p + '%';
+      // ranges crossing zero fill from zero, so negative values read as negative
+      const z = (v.min < 0 && v.max > 0) ? (0 - v.min) / span * 100 : 0;
+      fillEl.style.left = Math.min(z, p) + '%';
+      fillEl.style.width = Math.abs(p - z) + '%';
       thumb.style.left = p + '%';
+      paintTicks();
     };
     paintLabel(); fill();
+    requestAnimationFrame(paintTicks); // rule has no width until the card is in the DOM
     const setVal = x => {
       if (!isFinite(x)) x = 0;
       v.value = x; num.value = x;
@@ -356,6 +383,7 @@ defNode('params/slider', {
           v.w = Math.round(LM.clamp(base + d, 140, 300));
           if (side === 'l') { node.x = Math.round(startNX + (base - v.w)); el.style.transform = `translate(${node.x}px, ${node.y}px)`; }
           applyW();
+          paintTicks();
           if (typeof Editor !== 'undefined' && Editor.redrawWires) Editor.redrawWires();
         };
         const up = () => {
@@ -413,6 +441,227 @@ defNode('params/slider', {
         window.removeEventListener('pointerdown', closer, true);
       };
       window.addEventListener('pointerdown', closer, true);
+    });
+  }
+});
+
+/* shared dial geometry for Knob / Angle — screen convention: 0° = east,
+ * degrees increase clockwise (matches atan2 in y-down and Rotate's direction) */
+function _dialSVG(size, r) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 ' + size + ' ' + size);
+  svg.setAttribute('class', 'dial');
+  const c = size / 2;
+  const pt = (deg, rr) => {
+    const a = deg * Math.PI / 180;
+    return [c + rr * Math.cos(a), c + rr * Math.sin(a)];
+  };
+  const arc = (a0, a1, rr) => {
+    const p0 = pt(a0, rr), p1 = pt(a1, rr);
+    return 'M ' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) +
+      ' A ' + rr + ' ' + rr + ' 0 ' + (a1 - a0 > 180 ? 1 : 0) + ' 1 ' +
+      p1[0].toFixed(2) + ' ' + p1[1].toFixed(2);
+  };
+  const el = (tag, cls) => {
+    const e = document.createElementNS(NS, tag);
+    if (cls) e.setAttribute('class', cls);
+    svg.appendChild(e);
+    return e;
+  };
+  return { svg, c, r, pt, arc, el };
+}
+
+defNode('params/knob', {
+  title: 'Knob', cat: 'Params', bare: true, width: 108,
+  desc: 'Rotary number — drag around the dial, shift snaps to integers; double-click for label, range and rounding',
+  inputs: [], outputs: [{ name: 'N', type: 'number' }],
+  defaults: { min: 0, max: 10, value: 5 },
+  compute: (a, c, node) => ({ N: node.values.value === undefined ? 0 : node.values.value }),
+  buildBody: (node, body, changed) => {
+    const v = node.values;
+    const A0 = 135, SWEEP = 270; // classic knob: 270° sweep, gap at the bottom
+    const quant = x => {
+      const m = v.mode || 'float';
+      if (m === 'int') return Math.round(x);
+      if (m === 'odd') return 2 * Math.round((x - 1) / 2) + 1;
+      if (m === 'even') return 2 * Math.round(x / 2);
+      const p = Math.pow(10, v.prec === undefined ? 3 : v.prec);
+      return Math.round(x * p) / p;
+    };
+    const kn = _mk('div', 'kn', body);
+    const lab = _mk('div', 'sl-label kn-label', kn);
+    const d = _dialSVG(64, 24);
+    kn.appendChild(d.svg);
+    const trk = d.el('path', 'dial-track');
+    trk.setAttribute('d', d.arc(A0, A0 + SWEEP, d.r));
+    const fil = d.el('path', 'dial-fill');
+    const ind = d.el('circle', 'dial-ind');
+    ind.setAttribute('r', 3);
+    const num = _numInput('sl-val kn-val', v.value, kn);
+    const paintLabel = () => { lab.textContent = v.label || ''; };
+    const paint = () => {
+      const span = (v.max - v.min) || 1;
+      const t = LM.clamp((v.value - v.min) / span, 0, 1);
+      const a = A0 + t * SWEEP;
+      fil.setAttribute('d', d.arc(A0, Math.max(A0 + 0.01, a), d.r));
+      const p = d.pt(a, d.r - 7);
+      ind.setAttribute('cx', p[0]); ind.setAttribute('cy', p[1]);
+    };
+    paintLabel(); paint();
+    const setVal = x => {
+      if (!isFinite(x)) x = 0;
+      v.value = x; num.value = x;
+      paint(); changed();
+    };
+    d.svg.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      try { d.svg.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
+      const apply = ev => {
+        const r = d.svg.getBoundingClientRect();
+        const dx = ev.clientX - (r.left + r.width / 2), dy = ev.clientY - (r.top + r.height / 2);
+        let rel = ((Math.atan2(dy, dx) * 180 / Math.PI) - A0 + 360) % 360;
+        if (rel > SWEEP) rel = rel < SWEEP + 45 ? SWEEP : 0; // the bottom gap snaps to the nearer end
+        const raw = v.min + (rel / SWEEP) * (v.max - v.min);
+        setVal(_weftShift || ev.shiftKey ? Math.round(raw) : quant(raw));
+      };
+      apply(e);
+      const mv = ev => apply(ev);
+      const up = () => {
+        d.svg.removeEventListener('pointermove', mv);
+        d.svg.removeEventListener('pointerup', up);
+        d.svg.removeEventListener('pointercancel', up);
+      };
+      d.svg.addEventListener('pointermove', mv);
+      d.svg.addEventListener('pointerup', up);
+      d.svg.addEventListener('pointercancel', up);
+    });
+    num.addEventListener('change', () => setVal(quant(parseFloat(num.value) || 0)));
+    /* double-click → label, range, rounding (the knob has no min/max end marks) */
+    kn.addEventListener('dblclick', e => {
+      if (e.target.tagName === 'INPUT') return;
+      e.stopPropagation();
+      const nodeEl = body.closest('.node');
+      const old = body.querySelector('.sl-opts');
+      if (old) { old.remove(); if (nodeEl) nodeEl.style.zIndex = ''; return; }
+      const op = _mk('div', 'sl-opts', body);
+      if (nodeEl) nodeEl.style.zIndex = 25;
+      op.addEventListener('pointerdown', ev => ev.stopPropagation());
+      op.addEventListener('dblclick', ev => ev.stopPropagation());
+      const row = (cap, val, fn) => {
+        const r = _mk('div', 'sl-opt-row', op);
+        _mk('span', 'sl-opt-cap', r).textContent = cap;
+        const i = cap === 'label' ? _mk('input', '', r) : _numInput('', val, r);
+        if (cap === 'label') { i.type = 'text'; i.value = val; i.spellcheck = false; i.placeholder = 'none'; }
+        i.addEventListener('change', () => fn(i));
+        return i;
+      };
+      row('label', v.label || '', i => { v.label = i.value.trim(); paintLabel(); changed(); });
+      row('min', v.min, i => { v.min = parseFloat(i.value) || 0; setVal(quant(v.value)); });
+      row('max', v.max, i => { v.max = parseFloat(i.value) || 0; setVal(quant(v.value)); });
+      const seg = _mk('div', 'seg', op);
+      const prow = _mk('div', 'sl-opt-row', op);
+      _mk('span', 'sl-opt-cap', prow).textContent = 'decimals';
+      const pi = _numInput('', v.prec === undefined ? 3 : v.prec, prow);
+      pi.addEventListener('change', () => {
+        v.prec = LM.clamp(Math.round(parseFloat(pi.value) || 0), 0, 6);
+        pi.value = v.prec;
+        setVal(quant(v.value));
+      });
+      const paintPrec = () => { prow.style.display = (v.mode || 'float') === 'float' ? '' : 'none'; };
+      [['decimal', 'float'], ['integer', 'int'], ['odd', 'odd'], ['even', 'even']].forEach(m => {
+        const b = _mk('div', 'seg-b' + ((v.mode || 'float') === m[1] ? ' on' : ''), seg);
+        b.textContent = m[0];
+        _cleanClick(b, () => {
+          v.mode = m[1];
+          seg.querySelectorAll('.seg-b').forEach(x => x.classList.remove('on'));
+          b.classList.add('on');
+          paintPrec(); setVal(quant(v.value));
+        });
+      });
+      paintPrec();
+      const closer = ev => {
+        if (op.contains(ev.target)) return;
+        op.remove();
+        if (nodeEl) nodeEl.style.zIndex = '';
+        window.removeEventListener('pointerdown', closer, true);
+      };
+      window.addEventListener('pointerdown', closer, true);
+    });
+  }
+});
+
+defNode('params/angle', {
+  title: 'Angle', cat: 'Params', bare: true, width: 108,
+  desc: 'A direction dial — outputs the angle in radians or degrees; shift snaps to 15°',
+  inputs: [], outputs: [{ name: 'A', type: 'number' }],
+  defaults: { deg: 0, out: 'rad' },
+  compute: (a, c, node) => ({ A: node.values.out === 'deg' ? (node.values.deg || 0) : (node.values.deg || 0) * Math.PI / 180 }),
+  buildBody: (node, body, changed) => {
+    const v = node.values;
+    const an = _mk('div', 'kn', body);
+    const d = _dialSVG(64, 24);
+    an.appendChild(d.svg);
+    const ring = d.el('circle', 'dial-track');
+    ring.setAttribute('cx', d.c); ring.setAttribute('cy', d.c); ring.setAttribute('r', d.r);
+    for (const q of [0, 90, 180, 270]) { // cardinal ticks
+      const t = d.el('line', 'dial-tick');
+      const p0 = d.pt(q, d.r - 3), p1 = d.pt(q, d.r + 3);
+      t.setAttribute('x1', p0[0]); t.setAttribute('y1', p0[1]);
+      t.setAttribute('x2', p1[0]); t.setAttribute('y2', p1[1]);
+    }
+    const needle = d.el('line', 'dial-needle');
+    needle.setAttribute('x1', d.c); needle.setAttribute('y1', d.c);
+    const hub = d.el('circle', 'dial-hub');
+    hub.setAttribute('cx', d.c); hub.setAttribute('cy', d.c); hub.setAttribute('r', 2.5);
+    const foot = _mk('div', 'an-foot', an);
+    const num = _numInput('sl-val an-val', Math.round(v.deg || 0), foot);
+    _mk('span', 'an-deg', foot).textContent = '°';
+    const seg = _mk('div', 'seg an-seg', an);
+    const paint = () => {
+      const p = d.pt(v.deg || 0, d.r - 4);
+      needle.setAttribute('x2', p[0]); needle.setAttribute('y2', p[1]);
+      if (document.activeElement !== num) num.value = Math.round(v.deg || 0);
+    };
+    paint();
+    const setDeg = x => {
+      if (!isFinite(x)) x = 0;
+      v.deg = ((x % 360) + 360) % 360;
+      paint(); changed();
+    };
+    d.svg.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      try { d.svg.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
+      const apply = ev => {
+        const r = d.svg.getBoundingClientRect();
+        const dx = ev.clientX - (r.left + r.width / 2), dy = ev.clientY - (r.top + r.height / 2);
+        const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+        setDeg(_weftShift || ev.shiftKey ? Math.round(deg / 15) * 15 : Math.round(deg * 10) / 10);
+      };
+      apply(e);
+      const mv = ev => apply(ev);
+      const up = () => {
+        d.svg.removeEventListener('pointermove', mv);
+        d.svg.removeEventListener('pointerup', up);
+        d.svg.removeEventListener('pointercancel', up);
+      };
+      d.svg.addEventListener('pointermove', mv);
+      d.svg.addEventListener('pointerup', up);
+      d.svg.addEventListener('pointercancel', up);
+    });
+    num.addEventListener('change', () => setDeg(parseFloat(num.value) || 0));
+    [['rad', 'rad'], ['deg', 'deg']].forEach(m => {
+      const b = _mk('div', 'seg-b' + ((v.out || 'rad') === m[1] ? ' on' : ''), seg);
+      b.textContent = m[0];
+      b.title = m[1] === 'rad' ? 'output radians (what Rotate expects)' : 'output degrees';
+      _cleanClick(b, () => {
+        v.out = m[1];
+        seg.querySelectorAll('.seg-b').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        changed();
+      });
     });
   }
 });
@@ -681,25 +930,25 @@ defNode('params/anchor', {
  * card follows the box */
 function _resizable(node, box, changed) {
   const v = node.values;
-  box.classList.toggle('sized', !!v.h);
+  box.classList.toggle('sized', !!(v.w || v.h));
   box.style.resize = 'both';
   box.style.overflow = 'hidden';
-  if (v.w) box.style.width = LM.clamp(v.w, 120, 420) + 'px';
+  // the box always has an explicit width and the card shrink-wraps it — sizes
+  // flow one way only (grip → box → card), so there is no measure-feedback loop
+  box.style.width = LM.clamp(v.w || 174, 120, 420) + 'px';
   if (v.h) box.style.height = LM.clamp(v.h, 44, 400) + 'px';
-  let pad = 2, ready = false, t = null; // bare cards: just the 1px borders
-  requestAnimationFrame(() => {
-    const card = box.closest('.node');
-    if (card && box.offsetWidth) pad = Math.max(2, card.offsetWidth - box.offsetWidth);
-    ready = true;
-  });
+  const card = box.closest('.node');
+  if (card) card.style.width = 'max-content';
+  let aw = box.style.width, ah = box.style.height, t = null;
   new ResizeObserver(() => {
-    if (!ready || !box.offsetWidth || !box.offsetHeight) return;
+    // only the native grip writes inline sizes — content growth (textarea
+    // rows) changes offsets without touching style and must not persist
+    if (box.style.width === aw && box.style.height === ah) return;
+    aw = box.style.width; ah = box.style.height;
     const w = Math.round(box.offsetWidth), h = Math.round(box.offsetHeight);
-    if (w === v.w && h === v.h) return;
+    if (!w || !h || (w === v.w && h === v.h)) return;
     v.w = w; v.h = h;
     box.classList.add('sized');
-    const card = box.closest('.node');
-    if (card) card.style.width = (w + pad) + 'px';
     if (typeof Editor !== 'undefined' && Editor.redrawWires) Editor.redrawWires();
     clearTimeout(t);
     t = setTimeout(changed, 300);
