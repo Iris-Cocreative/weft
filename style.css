@@ -180,6 +180,59 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
  * Deliberately NOT the .disabled look: bypass and dead-end are different facts. */
 .wire.dead { filter: saturate(0.25); opacity: 0.4; }
 
+/* colour picker popover — hand-rolled, one for every colour in the app */
+.cp {
+  position: fixed; z-index: 80; width: 196px;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); padding: 9px;
+}
+.cp-sv { position: relative; height: 128px; border-radius: 6px; cursor: crosshair; touch-action: none; }
+.cp-dot {
+  position: absolute; width: 11px; height: 11px; margin: -5.5px;
+  border: 2px solid #fff; border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); pointer-events: none;
+}
+.cp-hue, .cp-alpha { position: relative; height: 12px; border-radius: 6px; cursor: ew-resize; touch-action: none; }
+.cp-hue {
+  background: linear-gradient(90deg, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+.cp-alpha {
+  background:
+    linear-gradient(90deg, transparent, var(--cp, #fff)),
+    repeating-conic-gradient(rgba(255, 255, 255, 0.22) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px;
+}
+.cp-pin {
+  position: absolute; top: -2px; bottom: -2px; width: 4px; margin-left: -2px;
+  border-radius: 2px; background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); pointer-events: none;
+}
+.cp-row { display: flex; gap: 6px; }
+.cp-hex {
+  flex: 1; min-width: 0; padding: 3px 6px;
+  background: var(--dark-150); border: 1px solid var(--dark-400); border-radius: 5px;
+  color: var(--text); font: 11px var(--font-val); outline: none;
+}
+.cp-a {
+  width: 46px; padding: 3px 4px;
+  background: var(--dark-150); border: 1px solid var(--dark-400); border-radius: 5px;
+  color: var(--text); font: 11px var(--font-val); outline: none;
+}
+.cp-recent { display: flex; gap: 5px; min-height: 0; }
+.cp-recent:empty { display: none; }
+.cp-chip {
+  width: 16px; height: 16px; border-radius: 50%; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+.cp-chip:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
+
+/* colour port literal: a chip that opens the picker */
+.lit-swatch {
+  display: inline-block; width: 15px; height: 15px; border-radius: 50%;
+  cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.lit-swatch:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6); }
+
 /* settings popover (⚙ in loom tools) */
 #settingsPop {
   position: absolute; top: 46px; right: 12px; z-index: 30;
@@ -207,6 +260,10 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   cursor: grab;
 }
 .cnote.editing { cursor: auto; border-color: color-mix(in srgb, #c9a86a 55%, transparent); }
+.cnote.selected {
+  outline: 1px solid var(--accent); outline-offset: 2px;
+  box-shadow: 0 0 7.5px rgba(94, 234, 212, 0.33), 0 6px 18px rgba(0, 0, 0, 0.3);
+}
 .cnote textarea {
   width: 100%; height: 100%; resize: none;
   background: none; border: none; outline: none;
@@ -498,22 +555,25 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .gph { padding: 4px; min-height: 0; }
 .gph-cv { display: block; border-radius: 5px; }
 
-/* --- Note Pad (params/panel): quiet dark sheet --- */
+/* --- Note Pad (params/panel): quiet dark sheet, corner-grip resizable --- */
 .np {
   width: 100%; min-height: 44px;
   background: var(--dark-100); border: 1px solid var(--dark-300); border-radius: 8px;
   padding: 6px 9px;
+  display: flex; flex-direction: column;
 }
 .panel-src {
-  width: 100%; resize: vertical; min-height: 24px;
+  width: 100%; resize: none; min-height: 24px;
   background: transparent; border: none;
   color: var(--white-80); font: 11px/1.5 var(--font-val); outline: none;
 }
+.np.sized .panel-src { flex: 1; }
 .panel-out {
   max-height: 150px; overflow: auto;
   font: 11px/1.5 var(--font-val); color: var(--white-80);
   white-space: pre; user-select: text;
 }
+.np.sized .panel-out { max-height: none; flex: 1; }
 
 /* palette glyph for the swatch (its icon is a colour wheel, CSS-drawn) */
 .icon-swatch {

@@ -5,7 +5,8 @@ const Editor = (() => {
   const S = {
     graph: { nodes: [], wires: [] },
     pan: { x: 60, y: 40 }, zoom: 1,
-    sel: new Set(), selWire: null,
+    sel: new Set(), selWire: null, selNote: null,
+    wirePaths: new Map(),    // wireId -> svg path (live-colour tint)
     idc: 1, widc: 1, tidc: 1, gidc: 1,
     els: new Map(),          // nodeId -> element
     noteEls: new Map(),      // noteId -> element
@@ -330,19 +331,19 @@ const Editor = (() => {
       i.addEventListener('change', () => set(i.value));
       holder.appendChild(i);
     } else if (inp.type === 'color') {
-      const c = cur() || { r: 255, g: 255, b: 255, a: 1 };
-      const i = document.createElement('input');
-      i.type = 'color'; i.value = LM.colorToHex(c);
-      const al = document.createElement('input');
-      al.type = 'number'; al.step = 'any'; al.min = 0; al.max = 1; al.className = 'alpha';
-      al.value = c.a === undefined ? 1 : c.a; al.title = 'alpha';
-      const upd = () => {
-        const col = LM.hexToColor(i.value, LM.clamp(parseFloat(al.value) || 0, 0, 1));
-        set(col);
+      const chip = document.createElement('span');
+      chip.className = 'lit-swatch';
+      const paintChip = c => {
+        chip.style.background = LM.colorToHex(c);
+        chip.style.opacity = c.a === undefined ? 1 : Math.max(0.2, c.a);
+        chip.title = LM.colorToHex(c) + ((c.a !== undefined && c.a !== 1) ? ' · ' + c.a : '');
       };
-      i.addEventListener('input', upd);
-      al.addEventListener('change', upd);
-      holder.appendChild(i); holder.appendChild(al);
+      paintChip(cur() || { r: 255, g: 255, b: 255, a: 1 });
+      chip.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        pickColor(chip, cur() || { r: 255, g: 255, b: 255, a: 1 }, c => { paintChip(c); set(c); });
+      });
+      holder.appendChild(chip);
     } else if (inp.type === 'point' || inp.type === 'vector' || inp.type === 'point3') {
       /* one narrow field per component — point3 just has a third, so the branch
          is written per-component rather than per-type */
@@ -445,6 +446,7 @@ const Editor = (() => {
   function drawWiresNow() {
     const NS = 'http://www.w3.org/2000/svg';
     svgEl.innerHTML = '';
+    S.wirePaths.clear();
     // dead-branch dimming: alive = reaches an export sink or an inspector
     // (def.inspect — Panel / Graph Data / Time Graph live through postEval).
     // Recomputed here because every topology mutation funnels through
@@ -464,6 +466,7 @@ const Editor = (() => {
       path.setAttribute('d', d);
       path.setAttribute('class', 'wire' + (S.selWire === w.id ? ' selected' : '') + (alive.has(w.to[0]) ? '' : ' dead'));
       path.setAttribute('stroke', outputTypeColor(w.from));
+      S.wirePaths.set(w.id, path); // addressable for the live-colour tint
       svgEl.appendChild(path);
 
       const hit = document.createElementNS(NS, 'path');
@@ -475,7 +478,7 @@ const Editor = (() => {
       hit.addEventListener('pointerleave', () => path.classList.remove('hover'));
       hit.addEventListener('pointerdown', e => {
         e.stopPropagation();
-        S.selWire = w.id; S.sel.clear();
+        S.selWire = w.id; S.sel.clear(); S.selNote = null;
         updateSelection(); drawWires();
       });
       hit.addEventListener('dblclick', e => { e.stopPropagation(); insertRelayOnWire(w, worldPos(e)); });
@@ -534,12 +537,16 @@ const Editor = (() => {
     grip.className = 'cnote-grip';
     el.appendChild(ta);
     el.appendChild(grip);
-    /* click to edit, click away to save; an emptied note deletes itself */
+    /* click selects, double-click edits, click away saves — notes behave
+     * like nodes (Delete removes a selected one; empty notes survive) */
     ta.addEventListener('blur', () => {
       ta.style.pointerEvents = '';
       el.classList.remove('editing');
-      if (!ta.value.trim()) { removeNote(t.id); changed(); return; }
       if (t.text !== ta.value) { t.text = ta.value; changed(); }
+    });
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      editNote(t.id);
     });
     positionNote(el, t);
     notesLayerEl.appendChild(el);
@@ -560,6 +567,7 @@ const Editor = (() => {
     const el = S.noteEls.get(id);
     if (el) el.remove();
     S.noteEls.delete(id);
+    if (S.selNote === id) S.selNote = null;
     const a = S.graph.notes || [];
     const i = a.findIndex(t => t.id === id);
     if (i >= 0) a.splice(i, 1);
@@ -688,23 +696,174 @@ const Editor = (() => {
     return { x: dir === 'out' ? f.x + f.w : f.x, y: f.y + 14 };
   }
 
+  /* ------------------------------ colour picker ------------------------------
+   * One hand-rolled popover for every colour in the app (port literals, the
+   * Colour Swatch): SV square + hue strip + alpha strip + hex + recents.
+   * Mounted on document.body with position:fixed — transformed ancestors in
+   * the node canvas can't skew it. No dependencies (invariant #7).
+   */
+
+  const _rgb2hsv = c => {
+    const r = c.r / 255, g = c.g / 255, b = c.b / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let h = 0;
+    if (d) {
+      if (mx === r) h = ((g - b) / d) % 6;
+      else if (mx === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    return { h, s: mx ? d / mx : 0, v: mx };
+  };
+  const _hsv2rgb = (h, s, v) => {
+    const f = n => {
+      const k = (n + h / 60) % 6;
+      return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255);
+    };
+    return { r: f(5), g: f(3), b: f(1) };
+  };
+
+  let _cpEl = null, _cpCloser = null;
+
+  function closePicker() {
+    if (_cpEl) { _cpEl.remove(); _cpEl = null; }
+    if (_cpCloser) { window.removeEventListener('pointerdown', _cpCloser, true); _cpCloser = null; }
+  }
+
+  function _recentColours() {
+    try { return JSON.parse(localStorage.getItem('weft:recent-colours') || '[]'); } catch (e) { return []; }
+  }
+  function _pushRecent(c) {
+    const hex = LM.colorToHex(c), a = c.a === undefined ? 1 : c.a;
+    let list = _recentColours().filter(x => !(x.hex === hex && x.a === a));
+    list.unshift({ hex, a });
+    list = list.slice(0, 8);
+    try { localStorage.setItem('weft:recent-colours', JSON.stringify(list)); } catch (e) {}
+  }
+
+  function pickColor(anchorEl, color, onChange) {
+    closePicker();
+    const cur = Object.assign({ r: 255, g: 255, b: 255, a: 1 }, color || {});
+    let { h, s, v } = _rgb2hsv(cur);
+    let a = cur.a === undefined ? 1 : cur.a;
+
+    const pop = document.createElement('div');
+    pop.className = 'cp';
+    pop.innerHTML = `
+      <div class="cp-sv"><div class="cp-dot"></div></div>
+      <div class="cp-hue"><div class="cp-pin"></div></div>
+      <div class="cp-alpha"><div class="cp-pin"></div></div>
+      <div class="cp-row"><input class="cp-hex" spellcheck="false"><input class="cp-a" type="number" min="0" max="1" step="any" title="alpha"></div>
+      <div class="cp-recent"></div>`;
+    const sv = pop.querySelector('.cp-sv'), dot = pop.querySelector('.cp-dot');
+    const hue = pop.querySelector('.cp-hue'), huePin = hue.querySelector('.cp-pin');
+    const al = pop.querySelector('.cp-alpha'), alPin = al.querySelector('.cp-pin');
+    const hex = pop.querySelector('.cp-hex'), aNum = pop.querySelector('.cp-a');
+    const recent = pop.querySelector('.cp-recent');
+
+    const rgb = () => Object.assign(_hsv2rgb(h, s, v), { a });
+    const emit = () => onChange(rgb());
+    const paint = () => {
+      const base = _hsv2rgb(h, 1, 1);
+      sv.style.background =
+        `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, rgb(${base.r},${base.g},${base.b}))`;
+      dot.style.left = (s * 100) + '%';
+      dot.style.top = ((1 - v) * 100) + '%';
+      huePin.style.left = (h / 360 * 100) + '%';
+      alPin.style.left = (a * 100) + '%';
+      const c = rgb();
+      al.style.setProperty('--cp', `rgb(${c.r},${c.g},${c.b})`);
+      if (document.activeElement !== hex) hex.value = LM.colorToHex(c);
+      if (document.activeElement !== aNum) aNum.value = Math.round(a * 100) / 100;
+    };
+
+    const strip = (el, apply) => {
+      el.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        const move = ev => {
+          const r = el.getBoundingClientRect();
+          apply(LM.clamp((ev.clientX - r.left) / (r.width || 1), 0, 1),
+                LM.clamp((ev.clientY - r.top) / (r.height || 1), 0, 1));
+          paint(); emit();
+        };
+        move(e);
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      });
+    };
+    strip(sv, (x, y) => { s = x; v = 1 - y; });
+    strip(hue, x => { h = x * 360; });
+    strip(al, x => { a = Math.round(x * 100) / 100; });
+
+    hex.addEventListener('change', () => {
+      const c = LM.hexToColor(hex.value, a);
+      if (c) { ({ h, s, v } = _rgb2hsv(c)); paint(); emit(); }
+    });
+    aNum.addEventListener('change', () => {
+      a = LM.clamp(parseFloat(aNum.value) || 0, 0, 1);
+      paint(); emit();
+    });
+
+    for (const rc of _recentColours()) {
+      const b = document.createElement('span');
+      b.className = 'cp-chip';
+      b.style.background = rc.hex;
+      b.style.opacity = rc.a === undefined ? 1 : Math.max(0.15, rc.a);
+      b.title = rc.hex + (rc.a !== undefined && rc.a !== 1 ? ' · ' + rc.a : '');
+      b.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        const c = LM.hexToColor(rc.hex, rc.a === undefined ? 1 : rc.a);
+        ({ h, s, v } = _rgb2hsv(c));
+        a = c.a;
+        paint(); emit();
+      });
+      recent.appendChild(b);
+    }
+
+    document.body.appendChild(pop);
+    const ar = anchorEl.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = Math.round(LM.clamp(ar.left, 8, window.innerWidth - pw - 8)) + 'px';
+    pop.style.top = Math.round(ar.bottom + 8 + ph > window.innerHeight
+      ? Math.max(8, ar.top - ph - 8) : ar.bottom + 8) + 'px';
+    paint();
+
+    pop.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter') closeCommit(); });
+    const closeCommit = () => { _pushRecent(rgb()); closePicker(); };
+    _cpCloser = ev => {
+      const t = ev.target instanceof Node ? ev.target : null;
+      if (t && (pop.contains(t) || anchorEl === t || anchorEl.contains(t))) return;
+      closeCommit();
+    };
+    window.addEventListener('pointerdown', _cpCloser, true);
+    _cpEl = pop;
+  }
+
   /* ------------------------------ selection ------------------------------ */
 
   function selectOnly(id) {
-    S.sel.clear(); S.sel.add(id); S.selWire = null;
+    S.sel.clear(); S.sel.add(id); S.selWire = null; S.selNote = null;
     updateSelection();
   }
 
   function clearSel() {
-    S.sel.clear(); S.selWire = null;
+    S.sel.clear(); S.selWire = null; S.selNote = null;
     updateSelection(); drawWires();
   }
 
   function updateSelection() {
     for (const [id, el] of S.els) el.classList.toggle('selected', S.sel.has(id));
+    for (const [id, el] of S.noteEls) el.classList.toggle('selected', S.selNote === id);
   }
 
   function deleteSelection() {
+    if (S.selNote) { removeNote(S.selNote); S.selNote = null; changed(); return; }
     if (S.selWire) { removeWire(S.selWire); return; }
     if (!S.sel.size) return;
     for (const id of [...S.sel]) removeNode(id);
@@ -953,7 +1112,7 @@ const Editor = (() => {
       // a still click on empty space is a deselect (shift keeps the base selection) —
       // without this, selection only cleared when the pointer happened to move
       if (!d.moved) {
-        S.sel = new Set(d.base); S.selWire = null;
+        S.sel = new Set(d.base); S.selWire = null; S.selNote = null;
         updateSelection(); drawWires();
       }
       S.drag = null;
@@ -966,7 +1125,10 @@ const Editor = (() => {
     }
     if (d.kind === 'note') {
       S.drag = null;
-      if (!d.moved) editNote(d.id); else changed();
+      if (!d.moved) {
+        S.sel.clear(); S.selWire = null; S.selNote = d.id;
+        updateSelection();
+      } else changed();
       return;
     }
     if (d.kind === 'noteresize') { S.drag = null; changed(); return; }
@@ -1581,7 +1743,7 @@ const Editor = (() => {
       });
 
       editorEl.addEventListener('dblclick', e => {
-        if (e.target.closest('.node, #quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
+        if (e.target.closest('.node, .cnote, .gframe-bar, #quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
         openQA(e);
       });
       // right-click behavior lives in pointerdown/up (clean click = menu, drag = pan)
@@ -1673,6 +1835,18 @@ const Editor = (() => {
           });
         }
       }
+      // colour wires take the colour flowing through them (optional setting) —
+      // same 150ms cadence as the readouts, only wires whose type is colour
+      if (readouts && typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', false)) {
+        for (const w of S.graph.wires) {
+          const path = S.wirePaths.get(w.id);
+          if (!path) continue;
+          if (outputTypeColor(w.from) !== TYPE_COLORS.color) continue;
+          const L = (ctx.out[w.from[0]] || {})[w.from[1]];
+          const c = L && L[0];
+          if (c && typeof c === 'object' && 'r' in c) path.setAttribute('stroke', LM.colorToHex(c));
+        }
+      }
     },
 
     selectedIds() { return S.sel; },
@@ -1690,6 +1864,7 @@ const Editor = (() => {
     zoomToFit,
     zoom: () => S.zoom,
     redrawWires: drawWires,
+    pickColor,
 
     /* rebuild one node's card in place — dynamic-port nodes (Custom JS) edit
      * their own ports; wires to a port that no longer exists are pruned */

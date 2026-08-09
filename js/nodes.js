@@ -443,7 +443,6 @@ defNode('params/swatch', {
     const sw = _mk('div', 'sw', body);
     const circle = _mk('div', 'sw-circle', sw);
     circle.title = 'Colour Swatch';
-    const col = _mk('input', '', sw); col.type = 'color'; col.value = node.values.hex;
     const al = _mk('input', 'sw-alpha', sw);
     al.type = 'range'; al.min = 0; al.max = 1; al.step = 0.01;
     al.value = node.values.a === undefined ? 1 : node.values.a;
@@ -455,8 +454,15 @@ defNode('params/swatch', {
       al.style.setProperty('--sw', node.values.hex);
     };
     paint();
-    _cleanClick(circle, () => col.click());
-    col.addEventListener('input', () => { node.values.hex = col.value; paint(); changed(); });
+    /* the circle opens Weft's own picker (Editor.pickColor), not the OS dialog */
+    _cleanClick(circle, () => Editor.pickColor(circle,
+      LM.hexToColor(node.values.hex, node.values.a === undefined ? 1 : node.values.a),
+      c => {
+        node.values.hex = LM.colorToHex(c);
+        node.values.a = c.a === undefined ? 1 : c.a;
+        al.value = node.values.a;
+        paint(); changed();
+      }));
     al.addEventListener('input', () => { node.values.a = parseFloat(al.value); paint(); changed(); });
   }
 });
@@ -670,18 +676,49 @@ defNode('params/anchor', {
   }
 });
 
+/* editor-only: drag-resize for text boxes (Note Pad, Text List) — the
+ * browser's own corner grip on the box, persisted to values.w/h, and the
+ * card follows the box */
+function _resizable(node, box, changed) {
+  const v = node.values;
+  box.classList.toggle('sized', !!v.h);
+  box.style.resize = 'both';
+  box.style.overflow = 'hidden';
+  if (v.w) box.style.width = LM.clamp(v.w, 120, 420) + 'px';
+  if (v.h) box.style.height = LM.clamp(v.h, 44, 400) + 'px';
+  let pad = 2, ready = false, t = null; // bare cards: just the 1px borders
+  requestAnimationFrame(() => {
+    const card = box.closest('.node');
+    if (card && box.offsetWidth) pad = Math.max(2, card.offsetWidth - box.offsetWidth);
+    ready = true;
+  });
+  new ResizeObserver(() => {
+    if (!ready || !box.offsetWidth || !box.offsetHeight) return;
+    const w = Math.round(box.offsetWidth), h = Math.round(box.offsetHeight);
+    if (w === v.w && h === v.h) return;
+    v.w = w; v.h = h;
+    box.classList.add('sized');
+    const card = box.closest('.node');
+    if (card) card.style.width = (w + pad) + 'px';
+    if (typeof Editor !== 'undefined' && Editor.redrawWires) Editor.redrawWires();
+    clearTimeout(t);
+    t = setTimeout(changed, 300);
+  }).observe(box);
+}
+
 defNode('params/panel', {
   title: 'Note Pad', cat: 'Params', desc: 'Inspect data flowing through, or type a value', width: 200, bare: true, inspect: true,
   inputs: [{ name: 'V', type: 'any' }], outputs: [{ name: 'V', type: 'any' }],
   listInputs: ['V'],
   defaults: { text: 'hello weft' },
   compute: (a, c, node) => ({ V: a.V && a.V.length ? a.V : [node.values.text] }),
-  buildBody: (node, body) => {
+  buildBody: (node, body, changed) => {
     const np = _mk('div', 'np', body);
     const ta = _mk('textarea', 'panel-src', np);
     ta.value = node.values.text; ta.rows = 1; ta.spellcheck = false;
     ta.addEventListener('input', () => { node.values.text = ta.value; });
     _mk('pre', 'panel-out', np);
+    _resizable(node, np, changed);
   },
   postEval: (node, el) => {
     const out = el.querySelector('.panel-out');
@@ -703,12 +740,16 @@ defNode('params/textlist', {
   inputs: [], outputs: [{ name: 'L', type: 'string' }],
   defaults: { text: 'one\ntwo\nthree' },
   compute: (a, c, node) => ({ L: String(node.values.text === undefined ? '' : node.values.text).split('\n').filter(s => s.length) }),
-  buildBody: (node, body) => {
+  buildBody: (node, body, changed) => {
     const tl = _mk('div', 'np tl', body);
     const ta = _mk('textarea', 'panel-src', tl);
     ta.value = node.values.text; ta.rows = 3; ta.spellcheck = false;
-    ta.addEventListener('input', () => { node.values.text = ta.value; ta.rows = Math.max(2, Math.min(12, ta.value.split('\n').length)); });
-    ta.rows = Math.max(2, Math.min(12, String(node.values.text || '').split('\n').length));
+    ta.addEventListener('input', () => {
+      node.values.text = ta.value;
+      if (!node.values.h) ta.rows = Math.max(2, Math.min(12, ta.value.split('\n').length));
+    });
+    if (!node.values.h) ta.rows = Math.max(2, Math.min(12, String(node.values.text || '').split('\n').length));
+    _resizable(node, tl, changed);
   }
 });
 
