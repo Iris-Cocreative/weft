@@ -283,7 +283,7 @@ Pass-through container — wire a source through it, or set it directly; swap th
 
 ### `params/svg` — Vector In
 
-Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; holes draw as separate outlines
+Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; compound paths keep their holes
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1509,7 +1509,7 @@ Rectangle centered at P
 
 ### `crv/region` — Region Boolean
 
-Union, intersection or difference (A minus B) of two closed regions. Weft geometry has no holes: a cutter sitting entirely inside A returns A unchanged
+Union, intersection or difference (A minus B) of two closed regions. A cutter sitting entirely inside A carves a real hole (one level — a further boolean on the result sees only its outer outline)
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2012,6 +2012,21 @@ Colour from hue, saturation, lightness (all 0..1; hue wraps)
 |---|---|---|
 | C | color |  |
 
+### `disp/rgb` — Colour RGB
+
+Colour from red, green, blue (0..255) and alpha (0..1)
+
+| in | type | default | note |
+|---|---|---|---|
+| R | number | `255` |  |
+| G | number | `255` |  |
+| B | number | `255` |  |
+| A | number | `1` |  |
+
+| out | type | note |
+|---|---|---|
+| C | color |  |
+
 ### `disp/cymatics` — Cymatics
 
 Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator. Flip R (button, trigger, toggle) to re-throw the sand.
@@ -2029,6 +2044,36 @@ Chladni plate — sand grains shake off the vibrating regions and settle along t
 | out | type | note |
 |---|---|---|
 | P | point | grain points |
+
+### `disp/deconhsl` — Deconstruct HSL
+
+Split a colour into hue, saturation, lightness and alpha (all 0..1) — the inverse of Colour HSL, for nudging a colour that came from somewhere else
+
+| in | type | default | note |
+|---|---|---|---|
+| C | color | `{"r":230,"g":237,"b":250,"a":1}` |  |
+
+| out | type | note |
+|---|---|---|
+| H | number | hue |
+| S | number | saturation |
+| L | number | lightness |
+| A | number | alpha |
+
+### `disp/deconrgb` — Deconstruct RGB
+
+Split a colour into red, green, blue (0..255) and alpha (0..1)
+
+| in | type | default | note |
+|---|---|---|---|
+| C | color | `{"r":230,"g":237,"b":250,"a":1}` |  |
+
+| out | type | note |
+|---|---|---|
+| R | number | red |
+| G | number | green |
+| B | number | blue |
+| A | number | alpha |
 
 ### `disp/draw` — Draw
 
@@ -2429,4 +2474,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-151 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`
+154 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`

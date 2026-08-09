@@ -391,14 +391,20 @@ defNode('params/swatch', {
     const circle = _mk('div', 'sw-circle', sw);
     circle.title = 'Colour Swatch';
     const col = _mk('input', '', sw); col.type = 'color'; col.value = node.values.hex;
+    const al = _mk('input', 'sw-alpha', sw);
+    al.type = 'range'; al.min = 0; al.max = 1; al.step = 0.01;
+    al.value = node.values.a === undefined ? 1 : node.values.a;
+    al.title = 'alpha';
     const paint = () => {
       const a = node.values.a === undefined ? 1 : node.values.a;
       circle.style.background = node.values.hex;
       circle.style.opacity = 0.25 + 0.75 * a;
+      al.style.setProperty('--sw', node.values.hex);
     };
     paint();
     _cleanClick(circle, () => col.click());
     col.addEventListener('input', () => { node.values.hex = col.value; paint(); changed(); });
+    al.addEventListener('input', () => { node.values.a = parseFloat(al.value); paint(); changed(); });
   }
 });
 
@@ -709,10 +715,12 @@ function _svgImport(text) {
     const meas = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     root.appendChild(meas);
     const subs = [];
+    let ei = 0;
     for (const el of root.querySelectorAll('path,rect,circle,ellipse,line,polyline,polygon')) {
       if (el === meas) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+      const myEi = ei++;
       const elM = el.getScreenCTM();
       const m = inv && elM ? inv.multiply(elM) : null;
       const fill = _svgColor(cs.fill), stroke = _svgColor(cs.stroke);
@@ -726,13 +734,13 @@ function _svgImport(text) {
           /* the seam nudge: at exactly `prev`, getPointAtLength returns the END
            * of the previous subpath, which would spike the first sample */
           if (L - prev > 1e-6)
-            subs.push({ d, a: prev && prev + Math.min(1e-3, (L - prev) / 1e4), b: L, closed: /[zZ][\s]*$/.test(chunks[i]), m, fill, stroke });
+            subs.push({ d, a: prev && prev + Math.min(1e-3, (L - prev) / 1e4), b: L, closed: /[zZ][\s]*$/.test(chunks[i]), ei: myEi, m, fill, stroke });
           prev = L;
         }
       } else if (el.getTotalLength) {
         const L = el.getTotalLength();
         if (L > 1e-6)
-          subs.push({ el, a: 0, b: L, closed: /^(rect|circle|ellipse|polygon)$/i.test(el.tagName), m, fill, stroke });
+          subs.push({ el, a: 0, b: L, closed: /^(rect|circle|ellipse|polygon)$/i.test(el.tagName), ei: myEi, m, fill, stroke });
       }
     }
     if (!subs.length) return { error: 'no drawable shapes found' };
@@ -767,15 +775,38 @@ function _svgImport(text) {
     const total = counts.reduce((a, b) => a + b, 0), CAP = 24000;
     if (total > CAP) counts = counts.map(n => Math.max(8, Math.floor(n * CAP / total)));
     const eps = maxDim / 1600;
-    const paths = subs.map((s, i) => {
+    const norm = p => [Math.round((p.x - cx) / maxDim * 1e4) / 1e4, Math.round((p.y - cy) / maxDim * 1e4) / 1e4];
+    const entries = subs.map((s, i) => {
       let pts = _rdp(sample(s, counts[i]), eps);
       if (s.closed && pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) <= eps * 2)
         pts = pts.slice(0, -1);
-      return {
-        pts: pts.map(p => [Math.round((p.x - cx) / maxDim * 1e4) / 1e4, Math.round((p.y - cy) / maxDim * 1e4) / 1e4]),
-        closed: !!s.closed, fill: s.fill, stroke: s.stroke
-      };
-    }).filter(p => p.pts.length > 1);
+      return { pts, ei: s.ei, closed: !!s.closed, fill: s.fill, stroke: s.stroke };
+    }).filter(e => e.pts.length > 1);
+    /* compound paths: the subpaths of ONE <path> nest evenodd — a closed
+       subpath sitting inside an odd number of its siblings is a hole of its
+       innermost container (outer circle + inner circle = annulus). Separate
+       elements never combine; that matches SVG's per-path fill rule. */
+    const byEl = new Map();
+    for (const e of entries) { if (!byEl.has(e.ei)) byEl.set(e.ei, []); byEl.get(e.ei).push(e); }
+    const paths = [];
+    for (const group of byEl.values()) {
+      const closed = group.filter(e => e.closed && e.pts.length > 2);
+      for (const e of closed) {
+        e._depth = 0;
+        for (const o of closed) if (o !== e && LM.ptInPoly(e.pts[0], o.pts)) e._depth++;
+      }
+      for (const e of closed) {
+        if (e._depth % 2 === 0) continue;
+        const owner = closed.find(o => o !== e && o._depth === e._depth - 1 && LM.ptInPoly(e.pts[0], o.pts));
+        if (owner) { (owner._holes = owner._holes || []).push(e.pts.map(norm)); e._hole = true; }
+      }
+      for (const e of group) {
+        if (e._hole) continue;
+        const out = { pts: e.pts.map(norm), closed: e.closed, fill: e.fill, stroke: e.stroke };
+        if (e._holes) out.holes = e._holes;
+        paths.push(out);
+      }
+    }
     return { paths };
   } finally {
     host.remove();
@@ -784,7 +815,7 @@ function _svgImport(text) {
 
 defNode('params/svg', {
   title: 'Vector In', cat: 'Params', width: 176,
-  desc: 'Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; holes draw as separate outlines',
+  desc: 'Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; compound paths keep their holes',
   inputs: [{ name: 'S', type: 'number', default: 200, label: 'size (px, long side)' }],
   outputs: [
     { name: 'G', type: 'geometry' },
@@ -798,7 +829,10 @@ defNode('params/svg', {
     const s = a.S === undefined ? 200 : a.S;
     const G = [], F = [], K = [];
     for (const p of ps) {
-      G.push({ kind: 'poly', pts: p.pts.map(q => ({ x: q[0] * s, y: q[1] * s })), closed: !!p.closed });
+      const geo = { kind: 'poly', pts: p.pts.map(q => ({ x: q[0] * s, y: q[1] * s })), closed: !!p.closed };
+      if (p.holes && p.holes.length)
+        geo.holes = p.holes.map(h => h.map(q => ({ x: q[0] * s, y: q[1] * s })));
+      G.push(geo);
       F.push(p.fill || { r: 255, g: 255, b: 255, a: 0 });
       K.push(p.stroke || { r: 255, g: 255, b: 255, a: 0 });
     }
@@ -1542,7 +1576,10 @@ defNode('crv/area', {
   compute: a => {
     if (!a.C) return {};
     const P = LM.toPoly(a.C, 128);
-    return { A: Math.abs(LM.polyArea(P.pts)), C: LM.polyCentroid(P.pts) };
+    let ar = Math.abs(LM.polyArea(P.pts));
+    if (a.C.kind === 'poly' && a.C.holes)
+      for (const h of a.C.holes) if (h.length > 2) ar = Math.max(0, ar - Math.abs(LM.polyArea(h)));
+    return { A: ar, C: LM.polyCentroid(P.pts) };
   }
 });
 
@@ -1689,7 +1726,7 @@ defNode('crv/fillet', {
 
 defNode('crv/region', {
   title: 'Region Boolean', cat: 'Curve', width: 176,
-  desc: 'Union, intersection or difference (A minus B) of two closed regions. Weft geometry has no holes: a cutter sitting entirely inside A returns A unchanged',
+  desc: 'Union, intersection or difference (A minus B) of two closed regions. A cutter sitting entirely inside A carves a real hole (one level — a further boolean on the result sees only its outer outline)',
   inputs: [{ name: 'A', type: 'geometry' }, { name: 'B', type: 'geometry' }],
   outputs: [{ name: 'C', type: 'geometry' }],
   defaults: { mode: 'union' },
@@ -1698,7 +1735,14 @@ defNode('crv/region', {
     const PA = LM.toPoly(a.A, 96), PB = LM.toPoly(a.B, 96);
     if (PA.pts.length < 3 || PB.pts.length < 3) return {};
     const res = LM.clipPoly(PA.pts, PB.pts, node.values.mode || 'union');
-    return { C: res.map(pts => ({ kind: 'poly', pts: pts, closed: true })) };
+    const polys = [], holes = [];
+    for (const c of res) (c.hole ? holes : polys).push(c);
+    const out = polys.map(pts => ({ kind: 'poly', pts: pts, closed: true }));
+    for (const h of holes) {
+      const owner = out.find(p => p.pts.length > 2 && LM.ptInPoly(h[0], p.pts));
+      if (owner) (owner.holes = owner.holes || []).push(h.slice());
+    }
+    return { C: out };
   },
   buildBody: (node, body, changed) =>
     _modeSeg(node, body, changed, 'mode',
@@ -1849,6 +1893,47 @@ defNode('disp/gradient', {
     { name: 'B', type: 'color', default: { r: 244, g: 114, b: 182, a: 1 } }],
   outputs: [{ name: 'C', type: 'color' }],
   compute: a => ({ C: LM.mixColor(a.A, a.B, LM.clamp(a.T, 0, 1)) })
+});
+
+defNode('disp/rgb', {
+  title: 'Colour RGB', cat: 'Display', desc: 'Colour from red, green, blue (0..255) and alpha (0..1)',
+  inputs: [
+    { name: 'R', type: 'number', default: 255 },
+    { name: 'G', type: 'number', default: 255 },
+    { name: 'B', type: 'number', default: 255 },
+    { name: 'A', type: 'number', default: 1 }],
+  outputs: [{ name: 'C', type: 'color' }],
+  compute: a => ({ C: { r: LM.clamp(a.R, 0, 255), g: LM.clamp(a.G, 0, 255), b: LM.clamp(a.B, 0, 255), a: LM.clamp(a.A, 0, 1) } })
+});
+
+defNode('disp/deconhsl', {
+  title: 'Deconstruct HSL', cat: 'Display',
+  desc: 'Split a colour into hue, saturation, lightness and alpha (all 0..1) — the inverse of Colour HSL, for nudging a colour that came from somewhere else',
+  inputs: [{ name: 'C', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 } }],
+  outputs: [
+    { name: 'H', type: 'number', label: 'hue' },
+    { name: 'S', type: 'number', label: 'saturation' },
+    { name: 'L', type: 'number', label: 'lightness' },
+    { name: 'A', type: 'number', label: 'alpha' }],
+  compute: a => {
+    if (!a.C) return {};
+    const h = LM.colorToHsl(a.C);
+    return { H: h.h, S: h.s, L: h.l, A: h.a };
+  }
+});
+
+defNode('disp/deconrgb', {
+  title: 'Deconstruct RGB', cat: 'Display',
+  desc: 'Split a colour into red, green, blue (0..255) and alpha (0..1)',
+  inputs: [{ name: 'C', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 } }],
+  outputs: [
+    { name: 'R', type: 'number', label: 'red' },
+    { name: 'G', type: 'number', label: 'green' },
+    { name: 'B', type: 'number', label: 'blue' },
+    { name: 'A', type: 'number', label: 'alpha' }],
+  compute: a => a.C
+    ? { R: a.C.r || 0, G: a.C.g || 0, B: a.C.b || 0, A: a.C.a === undefined ? 1 : a.C.a }
+    : {}
 });
 
 defNode('disp/bg', {

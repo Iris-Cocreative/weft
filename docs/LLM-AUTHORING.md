@@ -123,7 +123,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/graph` | Graph Data | X Y A:point B:point (list-in X,Y) | X Y | on-node plot |
 | `params/timegraph` | Time Graph | V:number (list-in) | V:number | rolling trace |
 | `params/relay` | Relay | V:any (list-in) | V:any | wire organiser |
-| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; polylines centred on (0,0), long side scaled to S px; F/K are fill/stroke per path) |
+| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; polylines centred on (0,0), long side scaled to S px; compound paths keep their holes; F/K are fill/stroke per path) |
 
 ### State (memory per list item; resets on load)
 | node | title | in | out | |
@@ -217,7 +217,7 @@ means the same place on the curve in every other.
 | `crv/join` | C (list-in) T=1 | C | chains curves whose ends meet within T px |
 | `crv/trim` | C X:cutter | C | `values.mode` `'outside'`\|`'inside'`\|`'split'` |
 | `crv/fillet` | C R=12 N=8 | C | rounds corners, radius capped at half the shorter edge |
-| `crv/region` | A B | C | `values.mode` `'union'`\|`'intersection'`\|`'difference'`; no holes |
+| `crv/region` | A B | C | `values.mode` `'union'`\|`'intersection'`\|`'difference'`; a cutter wholly inside A carves a real hole (one level — a further boolean sees only the outer outline) |
 
 ### Transform (G:geometry in → G out)
 `xf/move` (T:vector) · `xf/rotate` (A:radians, C:center) ·
@@ -255,6 +255,9 @@ shade before colouring, or unlit faces come out black.
 | `disp/draw` | G S:stroke-color F:fill-color W:width | G | fill alpha 0 = no fill |
 | `disp/bg` | C:color | | |
 | `disp/hsl` | H S L A (0–1) | C:color | |
+| `disp/rgb` | R G B (0–255) A (0–1) | C:color | |
+| `disp/deconhsl` | C:color | H S L A (0–1) | inverse of `disp/hsl` |
+| `disp/deconrgb` | C:color | R G B (0–255) A (0–1) | |
 | `disp/gradient` | T=0.5 A:color B:color | C:color | |
 | `disp/text` | T:string P S:size | G:geometry | |
 | `disp/measure` | T S P | W H G | real text metrics |

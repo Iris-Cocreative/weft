@@ -406,10 +406,13 @@ Then:
   arc length like every other kind (Divide used to bunch points on it), the
   96-point table is built once per node instead of once per sample, and a
   reversed arc no longer renders one way while hit-testing another.
-  Known gap: **no holes** — Region Boolean's difference returns A unchanged when
-  the cutter sits wholly inside it. The fix is a `holes` field on `poly` drawn
-  as a second sub-path with `evenodd`; that is an invariant-#4 decision and it
-  belongs with the `path` kind below.
+  ~~Known gap: no holes~~ — **shipped 2026-08-08 (v0.15)**: `poly` grew the
+  `holes` field (extra sub-paths, evenodd fill in drawItem, carried by
+  xformGeom, respected by pointInGeom, subtracted by Area; the analysis layer
+  sees the outer outline only, so holes degrade rather than break). Region
+  Boolean's difference now returns the cutter as a hole when it sits wholly
+  inside A, and Vector In imports compound paths as holed polys. One honest
+  level: a further boolean on a holed poly works on its outer outline.
 - ✅ **`crv/offset` — Offset Curve** (shipped 2026-07-22). Uniform offset:
   circles/arcs/lines stay exact, other kinds sample through `toPoly` into a
   miter-join polyline (`LM.offsetPoly`/`LM.offsetGeom`). Positive D = outward
@@ -428,9 +431,10 @@ Then:
   every closed shape to two points — normalized to the unit box, and stored as
   plain polylines + per-path fill/stroke colours in `node.values`. Graph JSON,
   share links and exports therefore carry the artwork with **no asset manifest
-  needed**, and the compute is a pure scale-by-S map. Holes remain the honest
-  limit (a ring imports as two same-fill outlines); true Béziers still belong
-  to the `path` kind below — when it lands, re-import upgrades the fidelity.
+  needed**, and the compute is a pure scale-by-S map. Compound paths keep
+  their holes as of v0.15 (same-day follow-up — see the geometry-pass entry);
+  true Béziers still belong to the `path` kind below — when it lands,
+  re-import upgrades the fidelity.
   **Kaleidoscope** is the dihedral partner of Mirror + Array: whole-list input,
   N wedges around C, alternate wedges reflected-then-rotated so neighbours
   share mirrored edges, K = wedge index (principle 6). The Phase-4 mandala

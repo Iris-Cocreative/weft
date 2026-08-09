@@ -70,6 +70,23 @@ const LM = {
     const f = n => { const k = (n + h * 12) % 12; return l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
     return { r: f(0) * 255, g: f(8) * 255, b: f(4) * 255, a: a === undefined ? 1 : a };
   },
+  /* the inverse of hslToColor — h/s/l all 0..1, hue 0 = red */
+  colorToHsl: c => {
+    const r = LM.clamp((c && c.r) || 0, 0, 255) / 255;
+    const g = LM.clamp((c && c.g) || 0, 0, 255) / 255;
+    const b = LM.clamp((c && c.b) || 0, 0, 255) / 255;
+    const M = Math.max(r, g, b), m = Math.min(r, g, b), d = M - m;
+    let h = 0;
+    if (d > 1e-9) {
+      if (M === r) h = ((g - b) / d + 6) % 6;
+      else if (M === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h /= 6;
+    }
+    const l = (M + m) / 2;
+    const s = d < 1e-9 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    return { h: h, s: s, l: l, a: !c || c.a === undefined ? 1 : c.a };
+  },
   colorCss: c => c ? 'rgba(' + Math.round(c.r || 0) + ',' + Math.round(c.g || 0) + ',' + Math.round(c.b || 0) + ',' + (c.a === undefined ? 1 : Math.round(c.a * 1000) / 1000) + ')' : 'rgba(0,0,0,0)',
   mixColor: (a, b, t) => ({
     r: LM.lerp(a.r, b.r, t), g: LM.lerp(a.g, b.g, t), b: LM.lerp(a.b, b.b, t),
@@ -148,7 +165,9 @@ const LM = {
    * ellipse  {kind:'ellipse', cx, cy, rx, ry, rot}
    * rect     {kind:'rect', cx, cy, w, h, rot}
    * arc      {kind:'arc', cx, cy, r, a0, a1}
-   * poly     {kind:'poly', pts, closed}
+   * poly     {kind:'poly', pts, closed, holes?}   holes: [[{x,y},…],…] — filled
+   *          evenodd by drawItem; everything else (toPoly, the analysis layer)
+   *          sees only the outer outline, so holes degrade instead of breaking
    * spline   {kind:'spline', pts, closed}   (catmull-rom through pts)
    * text     {kind:'text', text, x, y, size}
    * poly3    {kind:'poly3', pts:[{x,y,z}], closed}      3D polyline
@@ -535,7 +554,11 @@ const LM = {
     if (!hits.length) {
       if (op === 'union') return inA ? [B.slice()] : inB ? [A.slice()] : [A.slice(), B.slice()];
       if (op === 'intersection') return inA ? [A.slice()] : inB ? [B.slice()] : [];
-      return inA ? [] : [A.slice()];   /* difference; B inside A gives a hole we cannot express */
+      if (inA) return [];   /* difference; A wholly inside the cutter */
+      /* the cutter wholly inside A carves a real hole — the contour comes back
+         tagged, and Region Boolean attaches it to the poly that contains it */
+      if (inB) { const h = B.slice(); h.hole = true; return [A.slice(), h]; }
+      return [A.slice()];
     }
     if (hits.length % 2) return null;   /* transversal crossings always pair up */
 
@@ -691,7 +714,13 @@ const LM = {
     }
     const P = LM.toPoly(g, 48), pts = P.pts;
     if (!pts.length) return false;
-    if (P.closed && pts.length > 2 && LM.ptInPoly(p, pts)) return true;
+    if (P.closed && pts.length > 2 && LM.ptInPoly(p, pts)) {
+      /* a point inside one of a poly's holes is outside the region */
+      let inHole = false;
+      if (g.kind === 'poly' && g.holes)
+        for (const h of g.holes) if (h.length > 2 && LM.ptInPoly(p, h)) { inHole = true; break; }
+      if (!inHole) return true;
+    }
     const cl = LM.closestOnPoly(pts, P.closed, p);
     return !!cl && cl.dist <= pad;
   },
@@ -822,7 +851,11 @@ const LM = {
         return { kind: 'ellipse', cx: c.x, cy: c.y, rx: Math.abs(e.s1), ry: Math.abs(e.s2), rot: e.rot };
       }
       case 'text': { const p = ap({ x: g.x, y: g.y }); return { kind: 'text', text: g.text, x: p.x, y: p.y, size: (g.size || 24) * sf }; }
-      case 'poly': return { kind: 'poly', pts: (g.pts || []).map(ap), closed: !!g.closed };
+      case 'poly': {
+        const o = { kind: 'poly', pts: (g.pts || []).map(ap), closed: !!g.closed };
+        if (g.holes && g.holes.length) o.holes = g.holes.map(h => h.map(ap));
+        return o;
+      }
       case 'spline': return { kind: 'spline', pts: (g.pts || []).map(ap), closed: !!g.closed };
       /* a 2D transform on 3D geometry acts on x/y and leaves z alone — Move and
          Rotate stay predictable on a mesh instead of flattening it. Real 3D
@@ -1125,6 +1158,24 @@ const LM = {
         }
         break;
       }
+      /* a poly may carry holes — each is its own subpath, and drawItem fills
+         the whole thing evenodd so they read as holes. Every other consumer
+         (toPoly and the analysis layer on top of it) sees the outer outline
+         only: holes degrade away rather than break anything. */
+      case 'poly': {
+        const pts = g.pts || [];
+        if (!pts.length) break;
+        g2.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) g2.lineTo(pts[i].x, pts[i].y);
+        if (g.closed) g2.closePath();
+        for (const h of g.holes || []) {
+          if (!h || h.length < 3) continue;
+          g2.moveTo(h[0].x, h[0].y);
+          for (let i = 1; i < h.length; i++) g2.lineTo(h[i].x, h[i].y);
+          g2.closePath();
+        }
+        break;
+      }
       default: {
         const P = LM.toPoly(g, 72);
         if (!P.pts.length) break;
@@ -1153,7 +1204,10 @@ const LM = {
     }
     g2.beginPath();
     LM.pathGeom(g2, g);
-    if (fill && fill.a > 0) { g2.fillStyle = LM.colorCss(fill); g2.fill(); }
+    if (fill && fill.a > 0) {
+      g2.fillStyle = LM.colorCss(fill);
+      g2.fill(g.kind === 'poly' && g.holes && g.holes.length ? 'evenodd' : 'nonzero');
+    }
     if (stroke && stroke.a > 0 && w > 0) {
       g2.strokeStyle = LM.colorCss(stroke); g2.lineWidth = w;
       g2.lineJoin = 'round'; g2.lineCap = 'round'; g2.stroke();

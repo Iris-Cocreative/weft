@@ -70,8 +70,10 @@ geometry that reaches no Draw node is invisible.
   `split`. Inside and outside need a closed cutter; `split` just hands you every
   piece.
 - **Add, subtract and overlap shapes** — `crv/region(A, B)`, mode
-  `union` / `intersection` / `difference`. Closed regions only, and there are no
-  holes: a cutter entirely inside A returns A untouched.
+  `union` / `intersection` / `difference`. Closed regions only. A cutter
+  entirely inside A carves a real hole (drawn evenodd, survives transforms,
+  subtracted by Area) — one level deep: a further boolean on the result works
+  on its outer outline.
 - **Round the corners** — `crv/fillet(C, R, N)`. Works on any curve, since
   everything becomes a polyline first.
 - **Glue segments into one curve** — `crv/join(C, T)` chains curves whose ends
@@ -169,7 +171,13 @@ downstream knows 3D happened.
   value into H for rainbow-by-index, or L for brightness-by-state.
 - **Blend two colors** — `disp/gradient(T 0–1, A, B → C)`.
 - **Hand-picked color** — `params/swatch(→ C)` into `disp/draw(S stroke /
-  F fill)`. A fill with a:0 is skipped.
+  F fill)`. A fill with a:0 is skipped; the strip under the circle sets alpha.
+- **Color from channel numbers** — `disp/rgb(R, G, B 0–255, A → C)`.
+- **Nudge a colour that came from somewhere else** — `disp/deconhsl(C → H, S,
+  L, A)`, do math on the channels, rebuild with `disp/hsl`. The classic move:
+  Vector In's fill F → Deconstruct HSL → add a per-item offset to H → Colour
+  HSL → Draw F — the imported artwork's own palette, hue-shifted per copy.
+  `disp/deconrgb` is the same round trip in RGB.
 
 ## Feedback (state that reads itself)
 

@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.14 — the vector import + the kaleidoscope (Vector In / Kaleidoscope).** v0.1 (2026-07-12): editor,
+**Status: v0.15 — holes + the colour family (compound paths, Region Boolean holes, RGB/HSL deconstruct).** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -317,6 +317,28 @@ wedge). The Phase-4 mandala verdict listed kaleidoscope replication among the
 import turning inside an eight-wedge kaleidoscope, hue by K — 176 nodes,
 23 examples.
 
+v0.15 (2026-08-08, holes + the colour family — same-day follow-ups from
+James's testing): **poly grew a `holes` field**, the invariant-#4 decision the
+roadmap had been holding — `{kind:'poly', pts, closed, holes:[[pts],…]}`,
+drawn as extra subpaths and filled evenodd by drawItem, carried by xformGeom,
+respected by pointInGeom (a ring hotspot is hollow) and subtracted by Area,
+while toPoly and the whole analysis layer keep seeing only the outer outline —
+holes *degrade* in every other node rather than breaking any (one honest
+level: a further boolean on a holed poly works on its outline). Three payoffs
+at once: **Vector In imports compound paths** (the subpaths of one `<path>`
+nest evenodd, so the Circle-test ring arrives as one annulus instead of two
+stacked discs), **Region Boolean's difference carves a real hole when the
+cutter sits wholly inside A** (the "hole we cannot express" comment is gone —
+clipPoly returns the cutter as a `.hole`-tagged contour and the node attaches
+it to the poly that contains it), and transforms/Kaleidoscope replicate holed
+geometry intact. **The colour family rounded out**: Colour RGB (`disp/rgb`),
+Deconstruct HSL (`disp/deconhsl`, via the new `LM.colorToHsl` — the exact
+inverse of Colour HSL) and Deconstruct RGB (`disp/deconrgb`), plus an **alpha
+strip on Colour Swatch** — a checkerboard range slider under the circle;
+`values.a` always rode into exports, now it has a control (adding it surfaced
+two vestigial `.sw-alpha` text-field rules from an abandoned design — one
+repurposed, one removed). 179 nodes, 23 examples.
+
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
 (must pass before finishing any change).
@@ -416,7 +438,8 @@ weft/
 - **Transform**: Move, Rotate, Scale (uniform or non-uniform), Mirror,
   Array (identical copies on two basis vectors, with I/J cell keys),
   Kaleidoscope (whole input × N mirrored wedges, with the wedge index K)
-- **Display**: Draw, Text, Colour HSL, Gradient, Background, Measure Text
+- **Display**: Draw, Text, Colour HSL, Colour RGB, Deconstruct HSL,
+  Deconstruct RGB, Gradient, Background, Measure Text
   (host `ctx.measureText`), Element (a real DOM element — `<a>`, heading,
   anything — placed by geometry bounds; hover/focus/click flow back as data)
 - **Audio** (experiment, v0.8.2–3): pitch — Note (note+octave → Hz/MIDI),
@@ -430,7 +453,9 @@ weft/
 ### Geometry model (2D)
 
 Plain objects: point `{x,y}`, `line`, `circle`, `ellipse`, `rect`, `arc`,
-`poly`, `spline` (catmull-rom), `text`. `LM.toPoly` converts anything to a
+`poly` (optionally with `holes` — extra outlines filled evenodd, carried by
+transforms and hit tests, invisible to the analysis layer), `spline`
+(catmull-rom), `text`. `LM.toPoly` converts anything to a
 polyline, and the whole analysis layer works on that plain point list — sample
 once, then intersect, split, offset, hull, fillet or clip it. Every kind is
 parameterized by **arc length** over `t = 0..1` (`LM.curvePoint`,

@@ -380,12 +380,22 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .sw input[type="color"] { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
+/* alpha strip under the circle — checkerboard shows through as a fades */
 .sw-alpha {
-  width: 34px; text-align: center; padding: 0;
-  background: transparent; border: 1px solid transparent; border-radius: 3px;
-  color: var(--white-40); font: 10px var(--font-val); outline: none;
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 36px; height: 8px; margin: 0; padding: 0; cursor: ew-resize;
+  border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 4px;
+  background:
+    linear-gradient(90deg, transparent, var(--sw, #fff)),
+    repeating-conic-gradient(rgba(255, 255, 255, 0.25) 0 25%, transparent 0 50%) 0 0 / 6px 6px,
+    var(--dark-200);
+  outline: none;
 }
-.sw-alpha:hover, .sw-alpha:focus { border-color: var(--dark-400); background: var(--dark-150); color: var(--white-80); }
+.sw-alpha::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 6px; height: 12px; border-radius: 3px;
+  background: var(--white-80); border: 1px solid var(--dark-300);
+}
 
 /* --- Graph Data (params/graph): plot on the node, number-blue marks --- */
 .gph { padding: 4px; min-height: 0; }
@@ -739,12 +749,11 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 /* keep the deliberate ghost styling of bare-widget text fields despite the
    generic rule above (the slider's range track keeps its own layered bg) */
-.node-body .sl-minmax input, .node-body input.sl-val, .node-body input.sw-alpha {
+.node-body .sl-minmax input, .node-body input.sl-val {
   background: transparent; border-color: transparent;
 }
 .node-body .sl-minmax input:hover, .node-body .sl-minmax input:focus,
-.node-body input.sl-val:hover, .node-body input.sl-val:focus,
-.node-body input.sw-alpha:hover, .node-body input.sw-alpha:focus {
+.node-body input.sl-val:hover, .node-body input.sl-val:focus {
   border-color: var(--dark-400); background: var(--dark-150);
 }
 .node-body input.sl-val { color: var(--type-number); }
