@@ -6,15 +6,17 @@ const Editor = (() => {
     graph: { nodes: [], wires: [] },
     pan: { x: 60, y: 40 }, zoom: 1,
     sel: new Set(), selWire: null,
-    idc: 1, widc: 1,
+    idc: 1, widc: 1, tidc: 1, gidc: 1,
     els: new Map(),          // nodeId -> element
+    noteEls: new Map(),      // noteId -> element
+    frameEls: new Map(),     // groupId -> element
     lastErr: new Map(),
     onChange: () => {},
     drag: null, hotPort: null,
     wireRaf: false
   };
 
-  let editorEl, worldEl, nodesEl, svgEl, qaEl, qaInput, qaList, ctxEl, marqueeEl = null;
+  let editorEl, worldEl, nodesEl, svgEl, framesEl, notesLayerEl, qaEl, qaInput, qaList, ctxEl, marqueeEl = null;
 
   /* ------------------------------ helpers ------------------------------ */
 
@@ -71,6 +73,17 @@ const Editor = (() => {
     S.els.delete(id);
     S.sel.delete(id);
     S.lastErr.delete(id);
+    // group membership follows the node out; a frame with no members goes too
+    for (const f of (S.graph.groups || []).slice()) {
+      const gi = f.nodes.indexOf(id);
+      if (gi >= 0) f.nodes.splice(gi, 1);
+      if (!f.nodes.length) {
+        const fe = S.frameEls.get(f.id);
+        if (fe) fe.remove();
+        S.frameEls.delete(f.id);
+        S.graph.groups.splice(S.graph.groups.indexOf(f), 1);
+      }
+    }
     refreshAllLiterals();
     drawWires();
   }
@@ -158,11 +171,20 @@ const Editor = (() => {
       const head = document.createElement('div');
       head.className = 'node-head';
       const icon = weftIconSVG(def.id, def.cat);
-      const title = (def.dynamic && n.values && n.values.title) || def.title;
+      // label precedence: user label > cluster title (values.title — a reserved
+      // port name, so node-level label avoids the collision) > def title
+      const title = n.label || (def.dynamic && n.values && n.values.title) || def.title;
       head.innerHTML = `<span class="icon">${icon || '<span class="dot"></span>'}</span><span class="title">${title}</span><span class="head-gap"></span>`;
-      head.title = def.dynamic ? 'double-click the name to rename' : (def.desc || '');
-      if (def.dynamic) {
+      const hoverTitle = () => n.label ? def.title + (def.desc ? ' — ' + def.desc : '')
+        : def.dynamic ? 'double-click the name to rename' : (def.desc || '');
+      head.title = hoverTitle();
+      {
+        // every node renames the way clusters always have: double-click the
+        // name, commit on blur/Enter, Escape restores. Clusters keep writing
+        // values.title; everything else writes n.label (cleared when the name
+        // is typed back to the def title).
         const tEl = head.querySelector('.title');
+        const current = () => n.label || (def.dynamic && n.values && n.values.title) || def.title;
         tEl.addEventListener('dblclick', e => {
           e.stopPropagation();
           tEl.contentEditable = 'true';
@@ -172,12 +194,21 @@ const Editor = (() => {
             tEl.contentEditable = 'false';
             const t = tEl.textContent.trim() || def.title;
             tEl.textContent = t;
-            if (n.values.title !== t) { n.values.title = t; changed(); }
+            if (def.dynamic) {
+              if (n.values.title !== t) { n.values.title = t; changed(); }
+            } else {
+              const label = t === def.title ? undefined : t;
+              if (n.label !== label) {
+                if (label) n.label = label; else delete n.label;
+                head.title = hoverTitle();
+                changed();
+              }
+            }
           };
           tEl.addEventListener('blur', commit, { once: true });
           tEl.addEventListener('keydown', ev => {
             if (ev.key === 'Enter') { ev.preventDefault(); tEl.blur(); }
-            if (ev.key === 'Escape') { tEl.textContent = n.values.title || def.title; tEl.blur(); }
+            if (ev.key === 'Escape') { tEl.textContent = current(); tEl.blur(); }
           });
         });
       }
@@ -421,8 +452,12 @@ const Editor = (() => {
     const alive = LM.sinkReachable(S.graph, NODE_DEFS, (n, d) => !!d.inspect);
     for (const [id, el] of S.els) el.classList.toggle('dead', !alive.has(id));
     for (const w of S.graph.wires) {
-      const p1 = portPos(w.from[0], 'out', w.from[1]);
-      const p2 = portPos(w.to[0], 'in', w.to[1]);
+      // folded groups: wires between two members vanish with them; wires
+      // crossing the boundary terminate on the frame edge
+      const hf = hiddenBy(w.from[0]), ht = hiddenBy(w.to[0]);
+      if (hf && hf === ht) continue;
+      const p1 = hf ? frameEdge(hf, 'out') : portPos(w.from[0], 'out', w.from[1]);
+      const p2 = ht ? frameEdge(ht, 'in') : portPos(w.to[0], 'in', w.to[1]);
       const d = wirePath(p1, p2);
 
       const path = document.createElementNS(NS, 'path');
@@ -453,6 +488,200 @@ const Editor = (() => {
       t.setAttribute('stroke', '#5eead4');
       svgEl.appendChild(t);
     }
+  }
+
+  /* ------------------------------ notes & group frames ------------------------------
+   * Canvas annotations (graph format 2). Notes are text on the canvas itself —
+   * never evaluated, never exported. Groups are a titled frame drawn around an
+   * explicit list of nodes: dragging the bar moves the members, folding hides
+   * them (wires crossing the boundary terminate on the frame edge). A cluster
+   * changes evaluation; a group changes only reading.
+   */
+
+  const noteById = id => (S.graph.notes || []).find(t => t.id === id);
+  const groupById = id => (S.graph.groups || []).find(f => f.id === id);
+  /* the collapsed group hiding this node, if any */
+  const hiddenBy = nodeId => (S.graph.groups || []).find(f => f.collapsed && f.nodes.indexOf(nodeId) >= 0) || null;
+
+  function nextNoteId() {
+    while (noteById('t' + S.tidc)) S.tidc++;
+    return 't' + (S.tidc++);
+  }
+  function nextGroupId() {
+    while (groupById('g' + S.gidc)) S.gidc++;
+    return 'g' + (S.gidc++);
+  }
+
+  function positionNote(el, t) {
+    el.style.transform = `translate(${t.x}px, ${t.y}px)`;
+    el.style.width = t.w + 'px';
+    el.style.height = t.h + 'px';
+  }
+
+  function buildNote(t) {
+    const el = document.createElement('div');
+    el.className = 'cnote';
+    el.dataset.id = t.id;
+    const ta = document.createElement('textarea');
+    ta.value = t.text || '';
+    ta.spellcheck = false;
+    ta.placeholder = 'write something…';
+    const grip = document.createElement('div');
+    grip.className = 'cnote-grip';
+    el.appendChild(ta);
+    el.appendChild(grip);
+    /* click to edit, click away to save; an emptied note deletes itself */
+    ta.addEventListener('blur', () => {
+      ta.style.pointerEvents = '';
+      el.classList.remove('editing');
+      if (!ta.value.trim()) { removeNote(t.id); changed(); return; }
+      if (t.text !== ta.value) { t.text = ta.value; changed(); }
+    });
+    positionNote(el, t);
+    notesLayerEl.appendChild(el);
+    S.noteEls.set(t.id, el);
+    return el;
+  }
+
+  function editNote(id) {
+    const el = S.noteEls.get(id);
+    if (!el) return;
+    const ta = el.querySelector('textarea');
+    el.classList.add('editing');
+    ta.style.pointerEvents = 'auto';
+    ta.focus();
+  }
+
+  function removeNote(id) {
+    const el = S.noteEls.get(id);
+    if (el) el.remove();
+    S.noteEls.delete(id);
+    const a = S.graph.notes || [];
+    const i = a.findIndex(t => t.id === id);
+    if (i >= 0) a.splice(i, 1);
+  }
+
+  function addNoteAt(x, y) {
+    if (!S.graph.notes) S.graph.notes = [];
+    const t = { id: nextNoteId(), x: Math.round(x), y: Math.round(y), w: 190, h: 110, text: '' };
+    S.graph.notes.push(t);
+    buildNote(t);
+    editNote(t.id);
+    changed();
+    return t;
+  }
+
+  function positionFrame(el, f) {
+    el.style.transform = `translate(${f.x}px, ${f.y}px)`;
+    el.style.width = f.w + 'px';
+    el.style.height = f.collapsed ? '' : f.h + 'px';
+  }
+
+  function buildFrame(f) {
+    const el = document.createElement('div');
+    el.className = 'gframe' + (f.collapsed ? ' folded' : '');
+    el.dataset.id = f.id;
+    const bar = document.createElement('div');
+    bar.className = 'gframe-bar';
+    const fold = document.createElement('span');
+    fold.className = 'gf-fold';
+    fold.textContent = f.collapsed ? '▸' : '▾';
+    fold.title = 'fold the group away';
+    const tEl = document.createElement('span');
+    tEl.className = 'gf-title';
+    tEl.textContent = f.title || 'group';
+    const x = document.createElement('span');
+    x.className = 'gf-x';
+    x.textContent = '×';
+    x.title = 'ungroup (the nodes stay)';
+    bar.appendChild(fold); bar.appendChild(tEl); bar.appendChild(x);
+    el.appendChild(bar);
+    /* rename — the same gesture as every node head */
+    tEl.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      tEl.contentEditable = 'true';
+      tEl.focus();
+      document.getSelection().selectAllChildren(tEl);
+      const commit = () => {
+        tEl.contentEditable = 'false';
+        const t = tEl.textContent.trim() || 'group';
+        tEl.textContent = t;
+        if (f.title !== t) { f.title = t; changed(); }
+      };
+      tEl.addEventListener('blur', commit, { once: true });
+      tEl.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') { ev.preventDefault(); tEl.blur(); }
+        if (ev.key === 'Escape') { tEl.textContent = f.title || 'group'; tEl.blur(); }
+      });
+    });
+    positionFrame(el, f);
+    framesEl.appendChild(el);
+    S.frameEls.set(f.id, el);
+    return el;
+  }
+
+  /* hide/show a node per current group folding (a node may sit in two frames) */
+  function applyHiding(nodeId) {
+    const el = S.els.get(nodeId);
+    if (el) el.style.display = hiddenBy(nodeId) ? 'none' : '';
+  }
+
+  function setFold(id, on) {
+    const f = groupById(id);
+    if (!f) return;
+    if (on) f.collapsed = true; else delete f.collapsed;
+    const el = S.frameEls.get(id);
+    if (el) {
+      el.classList.toggle('folded', !!on);
+      el.querySelector('.gf-fold').textContent = on ? '▸' : '▾';
+      positionFrame(el, f);
+    }
+    for (const nid of f.nodes) applyHiding(nid);
+    drawWires();
+    changed();
+  }
+
+  function ungroup(id) {
+    const f = groupById(id);
+    if (!f) return;
+    const el = S.frameEls.get(id);
+    if (el) el.remove();
+    S.frameEls.delete(id);
+    const a = S.graph.groups || [];
+    a.splice(a.indexOf(f), 1);
+    for (const nid of f.nodes) applyHiding(nid);
+    drawWires();
+    changed();
+  }
+
+  function groupSelection() {
+    if (!S.sel.size) { App.flash('select some nodes to group'); return; }
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const ids = [];
+    for (const id of S.sel) {
+      const n = nodeById(id), el = S.els.get(id);
+      if (!n || !el) continue;
+      ids.push(id);
+      x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
+      x1 = Math.max(x1, n.x + el.offsetWidth); y1 = Math.max(y1, n.y + el.offsetHeight);
+    }
+    if (!ids.length) return;
+    if (!S.graph.groups) S.graph.groups = [];
+    const f = {
+      id: nextGroupId(),
+      x: Math.round(x0 - 16), y: Math.round(y0 - 44),
+      w: Math.round(x1 - x0 + 32), h: Math.round(y1 - y0 + 60),
+      title: 'group', nodes: ids
+    };
+    S.graph.groups.push(f);
+    buildFrame(f);
+    changed();
+    return f;
+  }
+
+  /* where a wire meets a folded frame: its edge, at bar height */
+  function frameEdge(f, dir) {
+    return { x: dir === 'out' ? f.x + f.w : f.x, y: f.y + 14 };
   }
 
   /* ------------------------------ selection ------------------------------ */
@@ -559,6 +788,33 @@ const Editor = (() => {
     }
     if (e.button !== 0) return;
 
+    // notes & group frames sit behind the nodes, so anything that reached
+    // them missed every node. Typing targets (an open note, a title being
+    // renamed) keep their native behavior.
+    if (e.target.closest && e.target.closest('.cnote textarea, [contenteditable="true"]')) return;
+    const gripEl = e.target.closest && e.target.closest('.cnote-grip');
+    if (gripEl) {
+      const t = noteById(gripEl.parentElement.dataset.id);
+      if (t) { e.preventDefault(); S.drag = { kind: 'noteresize', id: t.id, sx: e.clientX, sy: e.clientY, ow: t.w, oh: t.h }; return; }
+    }
+    const noteEl = e.target.closest && e.target.closest('.cnote');
+    if (noteEl) {
+      const t = noteById(noteEl.dataset.id);
+      if (t) { e.preventDefault(); S.drag = { kind: 'note', id: t.id, sx: e.clientX, sy: e.clientY, ox: t.x, oy: t.y, moved: false }; return; }
+    }
+    const barEl = e.target.closest && e.target.closest('.gframe-bar');
+    if (barEl) {
+      const f = groupById(barEl.parentElement.dataset.id);
+      if (f) {
+        e.preventDefault();
+        if (e.target.classList.contains('gf-fold')) { setFold(f.id, !f.collapsed); return; }
+        if (e.target.classList.contains('gf-x')) { ungroup(f.id); return; }
+        const members = f.nodes.map(id => nodeById(id)).filter(Boolean).map(n => ({ n, ox: n.x, oy: n.y }));
+        S.drag = { kind: 'frame', id: f.id, sx: e.clientX, sy: e.clientY, ox: f.x, oy: f.y, members, moved: false };
+        return;
+      }
+    }
+
     if (portEl) { startWire(e, portEl); return; }
     if (nodeEl) {
       if (e.target.closest('input, textarea, select, button, [contenteditable]')) return;
@@ -623,6 +879,7 @@ const Editor = (() => {
       for (const n of S.graph.nodes) {
         const el = S.els.get(n.id);
         if (!el) continue;
+        if (hiddenBy(n.id)) continue; // folded away — not marquee-selectable
         const nw = el.offsetWidth, nh = el.offsetHeight;
         const hit = crossing
           ? (n.x < x + w && n.x + nw > x && n.y < y + h && n.y + nh > y)
@@ -631,6 +888,39 @@ const Editor = (() => {
       }
       S.sel = sel; S.selWire = null;
       updateSelection();
+    } else if (d.kind === 'note') {
+      const t = noteById(d.id);
+      if (t) {
+        t.x = Math.round(d.ox + (e.clientX - d.sx) / S.zoom);
+        t.y = Math.round(d.oy + (e.clientY - d.sy) / S.zoom);
+        if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 3) d.moved = true;
+        const el = S.noteEls.get(d.id);
+        if (el) positionNote(el, t);
+      }
+    } else if (d.kind === 'noteresize') {
+      const t = noteById(d.id);
+      if (t) {
+        t.w = Math.round(Math.max(110, d.ow + (e.clientX - d.sx) / S.zoom));
+        t.h = Math.round(Math.max(60, d.oh + (e.clientY - d.sy) / S.zoom));
+        const el = S.noteEls.get(d.id);
+        if (el) positionNote(el, t);
+      }
+    } else if (d.kind === 'frame') {
+      const f = groupById(d.id);
+      if (f) {
+        const dx = (e.clientX - d.sx) / S.zoom, dy = (e.clientY - d.sy) / S.zoom;
+        if (Math.abs(dx) + Math.abs(dy) > 1) d.moved = true;
+        f.x = Math.round(d.ox + dx); f.y = Math.round(d.oy + dy);
+        const el = S.frameEls.get(d.id);
+        if (el) positionFrame(el, f);
+        for (const m of d.members) {
+          m.n.x = Math.round(m.ox + dx);
+          m.n.y = Math.round(m.oy + dy);
+          const ne = S.els.get(m.n.id);
+          if (ne) position(ne, m.n);
+        }
+        drawWires();
+      }
     } else if (d.kind === 'clothpan') {
       Viewport.camPan(e.clientX - d.lx, e.clientY - d.ly);
       d.lx = e.clientX; d.ly = e.clientY;
@@ -670,6 +960,17 @@ const Editor = (() => {
       if (!d.moved) openCtx(e, d.id);
       return;
     }
+    if (d.kind === 'note') {
+      S.drag = null;
+      if (!d.moved) editNote(d.id); else changed();
+      return;
+    }
+    if (d.kind === 'noteresize') { S.drag = null; changed(); return; }
+    if (d.kind === 'frame') {
+      S.drag = null;
+      if (d.moved) changed();
+      return;
+    }
     S.drag = null;
     editorEl.classList.remove('panning');
     if (d.kind === 'node' && d.moved) changed();
@@ -707,7 +1008,11 @@ const Editor = (() => {
       e.preventDefault();
       duplicateSelection();
     }
-    else if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G')) {
+    else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      groupSelection();
+    }
+    else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'g' || e.key === 'G')) {
       e.preventDefault();
       collapseSelection();
     }
@@ -760,11 +1065,18 @@ const Editor = (() => {
       .sort((a, b) => a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
       .slice(0, 60);
     if (qaNum) qaItems = [{ id: '__slider' }].concat(qaItems);
+    // canvas annotation, not a node — pinned at the end unless searched for
+    if (!q || 'sticky note annotation'.includes(q)) qaItems = qaItems.concat([{ id: '__note' }]);
     qaIndex = 0;
     qaList.innerHTML = qaItems.map((d, i) => {
       if (d.id === '__slider') {
         return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="__slider" title="type a number, get a slider already set to it">
           <span class="pal-icon" style="color:${CATS.Params}">${weftIconSVG('params/slider', 'Params') || ''}</span>slider ${qaNum.value}<span class="qa-cat">${qaNum.min}–${qaNum.max}</span>
+        </div>`;
+      }
+      if (d.id === '__note') {
+        return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="__note" title="a sticky note on the canvas — never evaluated, never exported">
+          <span class="pal-icon" style="color:#c9a86a"><span class="dot" style="background:#c9a86a"></span></span>sticky note<span class="qa-cat">canvas</span>
         </div>`;
       }
       const icon = d.id === 'params/swatch' ? '<span class="icon-swatch"></span>'
@@ -788,6 +1100,11 @@ const Editor = (() => {
         selectOnly(n.id);
         changed();
       }
+      return;
+    }
+    if (type === '__note') {
+      closeQA();
+      addNoteAt(qaPos.x, qaPos.y);
       return;
     }
     closeQA();
@@ -823,6 +1140,7 @@ const Editor = (() => {
       if (n.enabled === false) o.enabled = false;
       if (n.preview === false) o.preview = false;
       if (n.collapsed) o.collapsed = true;
+      if (n.label) o.label = n.label;
       return o;
     });
     const wires = S.graph.wires
@@ -896,6 +1214,7 @@ const Editor = (() => {
       if (src.enabled === false) n.enabled = false;
       if (src.preview === false) n.preview = false;
       if (src.collapsed) n.collapsed = true;
+      if (src.label) n.label = src.label;
       idMap[src.id] = n.id;
       S.graph.nodes.push(n);
       buildNode(n);
@@ -973,6 +1292,7 @@ const Editor = (() => {
     if (n.enabled === false) o.enabled = false;
     if (n.preview === false) o.preview = false;
     if (n.collapsed) o.collapsed = true;
+    if (n.label) o.label = n.label;
     return o;
   }
 
@@ -1153,6 +1473,7 @@ const Editor = (() => {
     ctxEl.innerHTML = `
       <div class="ctx-item" data-act="dup">Duplicate${many ? ' (' + S.sel.size + ')' : ''}</div>
       ${many ? `<div class="ctx-item" data-act="collapse">Collapse to cluster (${S.sel.size})</div>` : ''}
+      ${many ? `<div class="ctx-item" data-act="group">Group (${S.sel.size})</div>` : ''}
       ${n.type === 'meta/cluster' ? `<div class="ctx-item" data-act="expand">Expand cluster</div>` : ''}
       <div class="ctx-item" data-act="able">${n.enabled === false ? 'Enable' : 'Disable (pass through)'}</div>
       ${previewCapable(def, n) ? `<div class="ctx-item" data-act="prev">${n.preview === false ? 'Preview on' : 'Preview off'}</div>` : ''}
@@ -1165,6 +1486,7 @@ const Editor = (() => {
         duplicateSelection();
       }
       if (act === 'collapse') collapseSelection();
+      if (act === 'group') groupSelection();
       if (act === 'expand') expandCluster(nodeId);
       if (act === 'able') {
         n.enabled = n.enabled === false ? true : false;
@@ -1198,6 +1520,8 @@ const Editor = (() => {
       worldEl = document.getElementById('world');
       nodesEl = document.getElementById('nodes');
       svgEl = document.getElementById('wires');
+      framesEl = document.getElementById('frames');
+      notesLayerEl = document.getElementById('canvasNotes');
       qaEl = document.getElementById('quickAdd');
       qaInput = qaEl.querySelector('input');
       qaList = qaEl.querySelector('.qa-list');
@@ -1250,9 +1574,31 @@ const Editor = (() => {
         if (!w.id) w.id = 'w' + (S.widc++);
         else { const m = /^w(\d+)$/.exec(w.id); if (m) S.widc = Math.max(S.widc, +m[1] + 1); }
       }
+      // format-2 annotations — loading stays lax, malformed entries just drop
+      S.tidc = 1; S.gidc = 1;
+      g.notes = (Array.isArray(g.notes) ? g.notes : [])
+        .filter(t => t && typeof t.x === 'number' && typeof t.y === 'number');
+      g.groups = (Array.isArray(g.groups) ? g.groups : [])
+        .filter(f => f && typeof f.x === 'number' && Array.isArray(f.nodes));
+      for (const t of g.notes) {
+        const m = /^t(\d+)$/.exec(t.id || '');
+        if (m) S.tidc = Math.max(S.tidc, +m[1] + 1); else if (!t.id) t.id = nextNoteId();
+        t.w = t.w || 190; t.h = t.h || 110;
+      }
+      for (const f of g.groups) {
+        const m = /^g(\d+)$/.exec(f.id || '');
+        if (m) S.gidc = Math.max(S.gidc, +m[1] + 1); else if (!f.id) f.id = nextGroupId();
+      }
       nodesEl.innerHTML = '';
       S.els.clear();
+      notesLayerEl.innerHTML = '';
+      S.noteEls.clear();
+      framesEl.innerHTML = '';
+      S.frameEls.clear();
       for (const n of g.nodes) buildNode(n);
+      for (const t of g.notes) buildNote(t);
+      for (const f of g.groups) buildFrame(f);
+      for (const n of g.nodes) applyHiding(n.id);
       refreshAllLiterals();
       drawWiresNow();
     },

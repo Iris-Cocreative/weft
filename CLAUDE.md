@@ -84,7 +84,10 @@ plus the category order arrays in the two generators (and `catDesc` in
    2D transform moves x/y and leaves z alone. Real 3D transforms are `LM.xform3`;
    real 3D drawing goes through `d3/project`, which emits ordinary 2D geometry.
    That is why 3D needed no renderer change, no ctx change and no new invariant.
-5. **Graphs are plain JSON**: `{format:1, nodes:[{id,type,x,y,values}], wires:[{id,from:[nid,port],to:[nid,port]}]}`.
+5. **Graphs are plain JSON**: `{format:2, nodes:[{id,type,x,y,values,label?}], wires:[{id,from:[nid,port],to:[nid,port]}], notes?:[{id,x,y,w,h,text}], groups?:[{id,x,y,w,h,title,nodes:[ids],collapsed?}]}`.
+   The format-2 fields (`label`, `notes`, `groups`) are all optional and
+   editor-only — the evaluator and exporter never read them (smoke check 25
+   pins that an annotated graph exports byte-identically to a bare one).
    Never make loading strict — unknown node types must degrade gracefully
    (they already render as `?` nodes and mark an eval error, not a crash).
    Format changes go through `GRAPH_FORMAT` + a stepwise migration in

@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.15.1 — lean exporter (prune / tree-shake / gate; typical export halved).** v0.1 (2026-07-12): editor,
+**Status: v0.16 — the legibility pass (graph format 2: labels, sticky notes, group frames + dead-branch dimming).** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -350,6 +350,28 @@ serialize; cluster subgraphs slim recursively. Kaleidoscope demo export:
 70 KB → 34 KB, pixel-verified against the old export in Chrome. Two new smoke
 locks: 23 (exported parts draw bit-identically to the editor engine across
 the whole example corpus) and 24 (prune/gate/full-LM hygiene).
+v0.16 (2026-08-09): **the legibility pass** — the ROADMAP §5 autopsy closed
+in one format bump. *Dead-branch dimming*: the exporter's prune walk moved
+into the engine (`LM.sinkReachable(graph, defs, extraSink?)`); the editor
+recomputes it on every topology change and desaturates every node and wire
+that reaches no sink (contrast held — a whisper, deliberately not the
+`.disabled` bypass look). Inspector defs (`inspect: true` on Note Pad /
+Graph Data / Time Graph) count as sinks in the editor only, so a branch you
+wired up just to *look at* stays lit while the exporter's answer is untouched.
+First catch: Hexa graph shipped with a dead `vec/grid`. *Graph format 2*:
+node `label` (double-click any node's name to rename, same gesture clusters
+always had; def title on hover; cluster titles stay in `values.title`),
+canvas `notes[]` (sticky notes behind the node layer — quick-add "sticky
+note", click to edit, drag corner to resize, emptied notes delete), and
+`groups[]` (titled frames over an explicit member id list: bar-drag moves
+members, ▾ folds them away with crossing wires terminating on the frame edge,
+× ungroups, `Ctrl+Shift+G` / context menu on a multi-selection — `Ctrl+G`
+still collapses to cluster; a group changes only reading, a cluster changes
+evaluation). Migration is a no-op stamp (every new field optional), loading
+stays lax, copy/paste and collapse-to-cluster carry labels. Smoke check 25
+pins the serialize→migrate round-trip and that annotations never reach an
+export (byte-identical bundles); app.js now loads headless in the smoke
+harness under a window stub, so the format contract itself is under test.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

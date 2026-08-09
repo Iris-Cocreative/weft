@@ -1,4 +1,4 @@
-# Weft language specification (format 1)
+# Weft language specification (format 2)
 
 The formal contract for graphs, nodes, types, and evaluation. Written for two
 audiences at once: human contributors and LLMs authoring patches. The node
@@ -22,7 +22,7 @@ inventory lives in `NODE-CATALOG.md` (auto-generated — regenerate with
 
 ```json
 {
-  "format": 1,
+  "format": 2,
   "nodes": [
     { "id": "n1", "type": "params/slider", "x": 40, "y": 60,
       "values": { "min": 0, "max": 200, "value": 80 } }
@@ -36,6 +36,20 @@ inventory lives in `NODE-CATALOG.md` (auto-generated — regenerate with
 Rules:
 - `format` — integer format version. Omitted = 1. Loaders migrate old formats
   forward; a graph with a *newer* format than the app is refused, not guessed.
+  **Format 2** (2026-08-09) adds the three annotation fields below. All are
+  optional — a v1 graph is structurally valid v2, so migration is a no-op stamp.
+- `label` (optional, per node) — user-given display name shown in place of the
+  def title (the def title returns on hover). Purely editorial: the evaluator
+  and exporter never read it. Clusters keep their name in `values.title`
+  instead (`title` is a reserved port name, §9).
+- `notes` (optional, top-level) — sticky notes on the canvas:
+  `[{ "id": "t1", "x": 0, "y": 0, "w": 190, "h": 110, "text": "…" }]`.
+  Never evaluated, never exported.
+- `groups` (optional, top-level) — titled frames around an **explicit** node
+  list: `[{ "id": "g1", "x": 0, "y": 0, "w": 400, "h": 300, "title": "…",
+  "nodes": ["n1", "n2"], "collapsed": true }]`. Membership is the id list, not
+  the rectangle — predictable when frames overlap or a node is dragged across
+  an edge. A group changes only reading; a *cluster* (§9) changes evaluation.
 - `meta` (optional) — graph-level settings. Currently one key: `tuneA4`
   (concert pitch in Hz for the Audio pitch nodes; omitted = 432). Rides
   through save, autosave and export.

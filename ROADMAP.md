@@ -60,9 +60,9 @@ Diagnosis in `patches/organic-nav.md`; boundary argument in
   OUTPUT-MODES mode 2 exists.
 - [shipped v0.8] **Zoom-to-fit** — Fit button, `F` (fits selection if any),
   `Home` (fits all); zoom floor dropped to 0.08.
-- [idea] Remaining legibility: group/comment frames, relay pins, node labels,
-  sticky notes (§5 legibility pass still lists them — clusters removed the
-  urgency but they're still wanted).
+- ~~[idea] Remaining legibility: group/comment frames, relay pins, node labels,
+  sticky notes~~ → **shipped v0.16, 2026-08-09** (§5 legibility pass: format 2
+  labels/notes/groups + dead-branch dimming; relay pins had shipped 07-15).
 
 Exit met: organic-nav v2 = **28 working nodes** in one reusable Organic Nav
 cluster (nested Capsule Bar cluster inside), 3 nodes at top level, real
@@ -352,13 +352,17 @@ thing the editor could have shown him and didn't.** Read as a set, not a menu �
 they're all the same complaint (a graph can't currently say what it means), and
 they're cheap next to the tracks above.
 
-- **Labels, sticky notes, group frames.** Nodes are `c1`…`n129` with no
-  annotation; a 100-node patch is unreadable a month later, and *that* is why the
-  dead branches survived. Node `label` (optional, defaults to the def title) +
-  free sticky notes + a group frame that moves/collapses its children. Group
-  frames are also the prerequisite for the Blocker idea (§3.5) — do them first.
-  Format v2: `label` on nodes, plus top-level `notes[]` / `groups[]`. Keep loading
-  lax (invariant 5) so old patches open fine.
+- ~~**Labels, sticky notes, group frames.**~~ → **shipped v0.16, 2026-08-09**
+  exactly as spec'd: graph format 2 (`label` on nodes + top-level `notes[]` /
+  `groups[]`, all optional, loading lax, migration a no-op stamp). Every node
+  renames the way clusters always have (double-click the name; the def title
+  returns on hover); sticky notes live on the canvas behind the nodes (quick-add
+  "sticky note", click to edit, empty deletes); group frames hold an explicit
+  member list — the bar drags members along, ▾ folds them away with boundary
+  wires terminating on the frame edge, × ungroups. `Ctrl+Shift+G` groups
+  (`Ctrl+G` still collapses to cluster). Smoke check 25 pins the round-trip and
+  that annotations never reach an export bundle (byte-identical). Groups are
+  the prerequisite for the Blocker idea (§3.5) — that part is still open.
 - ~~**Subgraph / cluster node.**~~ → **shipped v0.8** (track 0.5) — and it went
   further than the cheap editor-only version sketched here: clusters are real
   nodes with real nested graphs, evaluated through `ctx.defs`, exportable and
@@ -368,9 +372,14 @@ they're cheap next to the tracks above.
   integer · decimal (3-place default, precision setting) · even · odd via the
   double-click options popover, plus a label field; shift-drag is a transient
   snap modifier exactly as spec'd — it never mutates the slider's type.
-- **Dead-branch dimming.** An output wired to nothing should be visibly dim. Free
-  to compute (the evaluator already knows the wire graph) and it makes an entire
-  category of mistake self-evident.
+- ~~**Dead-branch dimming.**~~ → **shipped v0.16, 2026-08-09**: the exporter's
+  prune walk now lives in the engine (`LM.sinkReachable`) and the editor dims
+  every node/wire that reaches no sink — desaturated, contrast held, distinct
+  from the `.disabled` bypass look. Inspector nodes (`def.inspect` on Panel /
+  Graph Data / Time Graph) count as sinks in the editor only, so inspection
+  branches stay lit while exports stay strict. First catch: the shipped Hexa
+  graph example carries a `vec/grid` (h4) wired to nothing — the fourth
+  confirmation of this autopsy.
 
 Then:
 - [idea] insert node onto an existing wire (drop-on-wire splices it in)

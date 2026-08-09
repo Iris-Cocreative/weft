@@ -18,7 +18,11 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const src = ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js']
+/* app.js holds the graph-format contract (migrate / serialize). It only
+ * touches the DOM inside functions; at load it just registers its init —
+ * the window stub leads the scope so typeof-guards elsewhere stay happy. */
+const src = 'const window = { addEventListener: () => {} };\n'
+  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js', 'js/app.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -1179,6 +1183,37 @@ for (const name of Object.keys(EXAMPLES)) {
   const cj = WeftExport.buildJS({ nodes: [
     { id: 'j', type: 'meta/js', values: { ins: [], outs: [ { name: 'R', type: 'number' } ], code: 'return { R: 1 };', mode: 'each' } } ], wires: [] });
   if (cj.indexOf('clipPolyOnce') < 0) failures.push('exporter: Custom JS export must carry the full LM');
+}
+
+/* 25 — graph format 2: labels, notes and groups round-trip through
+ * serialize → migrate, and are invisible to the runtime — the export of an
+ * annotated graph is byte-identical to the same graph without annotations */
+{
+  const base = JSON.parse(JSON.stringify(EXAMPLES['Phyllotaxis']));
+  const plain = WeftExport.buildJS(JSON.parse(JSON.stringify(base)));
+  const g = JSON.parse(JSON.stringify(base));
+  g.format = 2;
+  g.nodes[0].label = 'my renamed node';
+  g.notes = [{ id: 't1', x: 40, y: 60, w: 190, h: 110, text: 'a sticky note' }];
+  g.groups = [{ id: 'g1', x: 0, y: 0, w: 400, h: 300, title: 'a group', nodes: [g.nodes[0].id, g.nodes[1].id] }];
+  const annotated = WeftExport.buildJS(JSON.parse(JSON.stringify(g)));
+  if (annotated !== plain) failures.push('format-2: labels/notes/groups leak into the export (bundles differ)');
+  App.graph = g;
+  const snap = JSON.parse(JSON.stringify(App.serialize()));
+  if (snap.format !== 2) failures.push('format-2: serialize stamps format ' + snap.format + ', expected 2');
+  const back = App.migrate(snap);
+  if (back.nodes[0].label !== 'my renamed node') failures.push('format-2: node label lost in serialize round-trip');
+  if (!back.notes || back.notes.length !== 1 || back.notes[0].text !== 'a sticky note') failures.push('format-2: notes lost in serialize round-trip');
+  if (!back.groups || back.groups.length !== 1 || (back.groups[0].nodes || []).length !== 2) failures.push('format-2: groups lost in serialize round-trip');
+  const v1 = JSON.parse(JSON.stringify(base));
+  v1.format = 1;
+  const m = App.migrate(v1);
+  if (m.format !== 2) failures.push('format-2: migrate should step a v1 graph to 2, got ' + m.format);
+  if (m.nodes.length !== base.nodes.length || m.wires.length !== base.wires.length)
+    failures.push('format-2: migrating a v1 graph must not change its nodes or wires');
+  let refused = false;
+  try { App.migrate({ format: 99, nodes: [], wires: [] }); } catch (e) { refused = true; }
+  if (!refused) failures.push('format-2: a newer-format graph must be refused, never guessed');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

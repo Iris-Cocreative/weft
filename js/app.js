@@ -1,7 +1,7 @@
 'use strict';
 /* Weft app shell — palette, toolbar, persistence, history (undo/redo), export modal, splitter. */
 
-const GRAPH_FORMAT = 1;
+const GRAPH_FORMAT = 2;
 
 const App = {
   graph: { format: GRAPH_FORMAT, nodes: [], wires: [] },
@@ -16,7 +16,9 @@ const App = {
     if (!g || !Array.isArray(g.nodes) || !Array.isArray(g.wires)) throw new Error('not a weft graph');
     if (!g.format) g.format = 1; // pre-versioning graphs are structurally v1
     if (g.format > GRAPH_FORMAT) throw new Error('made in a newer Weft (format ' + g.format + ')');
-    // future stepwise migrations go here: if (g.format === 1) { ...; g.format = 2; }
+    // v2 adds node labels + canvas notes/groups — all optional, so a v1 graph
+    // is structurally v2 already; loading stays lax (invariant #5)
+    if (g.format === 1) { g.format = 2; }
     return g;
   },
 
@@ -29,9 +31,16 @@ const App = {
         if (n.enabled === false) o.enabled = false;
         if (n.preview === false) o.preview = false;
         if (n.collapsed) o.collapsed = true;
+        if (n.label) o.label = n.label;
         return o;
       }),
-      wires: App.graph.wires.map(w => ({ id: w.id, from: w.from, to: w.to }))
+      wires: App.graph.wires.map(w => ({ id: w.id, from: w.from, to: w.to })),
+      notes: (App.graph.notes && App.graph.notes.length)
+        ? App.graph.notes.map(t => ({ id: t.id, x: t.x, y: t.y, w: t.w, h: t.h, text: t.text }))
+        : undefined,
+      groups: (App.graph.groups && App.graph.groups.length)
+        ? App.graph.groups.map(f => ({ id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, title: f.title, nodes: f.nodes.slice(), collapsed: f.collapsed || undefined }))
+        : undefined
     };
   },
 
