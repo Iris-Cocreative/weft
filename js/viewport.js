@@ -165,14 +165,32 @@ const Viewport = {
 
     const audioHost = (typeof WeftAudio !== 'undefined') ? WeftAudio.makeHost() : null;
     const btnMute = document.getElementById('btnMute');
+    /* the user's mute choice, kept apart from pause-muting: pausing time also
+     * silences the patch, but resuming must not unmute someone who muted */
+    let userMuted = false, pauseMuted = false;
+    const paintMute = () => {
+      if (!btnMute || !audioHost) return;
+      btnMute.textContent = audioHost.isMuted() ? '🔇' : '🔊';
+      btnMute.classList.toggle('muted', audioHost.isMuted());
+    };
     if (btnMute) {
       if (!audioHost) btnMute.style.display = 'none';
       else btnMute.addEventListener('click', () => {
-        audioHost.mute(!audioHost.isMuted());
-        btnMute.textContent = audioHost.isMuted() ? '🔇' : '🔊';
-        btnMute.classList.toggle('muted', audioHost.isMuted());
+        userMuted = !userMuted;
+        audioHost.mute(userMuted || pauseMuted);
+        paintMute();
       });
     }
+    /* the one entry point for pausing time — also silences the patch, and
+     * resuming restores exactly the mute state the user had chosen */
+    Viewport.setPlaying = p => {
+      Viewport.playing = !!p;
+      if (audioHost) {
+        pauseMuted = !Viewport.playing;
+        audioHost.mute(userMuted || pauseMuted);
+        paintMute();
+      }
+    };
 
     /* client px → cloth coordinates, through the camera's inverse */
     const centered = (clientX, clientY, rect) => ({

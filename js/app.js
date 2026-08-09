@@ -250,6 +250,12 @@ const App = {
     } catch (e) { /* clipboard unavailable (file://, permissions) — show the link instead */ }
     if (copied) {
       App.flash('share link copied — the whole patch lives in the URL (' + url.length + ' chars)');
+      const b = document.getElementById('btnShare');
+      if (b && !b._resetTimer) {
+        const label = b.textContent;
+        b.textContent = 'copied ✓';
+        b._resetTimer = setTimeout(() => { b.textContent = label; b._resetTimer = null; }, 1600);
+      }
     } else {
       await App.ask({
         title: 'share link',
@@ -550,7 +556,14 @@ const App = {
 
     document.getElementById('btnSave').addEventListener('click', () => App.saveGraph());
     document.getElementById('btnSaveAs').addEventListener('click', () => App.saveGraphAs());
-    document.getElementById('btnShare').addEventListener('click', () => App.shareLink());
+    document.getElementById('btnShare').addEventListener('click', () => {
+      // surface failures — a silent rejection here reads as a dead button
+      App.shareLink().catch(e => App.ask({
+        title: 'share failed',
+        body: String((e && e.message) || e),
+        buttons: [{ label: 'OK', value: 'ok', accent: true }]
+      }));
+    });
 
     const fileInput = document.getElementById('fileInput');
     document.getElementById('btnLoad').addEventListener('click', () => fileInput.click());
@@ -575,7 +588,8 @@ const App = {
 
     const btnPlay = document.getElementById('btnPlay');
     btnPlay.addEventListener('click', () => {
-      Viewport.playing = !Viewport.playing;
+      if (Viewport.setPlaying) Viewport.setPlaying(!Viewport.playing);
+      else Viewport.playing = !Viewport.playing;
       btnPlay.textContent = Viewport.playing ? '⏸' : '▶';
     });
   },
@@ -789,7 +803,7 @@ const App = {
       paintThumbs();
     };
 
-    document.getElementById('btnGallery').addEventListener('click', open);
+    document.getElementById('btnGallery').addEventListener('click', e => { e.preventDefault(); open(); });
     document.getElementById('galleryClose').addEventListener('click', close);
     modal.addEventListener('pointerdown', e => { if (e.target === modal) close(); });
     search.addEventListener('input', apply);

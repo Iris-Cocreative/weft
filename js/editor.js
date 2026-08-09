@@ -469,6 +469,10 @@ const Editor = (() => {
       const hit = document.createElementNS(NS, 'path');
       hit.setAttribute('d', d);
       hit.setAttribute('class', 'wire-hit');
+      // seeing the wire respond is what makes "double-click for a relay"
+      // discoverable — the 2px stroke alone reads as unclickable
+      hit.addEventListener('pointerenter', () => path.classList.add('hover'));
+      hit.addEventListener('pointerleave', () => path.classList.remove('hover'));
       hit.addEventListener('pointerdown', e => {
         e.stopPropagation();
         S.selWire = w.id; S.sel.clear();
@@ -1540,7 +1544,19 @@ const Editor = (() => {
         if (!t || t.tagName !== 'INPUT' || t.type !== 'number' || !t.closest('.node')) return;
         e.preventDefault();
         const dir = e.key === 'ArrowUp' ? 1 : -1;
-        const step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+        let step = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
+        // ports that default to 1 (scales, gains, rates) live in fractions —
+        // the plain arrow walks them by 0.1 instead of doubling them
+        if (!e.shiftKey && !e.altKey) {
+          const row = t.closest('.row.in');
+          const nodeEl = t.closest('.node');
+          if (row && nodeEl) {
+            const n = nodeById(nodeEl.dataset.id);
+            const d = n && defOf(n);
+            const inp = d && insOf(n).find(i => i.name === row.dataset.input);
+            if (inp && inp.default === 1) step = 0.1;
+          }
+        }
         let v = (parseFloat(t.value) || 0) + dir * step;
         v = Math.round(v * 1e6) / 1e6; // shed float dust from ±0.1 walks
         if (t.min !== '' && v < +t.min) v = +t.min;

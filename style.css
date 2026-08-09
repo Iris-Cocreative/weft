@@ -243,7 +243,8 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .gf-title[contenteditable="true"] { outline: none; color: var(--text); }
 .gf-x { cursor: pointer; color: var(--faint); font-size: 13px; }
 .gf-x:hover { color: var(--danger); }
-.wire-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.wire.hover { stroke-width: 3.5; opacity: 1; filter: brightness(1.3); }
+.wire-hit { fill: none; stroke: transparent; stroke-width: 22; pointer-events: stroke; cursor: pointer; }
 
 #nodes { position: absolute; left: 0; top: 0; }
 
@@ -922,6 +923,10 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   background: rgba(5, 8, 13, 0.72);
   display: flex; align-items: center; justify-content: center;
   backdrop-filter: blur(3px);
+}
+/* the ask dialog can open over another modal (unsaved-changes over the
+ * gallery) — it must always paint on top */
+#askModal { z-index: 60;
 }
 .modal-box {
   width: min(760px, 92vw); max-height: 86vh;
