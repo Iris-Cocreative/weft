@@ -342,15 +342,58 @@ const App = {
     }
   },
 
-  /* ------------------------------ save to file ------------------------------ */
+  /* ------------------------------ save to file ------------------------------
+   * With the File System Access API (Chrome/Edge) Save genuinely overwrites
+   * the file it came from — no more "weft-graph (1).json" piling up in
+   * Downloads. The handle is remembered from Save-as AND from Open, cleared
+   * by New / example loads. Browsers without the API fall back to the old
+   * download flow untouched. */
 
-  saveGraph() {
-    App.download(App._fileName, JSON.stringify(App.serialize(), null, 2), 'application/json');
+  _fileHandle: null,
+
+  _rememberName(name) {
+    App._fileName = name;
+    try { localStorage.setItem('weft:filename', name); } catch (e) {}
+  },
+
+  async _pickSaveHandle() {
+    const h = await showSaveFilePicker({
+      suggestedName: App._fileName,
+      types: [{ description: 'Weft graph', accept: { 'application/json': ['.json', '.weft'] } }]
+    });
+    App._fileHandle = h;
+    App._rememberName(h.name);
+    return h;
+  },
+
+  async saveGraph() {
+    const body = JSON.stringify(App.serialize(), null, 2);
+    if (typeof showSaveFilePicker === 'function') {
+      try {
+        const h = App._fileHandle || await App._pickSaveHandle();
+        const w = await h.createWritable();
+        await w.write(body);
+        await w.close();
+        App._dirty = false;
+        App.flash('saved ' + App._fileName);
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // picker cancelled — not an error
+        // permission lost / file moved: fall back to a fresh pick next time
+        App._fileHandle = null;
+        App.flash('could not save: ' + (e.message || e));
+      }
+      return;
+    }
+    App.download(App._fileName, body, 'application/json');
     App._dirty = false;
     App.flash('saved ' + App._fileName);
   },
 
   async saveGraphAs() {
+    if (typeof showSaveFilePicker === 'function') {
+      try { await App._pickSaveHandle(); } catch (e) { return; } // cancelled
+      return App.saveGraph();
+    }
     let name = await App.ask({
       title: 'save as',
       input: App._fileName,
@@ -358,9 +401,31 @@ const App = {
     });
     if (!name) return;
     if (!/\.(json|weft)$/i.test(name)) name += '.json';
-    App._fileName = name;
-    try { localStorage.setItem('weft:filename', name); } catch (e) {}
-    App.saveGraph();
+    App._rememberName(name);
+    return App.saveGraph();
+  },
+
+  async openGraph() {
+    if (typeof showOpenFilePicker !== 'function') {
+      document.getElementById('fileInput').click();
+      return;
+    }
+    let h;
+    try {
+      [h] = await showOpenFilePicker({
+        types: [{ description: 'Weft graph', accept: { 'application/json': ['.json', '.weft'] } }]
+      });
+    } catch (e) { return; } // cancelled
+    try {
+      const f = await h.getFile();
+      App.setGraph(JSON.parse(await f.text()));
+      Editor.zoomToFit(false);
+      App._fileHandle = h;        // a later Save overwrites this same file
+      App._rememberName(h.name);
+      App.flash('opened ' + h.name);
+    } catch (e) {
+      App.flash('could not open file: ' + (e.message || e));
+    }
   },
 
   /* ------------------------------ init ------------------------------ */
@@ -532,10 +597,11 @@ const App = {
         ]
       });
       if (r === null) return false;
-      if (r === 'save') App.saveGraph();
+      if (r === 'save') await App.saveGraph();
     }
     try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
     App.setGraph(JSON.parse(JSON.stringify(EXAMPLES[name])));
+    App._fileHandle = null; // don't let a later Save overwrite a real file with an example
     Editor.zoomToFit(false);
     App.flash('loaded example: ' + name);
     return true;
@@ -607,6 +673,7 @@ const App = {
     document.getElementById('btnNew').addEventListener('click', () => {
       try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
       App.setGraph({ format: GRAPH_FORMAT, nodes: [], wires: [] });
+      App._fileHandle = null; // a fresh canvas saves to a fresh file
       App.flash('canvas cleared — previous graph backed up');
     });
 
@@ -622,7 +689,7 @@ const App = {
     });
 
     const fileInput = document.getElementById('fileInput');
-    document.getElementById('btnLoad').addEventListener('click', () => fileInput.click());
+    document.getElementById('btnLoad').addEventListener('click', () => App.openGraph());
     fileInput.addEventListener('change', () => {
       const f = fileInput.files[0];
       if (!f) return;
