@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.16 — the legibility pass (graph format 2: labels, sticky notes, group frames + dead-branch dimming).** v0.1 (2026-07-12): editor,
+**Status: v0.17 — the polish pass (Hairline slider, real file overwrite, hand-rolled colour picker) + example corpus v3 (18 curated, incl. Seeing Sound + Stonehenge).** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -372,6 +372,41 @@ stays lax, copy/paste and collapse-to-cluster carry labels. Smoke check 25
 pins the serialize→migrate round-trip and that annotations never reach an
 export (byte-identical bundles); app.js now loads headless in the smoke
 harness under a window stub, so the format contract itself is under test.
+v0.17 (2026-08-09): **the polish pass + example corpus v3** — James's
+whole-app test-drive turned into six shipped phases. *Interface*: the
+Number Slider became **"Hairline"** (his design doc, direction 1a —
+number-first 22px mono value over a 2px ticked rule, custom pointer drag,
+min/max as faint end marks, selected sliders edge-resize 140–300px into
+`values.w`); quick-add grew angle shortcuts (90/180/360 → degree slider
+pre-wired into Radians) and 0–12 small-int sliders, both behind a new ⚙
+settings popover (`weft:set-*`, `App.setting()`); **Save genuinely
+overwrites** via the File System Access API (handle kept from Save-as and
+Open, cleared by New/examples; download fallback); a **hand-rolled colour
+picker** (SV square + hue + alpha + hex + recents, body-mounted fixed
+popover) replaced the OS dialog everywhere; sticky notes behave like nodes
+(click selects, dblclick edits, Delete removes, empties survive); Note Pad
++ Text List are corner-grip resizable (`values.w/h`); colour wires can wear
+the flowing colour (setting, tinted in postEval's 150ms cadence); wires
+glow on hover with a 22px hit band (the relay dblclick was never broken —
+just undiscoverable); Share flips to "copied ✓" and surfaces failures;
+pausing time silences audio through `Viewport.setPlaying` without eating a
+manual mute; Examples joined the nav links and the tagline left the
+toolbar; ports defaulting to 1 arrow-step by 0.1; the ask dialog paints
+above the gallery. *Corpus v3 — 18 examples*: five graphs from James's own
+loom (Phyllotaxis with SVG petals, triple-layer Noise blob, Scale board,
+Golden Rings, Iso-field) + Solar system gained a true-longitude **zodiac
+ring**, Superformula became a family of three, Loop pedal grew a cloth
+transport (rec/clear/click Hotspot buttons + metronome), Scale board tunes
+everything from **one Key node**, Intersections tours the boolean toolkit
+in six labelled vignettes, **Click toy** became a machine of memory
+(Counter scenes, latch pads, Edge+Timer hold-bar, Sample & Hold
+self-advance), **Seeing Sound** merged Cymatics/Harmonograph/Shape
+song/Rose window behind Hotspot tabs (the interval ratio is at once the
+rose's petal count and the pendulum ratio), and Henge became **Stonehenge**
+(thirty sockets scored into standing/fallen/gone by a cos-biased seeded
+roll; Shift List ∧ itself places the surviving lintel run). Retired to git
+history: Cursor wave, Scroll scene, Visualizer, Sing, Rosette, old Iso
+field, Cymatics, Harmonograph, Shape song, Rose window, Henge.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test

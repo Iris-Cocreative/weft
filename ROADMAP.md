@@ -242,6 +242,25 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 
+- [shipped v0.17, 2026-08-09] **The polish pass** (James's whole-app
+  test-drive, six phases): Hairline slider (design doc 1a — number-first,
+  ticked 2px rule, edge-resize on selection into `values.w`); angle + 0–12
+  quick-add slider shortcuts behind a new ⚙ settings popover
+  (`weft:set-*`, `App.setting()`); real file overwrite via the File System
+  Access API (Save writes back to the file it came from; handle from
+  Save-as AND Open, cleared by New/examples); hand-rolled colour picker
+  everywhere (SV + hue + alpha + hex + recents — no dependencies); sticky
+  notes select/edit/delete like nodes; resizable Note Pad + Text List
+  (`values.w/h`); optional live colour-wire tint; wire hover glow + 22px
+  hit band (relay dblclick was fine, just invisible); Share feedback;
+  pause silences audio (`Viewport.setPlaying`); Examples in the nav links,
+  tagline removed (rethink pending); default-1 ports arrow-step 0.1; ask
+  dialog above the gallery. Still open from this pass: multi-document
+  editing (tabs) — deliberately out of scope, noted below.
+- [idea] multi-document editing — several graphs open at once (tabs or a
+  window-per-file via the FS-API handles). The v0.17 save overhaul laid
+  the plumbing (per-file handles); the UI is the open question.
+
 - [shipped 2026-07-14] **QoL batch** — Save as (filename remembered in
   `weft:filename`; Save reuses it); unsaved-changes dialog before an example
   replaces edited work (`App.ask()` in-app dialog — native prompts would block
@@ -342,6 +361,16 @@ is now in, so any of these can be picked up in a workshop pass):
   Iso field, Scale board, Sing, Visualizer), with Feedback chase's Delay-cycle
   lock moved into smoke check 22. Still open: the spacing pass DESIGN.md
   flags — it needs real DOM boxes, the way the 2026-07-14 audit was done.
+  **Corpus v3 (2026-08-09, v0.17)**: 21 → 18, quality over count — five
+  graphs from James's own loom replaced or joined (Phyllotaxis w/ SVG
+  petals, triple Noise blob, Scale board, Golden Rings, Iso-field), Solar
+  system gained the zodiac, Superformula became a family of three, Loop
+  pedal grew a cloth transport + metronome, Click toy became a state-family
+  machine, Vesica grew into the Intersections tour, **Seeing Sound** merged
+  the four scope pieces behind Hotspot tabs, and Henge became a true
+  **Stonehenge** (ruin-as-arithmetic: Cull Pattern + Shift List). Retired:
+  Cursor wave, Scroll scene, Visualizer, Sing, Rosette, old Iso field,
+  Cymatics, Harmonograph, Shape song, Rose window, Henge.
 
 ### Legibility pass — [next], James 2026-07-14
 
