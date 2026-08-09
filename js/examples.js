@@ -4178,47 +4178,2300 @@ const EXAMPLES = {
   /* three circles = three independent toggle buttons from ONE node chain
    * (hotspot/latch/counter are per-list-item state machines); a real DOM
    * Button node resets everything */
-  'Click toy': _EX([
-    ['n1', 'sets/series', 30, 40, { S: -160, N: 160, C: 3 }],
-    ['n2', 'vec/construct', 240, 40],
-    ['n3', 'crv/circle', 460, 40, { R: 46 }],
-    ['n4', 'input/hotspot', 680, 60],
-    ['b1', 'input/button', 680, 420, { L: 'reset', P: { x: 0, y: 150 } }],
-    ['n5', 'state/latch', 900, 40],
-    ['n8', 'state/smooth', 900, 200, { S: 14 }],
-    ['n12', 'state/counter', 900, 360],
-    ['n6', 'state/smooth', 1120, 40, { S: 10 }],
-    ['n9', 'math/remap', 1120, 200, { S0: 0, S1: 1, T0: 46, T1: 54 }],
-    ['n13', 'disp/text', 1120, 460, { S: 15 }],
-    ['n14', 'vec/construct', 240, 360, { Y: 80 }],
-    ['n7', 'disp/gradient', 1340, 40, { A: { r: 42, g: 52, b: 70, a: 1 }, B: { r: 94, g: 234, b: 212, a: 1 } }],
-    ['n10', 'crv/circle', 1340, 220],
-    ['n11', 'disp/draw', 1560, 120, { S: { r: 94, g: 234, b: 212, a: 0.4 }, W: 1.5 }],
-    ['n15', 'disp/draw', 1560, 320],
-    ['n16', 'disp/text', 1340, 480, { T: 'click the dots', P: { x: 0, y: -120 }, S: 16 }],
-    ['n17', 'disp/draw', 1560, 480, { S: { r: 139, g: 158, b: 191, a: 0.85 } }],
-    ['n18', 'disp/bg', 1560, 640]
-  ], [
-    ['n1', 'S', 'n2', 'X'],
-    ['n2', 'P', 'n3', 'P'],
-    ['n3', 'C', 'n4', 'G'],
-    ['n4', 'C', 'n5', 'T'], ['b1', 'C', 'n5', 'R'],
-    ['n5', 'B', 'n6', 'V'],
-    ['n6', 'R', 'n7', 'T'],
-    ['n4', 'H', 'n8', 'V'],
-    ['n8', 'R', 'n9', 'V'],
-    ['n2', 'P', 'n10', 'P'], ['n9', 'R', 'n10', 'R'],
-    ['n10', 'C', 'n11', 'G'], ['n7', 'C', 'n11', 'F'],
-    ['n4', 'C', 'n12', 'U'], ['b1', 'C', 'n12', 'R'],
-    ['n12', 'N', 'n13', 'T'],
-    ['n1', 'S', 'n14', 'X'], ['n14', 'P', 'n13', 'P'],
-    ['n13', 'G', 'n15', 'G'],
-    ['n16', 'G', 'n17', 'G']
-  ]),
 
-  /* page scroll as the master parameter: the sun climbs, the sky warms,
-   * a windmill spins with scrolled distance, the hint fades out
-   * (wheel over the cloth to scrub the editor's simulated page) */
+  /* a machine where clicks accumulate: the disc is one big Hotspot driving a
+   * Counter, and four Text Lists (sides / hue / spin / name) are read by one
+   * List Item, so geometry AND palette change together. The pad row is the
+   * per-item idiom at full strength — one Hotspot, one Latch, one Smooth over
+   * a list of circles = N independent toggles, with Select swapping each lit
+   * pad to the scene's shape and their sum setting the ring count. The bar
+   * teaches press-vs-release: Edge starts a Timer on press and stops it on
+   * release, and the held seconds set the Turntable's rate. Sample & Hold
+   * remembers when you last touched anything, so the ring is a countdown and
+   * the scene advances by itself if you leave. */
+  'Click toy': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "cnt",
+        "type": "state/counter",
+        "x": 60,
+        "y": 60,
+        "values": {
+          "S": 1
+        },
+        "label": "scene index"
+      },
+      {
+        "id": "sd_sides",
+        "type": "params/textlist",
+        "x": 60,
+        "y": 200,
+        "values": {
+          "text": "3\n4\n5\n8"
+        },
+        "label": "sides"
+      },
+      {
+        "id": "sd_hue",
+        "type": "params/textlist",
+        "x": 60,
+        "y": 340,
+        "values": {
+          "text": "0.47\n0.09\n0.78\n0.94"
+        },
+        "label": "hue"
+      },
+      {
+        "id": "sd_spin",
+        "type": "params/textlist",
+        "x": 60,
+        "y": 480,
+        "values": {
+          "text": "0.5\n-0.34\n0.42\n-0.22"
+        },
+        "label": "spin"
+      },
+      {
+        "id": "sd_name",
+        "type": "params/textlist",
+        "x": 60,
+        "y": 620,
+        "values": {
+          "text": "triad\nquartet\npentad\noctet"
+        },
+        "label": "name"
+      },
+      {
+        "id": "it_sides",
+        "type": "sets/item",
+        "x": 330,
+        "y": 200
+      },
+      {
+        "id": "it_hue",
+        "type": "sets/item",
+        "x": 330,
+        "y": 340
+      },
+      {
+        "id": "it_spin",
+        "type": "sets/item",
+        "x": 330,
+        "y": 480
+      },
+      {
+        "id": "it_name",
+        "type": "sets/item",
+        "x": 330,
+        "y": 620
+      },
+      {
+        "id": "pn",
+        "type": "params/slider",
+        "x": 660,
+        "y": 60,
+        "values": {
+          "min": 3,
+          "max": 7,
+          "value": 5,
+          "mode": "int",
+          "label": "pads"
+        }
+      },
+      {
+        "id": "pser",
+        "type": "sets/series",
+        "x": 660,
+        "y": 200,
+        "values": {
+          "S": 0,
+          "N": 1
+        }
+      },
+      {
+        "id": "px",
+        "type": "math/expr",
+        "x": 660,
+        "y": 360,
+        "values": {
+          "expr": "(X - (Y - 1) / 2) * 78"
+        },
+        "label": "centred x"
+      },
+      {
+        "id": "ppt",
+        "type": "vec/construct",
+        "x": 660,
+        "y": 520,
+        "values": {
+          "Y": 190
+        }
+      },
+      {
+        "id": "phit",
+        "type": "crv/circle",
+        "x": 900,
+        "y": 60,
+        "values": {
+          "R": 26
+        },
+        "label": "hit area (never moves)"
+      },
+      {
+        "id": "phot",
+        "type": "input/hotspot",
+        "x": 900,
+        "y": 200
+      },
+      {
+        "id": "plat",
+        "type": "state/latch",
+        "x": 900,
+        "y": 360,
+        "label": "one node, one memory per pad"
+      },
+      {
+        "id": "psm",
+        "type": "state/smooth",
+        "x": 900,
+        "y": 520,
+        "values": {
+          "S": 12
+        }
+      },
+      {
+        "id": "pr",
+        "type": "math/remap",
+        "x": 900,
+        "y": 680,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 21,
+          "T1": 26
+        }
+      },
+      {
+        "id": "plit",
+        "type": "math/expr",
+        "x": 1140,
+        "y": 60,
+        "values": {
+          "expr": "X ? 1 : 0"
+        }
+      },
+      {
+        "id": "lit",
+        "type": "math/masadd",
+        "x": 1140,
+        "y": 200,
+        "label": "pads lit"
+      },
+      {
+        "id": "phu",
+        "type": "math/expr",
+        "x": 1140,
+        "y": 340,
+        "values": {
+          "expr": "Y + X * 0.012"
+        }
+      },
+      {
+        "id": "plum",
+        "type": "math/expr",
+        "x": 1140,
+        "y": 480,
+        "values": {
+          "expr": "X ? 0.68 : 0.28"
+        }
+      },
+      {
+        "id": "prp",
+        "type": "math/expr",
+        "x": 1140,
+        "y": 620,
+        "values": {
+          "expr": "X * 1.24"
+        }
+      },
+      {
+        "id": "pcirc",
+        "type": "crv/circle",
+        "x": 1380,
+        "y": 60,
+        "label": "unlit: a dot"
+      },
+      {
+        "id": "ppoly",
+        "type": "crv/polygon",
+        "x": 1380,
+        "y": 200,
+        "values": {
+          "A": 0.3
+        },
+        "label": "lit: the scene shape"
+      },
+      {
+        "id": "psel",
+        "type": "sets/select",
+        "x": 1380,
+        "y": 380,
+        "label": "one shape or the other, per pad"
+      },
+      {
+        "id": "pcol",
+        "type": "disp/hsl",
+        "x": 1380,
+        "y": 540,
+        "values": {
+          "S": 0.75
+        }
+      },
+      {
+        "id": "pfill",
+        "type": "disp/hsl",
+        "x": 1380,
+        "y": 680,
+        "values": {
+          "S": 0.75,
+          "A": 0.35
+        }
+      },
+      {
+        "id": "pdraw",
+        "type": "disp/draw",
+        "x": 1620,
+        "y": 300,
+        "values": {
+          "W": 2
+        }
+      },
+      {
+        "id": "disc",
+        "type": "crv/circle",
+        "x": 1900,
+        "y": 60,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": -56
+          },
+          "R": 166
+        },
+        "label": "the whole disc is the button"
+      },
+      {
+        "id": "dhot",
+        "type": "input/hotspot",
+        "x": 1900,
+        "y": 200
+      },
+      {
+        "id": "dsm",
+        "type": "state/smooth",
+        "x": 1900,
+        "y": 360,
+        "values": {
+          "S": 9
+        }
+      },
+      {
+        "id": "dalpha",
+        "type": "math/remap",
+        "x": 2140,
+        "y": 60,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 0.22,
+          "T1": 0.55
+        }
+      },
+      {
+        "id": "dcol",
+        "type": "disp/hsl",
+        "x": 2140,
+        "y": 220,
+        "values": {
+          "S": 0.5,
+          "L": 0.62
+        }
+      },
+      {
+        "id": "ddraw",
+        "type": "disp/draw",
+        "x": 2140,
+        "y": 380,
+        "values": {
+          "W": 1.5,
+          "F": {
+            "r": 255,
+            "g": 255,
+            "b": 255,
+            "a": 0.025
+          }
+        }
+      },
+      {
+        "id": "tm",
+        "type": "input/time",
+        "x": 60,
+        "y": 960
+      },
+      {
+        "id": "padsum",
+        "type": "math/masadd",
+        "x": 60,
+        "y": 1090,
+        "label": "any pad clicked"
+      },
+      {
+        "id": "idle",
+        "type": "params/slider",
+        "x": 60,
+        "y": 1220,
+        "values": {
+          "min": 2,
+          "max": 20,
+          "value": 6,
+          "label": "idle seconds"
+        }
+      },
+      {
+        "id": "any1",
+        "type": "math/logic",
+        "x": 300,
+        "y": 960,
+        "values": {
+          "mode": "or"
+        }
+      },
+      {
+        "id": "any2",
+        "type": "math/logic",
+        "x": 300,
+        "y": 1100,
+        "values": {
+          "mode": "or"
+        },
+        "label": "you touched something"
+      },
+      {
+        "id": "smp",
+        "type": "state/sample",
+        "x": 540,
+        "y": 960,
+        "label": "time of the last touch"
+      },
+      {
+        "id": "since",
+        "type": "math/sub",
+        "x": 540,
+        "y": 1100,
+        "label": "seconds idle"
+      },
+      {
+        "id": "tick",
+        "type": "math/expr",
+        "x": 540,
+        "y": 1240,
+        "values": {
+          "expr": "floor(X / max(Y, 0.5))"
+        }
+      },
+      {
+        "id": "prv",
+        "type": "state/prev",
+        "x": 780,
+        "y": 1240
+      },
+      {
+        "id": "fire",
+        "type": "math/cmp",
+        "x": 780,
+        "y": 1100,
+        "values": {
+          "mode": ">"
+        },
+        "label": "true for one frame"
+      },
+      {
+        "id": "adv",
+        "type": "math/logic",
+        "x": 1020,
+        "y": 1100,
+        "values": {
+          "mode": "or"
+        },
+        "label": "advance the scene"
+      },
+      {
+        "id": "prog",
+        "type": "math/expr",
+        "x": 540,
+        "y": 1380,
+        "values": {
+          "expr": "(X % max(Y, 0.5)) / max(Y, 0.5)"
+        }
+      },
+      {
+        "id": "a1",
+        "type": "math/expr",
+        "x": 780,
+        "y": 1380,
+        "values": {
+          "expr": "-1.5708 + 6.28319 * X"
+        }
+      },
+      {
+        "id": "ring",
+        "type": "crv/arc",
+        "x": 1020,
+        "y": 1380,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": -56
+          },
+          "R": 180,
+          "A0": -1.5708
+        },
+        "label": "countdown ring"
+      },
+      {
+        "id": "rcol",
+        "type": "disp/hsl",
+        "x": 1020,
+        "y": 1240,
+        "values": {
+          "S": 0.6,
+          "L": 0.55,
+          "A": 0.85
+        }
+      },
+      {
+        "id": "rdraw",
+        "type": "disp/draw",
+        "x": 1260,
+        "y": 1320,
+        "values": {
+          "W": 3
+        }
+      },
+      {
+        "id": "hmul",
+        "type": "math/expr",
+        "x": 1540,
+        "y": 960,
+        "values": {
+          "expr": "1 + X * 1.1"
+        },
+        "label": "a long hold spins it faster"
+      },
+      {
+        "id": "spinr",
+        "type": "math/mul",
+        "x": 1540,
+        "y": 1100
+      },
+      {
+        "id": "tt",
+        "type": "input/turntable",
+        "x": 1540,
+        "y": 1240,
+        "label": "rate changes never jump"
+      },
+      {
+        "id": "twist",
+        "type": "params/slider",
+        "x": 1540,
+        "y": 1380,
+        "values": {
+          "min": 0,
+          "max": 0.6,
+          "value": 0.26,
+          "label": "twist"
+        }
+      },
+      {
+        "id": "rings",
+        "type": "math/expr",
+        "x": 1780,
+        "y": 960,
+        "values": {
+          "expr": "3 + X"
+        },
+        "label": "rings = 3 + lit pads"
+      },
+      {
+        "id": "fser",
+        "type": "sets/series",
+        "x": 1780,
+        "y": 1100,
+        "values": {
+          "S": 0,
+          "N": 1
+        }
+      },
+      {
+        "id": "frad",
+        "type": "math/expr",
+        "x": 1780,
+        "y": 1240,
+        "values": {
+          "expr": "150 * (1 - X / max(Y, 1) * 0.86)"
+        },
+        "label": "rings always fill the disc"
+      },
+      {
+        "id": "fang",
+        "type": "math/expr",
+        "x": 2020,
+        "y": 960,
+        "values": {
+          "expr": "X * Y + Z * 0.55"
+        }
+      },
+      {
+        "id": "fh",
+        "type": "math/expr",
+        "x": 2020,
+        "y": 1100,
+        "values": {
+          "expr": "Y + X * 0.014"
+        }
+      },
+      {
+        "id": "fl",
+        "type": "math/expr",
+        "x": 2020,
+        "y": 1240,
+        "values": {
+          "expr": "0.75 - X / max(Y, 1) * 0.3"
+        }
+      },
+      {
+        "id": "fig",
+        "type": "crv/polygon",
+        "x": 2260,
+        "y": 960,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": -56
+          }
+        }
+      },
+      {
+        "id": "fcol",
+        "type": "disp/hsl",
+        "x": 2260,
+        "y": 1120,
+        "values": {
+          "S": 0.72
+        }
+      },
+      {
+        "id": "fdraw",
+        "type": "disp/draw",
+        "x": 2260,
+        "y": 1280,
+        "values": {
+          "W": 2
+        }
+      },
+      {
+        "id": "hrect",
+        "type": "crv/rect",
+        "x": 60,
+        "y": 1680,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": 262
+          },
+          "W": 250,
+          "H": 26
+        },
+        "label": "press-and-hold bar"
+      },
+      {
+        "id": "hhot",
+        "type": "input/hotspot",
+        "x": 60,
+        "y": 1820
+      },
+      {
+        "id": "hedge",
+        "type": "state/edge",
+        "x": 300,
+        "y": 1820,
+        "label": "press vs release"
+      },
+      {
+        "id": "htim",
+        "type": "state/timer",
+        "x": 540,
+        "y": 1820,
+        "label": "runs only while held"
+      },
+      {
+        "id": "hw",
+        "type": "math/expr",
+        "x": 780,
+        "y": 1680,
+        "values": {
+          "expr": "max(3, min(X, 2.5) / 2.5 * 244)"
+        }
+      },
+      {
+        "id": "hcx",
+        "type": "math/expr",
+        "x": 780,
+        "y": 1820,
+        "values": {
+          "expr": "X / 2 - 122"
+        }
+      },
+      {
+        "id": "hnum",
+        "type": "math/expr",
+        "x": 780,
+        "y": 1960,
+        "values": {
+          "expr": "round(X * 100) / 100"
+        }
+      },
+      {
+        "id": "hpt",
+        "type": "vec/construct",
+        "x": 1020,
+        "y": 1820,
+        "values": {
+          "Y": 262
+        }
+      },
+      {
+        "id": "hfill",
+        "type": "crv/rect",
+        "x": 1020,
+        "y": 1680,
+        "values": {
+          "H": 20
+        }
+      },
+      {
+        "id": "htxt",
+        "type": "disp/text",
+        "x": 1020,
+        "y": 1960,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": 262
+          },
+          "S": 13
+        }
+      },
+      {
+        "id": "hcol",
+        "type": "disp/hsl",
+        "x": 1260,
+        "y": 1680,
+        "values": {
+          "S": 0.7,
+          "L": 0.5,
+          "A": 0.5
+        }
+      },
+      {
+        "id": "hdraw",
+        "type": "disp/draw",
+        "x": 1260,
+        "y": 1820,
+        "values": {
+          "S": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0
+          }
+        }
+      },
+      {
+        "id": "hbdraw",
+        "type": "disp/draw",
+        "x": 1260,
+        "y": 1960,
+        "values": {
+          "S": {
+            "r": 139,
+            "g": 158,
+            "b": 191,
+            "a": 0.5
+          },
+          "W": 1.5
+        }
+      },
+      {
+        "id": "cap1",
+        "type": "disp/text",
+        "x": 1540,
+        "y": 1680,
+        "values": {
+          "T": "click the disc · latch the pads · hold the bar",
+          "P": {
+            "x": 0,
+            "y": -252
+          },
+          "S": 15
+        }
+      },
+      {
+        "id": "cap3",
+        "type": "disp/text",
+        "x": 1540,
+        "y": 1820,
+        "values": {
+          "T": "hold the bar — press starts the Timer, release stops it",
+          "P": {
+            "x": 0,
+            "y": 296
+          },
+          "S": 12
+        }
+      },
+      {
+        "id": "hintA",
+        "type": "params/textlist",
+        "x": 1540,
+        "y": 1960,
+        "values": {
+          "text": "each lit pad adds a ring to the figure"
+        }
+      },
+      {
+        "id": "hintB",
+        "type": "params/textlist",
+        "x": 1540,
+        "y": 2120,
+        "values": {
+          "text": "click a pad — one Latch node, one memory each"
+        }
+      },
+      {
+        "id": "hintsel",
+        "type": "sets/select",
+        "x": 1800,
+        "y": 2040,
+        "label": "the hint knows what you did"
+      },
+      {
+        "id": "hinttxt",
+        "type": "disp/text",
+        "x": 1800,
+        "y": 1900,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": 232
+          },
+          "S": 12
+        }
+      },
+      {
+        "id": "nametxt",
+        "type": "disp/text",
+        "x": 1800,
+        "y": 1680,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": 138
+          },
+          "S": 18
+        }
+      },
+      {
+        "id": "namecol",
+        "type": "disp/hsl",
+        "x": 1800,
+        "y": 1790,
+        "values": {
+          "S": 0.8,
+          "L": 0.66
+        }
+      },
+      {
+        "id": "txtcol",
+        "type": "disp/hsl",
+        "x": 2060,
+        "y": 1680,
+        "values": {
+          "S": 0.25,
+          "L": 0.72,
+          "A": 0.85
+        }
+      },
+      {
+        "id": "bgcol",
+        "type": "disp/hsl",
+        "x": 2060,
+        "y": 1900,
+        "values": {
+          "S": 0.45,
+          "L": 0.055
+        }
+      },
+      {
+        "id": "btn",
+        "type": "input/button",
+        "x": 2060,
+        "y": 2100,
+        "values": {
+          "L": "reset",
+          "P": {
+            "x": 250,
+            "y": 296
+          }
+        }
+      },
+      {
+        "id": "capdraw",
+        "type": "disp/draw",
+        "x": 2300,
+        "y": 1680
+      },
+      {
+        "id": "namedraw",
+        "type": "disp/draw",
+        "x": 2300,
+        "y": 1820
+      },
+      {
+        "id": "bg",
+        "type": "disp/bg",
+        "x": 2300,
+        "y": 1960
+      }
+    ],
+    "wires": [
+      {
+        "from": [
+          "sd_sides",
+          "L"
+        ],
+        "to": [
+          "it_sides",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "sd_hue",
+          "L"
+        ],
+        "to": [
+          "it_hue",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "sd_spin",
+          "L"
+        ],
+        "to": [
+          "it_spin",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "sd_name",
+          "L"
+        ],
+        "to": [
+          "it_name",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "cnt",
+          "N"
+        ],
+        "to": [
+          "it_sides",
+          "i"
+        ]
+      },
+      {
+        "from": [
+          "cnt",
+          "N"
+        ],
+        "to": [
+          "it_hue",
+          "i"
+        ]
+      },
+      {
+        "from": [
+          "cnt",
+          "N"
+        ],
+        "to": [
+          "it_spin",
+          "i"
+        ]
+      },
+      {
+        "from": [
+          "cnt",
+          "N"
+        ],
+        "to": [
+          "it_name",
+          "i"
+        ]
+      },
+      {
+        "from": [
+          "adv",
+          "R"
+        ],
+        "to": [
+          "cnt",
+          "U"
+        ]
+      },
+      {
+        "from": [
+          "btn",
+          "C"
+        ],
+        "to": [
+          "cnt",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "pn",
+          "N"
+        ],
+        "to": [
+          "pser",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "pn",
+          "N"
+        ],
+        "to": [
+          "px",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "pser",
+          "S"
+        ],
+        "to": [
+          "px",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "px",
+          "R"
+        ],
+        "to": [
+          "ppt",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "ppt",
+          "P"
+        ],
+        "to": [
+          "phit",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "phit",
+          "C"
+        ],
+        "to": [
+          "phot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "phot",
+          "C"
+        ],
+        "to": [
+          "plat",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "btn",
+          "C"
+        ],
+        "to": [
+          "plat",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "phot",
+          "H"
+        ],
+        "to": [
+          "psm",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "psm",
+          "R"
+        ],
+        "to": [
+          "pr",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "plat",
+          "B"
+        ],
+        "to": [
+          "plit",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "plit",
+          "R"
+        ],
+        "to": [
+          "lit",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "pser",
+          "S"
+        ],
+        "to": [
+          "phu",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "phu",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "plat",
+          "B"
+        ],
+        "to": [
+          "plum",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "pr",
+          "R"
+        ],
+        "to": [
+          "prp",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "ppt",
+          "P"
+        ],
+        "to": [
+          "pcirc",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "pr",
+          "R"
+        ],
+        "to": [
+          "pcirc",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "ppt",
+          "P"
+        ],
+        "to": [
+          "ppoly",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "prp",
+          "R"
+        ],
+        "to": [
+          "ppoly",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "it_sides",
+          "E"
+        ],
+        "to": [
+          "ppoly",
+          "N"
+        ]
+      },
+      {
+        "from": [
+          "ppoly",
+          "C"
+        ],
+        "to": [
+          "psel",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "pcirc",
+          "C"
+        ],
+        "to": [
+          "psel",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "plat",
+          "B"
+        ],
+        "to": [
+          "psel",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "phu",
+          "R"
+        ],
+        "to": [
+          "pcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "plum",
+          "R"
+        ],
+        "to": [
+          "pcol",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "phu",
+          "R"
+        ],
+        "to": [
+          "pfill",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "plum",
+          "R"
+        ],
+        "to": [
+          "pfill",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "psel",
+          "L"
+        ],
+        "to": [
+          "pdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "pcol",
+          "C"
+        ],
+        "to": [
+          "pdraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "pfill",
+          "C"
+        ],
+        "to": [
+          "pdraw",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "disc",
+          "C"
+        ],
+        "to": [
+          "dhot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "disc",
+          "C"
+        ],
+        "to": [
+          "ddraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "dhot",
+          "H"
+        ],
+        "to": [
+          "dsm",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "dsm",
+          "R"
+        ],
+        "to": [
+          "dalpha",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "dcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "dalpha",
+          "R"
+        ],
+        "to": [
+          "dcol",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "dcol",
+          "C"
+        ],
+        "to": [
+          "ddraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "phot",
+          "C"
+        ],
+        "to": [
+          "padsum",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "dhot",
+          "C"
+        ],
+        "to": [
+          "any1",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "padsum",
+          "R"
+        ],
+        "to": [
+          "any1",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "any1",
+          "R"
+        ],
+        "to": [
+          "any2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "hedge",
+          "F"
+        ],
+        "to": [
+          "any2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "tm",
+          "T"
+        ],
+        "to": [
+          "smp",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "any2",
+          "R"
+        ],
+        "to": [
+          "smp",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "tm",
+          "T"
+        ],
+        "to": [
+          "since",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "smp",
+          "R"
+        ],
+        "to": [
+          "since",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "since",
+          "R"
+        ],
+        "to": [
+          "tick",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "idle",
+          "N"
+        ],
+        "to": [
+          "tick",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "tick",
+          "R"
+        ],
+        "to": [
+          "prv",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "tick",
+          "R"
+        ],
+        "to": [
+          "fire",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "prv",
+          "P"
+        ],
+        "to": [
+          "fire",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "dhot",
+          "C"
+        ],
+        "to": [
+          "adv",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "fire",
+          "R"
+        ],
+        "to": [
+          "adv",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "since",
+          "R"
+        ],
+        "to": [
+          "prog",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "idle",
+          "N"
+        ],
+        "to": [
+          "prog",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "prog",
+          "R"
+        ],
+        "to": [
+          "a1",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "a1",
+          "R"
+        ],
+        "to": [
+          "ring",
+          "A1"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "rcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "ring",
+          "C"
+        ],
+        "to": [
+          "rdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "rcol",
+          "C"
+        ],
+        "to": [
+          "rdraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "htim",
+          "S"
+        ],
+        "to": [
+          "hmul",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "it_spin",
+          "E"
+        ],
+        "to": [
+          "spinr",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "hmul",
+          "R"
+        ],
+        "to": [
+          "spinr",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "spinr",
+          "R"
+        ],
+        "to": [
+          "tt",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "lit",
+          "R"
+        ],
+        "to": [
+          "rings",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "rings",
+          "R"
+        ],
+        "to": [
+          "fser",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "fser",
+          "S"
+        ],
+        "to": [
+          "frad",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "rings",
+          "R"
+        ],
+        "to": [
+          "frad",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "rings",
+          "R"
+        ],
+        "to": [
+          "fl",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "fser",
+          "S"
+        ],
+        "to": [
+          "fang",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "twist",
+          "N"
+        ],
+        "to": [
+          "fang",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "tt",
+          "T"
+        ],
+        "to": [
+          "fang",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "fser",
+          "S"
+        ],
+        "to": [
+          "fh",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "fh",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "fser",
+          "S"
+        ],
+        "to": [
+          "fl",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "frad",
+          "R"
+        ],
+        "to": [
+          "fig",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "it_sides",
+          "E"
+        ],
+        "to": [
+          "fig",
+          "N"
+        ]
+      },
+      {
+        "from": [
+          "fang",
+          "R"
+        ],
+        "to": [
+          "fig",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "fh",
+          "R"
+        ],
+        "to": [
+          "fcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "fl",
+          "R"
+        ],
+        "to": [
+          "fcol",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "fig",
+          "C"
+        ],
+        "to": [
+          "fdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "fcol",
+          "C"
+        ],
+        "to": [
+          "fdraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "hrect",
+          "C"
+        ],
+        "to": [
+          "hhot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "hrect",
+          "C"
+        ],
+        "to": [
+          "hbdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "hhot",
+          "D"
+        ],
+        "to": [
+          "hedge",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "hedge",
+          "R"
+        ],
+        "to": [
+          "htim",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "hedge",
+          "F"
+        ],
+        "to": [
+          "htim",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "htim",
+          "S"
+        ],
+        "to": [
+          "hw",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "hw",
+          "R"
+        ],
+        "to": [
+          "hcx",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "htim",
+          "S"
+        ],
+        "to": [
+          "hnum",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "hcx",
+          "R"
+        ],
+        "to": [
+          "hpt",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "hpt",
+          "P"
+        ],
+        "to": [
+          "hfill",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "hw",
+          "R"
+        ],
+        "to": [
+          "hfill",
+          "W"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "hcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "hfill",
+          "C"
+        ],
+        "to": [
+          "hdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "hcol",
+          "C"
+        ],
+        "to": [
+          "hdraw",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "hnum",
+          "R"
+        ],
+        "to": [
+          "htxt",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "hintA",
+          "L"
+        ],
+        "to": [
+          "hintsel",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "hintB",
+          "L"
+        ],
+        "to": [
+          "hintsel",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "lit",
+          "R"
+        ],
+        "to": [
+          "hintsel",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "hintsel",
+          "L"
+        ],
+        "to": [
+          "hinttxt",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "it_name",
+          "E"
+        ],
+        "to": [
+          "nametxt",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "namecol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "txtcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "it_hue",
+          "E"
+        ],
+        "to": [
+          "bgcol",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "cap1",
+          "G"
+        ],
+        "to": [
+          "capdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "hinttxt",
+          "G"
+        ],
+        "to": [
+          "capdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "cap3",
+          "G"
+        ],
+        "to": [
+          "capdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "htxt",
+          "G"
+        ],
+        "to": [
+          "capdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "txtcol",
+          "C"
+        ],
+        "to": [
+          "capdraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "nametxt",
+          "G"
+        ],
+        "to": [
+          "namedraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "namecol",
+          "C"
+        ],
+        "to": [
+          "namedraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "bgcol",
+          "C"
+        ],
+        "to": [
+          "bg",
+          "C"
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "id": "t1",
+        "x": 20,
+        "y": -390,
+        "w": 620,
+        "h": 330,
+        "text": "click toy — a machine made of memory\n\ndisc: every click advances the scene index (Counter). four scenes live in the Text Lists — sides, hue, spin, name — and one List Item reads all four, so geometry AND palette change together.\n\npads: ONE Hotspot + ONE Latch behind a list of circles = independent toggles, one memory each. lit pads take the scene's shape (Select) and add rings to the figure.\n\nring: seconds since you last touched anything. Sample & Hold remembers when that was; when the ring closes, the scene advances by itself.\n\nbar: Edge splits press from release — press starts a Timer, release stops it, and how long you held sets the spin rate.\n\nreset clears every latch and the scene index."
+      }
+    ],
+    "groups": [
+      {
+        "id": "g1",
+        "x": 20,
+        "y": 10,
+        "w": 560,
+        "h": 800,
+        "title": "four scenes on one index",
+        "nodes": [
+          "cnt",
+          "sd_sides",
+          "sd_hue",
+          "sd_spin",
+          "sd_name",
+          "it_sides",
+          "it_hue",
+          "it_spin",
+          "it_name"
+        ]
+      },
+      {
+        "id": "g2",
+        "x": 620,
+        "y": 10,
+        "w": 1210,
+        "h": 850,
+        "title": "pad bank — one chain, N independent machines",
+        "nodes": [
+          "pn",
+          "pser",
+          "px",
+          "ppt",
+          "phit",
+          "phot",
+          "plat",
+          "psm",
+          "pr",
+          "plit",
+          "lit",
+          "phu",
+          "plum",
+          "prp",
+          "pcirc",
+          "ppoly",
+          "psel",
+          "pcol",
+          "pfill",
+          "pdraw"
+        ]
+      },
+      {
+        "id": "g3",
+        "x": 1860,
+        "y": 10,
+        "w": 500,
+        "h": 540,
+        "title": "the disc — one big click target",
+        "nodes": [
+          "disc",
+          "dhot",
+          "dsm",
+          "dalpha",
+          "dcol",
+          "ddraw"
+        ]
+      },
+      {
+        "id": "g4",
+        "x": 20,
+        "y": 900,
+        "w": 1460,
+        "h": 660,
+        "title": "idle clock — walk away and it advances itself",
+        "nodes": [
+          "tm",
+          "padsum",
+          "idle",
+          "any1",
+          "any2",
+          "smp",
+          "since",
+          "tick",
+          "prv",
+          "fire",
+          "adv",
+          "prog",
+          "a1",
+          "ring",
+          "rcol",
+          "rdraw"
+        ]
+      },
+      {
+        "id": "g5",
+        "x": 1500,
+        "y": 900,
+        "w": 990,
+        "h": 660,
+        "title": "the figure — shape, colour and spin of the scene",
+        "nodes": [
+          "hmul",
+          "spinr",
+          "tt",
+          "twist",
+          "rings",
+          "fser",
+          "frad",
+          "fang",
+          "fh",
+          "fl",
+          "fig",
+          "fcol",
+          "fdraw"
+        ]
+      },
+      {
+        "id": "g6",
+        "x": 20,
+        "y": 1620,
+        "w": 1460,
+        "h": 520,
+        "title": "hold bar — press starts, release stops",
+        "nodes": [
+          "hrect",
+          "hhot",
+          "hedge",
+          "htim",
+          "hw",
+          "hcx",
+          "hnum",
+          "hpt",
+          "hfill",
+          "htxt",
+          "hcol",
+          "hdraw",
+          "hbdraw"
+        ]
+      },
+      {
+        "id": "g7",
+        "x": 1500,
+        "y": 1620,
+        "w": 990,
+        "h": 700,
+        "title": "signposts, palette and reset",
+        "nodes": [
+          "cap1",
+          "cap3",
+          "hintA",
+          "hintB",
+          "hintsel",
+          "hinttxt",
+          "nametxt",
+          "namecol",
+          "txtcol",
+          "bgcol",
+          "btn",
+          "capdraw",
+          "namedraw",
+          "bg"
+        ]
+      }
+    ]
+  },
   'Solar system': _EX([
     /* — data: J2000 elements, mercury → neptune, one line per planet — */
     ['da', 'params/textlist', 30, 40, { text: '0.38709927\n0.72333566\n1.00000261\n1.52371034\n5.20288700\n9.53667594\n19.18916464\n30.06992276' }],
@@ -12470,50 +14723,2687 @@ const EXAMPLES = {
       }
     ]
   },
-  'Henge': _EX([
-    ['t1', 'input/time', 30, 40],
-    ['sr', 'sets/series', 30, 200, { S: 0, N: 1, C: 9 }],
-    ['mu2', 'math/mul', 230, 40, { B: 0.35 }],
-    ['mu1', 'math/mul', 230, 200, { B: 0.6981317007977318 }],
-    /* the flat ring and its hexagons are scaffolding for Extrude — their 2D
-       ghosts would otherwise hang in the air beside the solids they became */
-    ['pv', 'vec/polar', 430, 200, { R: 150 }, { preview: false }],
-    ['pg', 'crv/polygon', 630, 200, { R: 40, N: 6 }, { preview: false }],
-    ['ex', 'd3/extrude', 830, 200, { H: 70, C: true }],
-    ['rx', 'd3/rotate3', 1030, 200, { R: 1.5707963267948966, A: { x: 1, y: 0, z: 0 } }],
-    ['ry', 'd3/rotate3', 1230, 200, { A: { x: 0, y: 1, z: 0 } }],
-    ['ob', 'd3/orbit', 1430, 20, { T: { x: 0, y: 0, z: 0 }, D: 860, A: 0.55, E: 0.42, F: 42 }],
-    ['sc', 'd3/scale3', 1430, 400, { F: { x: 0.55, y: 0.55, z: 0.55 } }],
-    ['rz', 'd3/rotate3', 1630, 400, { R: 0.3490658503988659, A: { x: 0, y: 1, z: 0 } }],
-    ['pj', 'd3/project', 1850, 180, { mode: 'shaded' }],
-    ['rm', 'math/remap', 2070, 340, { S0: 0, S1: 1, T0: 0.09, T1: 0.66 }],
-    ['hs', 'disp/hsl', 2290, 340, { H: 0.53, S: 0.52 }],
-    ['dw', 'disp/draw', 2510, 180, { S: { r: 7, g: 11, b: 18, a: 0.6 }, W: 1 }],
-    ['bg', 'disp/bg', 2510, 400, { C: { r: 8, g: 10, b: 16, a: 1 } }]
-  ], [
-    ['sr', 'S', 'mu1', 'A'],
-    ['mu1', 'R', 'pv', 'A'],
-    ['pv', 'P', 'pg', 'P'],
-    ['pg', 'C', 'ex', 'G'],
-    ['ex', 'G', 'rx', 'G'],
-    ['t1', 'T', 'mu2', 'A'],
-    ['mu2', 'R', 'ry', 'R'],
-    ['rx', 'G', 'ry', 'G'],
-    ['ry', 'G', 'sc', 'G'],
-    ['sc', 'G', 'rz', 'G'],
-    ['ry', 'G', 'pj', 'G'],
-    ['rz', 'G', 'pj', 'G'],
-    ['ob', 'C', 'pj', 'C'],
-    ['pj', 'S', 'rm', 'V'],
-    ['rm', 'R', 'hs', 'L'],
-    ['pj', 'F', 'dw', 'G'],
-    ['hs', 'C', 'dw', 'F']
-  ]),
 
-  /* Rosette (2026-08-08) — Vector In + Kaleidoscope. The leaf is a baked SVG
-   * import (exactly what params/svg stores after "load svg…"), moved off
-   * centre and slowly rotated; Kaleidoscope takes the whole two-path motif
-   * into every wedge, mirroring alternates, and K colours by wedge. */
+  /* Stonehenge (2026-08-09) — the monument as arithmetic. Every stone is one
+   * d3/box built on the +z axis and swung onto its bearing by a Rotate3 about
+   * the origin, so position and facing can never disagree: thirty sarsens from
+   * one Series, five trilithons from a ten-item list split by floor(i/2) and
+   * i mod 2, a bluestone ring from a third.
+   *
+   * The ruin is not hand-placed. A seeded roll plus cos(angle) scores each of
+   * the thirty sockets, so the north-east arc that faces the avenue survives
+   * and the south-west falls; two thresholds cut that score into standing,
+   * fallen and gone, and Cull Pattern takes the geometry list rather than the
+   * parameters, so one node does the work. Shift List moves the standing
+   * pattern one place and ANDs it with itself — a lintel exists only where two
+   * neighbours are both still up, which is why the run of lintels comes out
+   * continuous, exactly as it is on Salisbury Plain.
+   *
+   * Two things worth stealing. The sun rides the camera: Orbit's A output goes
+   * through sin/cos into Project's light, so the key light stays off the
+   * shoulder at every angle of the drift instead of swinging from front-lit to
+   * dead. And the plain is a SECOND Project and Draw whose nodes sit first in
+   * the graph — draw order follows node order, so the ground is painted before
+   * a single stone and no depth sort can ever put it in front of the monument.
+   * That is also why it can be a flat revolved disc in one colour: subdivided
+   * into rings only so that a camera wheeled in close loses the cell it stands
+   * on rather than the whole plain. */
+  'Stonehenge': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "gcol",
+        "type": "params/swatch",
+        "x": 260,
+        "y": 2870,
+        "values": {
+          "hex": "#2e2924",
+          "a": 1
+        },
+        "label": "the plain"
+      },
+      {
+        "id": "gser",
+        "type": "sets/series",
+        "x": 490,
+        "y": 2870,
+        "values": {
+          "S": 0,
+          "N": 140,
+          "C": 5
+        },
+        "label": "radii out to 560"
+      },
+      {
+        "id": "gpt",
+        "type": "vec/construct",
+        "x": 720,
+        "y": 2870,
+        "values": {}
+      },
+      {
+        "id": "gpl",
+        "type": "crv/polyline",
+        "x": 950,
+        "y": 2870,
+        "values": {
+          "C": false
+        },
+        "label": "a flat profile"
+      },
+      {
+        "id": "grnd",
+        "type": "d3/revolve",
+        "x": 1180,
+        "y": 2870,
+        "values": {
+          "N": 40,
+          "A": 6.283185307179586
+        },
+        "label": "spun into rings"
+      },
+      {
+        "id": "gpj",
+        "type": "d3/project",
+        "x": 1410,
+        "y": 2870,
+        "values": {
+          "mode": "shaded"
+        }
+      },
+      {
+        "id": "gdraw",
+        "type": "disp/draw",
+        "x": 1640,
+        "y": 2870,
+        "values": {
+          "W": 1
+        },
+        "label": "drawn FIRST — see the note"
+      },
+      {
+        "id": "sRad",
+        "type": "params/slider",
+        "x": 30,
+        "y": 40,
+        "values": {
+          "min": 120,
+          "max": 250,
+          "value": 180,
+          "label": "Ring radius"
+        }
+      },
+      {
+        "id": "sHgt",
+        "type": "params/slider",
+        "x": 30,
+        "y": 170,
+        "values": {
+          "min": 26,
+          "max": 74,
+          "value": 46,
+          "label": "Stone height"
+        }
+      },
+      {
+        "id": "sRuin",
+        "type": "params/slider",
+        "x": 30,
+        "y": 300,
+        "values": {
+          "min": 0.1,
+          "max": 0.9,
+          "value": 0.42,
+          "label": "Ruin"
+        }
+      },
+      {
+        "id": "ss",
+        "type": "sets/series",
+        "x": 260,
+        "y": 40,
+        "values": {
+          "S": 0,
+          "N": 1,
+          "C": 30
+        },
+        "label": "30 sockets"
+      },
+      {
+        "id": "sjA",
+        "type": "sets/random",
+        "x": 260,
+        "y": 170,
+        "values": {
+          "N": 30,
+          "A": -0.04,
+          "B": 0.04,
+          "S": 5
+        },
+        "label": "angle jitter"
+      },
+      {
+        "id": "sjH",
+        "type": "sets/random",
+        "x": 260,
+        "y": 300,
+        "values": {
+          "N": 30,
+          "A": -5,
+          "B": 7,
+          "S": 12
+        },
+        "label": "height jitter"
+      },
+      {
+        "id": "sjR",
+        "type": "sets/random",
+        "x": 260,
+        "y": 430,
+        "values": {
+          "N": 30,
+          "A": -7,
+          "B": 7,
+          "S": 23
+        },
+        "label": "radius jitter"
+      },
+      {
+        "id": "srnd",
+        "type": "sets/random",
+        "x": 260,
+        "y": 560,
+        "values": {
+          "N": 30,
+          "A": 0,
+          "B": 1,
+          "S": 3
+        },
+        "label": "survival roll"
+      },
+      {
+        "id": "sjT",
+        "type": "sets/random",
+        "x": 260,
+        "y": 690,
+        "values": {
+          "N": 30,
+          "A": -0.075,
+          "B": 0.075,
+          "S": 57
+        },
+        "label": "lean jitter"
+      },
+      {
+        "id": "sang",
+        "type": "math/mul",
+        "x": 490,
+        "y": 40,
+        "values": {
+          "B": 0.20943951023931953
+        },
+        "label": "socket angle"
+      },
+      {
+        "id": "sh2",
+        "type": "math/add",
+        "x": 490,
+        "y": 300,
+        "values": {},
+        "label": "stone height"
+      },
+      {
+        "id": "sz",
+        "type": "math/add",
+        "x": 490,
+        "y": 430,
+        "values": {},
+        "label": "stone radius"
+      },
+      {
+        "id": "sjW",
+        "type": "sets/random",
+        "x": 490,
+        "y": 690,
+        "values": {
+          "N": 30,
+          "A": 19,
+          "B": 28,
+          "S": 71
+        },
+        "label": "width jitter"
+      },
+      {
+        "id": "sa2",
+        "type": "math/add",
+        "x": 720,
+        "y": 40,
+        "values": {},
+        "label": "angle + jitter"
+      },
+      {
+        "id": "sy",
+        "type": "math/mul",
+        "x": 720,
+        "y": 300,
+        "values": {
+          "B": -0.5
+        },
+        "label": "half height up"
+      },
+      {
+        "id": "sscore",
+        "type": "math/expr",
+        "x": 720,
+        "y": 560,
+        "values": {
+          "expr": "X + Z*cos(Y)",
+          "Z": 0.58
+        },
+        "label": "survival score"
+      },
+      {
+        "id": "sp",
+        "type": "d3/point3",
+        "x": 950,
+        "y": 300,
+        "values": {},
+        "label": "socket, on +z"
+      },
+      {
+        "id": "sstand",
+        "type": "math/cmp",
+        "x": 950,
+        "y": 560,
+        "values": {
+          "mode": ">"
+        },
+        "label": "still standing"
+      },
+      {
+        "id": "t0",
+        "type": "math/sub",
+        "x": 950,
+        "y": 690,
+        "values": {
+          "B": 0.18
+        },
+        "label": "fallen floor"
+      },
+      {
+        "id": "sbp",
+        "type": "d3/point3",
+        "x": 1180,
+        "y": 170,
+        "values": {
+          "Y": 0
+        },
+        "label": "its base, to lean about"
+      },
+      {
+        "id": "sbox",
+        "type": "d3/box",
+        "x": 1180,
+        "y": 300,
+        "values": {
+          "W": 23,
+          "D": 13
+        },
+        "label": "sarsen upright"
+      },
+      {
+        "id": "sfp",
+        "type": "d3/point3",
+        "x": 1180,
+        "y": 430,
+        "values": {
+          "Y": -7
+        },
+        "label": "toppled centre"
+      },
+      {
+        "id": "snot",
+        "type": "math/logic",
+        "x": 1180,
+        "y": 560,
+        "values": {
+          "mode": "not"
+        }
+      },
+      {
+        "id": "sabove",
+        "type": "math/cmp",
+        "x": 1180,
+        "y": 690,
+        "values": {
+          "mode": ">"
+        }
+      },
+      {
+        "id": "stilt",
+        "type": "d3/rotate3",
+        "x": 1410,
+        "y": 300,
+        "values": {
+          "A": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          }
+        },
+        "label": "nothing stands quite straight"
+      },
+      {
+        "id": "sfbox",
+        "type": "d3/box",
+        "x": 1410,
+        "y": 430,
+        "values": {
+          "W": 23,
+          "H": 13
+        },
+        "label": "toppled slab"
+      },
+      {
+        "id": "sfall",
+        "type": "math/logic",
+        "x": 1410,
+        "y": 620,
+        "values": {
+          "mode": "and"
+        },
+        "label": "down but not gone"
+      },
+      {
+        "id": "srot",
+        "type": "d3/rotate3",
+        "x": 1640,
+        "y": 300,
+        "values": {
+          "A": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          }
+        },
+        "label": "swing onto the ring"
+      },
+      {
+        "id": "scull",
+        "type": "sets/cullpat",
+        "x": 1870,
+        "y": 300,
+        "values": {},
+        "label": "the standing stones"
+      },
+      {
+        "id": "sfrot",
+        "type": "d3/rotate3",
+        "x": 1870,
+        "y": 430,
+        "values": {
+          "A": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "sfcull",
+        "type": "sets/cullpat",
+        "x": 2100,
+        "y": 430,
+        "values": {},
+        "label": "the fallen ones"
+      },
+      {
+        "id": "lhi",
+        "type": "math/add",
+        "x": 490,
+        "y": 1080,
+        "values": {
+          "B": 0.15
+        },
+        "label": "lintels need better than that"
+      },
+      {
+        "id": "lang",
+        "type": "math/add",
+        "x": 720,
+        "y": 820,
+        "values": {
+          "B": 0.10471975511965977
+        },
+        "label": "half a step over"
+      },
+      {
+        "id": "lhsh",
+        "type": "sets/shift",
+        "x": 720,
+        "y": 950,
+        "values": {
+          "S": 1,
+          "W": true
+        },
+        "label": "next stone's height"
+      },
+      {
+        "id": "lcmp",
+        "type": "math/cmp",
+        "x": 720,
+        "y": 1080,
+        "values": {
+          "mode": ">"
+        },
+        "label": "the most intact arc"
+      },
+      {
+        "id": "lhmax",
+        "type": "math/max",
+        "x": 950,
+        "y": 950,
+        "values": {},
+        "label": "rest on the taller"
+      },
+      {
+        "id": "lw",
+        "type": "math/expr",
+        "x": 1180,
+        "y": 820,
+        "values": {
+          "expr": "2*X*sin(Y)*1.02",
+          "Y": 0.10471975511965977
+        },
+        "label": "chord = lintel span"
+      },
+      {
+        "id": "ly",
+        "type": "math/expr",
+        "x": 1180,
+        "y": 950,
+        "values": {
+          "expr": "-(X + Y/2)",
+          "Y": 9
+        }
+      },
+      {
+        "id": "lpsh",
+        "type": "sets/shift",
+        "x": 1180,
+        "y": 1080,
+        "values": {
+          "S": 1,
+          "W": true
+        }
+      },
+      {
+        "id": "lp",
+        "type": "d3/point3",
+        "x": 1410,
+        "y": 950,
+        "values": {}
+      },
+      {
+        "id": "land",
+        "type": "math/logic",
+        "x": 1410,
+        "y": 1080,
+        "values": {
+          "mode": "and"
+        },
+        "label": "both neighbours up"
+      },
+      {
+        "id": "lbox",
+        "type": "d3/box",
+        "x": 1640,
+        "y": 950,
+        "values": {
+          "H": 9,
+          "D": 15
+        },
+        "label": "lintel"
+      },
+      {
+        "id": "lrot",
+        "type": "d3/rotate3",
+        "x": 1870,
+        "y": 950,
+        "values": {
+          "A": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "lcull",
+        "type": "sets/cullpat",
+        "x": 2100,
+        "y": 950,
+        "values": {},
+        "label": "the surviving run"
+      },
+      {
+        "id": "sTri",
+        "type": "params/slider",
+        "x": 30,
+        "y": 1240,
+        "values": {
+          "min": 52,
+          "max": 130,
+          "value": 92,
+          "label": "Trilithon height"
+        }
+      },
+      {
+        "id": "sHorse",
+        "type": "params/slider",
+        "x": 30,
+        "y": 1370,
+        "values": {
+          "min": 60,
+          "max": 140,
+          "value": 88,
+          "label": "Horseshoe radius"
+        }
+      },
+      {
+        "id": "ts",
+        "type": "sets/series",
+        "x": 260,
+        "y": 1240,
+        "values": {
+          "S": 0,
+          "N": 1,
+          "C": 10
+        },
+        "label": "5 pairs = 10 uprights"
+      },
+      {
+        "id": "tdiv",
+        "type": "math/div",
+        "x": 490,
+        "y": 1240,
+        "values": {
+          "B": 2
+        }
+      },
+      {
+        "id": "tmod",
+        "type": "math/mod",
+        "x": 490,
+        "y": 1370,
+        "values": {
+          "B": 2
+        }
+      },
+      {
+        "id": "tk",
+        "type": "math/floor",
+        "x": 720,
+        "y": 1240,
+        "values": {},
+        "label": "which trilithon"
+      },
+      {
+        "id": "tside",
+        "type": "math/expr",
+        "x": 720,
+        "y": 1370,
+        "values": {
+          "expr": "X*2 - 1"
+        },
+        "label": "left / right"
+      },
+      {
+        "id": "tev",
+        "type": "math/cmp",
+        "x": 720,
+        "y": 1500,
+        "values": {
+          "mode": "=",
+          "B": 0
+        },
+        "label": "one per pair"
+      },
+      {
+        "id": "tang",
+        "type": "math/expr",
+        "x": 950,
+        "y": 1240,
+        "values": {
+          "expr": "Y + X*Z",
+          "Y": 1.1915926535897934,
+          "Z": 0.975
+        },
+        "label": "horseshoe, open to the avenue"
+      },
+      {
+        "id": "th",
+        "type": "math/expr",
+        "x": 950,
+        "y": 1370,
+        "values": {
+          "expr": "Y - Z*abs(X - 2)",
+          "Z": 11
+        },
+        "label": "tallest at the apex"
+      },
+      {
+        "id": "tx",
+        "type": "math/mul",
+        "x": 950,
+        "y": 1500,
+        "values": {
+          "B": 15
+        },
+        "label": "the narrow gap"
+      },
+      {
+        "id": "tacull",
+        "type": "sets/cullpat",
+        "x": 1180,
+        "y": 1240,
+        "values": {}
+      },
+      {
+        "id": "ty",
+        "type": "math/mul",
+        "x": 1180,
+        "y": 1370,
+        "values": {
+          "B": -0.5
+        }
+      },
+      {
+        "id": "tp",
+        "type": "d3/point3",
+        "x": 1180,
+        "y": 1500,
+        "values": {}
+      },
+      {
+        "id": "thcull",
+        "type": "sets/cullpat",
+        "x": 1410,
+        "y": 1240,
+        "values": {}
+      },
+      {
+        "id": "tbox",
+        "type": "d3/box",
+        "x": 1410,
+        "y": 1500,
+        "values": {
+          "W": 24,
+          "D": 15
+        },
+        "label": "trilithon upright"
+      },
+      {
+        "id": "tly",
+        "type": "math/expr",
+        "x": 1640,
+        "y": 1240,
+        "values": {
+          "expr": "-(X + Y/2)",
+          "Y": 12
+        }
+      },
+      {
+        "id": "trot",
+        "type": "d3/rotate3",
+        "x": 1640,
+        "y": 1500,
+        "values": {
+          "A": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "tlp",
+        "type": "d3/point3",
+        "x": 1870,
+        "y": 1240,
+        "values": {}
+      },
+      {
+        "id": "tlbox",
+        "type": "d3/box",
+        "x": 2100,
+        "y": 1240,
+        "values": {
+          "W": 62,
+          "H": 12,
+          "D": 17
+        },
+        "label": "trilithon lintel"
+      },
+      {
+        "id": "tlrot",
+        "type": "d3/rotate3",
+        "x": 2330,
+        "y": 1240,
+        "values": {
+          "A": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "bs",
+        "type": "sets/series",
+        "x": 260,
+        "y": 1920,
+        "values": {
+          "S": 0,
+          "N": 1,
+          "C": 26
+        }
+      },
+      {
+        "id": "bjA",
+        "type": "sets/random",
+        "x": 260,
+        "y": 2050,
+        "values": {
+          "N": 26,
+          "A": -0.06,
+          "B": 0.06,
+          "S": 31
+        }
+      },
+      {
+        "id": "bh",
+        "type": "sets/random",
+        "x": 260,
+        "y": 2180,
+        "values": {
+          "N": 26,
+          "A": 15,
+          "B": 29,
+          "S": 41
+        },
+        "label": "no two alike"
+      },
+      {
+        "id": "brnd",
+        "type": "sets/random",
+        "x": 260,
+        "y": 2310,
+        "values": {
+          "N": 26,
+          "A": 0,
+          "B": 1,
+          "S": 17
+        }
+      },
+      {
+        "id": "bang",
+        "type": "math/mul",
+        "x": 490,
+        "y": 1920,
+        "values": {
+          "B": 0.24166097335362405
+        }
+      },
+      {
+        "id": "by",
+        "type": "math/mul",
+        "x": 490,
+        "y": 2180,
+        "values": {
+          "B": -0.5
+        }
+      },
+      {
+        "id": "bcmp",
+        "type": "math/cmp",
+        "x": 490,
+        "y": 2310,
+        "values": {
+          "mode": ">",
+          "B": 0.42
+        }
+      },
+      {
+        "id": "ba2",
+        "type": "math/add",
+        "x": 720,
+        "y": 1920,
+        "values": {}
+      },
+      {
+        "id": "bp",
+        "type": "d3/point3",
+        "x": 720,
+        "y": 2180,
+        "values": {
+          "Z": 124
+        }
+      },
+      {
+        "id": "bbox",
+        "type": "d3/box",
+        "x": 950,
+        "y": 2180,
+        "values": {
+          "W": 13,
+          "D": 9
+        },
+        "label": "bluestone"
+      },
+      {
+        "id": "brot",
+        "type": "d3/rotate3",
+        "x": 1180,
+        "y": 2180,
+        "values": {
+          "A": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "bcull",
+        "type": "sets/cullpat",
+        "x": 1410,
+        "y": 2180,
+        "values": {},
+        "label": "what is left of the ring"
+      },
+      {
+        "id": "heel",
+        "type": "d3/box",
+        "x": 260,
+        "y": 2480,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": -32,
+            "z": 265
+          },
+          "W": 22,
+          "H": 64,
+          "D": 18
+        },
+        "label": "Heel Stone"
+      },
+      {
+        "id": "slau",
+        "type": "d3/box",
+        "x": 260,
+        "y": 2610,
+        "values": {
+          "P": {
+            "x": -46,
+            "y": -7,
+            "z": 224
+          },
+          "W": 62,
+          "H": 14,
+          "D": 22
+        },
+        "label": "Slaughter Stone"
+      },
+      {
+        "id": "altar",
+        "type": "d3/box",
+        "x": 260,
+        "y": 2740,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": -8,
+            "z": -68
+          },
+          "W": 78,
+          "H": 16,
+          "D": 22
+        },
+        "label": "Altar Stone"
+      },
+      {
+        "id": "heelr",
+        "type": "d3/rotate3",
+        "x": 490,
+        "y": 2480,
+        "values": {
+          "R": 0.17,
+          "A": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "C": {
+            "x": 0,
+            "y": 0,
+            "z": 265
+          }
+        },
+        "label": "its famous lean"
+      },
+      {
+        "id": "sSun",
+        "type": "params/slider",
+        "x": 30,
+        "y": 3010,
+        "values": {
+          "min": -0.7,
+          "max": -0.05,
+          "value": -0.22,
+          "label": "Sun height"
+        }
+      },
+      {
+        "id": "sDrift",
+        "type": "params/slider",
+        "x": 30,
+        "y": 3140,
+        "values": {
+          "min": -0.2,
+          "max": 0.2,
+          "value": 0.05,
+          "label": "Drift"
+        }
+      },
+      {
+        "id": "turn",
+        "type": "input/turntable",
+        "x": 260,
+        "y": 3010,
+        "values": {}
+      },
+      {
+        "id": "yaw",
+        "type": "math/add",
+        "x": 490,
+        "y": 3010,
+        "values": {
+          "B": 3.6
+        }
+      },
+      {
+        "id": "orb",
+        "type": "d3/orbit",
+        "x": 720,
+        "y": 3010,
+        "values": {
+          "T": {
+            "x": 0,
+            "y": -34,
+            "z": 0
+          },
+          "D": 760,
+          "E": 0.27,
+          "F": 46
+        },
+        "label": "drag to walk round it"
+      },
+      {
+        "id": "la",
+        "type": "math/add",
+        "x": 950,
+        "y": 3010,
+        "values": {
+          "B": -1.35
+        },
+        "label": "a step round from the eye"
+      },
+      {
+        "id": "lsx",
+        "type": "math/sin",
+        "x": 1180,
+        "y": 3010,
+        "values": {}
+      },
+      {
+        "id": "lcz",
+        "type": "math/cos",
+        "x": 1180,
+        "y": 3140,
+        "values": {}
+      },
+      {
+        "id": "lnz",
+        "type": "math/neg",
+        "x": 1410,
+        "y": 3140,
+        "values": {}
+      },
+      {
+        "id": "sun",
+        "type": "d3/point3",
+        "x": 1640,
+        "y": 3010,
+        "values": {},
+        "label": "a low sun, off the shoulder"
+      },
+      {
+        "id": "pj",
+        "type": "d3/project",
+        "x": 2560,
+        "y": 1500,
+        "values": {
+          "mode": "shaded"
+        },
+        "label": "one sort for the whole site"
+      },
+      {
+        "id": "rmL",
+        "type": "math/remap",
+        "x": 2790,
+        "y": 1630,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 0.1,
+          "T1": 0.7
+        },
+        "label": "shade → lightness"
+      },
+      {
+        "id": "rmS",
+        "type": "math/remap",
+        "x": 2790,
+        "y": 1760,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 0.06,
+          "T1": 0.24
+        },
+        "label": "lit stone runs warmer"
+      },
+      {
+        "id": "hsl",
+        "type": "disp/hsl",
+        "x": 3020,
+        "y": 1700,
+        "values": {
+          "H": 0.085
+        }
+      },
+      {
+        "id": "draw",
+        "type": "disp/draw",
+        "x": 3250,
+        "y": 1500,
+        "values": {
+          "W": 1
+        },
+        "label": "every face, one Draw"
+      },
+      {
+        "id": "bg",
+        "type": "disp/bg",
+        "x": 3250,
+        "y": 1700,
+        "values": {
+          "C": {
+            "r": 9,
+            "g": 10,
+            "b": 14,
+            "a": 1
+          }
+        }
+      }
+    ],
+    "wires": [
+      {
+        "from": [
+          "sRad",
+          "N"
+        ],
+        "to": [
+          "sz",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sRad",
+          "N"
+        ],
+        "to": [
+          "lw",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "sRad",
+          "N"
+        ],
+        "to": [
+          "lp",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "sHgt",
+          "N"
+        ],
+        "to": [
+          "sh2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sRuin",
+          "N"
+        ],
+        "to": [
+          "sstand",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "sRuin",
+          "N"
+        ],
+        "to": [
+          "t0",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "ss",
+          "S"
+        ],
+        "to": [
+          "sang",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sang",
+          "R"
+        ],
+        "to": [
+          "sa2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sang",
+          "R"
+        ],
+        "to": [
+          "sscore",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "sang",
+          "R"
+        ],
+        "to": [
+          "lang",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sjA",
+          "R"
+        ],
+        "to": [
+          "sa2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "sjH",
+          "R"
+        ],
+        "to": [
+          "sh2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "sjR",
+          "R"
+        ],
+        "to": [
+          "sz",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "srnd",
+          "R"
+        ],
+        "to": [
+          "sscore",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "sh2",
+          "R"
+        ],
+        "to": [
+          "sy",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sh2",
+          "R"
+        ],
+        "to": [
+          "sbox",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "sh2",
+          "R"
+        ],
+        "to": [
+          "sfbox",
+          "D"
+        ]
+      },
+      {
+        "from": [
+          "sh2",
+          "R"
+        ],
+        "to": [
+          "lhsh",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "sh2",
+          "R"
+        ],
+        "to": [
+          "lhmax",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sy",
+          "R"
+        ],
+        "to": [
+          "sp",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "sz",
+          "R"
+        ],
+        "to": [
+          "sp",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "sz",
+          "R"
+        ],
+        "to": [
+          "sfp",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "sp",
+          "P"
+        ],
+        "to": [
+          "sbox",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sa2",
+          "R"
+        ],
+        "to": [
+          "srot",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "sa2",
+          "R"
+        ],
+        "to": [
+          "sfrot",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "srot",
+          "G"
+        ],
+        "to": [
+          "scull",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "sscore",
+          "R"
+        ],
+        "to": [
+          "sstand",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sscore",
+          "R"
+        ],
+        "to": [
+          "sabove",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "t0",
+          "R"
+        ],
+        "to": [
+          "sabove",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "sstand",
+          "R"
+        ],
+        "to": [
+          "scull",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sstand",
+          "R"
+        ],
+        "to": [
+          "snot",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sRuin",
+          "N"
+        ],
+        "to": [
+          "lhi",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sscore",
+          "R"
+        ],
+        "to": [
+          "lcmp",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "lhi",
+          "R"
+        ],
+        "to": [
+          "lcmp",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "lcmp",
+          "R"
+        ],
+        "to": [
+          "lpsh",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "lcmp",
+          "R"
+        ],
+        "to": [
+          "land",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sabove",
+          "R"
+        ],
+        "to": [
+          "sfall",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "snot",
+          "R"
+        ],
+        "to": [
+          "sfall",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "sfp",
+          "P"
+        ],
+        "to": [
+          "sfbox",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sfbox",
+          "G"
+        ],
+        "to": [
+          "sfrot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "sfrot",
+          "G"
+        ],
+        "to": [
+          "sfcull",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "sfall",
+          "R"
+        ],
+        "to": [
+          "sfcull",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "lhsh",
+          "L"
+        ],
+        "to": [
+          "lhmax",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "lhmax",
+          "R"
+        ],
+        "to": [
+          "ly",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "ly",
+          "R"
+        ],
+        "to": [
+          "lp",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "lp",
+          "P"
+        ],
+        "to": [
+          "lbox",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "lw",
+          "R"
+        ],
+        "to": [
+          "lbox",
+          "W"
+        ]
+      },
+      {
+        "from": [
+          "lbox",
+          "G"
+        ],
+        "to": [
+          "lrot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "lang",
+          "R"
+        ],
+        "to": [
+          "lrot",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "lrot",
+          "G"
+        ],
+        "to": [
+          "lcull",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "lpsh",
+          "L"
+        ],
+        "to": [
+          "land",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "land",
+          "R"
+        ],
+        "to": [
+          "lcull",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sTri",
+          "N"
+        ],
+        "to": [
+          "th",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "sHorse",
+          "N"
+        ],
+        "to": [
+          "tp",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "sHorse",
+          "N"
+        ],
+        "to": [
+          "tlp",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "ts",
+          "S"
+        ],
+        "to": [
+          "tdiv",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "ts",
+          "S"
+        ],
+        "to": [
+          "tmod",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "tdiv",
+          "R"
+        ],
+        "to": [
+          "tk",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "tmod",
+          "R"
+        ],
+        "to": [
+          "tside",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "tmod",
+          "R"
+        ],
+        "to": [
+          "tev",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "tk",
+          "R"
+        ],
+        "to": [
+          "tang",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "tk",
+          "R"
+        ],
+        "to": [
+          "th",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "tside",
+          "R"
+        ],
+        "to": [
+          "tx",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "tx",
+          "R"
+        ],
+        "to": [
+          "tp",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "th",
+          "R"
+        ],
+        "to": [
+          "ty",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "th",
+          "R"
+        ],
+        "to": [
+          "tbox",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "th",
+          "R"
+        ],
+        "to": [
+          "thcull",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "ty",
+          "R"
+        ],
+        "to": [
+          "tp",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "tp",
+          "P"
+        ],
+        "to": [
+          "tbox",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "tbox",
+          "G"
+        ],
+        "to": [
+          "trot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "tang",
+          "R"
+        ],
+        "to": [
+          "trot",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "tang",
+          "R"
+        ],
+        "to": [
+          "tacull",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "tev",
+          "R"
+        ],
+        "to": [
+          "tacull",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "tev",
+          "R"
+        ],
+        "to": [
+          "thcull",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "thcull",
+          "L"
+        ],
+        "to": [
+          "tly",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "tly",
+          "R"
+        ],
+        "to": [
+          "tlp",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "tlp",
+          "P"
+        ],
+        "to": [
+          "tlbox",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "tlbox",
+          "G"
+        ],
+        "to": [
+          "tlrot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "tacull",
+          "L"
+        ],
+        "to": [
+          "tlrot",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "bs",
+          "S"
+        ],
+        "to": [
+          "bang",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "bang",
+          "R"
+        ],
+        "to": [
+          "ba2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "bjA",
+          "R"
+        ],
+        "to": [
+          "ba2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "bh",
+          "R"
+        ],
+        "to": [
+          "by",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "bh",
+          "R"
+        ],
+        "to": [
+          "bbox",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "by",
+          "R"
+        ],
+        "to": [
+          "bp",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "bp",
+          "P"
+        ],
+        "to": [
+          "bbox",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "bbox",
+          "G"
+        ],
+        "to": [
+          "brot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "ba2",
+          "R"
+        ],
+        "to": [
+          "brot",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "brot",
+          "G"
+        ],
+        "to": [
+          "bcull",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "brnd",
+          "R"
+        ],
+        "to": [
+          "bcmp",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "bcmp",
+          "R"
+        ],
+        "to": [
+          "bcull",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "heel",
+          "G"
+        ],
+        "to": [
+          "heelr",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "sDrift",
+          "N"
+        ],
+        "to": [
+          "turn",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "turn",
+          "T"
+        ],
+        "to": [
+          "yaw",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "yaw",
+          "R"
+        ],
+        "to": [
+          "orb",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "scull",
+          "L"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "sfcull",
+          "L"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "lcull",
+          "L"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "trot",
+          "G"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "tlrot",
+          "G"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "bcull",
+          "L"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "heelr",
+          "G"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "slau",
+          "G"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "altar",
+          "G"
+        ],
+        "to": [
+          "pj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "orb",
+          "C"
+        ],
+        "to": [
+          "pj",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "sun",
+          "P"
+        ],
+        "to": [
+          "pj",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "pj",
+          "S"
+        ],
+        "to": [
+          "rmL",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "pj",
+          "S"
+        ],
+        "to": [
+          "rmS",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "rmL",
+          "R"
+        ],
+        "to": [
+          "hsl",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "rmS",
+          "R"
+        ],
+        "to": [
+          "hsl",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "pj",
+          "F"
+        ],
+        "to": [
+          "draw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "hsl",
+          "C"
+        ],
+        "to": [
+          "draw",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "hsl",
+          "C"
+        ],
+        "to": [
+          "draw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "orb",
+          "A"
+        ],
+        "to": [
+          "la",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "la",
+          "R"
+        ],
+        "to": [
+          "lsx",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "la",
+          "R"
+        ],
+        "to": [
+          "lcz",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "lcz",
+          "R"
+        ],
+        "to": [
+          "lnz",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "lsx",
+          "R"
+        ],
+        "to": [
+          "sun",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "sSun",
+          "N"
+        ],
+        "to": [
+          "sun",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "lnz",
+          "R"
+        ],
+        "to": [
+          "sun",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "sz",
+          "R"
+        ],
+        "to": [
+          "sbp",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "sbox",
+          "G"
+        ],
+        "to": [
+          "stilt",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "sjT",
+          "R"
+        ],
+        "to": [
+          "stilt",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "sbp",
+          "P"
+        ],
+        "to": [
+          "stilt",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "stilt",
+          "G"
+        ],
+        "to": [
+          "srot",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "orb",
+          "C"
+        ],
+        "to": [
+          "gpj",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "gpj",
+          "F"
+        ],
+        "to": [
+          "gdraw",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "gcol",
+          "C"
+        ],
+        "to": [
+          "gdraw",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "gcol",
+          "C"
+        ],
+        "to": [
+          "gdraw",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "gser",
+          "S"
+        ],
+        "to": [
+          "gpt",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "gpt",
+          "P"
+        ],
+        "to": [
+          "gpl",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "gpl",
+          "C"
+        ],
+        "to": [
+          "grnd",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "grnd",
+          "G"
+        ],
+        "to": [
+          "gpj",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "sjW",
+          "R"
+        ],
+        "to": [
+          "sbox",
+          "W"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "id": "gA",
+        "x": 20,
+        "y": 0,
+        "w": 2260,
+        "h": 800,
+        "title": "sarsen circle — 30 sockets, and which of them are still up",
+        "nodes": [
+          "ss",
+          "sjA",
+          "sjH",
+          "sjR",
+          "srnd",
+          "sang",
+          "sh2",
+          "sz",
+          "sa2",
+          "sy",
+          "sscore",
+          "sp",
+          "sstand",
+          "t0",
+          "sbox",
+          "sfp",
+          "snot",
+          "sabove",
+          "srot",
+          "sfbox",
+          "sfall",
+          "scull",
+          "sfrot",
+          "sfcull",
+          "sjT",
+          "sbp",
+          "stilt",
+          "sjW",
+          "sRad",
+          "sHgt",
+          "sRuin"
+        ]
+      },
+      {
+        "id": "gB",
+        "x": 465,
+        "y": 810,
+        "w": 1825,
+        "h": 380,
+        "title": "lintels — one bridges a gap only where both its stones survive",
+        "nodes": [
+          "lang",
+          "lhsh",
+          "lhmax",
+          "lw",
+          "ly",
+          "lhi",
+          "lcmp",
+          "lpsh",
+          "lp",
+          "land",
+          "lbox",
+          "lrot",
+          "lcull"
+        ]
+      },
+      {
+        "id": "gC",
+        "x": 20,
+        "y": 1210,
+        "w": 2495,
+        "h": 400,
+        "title": "trilithon horseshoe — five pairs from one 10-item list",
+        "nodes": [
+          "ts",
+          "tdiv",
+          "tmod",
+          "tk",
+          "tside",
+          "tev",
+          "tang",
+          "th",
+          "tx",
+          "tacull",
+          "ty",
+          "tp",
+          "thcull",
+          "tbox",
+          "tly",
+          "trot",
+          "tlp",
+          "tlbox",
+          "tlrot",
+          "sTri",
+          "sHorse"
+        ]
+      },
+      {
+        "id": "gD",
+        "x": 235,
+        "y": 1880,
+        "w": 1360,
+        "h": 530,
+        "title": "bluestone circle",
+        "nodes": [
+          "bs",
+          "bjA",
+          "bh",
+          "brnd",
+          "bang",
+          "by",
+          "bcmp",
+          "ba2",
+          "bp",
+          "bbox",
+          "brot",
+          "bcull"
+        ]
+      },
+      {
+        "id": "gE",
+        "x": 235,
+        "y": 2440,
+        "w": 1585,
+        "h": 540,
+        "title": "outliers, and the plain they stand on",
+        "nodes": [
+          "heel",
+          "heelr",
+          "slau",
+          "altar",
+          "gcol",
+          "gser",
+          "gpt",
+          "gpl",
+          "grnd",
+          "gpj",
+          "gdraw"
+        ]
+      },
+      {
+        "id": "gF",
+        "x": 20,
+        "y": 2990,
+        "w": 1800,
+        "h": 330,
+        "title": "camera, and a sun that rides with it",
+        "nodes": [
+          "turn",
+          "yaw",
+          "orb",
+          "la",
+          "lsx",
+          "lcz",
+          "lnz",
+          "sun",
+          "sSun",
+          "sDrift"
+        ]
+      },
+      {
+        "id": "gG",
+        "x": 2525,
+        "y": 1430,
+        "w": 920,
+        "h": 470,
+        "title": "project, shade, draw",
+        "nodes": [
+          "pj",
+          "rmL",
+          "rmS",
+          "hsl",
+          "draw",
+          "bg"
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "id": "nt1",
+        "x": 2400,
+        "y": 60,
+        "w": 340,
+        "h": 190,
+        "text": "Every stone is built once, on the +z axis, then swung onto its bearing by Rotate3 about the origin — so position and facing can never disagree. The whole site is one list of boxes."
+      },
+      {
+        "id": "nt2",
+        "x": 2400,
+        "y": 300,
+        "w": 340,
+        "h": 210,
+        "text": "Ruin is a score, not a hand-placed gap: a seeded roll plus cos(angle), so the north-east arc facing the avenue survives and the south-west falls. Above the line the stone stands, just below it lies where it fell, below that it is gone."
+      },
+      {
+        "id": "nt3",
+        "x": 2400,
+        "y": 560,
+        "w": 340,
+        "h": 200,
+        "text": "The plain is a flat circle with its own Project and Draw, and those nodes sit FIRST in the graph — so the ground is painted before a single stone. One disc, one draw item, and no depth sort can ever put it in front of the monument."
+      }
+    ]
+  },
 
 };
 
@@ -12596,9 +17486,9 @@ const EXAMPLE_META = {
   },
   'Click toy': {
     cat: 'State & interaction',
-    blurb: 'Three circles are three independent toggle buttons from one node chain, with a real DOM button to reset them.',
-    teaches: 'Hotspot, Latch and Counter are per-list-item state machines — one chain, three separate memories.',
-    tags: ['hotspot', 'latch', 'counter', 'button', 'dom'],
+    blurb: 'A small machine made of memory — the disc changes the scene, the pads latch and grow the figure, the bar times how long you hold it, and if you walk away it advances itself.',
+    teaches: 'The whole state family in one toy: one Hotspot and one Latch behind a list of pads are five independent machines, Select swaps each pad’s shape, Edge splits press from release, and Sample & Hold turns “seconds since you last touched anything” into a self-winding clock.',
+    tags: ['hotspot', 'latch', 'counter', 'edge', 'timer', 'select', 'per-item state', 'button', 'dom'],
     needs: [], frames: 40
   },
   'Solar system': {
@@ -12678,12 +17568,12 @@ const EXAMPLE_META = {
     tags: ['intersection', 'region boolean', 'trim', 'fillet', 'self-intersection', 'multi-wire'],
     needs: [], frames: 40
   },
-  'Henge': {
+  'Stonehenge': {
     cat: '3D',
-    blurb: 'Two rings of hexagonal stones, extruded from flat polygons and turning on a table you can grab and orbit.',
-    teaches: 'The whole 3D idiom in four nodes: Extrude a 2D curve, Project it with a camera, and wire the shade list through Colour HSL so one Draw paints all 144 faces in depth order.',
-    tags: ['3d', 'extrude', 'project', 'orbit camera', 'shading', 'painter’s algorithm'],
-    needs: [], frames: 60
+    blurb: 'The sarsen circle, its surviving lintels and the trilithon horseshoe, standing half-ruined on a dark plain that turns slowly under a low sun.',
+    teaches: 'Ruin as arithmetic — a seeded roll biased by cos(angle) sorts thirty sockets into standing, fallen and gone, and shifting that same pattern by one place says where a lintel can still bridge two stones.',
+    tags: ['3d', 'stonehenge', 'ruins', 'cull pattern', 'shift list', 'orbit camera', 'draw order'],
+    needs: [], frames: 40
   },
 
 };
