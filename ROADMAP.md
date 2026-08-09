@@ -567,6 +567,19 @@ Still open, in rough order of appetite:
   Delay-based loop pedal covers the ambient case), cluster id prefixing.*
 - Export targets: React component wrapper, Webflow-ready embed snippet preset,
   "editor-embedded" export (ship the patch *with* knobs exposed for end users).
+  *Update 2026-08-08: the compiler itself went on a diet (**lean exporter**,
+  shipped v0.15.1) — three passes in `js/export.js`: prune (nodes with no path
+  to a draw/DOM/audio/bg/hotspot sink are dropped, wires and defs with them),
+  shake (LM serialized as the transitive closure of `LM.*` references from the
+  surviving computes + mount; a graph with Custom JS keeps the full library
+  since its code receives LM), gate (keyboard/scroll/DOM-layer/measureText/
+  hotspot-cursor runtime blocks omitted unless a surviving compute reads that
+  channel — also skips their per-frame work, e.g. the layout-forcing
+  `scrollHeight` read). Port labels and editor-only def fields no longer
+  serialize; cluster subgraphs slim recursively. Kaleidoscope demo: 70 KB →
+  34 KB. Pinned by smoke 23 (exported parts must draw bit-identically to the
+  editor engine across the whole example corpus) and smoke 24 (prune/gate/
+  full-LM-for-Custom-JS hygiene).*
 - Graph gallery / community sharing — share links exist as of v0.9; a gallery
   is now just a page of them.
 - Expression + Custom JS use `new Function` — fine for your own patches; the

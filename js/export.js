@@ -4,15 +4,48 @@
  * The runtime (LM) and each used node's compute function are serialized with
  * Function.prototype.toString(), so the export carries exactly the code it
  * needs and nothing else. No editor, no dependencies.
+ *
+ * Three passes keep the output lean and the frame loop cheap:
+ *   1. prune — drop nodes that cannot reach a sink (draw / DOM / audio / bg /
+ *      hotspot cursor); their wires and defs vanish with them
+ *   2. shake — serialize only the LM helpers transitively referenced by the
+ *      surviving computes and the mount. A graph with Custom JS keeps the
+ *      whole library: its code receives LM and may call anything.
+ *   3. gate — omit the input channels (keyboard, scroll, DOM layer, text
+ *      measurement, hotspot cursor) that no surviving compute reads
+ * Smoke check 23 pins passes 1–2: the exported parts must draw exactly what
+ * the editor engine draws.
  */
 const WeftExport = (() => {
 
-  function serializeLM() {
-    const parts = Object.keys(LM).map(k => {
-      const v = LM[k];
-      return '  ' + k + ': ' + (typeof v === 'function' ? v.toString() : JSON.stringify(v));
-    });
-    return '{\n' + parts.join(',\n') + '\n}';
+  /* a node earns its keep by writing to an output channel; everything upstream
+   * of one survives, the rest never reached the screen in the first place */
+  const SINK_RE = /ctx\.(drawList|domList|audioList|bg)\b/;
+  function isSink(n) {
+    if (n.enabled === false) return false;   /* passthrough only — kept if downstream needs it */
+    if (n.type === 'input/hotspot') return true;   /* the mount reads H for the cursor */
+    const d = NODE_DEFS[n.type];
+    if (!d) return false;
+    return !!d.dynamic || SINK_RE.test(d.compute.toString());
+  }
+
+  function pruneGraph(graph) {
+    const nodes = graph.nodes || [], wires = graph.wires || [];
+    const feeds = {};
+    for (const w of wires) (feeds[w.to[0]] = feeds[w.to[0]] || []).push(w.from[0]);
+    const keep = new Set();
+    const stack = nodes.filter(isSink).map(n => n.id);
+    while (stack.length) {
+      const id = stack.pop();
+      if (keep.has(id)) continue;
+      keep.add(id);
+      for (const src of feeds[id] || []) stack.push(src);
+    }
+    return {
+      meta: graph.meta,
+      nodes: nodes.filter(n => keep.has(n.id)),
+      wires: wires.filter(w => keep.has(w.from[0]) && keep.has(w.to[0]))
+    };
   }
 
   /* used node types, walking into cluster subgraphs (values.graph) recursively */
@@ -25,14 +58,18 @@ const WeftExport = (() => {
     return set;
   }
 
-  function serializeDefs(graph) {
-    const used = [...collectTypes(graph)].filter(t => NODE_DEFS[t]);
+  /* the evaluator only reads name/type/default off ports — labels are editor UI */
+  const slimIn = p => ({ name: p.name, type: p.type, default: p.default });
+  const slimOut = p => ({ name: p.name, type: p.type });
+
+  function serializeDefs(types) {
+    const used = [...types].filter(t => NODE_DEFS[t]);
     const parts = used.map(t => {
       const d = NODE_DEFS[t];
       return '  ' + JSON.stringify(t) + ': {\n' +
-        '    inputs: ' + JSON.stringify(d.inputs || []) + ',\n' +
-        '    outputs: ' + JSON.stringify(d.outputs || []) + ',\n' +
-        '    listInputs: ' + JSON.stringify(d.listInputs || []) + ',\n' +
+        ((d.inputs || []).length ? '    inputs: ' + JSON.stringify(d.inputs.map(slimIn)) + ',\n' : '') +
+        ((d.outputs || []).length ? '    outputs: ' + JSON.stringify(d.outputs.map(slimOut)) + ',\n' : '') +
+        ((d.listInputs || []).length ? '    listInputs: ' + JSON.stringify(d.listInputs) + ',\n' : '') +
         (d.dynamic ? '    dynamic: true,\n' : '') +
         (d.feedback ? '    feedback: true,\n' : '') +
         '    compute: ' + d.compute.toString() + '\n  }';
@@ -40,41 +77,88 @@ const WeftExport = (() => {
     return '{\n' + parts.join(',\n') + '\n}';
   }
 
+  /* transitive closure of LM.* references in the seed source. Comments naming
+   * LM helpers over-include harmlessly; nothing referenced can be missed
+   * because runtime code only ever reaches the library as LM.<name> */
+  function lmClosure(seedSrc) {
+    const need = new Set();
+    const scan = src => {
+      const re = /\bLM\.([A-Za-z_$][A-Za-z0-9_$]*)/g;
+      let m;
+      while ((m = re.exec(src))) {
+        const k = m[1];
+        if (need.has(k) || !(k in LM)) continue;
+        need.add(k);
+        if (typeof LM[k] === 'function') scan(LM[k].toString());
+      }
+    };
+    scan(seedSrc);
+    return need;
+  }
+
+  /* need = null serializes the whole library (Custom JS graphs) */
+  function serializeLM(need) {
+    const parts = Object.keys(LM).filter(k => !need || need.has(k)).map(k => {
+      const v = LM[k];
+      return '  ' + k + ': ' + (typeof v === 'function' ? v.toString() : JSON.stringify(v));
+    });
+    return '{\n' + parts.join(',\n') + '\n}';
+  }
+
+  /* GRAPH carries only what the evaluator reads: id/type/values (+ enabled:
+   * false). Cluster subgraphs are slimmed the same way, recursively. */
+  function slimNode(n) {
+    const o = { id: n.id, type: n.type, values: slimValues(n.values || {}) };
+    if (n.enabled === false) o.enabled = false;
+    return o;
+  }
+  function slimValues(v) {
+    if (v.graph && Array.isArray(v.graph.nodes)) {
+      v = Object.assign({}, v);
+      v.graph = {
+        nodes: v.graph.nodes.map(slimNode),
+        wires: (v.graph.wires || []).map(w => ({ from: w.from, to: w.to }))
+      };
+    }
+    return v;
+  }
+
   function serializeGraph(graph) {
     return JSON.stringify({
       meta: (graph.meta && graph.meta.tuneA4) ? { tuneA4: graph.meta.tuneA4 } : undefined,
-      nodes: graph.nodes.map(n => {
-        const o = { id: n.id, type: n.type, values: n.values || {} };
-        if (n.enabled === false) o.enabled = false;
-        return o;
-      }),
+      nodes: graph.nodes.map(slimNode),
       wires: graph.wires.map(w => ({ from: w.from, to: w.to }))
     });
   }
 
-  function buildJS(graph) {
-    const hasAudio = [...collectTypes(graph)].some(t => t.indexOf('audio/') === 0);
-    return `/* Exported from Weft — a parametric web experience.
- * Attaches to <canvas data-weft> if present, otherwise creates a
- * full-window background canvas. Coordinates are centered: (0,0) is
- * the middle of the canvas. */
-(function () {
-'use strict';
-const GRAPH = ${serializeGraph(graph)};
-const DEFS = ${serializeDefs(graph)};
-const LM = ${serializeLM()};
-${hasAudio ? 'const WeftAudio = { makeHost: ' + WeftAudio.makeHost.toString() + ' };\n' : ''}
-function mount(canvas) {
-${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}
-  const g2 = canvas.getContext('2d');
-  const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false };
-  let mx = null, my = null, frame = 0;
-  let pressedBuf = false, releasedBuf = false;
-  window.addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; });
-  window.addEventListener('pointerdown', e => { mx = e.clientX; my = e.clientY; mouse.down = true; pressedBuf = true; });
-  window.addEventListener('pointerup', () => { if (mouse.down) releasedBuf = true; mouse.down = false; });
+  /* the compiled pieces, exposed so smoke can evaluate them against the live
+   * engine (equivalence check) without parsing the assembled file */
+  function buildParts(sourceGraph) {
+    const graph = pruneGraph(sourceGraph);
+    const types = collectTypes(graph);
+    const defsJS = serializeDefs(types);
+    const hasJs = types.has('meta/js');
+    const hasAudio = [...types].some(t => t.indexOf('audio/') === 0);
+    const audioJS = hasAudio ? WeftAudio.makeHost.toString() : '';
+    const lmJS = serializeLM(hasJs ? null :
+      lmClosure(defsJS + ' LM.evaluateGraph LM.colorCss LM.drawItem ' + audioJS));
+    return {
+      graph, graphJS: serializeGraph(graph), defsJS, lmJS, audioJS, hasAudio,
+      gates: {   /* Custom JS receives ctx wholesale, so it may read any channel */
+        keys: hasJs || /ctx\.keys/.test(defsJS),
+        scroll: hasJs || /ctx\.scroll/.test(defsJS),
+        dom: hasJs || /ctx\.dom(List|State)/.test(defsJS),
+        measure: hasJs || /measureText/.test(defsJS),
+        hotspot: graph.nodes.some(n => n.type === 'input/hotspot')
+      }
+    };
+  }
 
-  const kDown = {};
+  function buildJS(sourceGraph) {
+    const P = buildParts(sourceGraph);
+    const F = P.gates, hasAudio = P.hasAudio;
+
+    const keysSetup = F.keys ? `  const kDown = {};
   let kPressed = {}, kReleased = {};
   const keyName = e => e.key === ' ' ? 'space' : e.key.toLowerCase();
   window.addEventListener('keydown', e => {
@@ -86,10 +170,15 @@ ${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}
   });
   window.addEventListener('keyup', e => { const k = keyName(e); if (kDown[k]) kReleased[k] = true; delete kDown[k]; });
   window.addEventListener('blur', () => { for (const k in kDown) delete kDown[k]; });
+` : `  const keys = { down: {}, pressed: {}, released: {} };
+`;
 
-  const scroll = { y: 0, max: 0, v: 0 };
+    const scrollSetup = F.scroll ? `  const scroll = { y: 0, max: 0, v: 0 };
   let scrollLastY = window.scrollY || 0;
+` : `  const scroll = { y: 0, max: 0, v: 0 };
+`;
 
+    const measureSetup = F.measure ? `
   /* text measurement — same contract as the editor host (invariant #8) */
   const mCanvas = document.createElement('canvas');
   const mg = mCanvas.getContext('2d');
@@ -97,7 +186,9 @@ ${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}
     mg.font = size + 'px Inter, system-ui, sans-serif';
     return { w: mg.measureText(String(text)).width, h: size * 1.2 };
   };
+` : '';
 
+    const domSetup = F.dom ? `
   /* real DOM elements declared by nodes (Button / Element) — reconciled every frame */
   const domState = {}, domEls = {};
   const domLayer = document.createElement('div');
@@ -163,7 +254,48 @@ ${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}
       if (!seen[id]) { domEls[id].remove(); delete domEls[id]; delete domState[id]; }
     }
   }
+` : '';
 
+    const keysFrame = F.keys ? `    const keys = { down: kDown, pressed: kPressed, released: kReleased };
+    kPressed = {}; kReleased = {};
+` : '';
+
+    const scrollFrame = F.scroll ? `    scroll.y = window.scrollY || document.documentElement.scrollTop || 0;
+    scroll.max = Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight);
+    scroll.v = scroll.v * 0.8 + ((scroll.y - scrollLastY) / Math.max(dt, 1e-3)) * 0.2;
+    scrollLastY = scroll.y;
+` : '';
+
+    const hotspotFrame = F.hotspot ? `
+    let overHotspot = false;
+    for (const n of GRAPH.nodes) {
+      if (n.type !== 'input/hotspot' || n.enabled === false) continue;
+      const o = ctx.out[n.id];
+      if (o && (o.H || []).some(Boolean)) { overHotspot = true; break; }
+    }
+    canvas.style.cursor = overHotspot ? 'pointer' : '';` : '';
+
+    return `/* Exported from Weft — a parametric web experience.
+ * Attaches to <canvas data-weft> if present, otherwise creates a
+ * full-window background canvas. Coordinates are centered: (0,0) is
+ * the middle of the canvas. */
+(function () {
+'use strict';
+const GRAPH = ${P.graphJS};
+const DEFS = ${P.defsJS};
+const LM = ${P.lmJS};
+${hasAudio ? 'const WeftAudio = { makeHost: ' + P.audioJS + ' };\n' : ''}
+function mount(canvas) {
+${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}  const g2 = canvas.getContext('2d');
+  const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false };
+  let mx = null, my = null, frame = 0;
+  let pressedBuf = false, releasedBuf = false;
+  window.addEventListener('pointermove', e => { mx = e.clientX; my = e.clientY; });
+  window.addEventListener('pointerdown', e => { mx = e.clientX; my = e.clientY; mouse.down = true; pressedBuf = true; });
+  window.addEventListener('pointerup', () => { if (mouse.down) releasedBuf = true; mouse.down = false; });
+
+${keysSetup}
+${scrollSetup}${measureSetup}${domSetup}
   const t0 = performance.now();
   let last = t0;
 
@@ -184,30 +316,16 @@ ${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}
     }
     mouse.pressed = pressedBuf; mouse.released = releasedBuf;
     pressedBuf = releasedBuf = false;
-    const keys = { down: kDown, pressed: kPressed, released: kReleased };
-    kPressed = {}; kReleased = {};
-    scroll.y = window.scrollY || document.documentElement.scrollTop || 0;
-    scroll.max = Math.max(0, (document.documentElement.scrollHeight || 0) - window.innerHeight);
-    scroll.v = scroll.v * 0.8 + ((scroll.y - scrollLastY) / Math.max(dt, 1e-3)) * 0.2;
-    scrollLastY = scroll.y;
-
+${keysFrame}${scrollFrame}
     const ctx = {
       t: (now - t0) / 1000, dt, frame: frame++, mouse, keys, scroll,
-      W: rect.width, H: rect.height, measureText, defs: DEFS,
-      drawList: [], domList: [], audioList: [], domState, bg: null, errors: {}, out: {},
+      W: rect.width, H: rect.height, ${F.measure ? 'measureText, ' : ''}defs: DEFS,
+      drawList: [], domList: [], audioList: [], ${F.dom ? 'domState' : 'domState: {}'}, bg: null, errors: {}, out: {},
       audioState: ${hasAudio ? 'audio.state()' : '{}'},
       tuneA4: (GRAPH.meta && GRAPH.meta.tuneA4) || 432
     };
     LM.evaluateGraph(GRAPH, DEFS, ctx);
-    syncDom(ctx.domList, rect);
-${hasAudio ? '    audio.sync(ctx.audioList);\n' : ''}
-    let overHotspot = false;
-    for (const n of GRAPH.nodes) {
-      if (n.type !== 'input/hotspot' || n.enabled === false) continue;
-      const o = ctx.out[n.id];
-      if (o && (o.H || []).some(Boolean)) { overHotspot = true; break; }
-    }
-    canvas.style.cursor = overHotspot ? 'pointer' : '';
+${F.dom ? '    syncDom(ctx.domList, rect);\n' : ''}${hasAudio ? '    audio.sync(ctx.audioList);\n' : ''}${hotspotFrame}
     g2.setTransform(dpr, 0, 0, dpr, 0, 0);
     g2.clearRect(0, 0, rect.width, rect.height);
     if (ctx.bg && ctx.bg.a > 0) { g2.fillStyle = LM.colorCss(ctx.bg); g2.fillRect(0, 0, rect.width, rect.height); }
@@ -261,5 +379,5 @@ ${js}
 `;
   }
 
-  return { buildJS, buildDemoHTML };
+  return { buildJS, buildDemoHTML, buildParts };
 })();

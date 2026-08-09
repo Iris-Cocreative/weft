@@ -1130,6 +1130,56 @@ for (const name of Object.keys(EXAMPLES)) {
   try { new Function(WeftExport.buildJS(g)); } catch (e) { failures.push('delay cycle export does not compile → ' + e.message); }
 }
 
+/* 23 — export equivalence: the pruned graph + shaken LM + slimmed defs must
+ * draw exactly what the editor engine draws, frame for frame. new Function
+ * only proves syntax; this proves the tree-shaker never drops a helper. */
+for (const name of Object.keys(EXAMPLES)) {
+  const parts = WeftExport.buildParts(JSON.parse(JSON.stringify(EXAMPLES[name])));
+  let EX;
+  try {
+    EX = new Function('const LM = ' + parts.lmJS + '; const DEFS = ' + parts.defsJS +
+      '; const GRAPH = ' + parts.graphJS + '; return { LM: LM, DEFS: DEFS, GRAPH: GRAPH };')();
+  } catch (e) { failures.push('export parts "' + name + '" do not evaluate → ' + e.message); continue; }
+  const base = JSON.parse(JSON.stringify(EXAMPLES[name]));
+  for (const t of [0, 0.5, 2]) {
+    const cb = mkCtx(); cb.t = t;
+    LM.evaluateGraph(base, NODE_DEFS, cb);
+    const ce = mkCtx(); ce.t = t; ce.defs = EX.DEFS;
+    EX.LM.evaluateGraph(EX.GRAPH, EX.DEFS, ce);
+    for (const nid of Object.keys(ce.errors))
+      failures.push('export eval "' + name + '" t=' + t + ' node ' + nid + ': ' + ce.errors[nid]);
+    if (JSON.stringify(ce.drawList) !== JSON.stringify(cb.drawList))
+      failures.push('export equivalence "' + name + '" t=' + t + ': drawList diverges from the editor engine');
+    if (JSON.stringify(ce.bg || null) !== JSON.stringify(cb.bg || null))
+      failures.push('export equivalence "' + name + '" t=' + t + ': bg diverges from the editor engine');
+  }
+}
+
+/* 24 — exporter hygiene: orphans prune, unused channels gate out, wanted
+ * channels stay, Custom JS keeps the full library */
+{
+  const drawNodes = [
+    { id: 'ci', type: 'crv/circle', values: {} },
+    { id: 'dw', type: 'disp/draw', values: {} } ];
+  const drawWires = [ { from: ['ci', 'C'], to: ['dw', 'G'] } ];
+  const js = WeftExport.buildJS({
+    nodes: drawNodes.concat([ { id: 'orphan', type: 'params/slider', values: { value: 3 } } ]),
+    wires: drawWires });
+  if (js.indexOf('orphan') >= 0) failures.push('exporter: node with no path to a sink not pruned');
+  if (js.indexOf('params/slider') >= 0) failures.push('exporter: def of a pruned node not dropped');
+  if (js.indexOf('clipPolyOnce') >= 0) failures.push('exporter: unused LM helpers not shaken out');
+  if (js.indexOf('keydown') >= 0) failures.push('exporter: keyboard runtime included though nothing reads keys');
+  if (js.indexOf('weft-btn') >= 0) failures.push('exporter: DOM layer included though nothing declares DOM');
+  if (js.indexOf('scrollY') >= 0) failures.push('exporter: scroll tracking included though nothing reads scroll');
+  const kb = WeftExport.buildJS({
+    nodes: drawNodes.concat([ { id: 'k', type: 'input/keyboard', values: {} } ]),
+    wires: drawWires.concat([ { from: ['k', 'D'], to: ['dw', 'W'] } ]) });
+  if (kb.indexOf('keydown') < 0) failures.push('exporter: keyboard runtime missing though a node reads keys');
+  const cj = WeftExport.buildJS({ nodes: [
+    { id: 'j', type: 'meta/js', values: { ins: [], outs: [ { name: 'R', type: 'number' } ], code: 'return { R: 1 };', mode: 'each' } } ], wires: [] });
+  if (cj.indexOf('clipPolyOnce') < 0) failures.push('exporter: Custom JS export must carry the full LM');
+}
+
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
 `;
 

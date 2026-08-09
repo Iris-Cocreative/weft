@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.15 — holes + the colour family (compound paths, Region Boolean holes, RGB/HSL deconstruct).** v0.1 (2026-07-12): editor,
+**Status: v0.15.1 — lean exporter (prune / tree-shake / gate; typical export halved).** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -338,6 +338,18 @@ strip on Colour Swatch** — a checkerboard range slider under the circle;
 `values.a` always rode into exports, now it has a control (adding it surfaced
 two vestigial `.sw-alpha` text-field rules from an abandoned design — one
 repurposed, one removed). 179 nodes, 23 examples.
+v0.15.1 (2026-08-08): **lean exporter** — the compiler grew three passes:
+*prune* (nodes with no path to a draw/DOM/audio/bg/hotspot sink drop out,
+their wires and defs with them), *shake* (LM serialized as the transitive
+closure of `LM.*` references from the surviving computes + mount — a graph
+with Custom JS keeps the full library, its code receives LM), *gate* (the
+keyboard / scroll / DOM-layer / measureText / hotspot-cursor runtime blocks
+are omitted unless a surviving compute reads that channel, which also skips
+their per-frame work). Port labels and editor-only def fields no longer
+serialize; cluster subgraphs slim recursively. Kaleidoscope demo export:
+70 KB → 34 KB, pixel-verified against the old export in Chrome. Two new smoke
+locks: 23 (exported parts draw bit-identically to the editor engine across
+the whole example corpus) and 24 (prune/gate/full-LM hygiene).
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
