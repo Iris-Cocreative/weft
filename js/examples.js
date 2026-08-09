@@ -213,137 +213,3912 @@ const EXAMPLES = {
   },
 
   /* series → golden-angle spiral of circles, sized by expression, coloured by index */
-  'Phyllotaxis': _EX([
-    ['n1', 'params/slider', 30, 40, { min: 1, max: 400, value: 220 }],
-    ['n2', 'sets/series', 240, 40],
-    ['n3', 'params/slider', 30, 200, { min: 0, max: 6.283, value: 2.399 }],
-    ['n4', 'math/mul', 460, 40],
-    ['n5', 'input/time', 30, 360],
-    ['n7', 'params/slider', 30, 480, { min: -2, max: 2, value: 0.15 }],
-    ['n6', 'math/mul', 240, 400],
-    ['n8', 'math/add', 660, 120],
-    ['n10', 'math/sqrt', 240, 220],
-    ['n9', 'params/slider', 30, 640, { min: 0, max: 40, value: 14 }],
-    ['n11', 'math/mul', 460, 260],
-    ['n12', 'vec/polar', 860, 180],
-    ['n13', 'math/expr', 660, 380, { expr: '2 + X * 0.028' }],
-    ['n16', 'crv/circle', 1080, 220],
-    ['n17', 'math/mul', 460, 460, { B: 0.0032 }],
-    ['n18', 'disp/hsl', 660, 560, { S: 0.75, L: 0.62, A: 0.9 }],
-    ['n19', 'disp/draw', 1300, 260, { S: { r: 0, g: 0, b: 0, a: 0 }, W: 1 }]
-  ], [
-    ['n1', 'N', 'n2', 'C'],
-    ['n2', 'S', 'n4', 'A'], ['n3', 'N', 'n4', 'B'],
-    ['n5', 'T', 'n6', 'A'], ['n7', 'N', 'n6', 'B'],
-    ['n4', 'R', 'n8', 'A'], ['n6', 'R', 'n8', 'B'],
-    ['n2', 'S', 'n10', 'V'],
-    ['n10', 'R', 'n11', 'A'], ['n9', 'N', 'n11', 'B'],
-    ['n8', 'R', 'n12', 'A'], ['n11', 'R', 'n12', 'R'],
-    ['n2', 'S', 'n13', 'X'],
-    ['n12', 'P', 'n16', 'P'], ['n13', 'R', 'n16', 'R'],
-    ['n2', 'S', 'n17', 'A'],
-    ['n17', 'R', 'n18', 'H'],
-    ['n16', 'C', 'n19', 'G'], ['n18', 'C', 'n19', 'F']
-  ]),
-
-  /* a closed spline through polar points whose radii breathe with noise + time */
-  'Noise blob': _EX([
-    ['n1', 'params/slider', 30, 40, { min: 3, max: 64, value: 18 }],
-    ['n2', 'sets/series', 240, 40],
-    ['n3', 'math/expr', 460, 40, { expr: 'X / Y * 2 * PI' }],
-    ['n4', 'input/time', 30, 300],
-    ['n5', 'math/expr', 460, 260, { expr: 'X * 0.9 + Y * 0.6' }],
-    ['n6', 'math/noise', 680, 200],
-    ['n7', 'math/remap', 880, 160, { S0: 0, S1: 1, T0: 90, T1: 200 }],
-    ['n8', 'vec/polar', 1100, 100],
-    ['n9', 'crv/interp', 1320, 120, { C: true }],
-    ['n10', 'disp/draw', 1540, 140, { S: { r: 94, g: 234, b: 212, a: 1 }, F: { r: 94, g: 234, b: 212, a: 0.08 }, W: 2 }]
-  ], [
-    ['n1', 'N', 'n2', 'C'],
-    ['n2', 'S', 'n3', 'X'], ['n1', 'N', 'n3', 'Y'],
-    ['n2', 'S', 'n5', 'X'], ['n4', 'T', 'n5', 'Y'],
-    ['n5', 'R', 'n6', 'X'],
-    ['n6', 'N', 'n7', 'V'],
-    ['n3', 'R', 'n8', 'A'], ['n7', 'R', 'n8', 'R'],
-    ['n8', 'P', 'n9', 'V'],
-    ['n9', 'C', 'n10', 'G']
-  ]),
-
-  /* The same idea as Checker dispatch, done right — and the reason Grid exists.
-   * Three phases of pulse across an isometric lattice, no branching at all:
-   * the grid hands out a colour class K (0/1/2) per point, K becomes a phase
-   * offset inside the Expression, and list matching turns ONE Circle node into
-   * a whole field. Viewport drives the extents, so it fills any canvas.
-   * 8 nodes vs 21 — the difference between the two lives entirely in K. */
-  'Iso field': _EX([
-    ['n1', 'input/viewport', 30, 40],
-    ['n2', 'params/slider', 30, 200, { min: 16, max: 120, value: 44 }],
-    ['n3', 'vec/grid', 260, 60, { iso: true }],
-    ['n4', 'math/expr', 500, 60, { expr: 'T + X * PI * 2 / 3' }],
-    ['n5', 'math/sin', 700, 60],
-    ['n6', 'math/remap', 880, 60, { S0: -1, S1: 1, T0: 3, T1: 16 }],
-    ['n7', 'crv/circle', 1100, 60],
-    ['n8', 'disp/draw', 1300, 60, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 94, g: 234, b: 212, a: 0.9 } }]
-  ], [
-    ['n1', 'W', 'n3', 'W'], ['n1', 'H', 'n3', 'H'], ['n2', 'N', 'n3', 'S'],
-    ['n3', 'K', 'n4', 'X'],
-    ['n4', 'R', 'n5', 'V'],
-    ['n5', 'R', 'n6', 'V'],
-    ['n3', 'P', 'n7', 'P'], ['n6', 'R', 'n7', 'R'],
-    ['n7', 'C', 'n8', 'G']
-  ]),
-
-  /* Iso field + the pointer. Distance-to-cursor is just another parallel list,
-   * so it can drive BOTH halves of the radius at once:
-   *   phase     = T*speed + K*2π/3 − distance*wavelength   → rings radiate from
-   *               the cursor, still cycling in time, still 3-phase per lattice
-   *   amplitude = remap(distance) → the T1 of the radius remap, so the field is
-   *               quiet far away and blooms under the pointer
-   * The Expression earns all four of its variables: T (time), X = K (lattice
-   * class), Y = distance, Z = speed. Still one Circle, still one Draw. */
-  'Cursor wave': _EX([
-    ['n1', 'input/viewport', 30, 40],
-    ['n2', 'params/slider', 30, 190, { min: 16, max: 120, value: 44 }],
-    ['n3', 'vec/grid', 250, 60, { iso: true }],
-    ['n4', 'input/mouse', 30, 420],
-    ['n5', 'vec/construct', 250, 440],
-    ['n6', 'vec/distance', 470, 380],
-    ['n7', 'params/slider', 250, 620, { min: 0, max: 0.06, value: 0.024 }],
-    ['n8', 'math/mul', 700, 560],
-    ['n9', 'params/slider', 700, 700, { min: 0, max: 4, value: 1.4 }],
-    ['n10', 'math/expr', 940, 60, { expr: 'T * Z + X * PI * 2 / 3 - Y' }],
-    ['n11', 'math/sin', 1160, 60],
-    ['n12', 'params/slider', 940, 420, { min: 60, max: 700, value: 340 }],
-    ['n13', 'math/remap', 1160, 300, { S0: 0, S1: 340, T0: 26, T1: 3, C: true }],
-    ['n14', 'math/remap', 1400, 60, { S0: -1, S1: 1, T0: 2, T1: 26, C: true }],
-    ['n15', 'crv/circle', 1640, 60],
-    ['n16', 'disp/draw', 1860, 60, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 94, g: 234, b: 212, a: 0.9 } }]
-  ], [
-    ['n1', 'W', 'n3', 'W'], ['n1', 'H', 'n3', 'H'], ['n2', 'N', 'n3', 'S'],
-    ['n4', 'X', 'n5', 'X'], ['n4', 'Y', 'n5', 'Y'],
-    ['n3', 'P', 'n6', 'A'], ['n5', 'P', 'n6', 'B'],
-    ['n6', 'D', 'n8', 'A'], ['n7', 'N', 'n8', 'B'],
-    ['n3', 'K', 'n10', 'X'], ['n8', 'R', 'n10', 'Y'], ['n9', 'N', 'n10', 'Z'],
-    ['n10', 'R', 'n11', 'V'],
-    ['n6', 'D', 'n13', 'V'], ['n12', 'N', 'n13', 'S1'],
-    ['n11', 'R', 'n14', 'V'], ['n13', 'R', 'n14', 'T1'],
-    ['n3', 'P', 'n15', 'P'], ['n14', 'R', 'n15', 'R'],
-    ['n15', 'C', 'n16', 'G']
-  ]),
-
-  /* The iso family's showpiece — a lattice that behaves like a material.
-   * Geometry: hexagons of circumradius spacing/√3 tile the iso lattice exactly
-   * (horizontal s, rows s·√3/2, half-staggered → honeycomb), so the quiet field
-   * reads as cloth, not dots. Physics: ONE Spring node is 300+ independent
-   * mass-machines (state is per list item); its R drives size + hue, and its
-   * VELOCITY drives rotation — cells twist while they move and settle straight.
-   * Interaction: pointer proximity pumps energy in; clicks are caught by a
-   * Hotspot on a viewport-filling rectangle — the whole canvas as an interface
-   * element (armed on press, fires on release, so no click is too quick).
-   * Its trigger makes Sample & Hold freeze the click point and Timer restart
-   * from zero — timer × speed = ring radius, and a gaussian around that ring
-   * in the Expression is a pulse that travels outward through the cells.
-   * Every part of the machine is an ordinary wire. */
+  'Phyllotaxis': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "n2",
+        "type": "sets/series",
+        "x": 253,
+        "y": -59,
+        "values": {
+          "S": 7
+        }
+      },
+      {
+        "id": "n4",
+        "type": "math/mul",
+        "x": 460,
+        "y": 40,
+        "values": {}
+      },
+      {
+        "id": "n5",
+        "type": "input/time",
+        "x": -16,
+        "y": 340,
+        "values": {}
+      },
+      {
+        "id": "n7",
+        "type": "params/slider",
+        "x": -19,
+        "y": 487,
+        "values": {
+          "min": -2,
+          "max": 2,
+          "value": 0.15
+        }
+      },
+      {
+        "id": "n6",
+        "type": "math/mul",
+        "x": 240,
+        "y": 400,
+        "values": {}
+      },
+      {
+        "id": "n8",
+        "type": "math/add",
+        "x": 660,
+        "y": 120,
+        "values": {}
+      },
+      {
+        "id": "n10",
+        "type": "math/sqrt",
+        "x": 279,
+        "y": 249,
+        "values": {}
+      },
+      {
+        "id": "n9",
+        "type": "params/slider",
+        "x": 30,
+        "y": 640,
+        "values": {
+          "min": 0,
+          "max": 2,
+          "value": 1.263
+        }
+      },
+      {
+        "id": "n11",
+        "type": "math/mul",
+        "x": 479,
+        "y": 257,
+        "values": {}
+      },
+      {
+        "id": "n12",
+        "type": "vec/polar",
+        "x": 850,
+        "y": 171,
+        "values": {
+          "O": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      {
+        "id": "n19",
+        "type": "disp/draw",
+        "x": 1659,
+        "y": 295,
+        "values": {
+          "S": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 0
+          },
+          "W": 1
+        }
+      },
+      {
+        "id": "n20",
+        "type": "params/svg",
+        "x": -58,
+        "y": -1428,
+        "values": {
+          "name": "PK logo elementsArtboard 28",
+          "paths": [
+            {
+              "pts": [
+                [
+                  0.1534,
+                  -0.2615
+                ],
+                [
+                  0.0966,
+                  -0.314
+                ],
+                [
+                  0.0754,
+                  -0.3349
+                ],
+                [
+                  0.0537,
+                  -0.3594
+                ],
+                [
+                  0.0359,
+                  -0.3832
+                ],
+                [
+                  0.019,
+                  -0.4112
+                ],
+                [
+                  0.0049,
+                  -0.4407
+                ],
+                [
+                  -0.0074,
+                  -0.4742
+                ],
+                [
+                  -0.0175,
+                  -0.5116
+                ],
+                [
+                  -0.0172,
+                  -0.4827
+                ],
+                [
+                  -0.0197,
+                  -0.456
+                ],
+                [
+                  -0.0246,
+                  -0.4327
+                ],
+                [
+                  -0.0325,
+                  -0.4103
+                ],
+                [
+                  -0.0464,
+                  -0.384
+                ],
+                [
+                  -0.0639,
+                  -0.36
+                ],
+                [
+                  -0.0858,
+                  -0.3357
+                ],
+                [
+                  -0.1386,
+                  -0.2832
+                ],
+                [
+                  -0.1472,
+                  -0.2711
+                ],
+                [
+                  -0.1554,
+                  -0.252
+                ],
+                [
+                  -0.1602,
+                  -0.2318
+                ],
+                [
+                  -0.1624,
+                  -0.2081
+                ],
+                [
+                  -0.1614,
+                  -0.1814
+                ],
+                [
+                  -0.1839,
+                  -0.2614
+                ],
+                [
+                  -0.191,
+                  -0.2347
+                ],
+                [
+                  -0.1998,
+                  -0.2126
+                ],
+                [
+                  -0.2093,
+                  -0.194
+                ],
+                [
+                  -0.232,
+                  -0.1556
+                ],
+                [
+                  -0.2388,
+                  -0.1423
+                ],
+                [
+                  -0.2427,
+                  -0.1311
+                ],
+                [
+                  -0.2445,
+                  -0.1224
+                ],
+                [
+                  -0.2455,
+                  -0.1105
+                ],
+                [
+                  -0.2449,
+                  -0.0957
+                ],
+                [
+                  -0.2423,
+                  -0.081
+                ],
+                [
+                  -0.2375,
+                  -0.0638
+                ],
+                [
+                  -0.2324,
+                  -0.0499
+                ],
+                [
+                  -0.2271,
+                  -0.0392
+                ],
+                [
+                  -0.2565,
+                  -0.098
+                ],
+                [
+                  -0.2627,
+                  -0.1082
+                ],
+                [
+                  -0.2644,
+                  -0.1106
+                ],
+                [
+                  -0.265,
+                  -0.1099
+                ],
+                [
+                  -0.2645,
+                  -0.0951
+                ],
+                [
+                  -0.2668,
+                  -0.0804
+                ],
+                [
+                  -0.2955,
+                  0.0009
+                ],
+                [
+                  -0.2991,
+                  0.0154
+                ],
+                [
+                  -0.3001,
+                  0.0302
+                ],
+                [
+                  -0.2991,
+                  0.042
+                ],
+                [
+                  -0.2968,
+                  0.0537
+                ],
+                [
+                  -0.2874,
+                  0.0819
+                ],
+                [
+                  -0.2752,
+                  0.1057
+                ],
+                [
+                  -0.2654,
+                  0.1206
+                ],
+                [
+                  -0.2599,
+                  0.1263
+                ],
+                [
+                  -0.2666,
+                  0.1203
+                ],
+                [
+                  -0.2742,
+                  0.1112
+                ],
+                [
+                  -0.2902,
+                  0.0861
+                ],
+                [
+                  -0.3088,
+                  0.0489
+                ],
+                [
+                  -0.323,
+                  0.0129
+                ],
+                [
+                  -0.3177,
+                  0.0586
+                ],
+                [
+                  -0.3132,
+                  0.1299
+                ],
+                [
+                  -0.3096,
+                  0.1564
+                ],
+                [
+                  -0.3052,
+                  0.1798
+                ],
+                [
+                  -0.2969,
+                  0.2114
+                ],
+                [
+                  -0.2872,
+                  0.2396
+                ],
+                [
+                  -0.2753,
+                  0.2668
+                ],
+                [
+                  -0.2613,
+                  0.2931
+                ],
+                [
+                  -0.2436,
+                  0.3206
+                ],
+                [
+                  -0.2235,
+                  0.3464
+                ],
+                [
+                  -0.2013,
+                  0.3705
+                ],
+                [
+                  -0.1773,
+                  0.3927
+                ],
+                [
+                  -0.1516,
+                  0.413
+                ],
+                [
+                  -0.1246,
+                  0.4315
+                ],
+                [
+                  -0.0939,
+                  0.4496
+                ],
+                [
+                  -0.0593,
+                  0.467
+                ],
+                [
+                  -0.0546,
+                  0.4706
+                ],
+                [
+                  -0.0508,
+                  0.4752
+                ],
+                [
+                  -0.0464,
+                  0.4829
+                ],
+                [
+                  -0.0383,
+                  0.5084
+                ],
+                [
+                  -0.0363,
+                  0.5105
+                ],
+                [
+                  -0.0335,
+                  0.5114
+                ],
+                [
+                  -0.0307,
+                  0.5104
+                ],
+                [
+                  -0.0286,
+                  0.5083
+                ],
+                [
+                  -0.0162,
+                  0.4814
+                ],
+                [
+                  -0.0111,
+                  0.474
+                ],
+                [
+                  -0.0048,
+                  0.4678
+                ],
+                [
+                  0.0003,
+                  0.4647
+                ],
+                [
+                  0.031,
+                  0.4533
+                ],
+                [
+                  0.0609,
+                  0.4399
+                ],
+                [
+                  0.0872,
+                  0.4261
+                ],
+                [
+                  0.1126,
+                  0.4106
+                ],
+                [
+                  0.1369,
+                  0.3935
+                ],
+                [
+                  0.1601,
+                  0.3748
+                ],
+                [
+                  0.182,
+                  0.3547
+                ],
+                [
+                  0.2044,
+                  0.3309
+                ],
+                [
+                  0.2215,
+                  0.3102
+                ],
+                [
+                  0.239,
+                  0.2862
+                ],
+                [
+                  0.2551,
+                  0.2611
+                ],
+                [
+                  0.2681,
+                  0.2378
+                ],
+                [
+                  0.2819,
+                  0.2081
+                ],
+                [
+                  0.3074,
+                  0.1446
+                ],
+                [
+                  0.3175,
+                  0.1135
+                ],
+                [
+                  0.3216,
+                  0.0931
+                ],
+                [
+                  0.3258,
+                  0.0618
+                ],
+                [
+                  0.3123,
+                  0.0883
+                ],
+                [
+                  0.2948,
+                  0.1124
+                ],
+                [
+                  0.2739,
+                  0.1335
+                ],
+                [
+                  0.2457,
+                  0.1553
+                ],
+                [
+                  0.2629,
+                  0.1398
+                ],
+                [
+                  0.2779,
+                  0.1213
+                ],
+                [
+                  0.2879,
+                  0.1031
+                ],
+                [
+                  0.2919,
+                  0.0918
+                ],
+                [
+                  0.2936,
+                  0.0831
+                ],
+                [
+                  0.294,
+                  0.0623
+                ],
+                [
+                  0.2904,
+                  0.0268
+                ],
+                [
+                  0.2857,
+                  0.0004
+                ],
+                [
+                  0.2773,
+                  -0.0312
+                ],
+                [
+                  0.2748,
+                  -0.0459
+                ],
+                [
+                  0.2742,
+                  -0.0637
+                ],
+                [
+                  0.2758,
+                  -0.0814
+                ],
+                [
+                  0.2692,
+                  -0.068
+                ],
+                [
+                  0.2552,
+                  -0.032
+                ],
+                [
+                  0.2451,
+                  -0.0125
+                ],
+                [
+                  0.2545,
+                  -0.0438
+                ],
+                [
+                  0.2586,
+                  -0.0702
+                ],
+                [
+                  0.2583,
+                  -0.091
+                ],
+                [
+                  0.2525,
+                  -0.111
+                ],
+                [
+                  0.2173,
+                  -0.1962
+                ],
+                [
+                  0.2093,
+                  -0.2187
+                ],
+                [
+                  0.2037,
+                  -0.2387
+                ],
+                [
+                  0.2028,
+                  -0.2167
+                ],
+                [
+                  0.2004,
+                  -0.202
+                ],
+                [
+                  0.196,
+                  -0.1878
+                ],
+                [
+                  0.1885,
+                  -0.1725
+                ],
+                [
+                  0.1868,
+                  -0.1932
+                ],
+                [
+                  0.1794,
+                  -0.2189
+                ],
+                [
+                  0.1676,
+                  -0.2429
+                ],
+                [
+                  0.1609,
+                  -0.2528
+                ]
+              ],
+              "closed": true,
+              "fill": {
+                "r": 0,
+                "g": 0,
+                "b": 0,
+                "a": 1
+              },
+              "stroke": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 0
+              }
+            }
+          ],
+          "S": 30
+        }
+      },
+      {
+        "id": "n21",
+        "type": "xf/move",
+        "x": 1470,
+        "y": -166,
+        "values": {}
+      },
+      {
+        "id": "n22",
+        "type": "vec/vec2pt",
+        "x": 1100,
+        "y": -72,
+        "values": {}
+      },
+      {
+        "id": "n23",
+        "type": "vec/angle",
+        "x": 1030,
+        "y": -195,
+        "values": {}
+      },
+      {
+        "id": "n24",
+        "type": "xf/rotate",
+        "x": 1136,
+        "y": -456,
+        "values": {},
+        "preview": false
+      },
+      {
+        "id": "n26",
+        "type": "xf/rotate",
+        "x": 800,
+        "y": -488,
+        "values": {},
+        "preview": false
+      },
+      {
+        "id": "n27",
+        "type": "math/rad",
+        "x": 827,
+        "y": -554,
+        "values": {}
+      },
+      {
+        "id": "n28",
+        "type": "params/slider",
+        "x": 813,
+        "y": -647,
+        "values": {
+          "min": 0,
+          "max": 180,
+          "value": 88,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n30",
+        "type": "xf/scale",
+        "x": 776,
+        "y": -162,
+        "values": {
+          "mode": "uniform"
+        },
+        "preview": false
+      },
+      {
+        "id": "n32",
+        "type": "math/remap",
+        "x": 992,
+        "y": 350,
+        "values": {
+          "T1": 1,
+          "S1": 1,
+          "C": false
+        }
+      },
+      {
+        "id": "n34",
+        "type": "sets/series",
+        "x": 227,
+        "y": 73,
+        "values": {}
+      },
+      {
+        "id": "n35",
+        "type": "math/div",
+        "x": 80,
+        "y": -221,
+        "values": {
+          "A": 1
+        }
+      },
+      {
+        "id": "n36",
+        "type": "params/slider",
+        "x": 660,
+        "y": 379,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "value": 0.3,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n37",
+        "type": "params/slider",
+        "x": 670,
+        "y": 455,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 2.5,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n41",
+        "type": "params/slider",
+        "x": -42,
+        "y": 838,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 0.5,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n43",
+        "type": "params/slider",
+        "x": -33,
+        "y": 774,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 1,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n50",
+        "type": "math/pow",
+        "x": 682,
+        "y": 270,
+        "values": {}
+      },
+      {
+        "id": "n51",
+        "type": "params/slider",
+        "x": -30,
+        "y": 721,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 2,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n52",
+        "type": "math/rad",
+        "x": 396,
+        "y": 175,
+        "values": {}
+      },
+      {
+        "id": "n53",
+        "type": "params/slider",
+        "x": -28,
+        "y": 223,
+        "values": {
+          "min": 136,
+          "max": 137.5,
+          "value": 137.5,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n54",
+        "type": "disp/gradient",
+        "x": 1342,
+        "y": 282,
+        "values": {
+          "T": 0.4,
+          "A": {
+            "r": 2,
+            "g": 34,
+            "b": 14,
+            "a": 1
+          },
+          "B": {
+            "r": 4,
+            "g": 153,
+            "b": 92,
+            "a": 1
+          }
+        }
+      },
+      {
+        "id": "n55",
+        "type": "input/mouse",
+        "x": -85,
+        "y": -656,
+        "values": {}
+      },
+      {
+        "id": "n56",
+        "type": "vec/distance",
+        "x": 353,
+        "y": -624,
+        "values": {}
+      },
+      {
+        "id": "n57",
+        "type": "vec/construct",
+        "x": 244,
+        "y": -584,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n58",
+        "type": "vec/vec2pt",
+        "x": 386,
+        "y": -715,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n59",
+        "type": "vec/construct",
+        "x": 248,
+        "y": -702,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n60",
+        "type": "params/slider",
+        "x": -47,
+        "y": -400,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 0.7,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n61",
+        "type": "state/smooth",
+        "x": 229,
+        "y": -459,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n62",
+        "type": "state/smooth",
+        "x": 211,
+        "y": -513,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n63",
+        "type": "math/remap",
+        "x": -335,
+        "y": -280,
+        "values": {
+          "T1": 7,
+          "S1": 500,
+          "T0": 300
+        }
+      },
+      {
+        "id": "n64",
+        "type": "params/number",
+        "x": 30,
+        "y": 34,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n65",
+        "type": "state/smooth",
+        "x": 452,
+        "y": -458,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n66",
+        "type": "math/sin",
+        "x": -313,
+        "y": -36,
+        "values": {}
+      },
+      {
+        "id": "n67",
+        "type": "math/mul",
+        "x": -154,
+        "y": -30,
+        "values": {
+          "B": 5
+        },
+        "collapsed": true
+      },
+      {
+        "id": "n68",
+        "type": "params/timegraph",
+        "x": -183,
+        "y": 86,
+        "values": {}
+      },
+      {
+        "id": "n69",
+        "type": "math/add",
+        "x": -49,
+        "y": -141,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n70",
+        "type": "sets/dispatch",
+        "x": 476,
+        "y": -1057,
+        "values": {}
+      },
+      {
+        "id": "n72",
+        "type": "params/svg",
+        "x": 231,
+        "y": -1504,
+        "values": {
+          "name": "PK logo elementsArtboard 29",
+          "paths": [
+            {
+              "pts": [
+                [
+                  -0.1779,
+                  0.3081
+                ],
+                [
+                  -0.3555,
+                  0.0003
+                ],
+                [
+                  -0.3546,
+                  -0.0021
+                ],
+                [
+                  -0.1784,
+                  -0.3075
+                ],
+                [
+                  -0.1762,
+                  -0.3084
+                ],
+                [
+                  0.1764,
+                  -0.3084
+                ],
+                [
+                  0.1785,
+                  -0.3072
+                ],
+                [
+                  0.3547,
+                  -0.0018
+                ],
+                [
+                  0.3552,
+                  0.0006
+                ],
+                [
+                  0.1774,
+                  0.3081
+                ],
+                [
+                  -0.1779,
+                  0.3081
+                ]
+              ],
+              "closed": false,
+              "fill": {
+                "r": 0,
+                "g": 0,
+                "b": 0,
+                "a": 1
+              },
+              "stroke": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 0
+              }
+            },
+            {
+              "pts": [
+                [
+                  -0.2501,
+                  0.433
+                ],
+                [
+                  0.25,
+                  0.433
+                ],
+                [
+                  0.5,
+                  -0.0002
+                ],
+                [
+                  0.2497,
+                  -0.433
+                ],
+                [
+                  -0.2476,
+                  -0.433
+                ],
+                [
+                  -0.2502,
+                  -0.4328
+                ],
+                [
+                  -0.5,
+                  0.0004
+                ]
+              ],
+              "closed": true,
+              "fill": {
+                "r": 0,
+                "g": 0,
+                "b": 0,
+                "a": 1
+              },
+              "stroke": {
+                "r": 255,
+                "g": 255,
+                "b": 255,
+                "a": 0
+              }
+            }
+          ],
+          "S": 30
+        },
+        "preview": false
+      },
+      {
+        "id": "n73",
+        "type": "input/hotspot",
+        "x": -114,
+        "y": -868,
+        "values": {}
+      },
+      {
+        "id": "n74",
+        "type": "crv/circle",
+        "x": -365,
+        "y": -753,
+        "values": {
+          "R": 229
+        }
+      },
+      {
+        "id": "n76",
+        "type": "state/latch",
+        "x": 75,
+        "y": -822,
+        "values": {}
+      },
+      {
+        "id": "n77",
+        "type": "sets/dispatch",
+        "x": 477,
+        "y": -1172,
+        "values": {}
+      },
+      {
+        "id": "n81",
+        "type": "params/swatch",
+        "x": 762,
+        "y": -970,
+        "values": {
+          "hex": "#04995c",
+          "a": 1
+        }
+      },
+      {
+        "id": "n82",
+        "type": "sets/dispatch",
+        "x": 852,
+        "y": -984,
+        "values": {}
+      },
+      {
+        "id": "n83",
+        "type": "sets/dispatch",
+        "x": 903,
+        "y": -1156,
+        "values": {}
+      },
+      {
+        "id": "n84",
+        "type": "params/swatch",
+        "x": 791,
+        "y": -1154,
+        "values": {
+          "hex": "#0eb3c8",
+          "a": 1
+        }
+      },
+      {
+        "id": "n86",
+        "type": "crv/polygon",
+        "x": 469,
+        "y": -1560,
+        "values": {
+          "R": 16
+        }
+      },
+      {
+        "id": "n87",
+        "type": "crv/polygon",
+        "x": 468,
+        "y": -1403,
+        "values": {
+          "R": 9
+        }
+      },
+      {
+        "id": "n89",
+        "type": "crv/region",
+        "x": 725,
+        "y": -1363,
+        "values": {
+          "mode": "difference"
+        },
+        "collapsed": true
+      },
+      {
+        "id": "n90",
+        "type": "math/rad",
+        "x": 473,
+        "y": -1626,
+        "values": {}
+      },
+      {
+        "id": "n91",
+        "type": "params/slider",
+        "x": 426,
+        "y": -1694,
+        "values": {
+          "min": 0,
+          "max": 100,
+          "value": 14,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n93",
+        "type": "sets/series",
+        "x": 445,
+        "y": 807,
+        "values": {}
+      },
+      {
+        "id": "n94",
+        "type": "math/pow",
+        "x": 664,
+        "y": 714,
+        "values": {}
+      },
+      {
+        "id": "n95",
+        "type": "math/mul",
+        "x": 448,
+        "y": 1004,
+        "values": {}
+      },
+      {
+        "id": "n96",
+        "type": "math/pow",
+        "x": 689,
+        "y": 926,
+        "values": {}
+      }
+    ],
+    "wires": [
+      {
+        "id": "w2",
+        "from": [
+          "n2",
+          "S"
+        ],
+        "to": [
+          "n4",
+          "A"
+        ]
+      },
+      {
+        "id": "w4",
+        "from": [
+          "n5",
+          "T"
+        ],
+        "to": [
+          "n6",
+          "A"
+        ]
+      },
+      {
+        "id": "w5",
+        "from": [
+          "n7",
+          "N"
+        ],
+        "to": [
+          "n6",
+          "B"
+        ]
+      },
+      {
+        "id": "w6",
+        "from": [
+          "n4",
+          "R"
+        ],
+        "to": [
+          "n8",
+          "A"
+        ]
+      },
+      {
+        "id": "w7",
+        "from": [
+          "n6",
+          "R"
+        ],
+        "to": [
+          "n8",
+          "B"
+        ]
+      },
+      {
+        "id": "w8",
+        "from": [
+          "n2",
+          "S"
+        ],
+        "to": [
+          "n10",
+          "V"
+        ]
+      },
+      {
+        "id": "w9",
+        "from": [
+          "n10",
+          "R"
+        ],
+        "to": [
+          "n11",
+          "A"
+        ]
+      },
+      {
+        "id": "w10",
+        "from": [
+          "n9",
+          "N"
+        ],
+        "to": [
+          "n11",
+          "B"
+        ]
+      },
+      {
+        "id": "w11",
+        "from": [
+          "n8",
+          "R"
+        ],
+        "to": [
+          "n12",
+          "A"
+        ]
+      },
+      {
+        "id": "w20",
+        "from": [
+          "n12",
+          "P"
+        ],
+        "to": [
+          "n22",
+          "B"
+        ]
+      },
+      {
+        "id": "w22",
+        "from": [
+          "n22",
+          "V"
+        ],
+        "to": [
+          "n21",
+          "T"
+        ]
+      },
+      {
+        "id": "w23",
+        "from": [
+          "n21",
+          "G"
+        ],
+        "to": [
+          "n19",
+          "G"
+        ]
+      },
+      {
+        "id": "w24",
+        "from": [
+          "n12",
+          "P"
+        ],
+        "to": [
+          "n23",
+          "B"
+        ]
+      },
+      {
+        "id": "w26",
+        "from": [
+          "n23",
+          "R"
+        ],
+        "to": [
+          "n24",
+          "A"
+        ]
+      },
+      {
+        "id": "w28",
+        "from": [
+          "n24",
+          "G"
+        ],
+        "to": [
+          "n21",
+          "G"
+        ]
+      },
+      {
+        "id": "w29",
+        "from": [
+          "n28",
+          "N"
+        ],
+        "to": [
+          "n27",
+          "V"
+        ]
+      },
+      {
+        "id": "w30",
+        "from": [
+          "n27",
+          "R"
+        ],
+        "to": [
+          "n26",
+          "A"
+        ]
+      },
+      {
+        "id": "w32",
+        "from": [
+          "n26",
+          "G"
+        ],
+        "to": [
+          "n24",
+          "G"
+        ]
+      },
+      {
+        "id": "w36",
+        "from": [
+          "n32",
+          "R"
+        ],
+        "to": [
+          "n30",
+          "F"
+        ]
+      },
+      {
+        "id": "w37",
+        "from": [
+          "n30",
+          "G"
+        ],
+        "to": [
+          "n26",
+          "G"
+        ]
+      },
+      {
+        "id": "w41",
+        "from": [
+          "n35",
+          "R"
+        ],
+        "to": [
+          "n34",
+          "N"
+        ]
+      },
+      {
+        "id": "w43",
+        "from": [
+          "n36",
+          "N"
+        ],
+        "to": [
+          "n32",
+          "T0"
+        ]
+      },
+      {
+        "id": "w44",
+        "from": [
+          "n37",
+          "N"
+        ],
+        "to": [
+          "n32",
+          "T1"
+        ]
+      },
+      {
+        "id": "w73",
+        "from": [
+          "n11",
+          "R"
+        ],
+        "to": [
+          "n50",
+          "A"
+        ]
+      },
+      {
+        "id": "w74",
+        "from": [
+          "n50",
+          "R"
+        ],
+        "to": [
+          "n12",
+          "R"
+        ]
+      },
+      {
+        "id": "w75",
+        "from": [
+          "n51",
+          "N"
+        ],
+        "to": [
+          "n50",
+          "B"
+        ]
+      },
+      {
+        "id": "w76",
+        "from": [
+          "n52",
+          "R"
+        ],
+        "to": [
+          "n4",
+          "B"
+        ]
+      },
+      {
+        "id": "w77",
+        "from": [
+          "n53",
+          "N"
+        ],
+        "to": [
+          "n52",
+          "V"
+        ]
+      },
+      {
+        "id": "w78",
+        "from": [
+          "n54",
+          "C"
+        ],
+        "to": [
+          "n19",
+          "F"
+        ]
+      },
+      {
+        "id": "w79",
+        "from": [
+          "n34",
+          "S"
+        ],
+        "to": [
+          "n54",
+          "T"
+        ]
+      },
+      {
+        "id": "w80",
+        "from": [
+          "n55",
+          "X"
+        ],
+        "to": [
+          "n57",
+          "X"
+        ]
+      },
+      {
+        "id": "w82",
+        "from": [
+          "n59",
+          "P"
+        ],
+        "to": [
+          "n58",
+          "B"
+        ]
+      },
+      {
+        "id": "w83",
+        "from": [
+          "n60",
+          "N"
+        ],
+        "to": [
+          "n61",
+          "S"
+        ]
+      },
+      {
+        "id": "w84",
+        "from": [
+          "n55",
+          "Y"
+        ],
+        "to": [
+          "n61",
+          "V"
+        ]
+      },
+      {
+        "id": "w85",
+        "from": [
+          "n60",
+          "N"
+        ],
+        "to": [
+          "n62",
+          "S"
+        ]
+      },
+      {
+        "id": "w86",
+        "from": [
+          "n55",
+          "Y"
+        ],
+        "to": [
+          "n57",
+          "Y"
+        ]
+      },
+      {
+        "id": "w89",
+        "from": [
+          "n55",
+          "X"
+        ],
+        "to": [
+          "n62",
+          "V"
+        ]
+      },
+      {
+        "id": "w91",
+        "from": [
+          "n64",
+          "N"
+        ],
+        "to": [
+          "n35",
+          "B"
+        ]
+      },
+      {
+        "id": "w92",
+        "from": [
+          "n64",
+          "N"
+        ],
+        "to": [
+          "n2",
+          "C"
+        ]
+      },
+      {
+        "id": "w93",
+        "from": [
+          "n64",
+          "N"
+        ],
+        "to": [
+          "n34",
+          "C"
+        ]
+      },
+      {
+        "id": "w101",
+        "from": [
+          "n57",
+          "P"
+        ],
+        "to": [
+          "n56",
+          "A"
+        ]
+      },
+      {
+        "id": "w102",
+        "from": [
+          "n60",
+          "N"
+        ],
+        "to": [
+          "n65",
+          "S"
+        ]
+      },
+      {
+        "id": "w104",
+        "from": [
+          "n56",
+          "D"
+        ],
+        "to": [
+          "n65",
+          "V"
+        ]
+      },
+      {
+        "id": "w105",
+        "from": [
+          "n65",
+          "R"
+        ],
+        "to": [
+          "n63",
+          "V"
+        ]
+      },
+      {
+        "id": "w106",
+        "from": [
+          "n62",
+          "R"
+        ],
+        "to": [
+          "n59",
+          "X"
+        ]
+      },
+      {
+        "id": "w107",
+        "from": [
+          "n61",
+          "R"
+        ],
+        "to": [
+          "n59",
+          "Y"
+        ]
+      },
+      {
+        "id": "w109",
+        "from": [
+          "n66",
+          "R"
+        ],
+        "to": [
+          "n67",
+          "A"
+        ]
+      },
+      {
+        "id": "w110",
+        "from": [
+          "n5",
+          "T"
+        ],
+        "to": [
+          "n66",
+          "V"
+        ]
+      },
+      {
+        "id": "w111",
+        "from": [
+          "n66",
+          "R"
+        ],
+        "to": [
+          "n68",
+          "V"
+        ]
+      },
+      {
+        "id": "w112",
+        "from": [
+          "n63",
+          "R"
+        ],
+        "to": [
+          "n69",
+          "A"
+        ]
+      },
+      {
+        "id": "w113",
+        "from": [
+          "n67",
+          "R"
+        ],
+        "to": [
+          "n69",
+          "B"
+        ]
+      },
+      {
+        "id": "w114",
+        "from": [
+          "n69",
+          "R"
+        ],
+        "to": [
+          "n64",
+          "N"
+        ]
+      },
+      {
+        "id": "w118",
+        "from": [
+          "n20",
+          "G"
+        ],
+        "to": [
+          "n70",
+          "L"
+        ]
+      },
+      {
+        "id": "w120",
+        "from": [
+          "n70",
+          "B"
+        ],
+        "to": [
+          "n30",
+          "G"
+        ]
+      },
+      {
+        "id": "w123",
+        "from": [
+          "n74",
+          "C"
+        ],
+        "to": [
+          "n73",
+          "G"
+        ]
+      },
+      {
+        "id": "w125",
+        "from": [
+          "n73",
+          "C"
+        ],
+        "to": [
+          "n76",
+          "T"
+        ]
+      },
+      {
+        "id": "w126",
+        "from": [
+          "n76",
+          "B"
+        ],
+        "to": [
+          "n70",
+          "P"
+        ]
+      },
+      {
+        "id": "w135",
+        "from": [
+          "n77",
+          "A"
+        ],
+        "to": [
+          "n30",
+          "G"
+        ]
+      },
+      {
+        "id": "w136",
+        "from": [
+          "n76",
+          "B"
+        ],
+        "to": [
+          "n77",
+          "P"
+        ]
+      },
+      {
+        "id": "w138",
+        "from": [
+          "n76",
+          "B"
+        ],
+        "to": [
+          "n82",
+          "P"
+        ]
+      },
+      {
+        "id": "w140",
+        "from": [
+          "n76",
+          "B"
+        ],
+        "to": [
+          "n83",
+          "P"
+        ]
+      },
+      {
+        "id": "w141",
+        "from": [
+          "n81",
+          "C"
+        ],
+        "to": [
+          "n82",
+          "L"
+        ]
+      },
+      {
+        "id": "w142",
+        "from": [
+          "n84",
+          "C"
+        ],
+        "to": [
+          "n83",
+          "L"
+        ]
+      },
+      {
+        "id": "w143",
+        "from": [
+          "n83",
+          "A"
+        ],
+        "to": [
+          "n54",
+          "B"
+        ]
+      },
+      {
+        "id": "w144",
+        "from": [
+          "n82",
+          "B"
+        ],
+        "to": [
+          "n54",
+          "B"
+        ]
+      },
+      {
+        "id": "w150",
+        "from": [
+          "n86",
+          "C"
+        ],
+        "to": [
+          "n89",
+          "A"
+        ]
+      },
+      {
+        "id": "w151",
+        "from": [
+          "n87",
+          "C"
+        ],
+        "to": [
+          "n89",
+          "B"
+        ]
+      },
+      {
+        "id": "w152",
+        "from": [
+          "n89",
+          "C"
+        ],
+        "to": [
+          "n77",
+          "L"
+        ]
+      },
+      {
+        "id": "w153",
+        "from": [
+          "n90",
+          "R"
+        ],
+        "to": [
+          "n86",
+          "A"
+        ]
+      },
+      {
+        "id": "w154",
+        "from": [
+          "n90",
+          "R"
+        ],
+        "to": [
+          "n87",
+          "A"
+        ]
+      },
+      {
+        "id": "w155",
+        "from": [
+          "n91",
+          "N"
+        ],
+        "to": [
+          "n90",
+          "V"
+        ]
+      },
+      {
+        "id": "w164",
+        "from": [
+          "n93",
+          "S"
+        ],
+        "to": [
+          "n94",
+          "A"
+        ]
+      },
+      {
+        "id": "w165",
+        "from": [
+          "n95",
+          "R"
+        ],
+        "to": [
+          "n96",
+          "A"
+        ]
+      },
+      {
+        "id": "w166",
+        "from": [
+          "n41",
+          "N"
+        ],
+        "to": [
+          "n93",
+          "N"
+        ]
+      },
+      {
+        "id": "w167",
+        "from": [
+          "n41",
+          "N"
+        ],
+        "to": [
+          "n95",
+          "B"
+        ]
+      },
+      {
+        "id": "w168",
+        "from": [
+          "n43",
+          "N"
+        ],
+        "to": [
+          "n94",
+          "B"
+        ]
+      },
+      {
+        "id": "w169",
+        "from": [
+          "n43",
+          "N"
+        ],
+        "to": [
+          "n96",
+          "B"
+        ]
+      },
+      {
+        "id": "w170",
+        "from": [
+          "n64",
+          "N"
+        ],
+        "to": [
+          "n95",
+          "A"
+        ]
+      },
+      {
+        "id": "w171",
+        "from": [
+          "n64",
+          "N"
+        ],
+        "to": [
+          "n93",
+          "C"
+        ]
+      },
+      {
+        "id": "w172",
+        "from": [
+          "n94",
+          "R"
+        ],
+        "to": [
+          "n32",
+          "V"
+        ]
+      },
+      {
+        "id": "w173",
+        "from": [
+          "n96",
+          "R"
+        ],
+        "to": [
+          "n32",
+          "S1"
+        ]
+      }
+    ]
+  },
+  'Noise blob': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "n1",
+        "type": "params/slider",
+        "x": -85,
+        "y": 53,
+        "values": {
+          "min": 3,
+          "max": 64,
+          "value": 21.037
+        }
+      },
+      {
+        "id": "n2",
+        "type": "sets/series",
+        "x": 240,
+        "y": 40,
+        "values": {}
+      },
+      {
+        "id": "n3",
+        "type": "math/expr",
+        "x": 460,
+        "y": 40,
+        "values": {
+          "expr": "X / Y * 2 * PI"
+        }
+      },
+      {
+        "id": "n4",
+        "type": "input/time",
+        "x": 30,
+        "y": 300,
+        "values": {}
+      },
+      {
+        "id": "n5",
+        "type": "math/expr",
+        "x": 419,
+        "y": 219,
+        "values": {
+          "expr": "X * 0.9 + Y * 0.6"
+        }
+      },
+      {
+        "id": "n6",
+        "type": "math/noise",
+        "x": 680,
+        "y": 200,
+        "values": {
+          "Y": 0
+        }
+      },
+      {
+        "id": "n7",
+        "type": "math/remap",
+        "x": 880,
+        "y": 160,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 90,
+          "T1": 200
+        }
+      },
+      {
+        "id": "n8",
+        "type": "vec/polar",
+        "x": 1111,
+        "y": 55,
+        "values": {}
+      },
+      {
+        "id": "n9",
+        "type": "crv/interp",
+        "x": 1420,
+        "y": 138,
+        "values": {
+          "C": true
+        }
+      },
+      {
+        "id": "n10",
+        "type": "disp/draw",
+        "x": 1875,
+        "y": 164,
+        "values": {
+          "S": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 1
+          },
+          "F": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 0.08
+          },
+          "W": 2
+        }
+      },
+      {
+        "id": "n14",
+        "type": "math/noise",
+        "x": 677,
+        "y": 585,
+        "values": {
+          "Y": 4
+        }
+      },
+      {
+        "id": "n15",
+        "type": "math/remap",
+        "x": 877,
+        "y": 545,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 90,
+          "T1": 200
+        }
+      },
+      {
+        "id": "n16",
+        "type": "vec/polar",
+        "x": 1108,
+        "y": 440,
+        "values": {}
+      },
+      {
+        "id": "n17",
+        "type": "crv/interp",
+        "x": 1417,
+        "y": 523,
+        "values": {
+          "C": true
+        }
+      },
+      {
+        "id": "n18",
+        "type": "params/swatch",
+        "x": 1439,
+        "y": -197,
+        "values": {
+          "hex": "#9b0000",
+          "a": 1
+        }
+      },
+      {
+        "id": "n19",
+        "type": "disp/hsl",
+        "x": 1735,
+        "y": -167,
+        "values": {
+          "A": 0.08
+        }
+      },
+      {
+        "id": "n20",
+        "type": "disp/deconhsl",
+        "x": 1633,
+        "y": -124,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n21",
+        "type": "params/swatch",
+        "x": 1435,
+        "y": -126,
+        "values": {
+          "hex": "#00ff00",
+          "a": 1
+        }
+      },
+      {
+        "id": "n22",
+        "type": "math/noise",
+        "x": 685,
+        "y": 923,
+        "values": {
+          "Y": 11
+        }
+      },
+      {
+        "id": "n23",
+        "type": "math/remap",
+        "x": 885,
+        "y": 883,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 90,
+          "T1": 200
+        }
+      },
+      {
+        "id": "n24",
+        "type": "vec/polar",
+        "x": 1116,
+        "y": 778,
+        "values": {}
+      },
+      {
+        "id": "n25",
+        "type": "crv/interp",
+        "x": 1425,
+        "y": 861,
+        "values": {
+          "C": true
+        }
+      },
+      {
+        "id": "n26",
+        "type": "params/swatch",
+        "x": 1435,
+        "y": -61,
+        "values": {
+          "hex": "#0000ff",
+          "a": 1
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": [
+          "n1",
+          "N"
+        ],
+        "to": [
+          "n2",
+          "C"
+        ]
+      },
+      {
+        "id": "w2",
+        "from": [
+          "n2",
+          "S"
+        ],
+        "to": [
+          "n3",
+          "X"
+        ]
+      },
+      {
+        "id": "w3",
+        "from": [
+          "n1",
+          "N"
+        ],
+        "to": [
+          "n3",
+          "Y"
+        ]
+      },
+      {
+        "id": "w4",
+        "from": [
+          "n2",
+          "S"
+        ],
+        "to": [
+          "n5",
+          "X"
+        ]
+      },
+      {
+        "id": "w5",
+        "from": [
+          "n4",
+          "T"
+        ],
+        "to": [
+          "n5",
+          "Y"
+        ]
+      },
+      {
+        "id": "w6",
+        "from": [
+          "n5",
+          "R"
+        ],
+        "to": [
+          "n6",
+          "X"
+        ]
+      },
+      {
+        "id": "w8",
+        "from": [
+          "n3",
+          "R"
+        ],
+        "to": [
+          "n8",
+          "A"
+        ]
+      },
+      {
+        "id": "w9",
+        "from": [
+          "n7",
+          "R"
+        ],
+        "to": [
+          "n8",
+          "R"
+        ]
+      },
+      {
+        "id": "w10",
+        "from": [
+          "n8",
+          "P"
+        ],
+        "to": [
+          "n9",
+          "V"
+        ]
+      },
+      {
+        "id": "w11",
+        "from": [
+          "n9",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "G"
+        ]
+      },
+      {
+        "id": "w17",
+        "from": [
+          "n6",
+          "N"
+        ],
+        "to": [
+          "n7",
+          "V"
+        ]
+      },
+      {
+        "id": "w18",
+        "from": [
+          "n15",
+          "R"
+        ],
+        "to": [
+          "n16",
+          "R"
+        ]
+      },
+      {
+        "id": "w19",
+        "from": [
+          "n16",
+          "P"
+        ],
+        "to": [
+          "n17",
+          "V"
+        ]
+      },
+      {
+        "id": "w20",
+        "from": [
+          "n14",
+          "N"
+        ],
+        "to": [
+          "n15",
+          "V"
+        ]
+      },
+      {
+        "id": "w21",
+        "from": [
+          "n5",
+          "R"
+        ],
+        "to": [
+          "n14",
+          "X"
+        ]
+      },
+      {
+        "id": "w22",
+        "from": [
+          "n3",
+          "R"
+        ],
+        "to": [
+          "n16",
+          "A"
+        ]
+      },
+      {
+        "id": "w23",
+        "from": [
+          "n17",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "G"
+        ]
+      },
+      {
+        "id": "w24",
+        "from": [
+          "n18",
+          "C"
+        ],
+        "to": [
+          "n20",
+          "C"
+        ]
+      },
+      {
+        "id": "w25",
+        "from": [
+          "n20",
+          "H"
+        ],
+        "to": [
+          "n19",
+          "H"
+        ]
+      },
+      {
+        "id": "w26",
+        "from": [
+          "n20",
+          "S"
+        ],
+        "to": [
+          "n19",
+          "S"
+        ]
+      },
+      {
+        "id": "w27",
+        "from": [
+          "n20",
+          "L"
+        ],
+        "to": [
+          "n19",
+          "L"
+        ]
+      },
+      {
+        "id": "w28",
+        "from": [
+          "n19",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "F"
+        ]
+      },
+      {
+        "id": "w29",
+        "from": [
+          "n18",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "S"
+        ]
+      },
+      {
+        "id": "w30",
+        "from": [
+          "n21",
+          "C"
+        ],
+        "to": [
+          "n20",
+          "C"
+        ]
+      },
+      {
+        "id": "w31",
+        "from": [
+          "n21",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "S"
+        ]
+      },
+      {
+        "id": "w32",
+        "from": [
+          "n23",
+          "R"
+        ],
+        "to": [
+          "n24",
+          "R"
+        ]
+      },
+      {
+        "id": "w33",
+        "from": [
+          "n24",
+          "P"
+        ],
+        "to": [
+          "n25",
+          "V"
+        ]
+      },
+      {
+        "id": "w34",
+        "from": [
+          "n22",
+          "N"
+        ],
+        "to": [
+          "n23",
+          "V"
+        ]
+      },
+      {
+        "id": "w35",
+        "from": [
+          "n5",
+          "R"
+        ],
+        "to": [
+          "n22",
+          "X"
+        ]
+      },
+      {
+        "id": "w36",
+        "from": [
+          "n3",
+          "R"
+        ],
+        "to": [
+          "n24",
+          "A"
+        ]
+      },
+      {
+        "id": "w37",
+        "from": [
+          "n25",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "G"
+        ]
+      },
+      {
+        "id": "w38",
+        "from": [
+          "n26",
+          "C"
+        ],
+        "to": [
+          "n20",
+          "C"
+        ]
+      },
+      {
+        "id": "w39",
+        "from": [
+          "n26",
+          "C"
+        ],
+        "to": [
+          "n10",
+          "S"
+        ]
+      }
+    ]
+  },
+  'Iso-field': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "n10",
+        "type": "params/slider",
+        "x": 312,
+        "y": 858,
+        "values": {
+          "min": 0,
+          "max": 250,
+          "value": 24,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n13",
+        "type": "crv/circle",
+        "x": 1349,
+        "y": 1203,
+        "values": {}
+      },
+      {
+        "id": "n14",
+        "type": "disp/draw",
+        "x": 2109,
+        "y": 1013,
+        "values": {
+          "F": {
+            "r": 255,
+            "g": 255,
+            "b": 255,
+            "a": 1
+          }
+        }
+      },
+      {
+        "id": "n21",
+        "type": "xf/kaleido",
+        "x": 1680,
+        "y": 1055,
+        "values": {
+          "M": false,
+          "N": 6
+        }
+      },
+      {
+        "id": "n22",
+        "type": "math/add",
+        "x": 978,
+        "y": 845,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n24",
+        "type": "vec/construct",
+        "x": 1121,
+        "y": 907,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n25",
+        "type": "vec/deconstruct",
+        "x": 844,
+        "y": 865,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n27",
+        "type": "math/add",
+        "x": 916,
+        "y": 1441,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n28",
+        "type": "vec/construct",
+        "x": 1009,
+        "y": 1371,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n29",
+        "type": "vec/deconstruct",
+        "x": 782,
+        "y": 1371,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n30",
+        "type": "crv/line",
+        "x": 1301,
+        "y": 1327,
+        "values": {}
+      },
+      {
+        "id": "n31",
+        "type": "params/point",
+        "x": 1136,
+        "y": 674,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n35",
+        "type": "math/mul",
+        "x": 832,
+        "y": 976,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n37",
+        "type": "math/mul",
+        "x": 926,
+        "y": 1013,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n38",
+        "type": "math/mul",
+        "x": 918,
+        "y": 1162,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n39",
+        "type": "params/slider",
+        "x": 385,
+        "y": 1177,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 1.732,
+          "mode": "float",
+          "prec": 3
+        }
+      },
+      {
+        "id": "n40",
+        "type": "math/mul",
+        "x": 815,
+        "y": 1184,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n41",
+        "type": "math/mul",
+        "x": 746,
+        "y": 1128,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n45",
+        "type": "params/slider",
+        "x": 1085,
+        "y": 772,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 4,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n46",
+        "type": "xf/kaleido",
+        "x": 1882,
+        "y": 1364,
+        "values": {
+          "M": true,
+          "N": 12
+        }
+      },
+      {
+        "id": "n47",
+        "type": "disp/hsl",
+        "x": 1832,
+        "y": 546,
+        "values": {
+          "S": 0.35,
+          "L": 0.74
+        }
+      },
+      {
+        "id": "n48",
+        "type": "params/slider",
+        "x": 1396,
+        "y": 571,
+        "values": {
+          "min": 0,
+          "max": 256,
+          "value": 139,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n49",
+        "type": "math/div",
+        "x": 1636,
+        "y": 474,
+        "values": {
+          "B": 256
+        }
+      },
+      {
+        "id": "n50",
+        "type": "params/slider",
+        "x": 1399,
+        "y": 683,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "value": 0.1,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n51",
+        "type": "disp/hsl",
+        "x": 1796,
+        "y": 776,
+        "values": {
+          "S": 0.35,
+          "L": 0.74
+        }
+      },
+      {
+        "id": "n52",
+        "type": "params/slider",
+        "x": 1399,
+        "y": 806,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "value": 1,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n58",
+        "type": "vec/construct",
+        "x": 1096,
+        "y": 477,
+        "values": {}
+      },
+      {
+        "id": "n66",
+        "type": "input/mouse",
+        "x": 231,
+        "y": 961,
+        "values": {}
+      },
+      {
+        "id": "n67",
+        "type": "state/smooth",
+        "x": 619,
+        "y": 578,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n68",
+        "type": "params/slider",
+        "x": 290,
+        "y": 544,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 0.5,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n69",
+        "type": "state/smooth",
+        "x": 623,
+        "y": 662,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n73",
+        "type": "math/clamp",
+        "x": 839,
+        "y": 426,
+        "values": {}
+      },
+      {
+        "id": "n75",
+        "type": "params/slider",
+        "x": 351,
+        "y": 423,
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "value": 290,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n76",
+        "type": "math/clamp",
+        "x": 845,
+        "y": 586,
+        "values": {}
+      },
+      {
+        "id": "n77",
+        "type": "vec/distance",
+        "x": 533,
+        "y": 995,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n78",
+        "type": "vec/construct",
+        "x": 448,
+        "y": 989,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n81",
+        "type": "params/slider",
+        "x": 98,
+        "y": 690,
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "value": 312,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n82",
+        "type": "math/mul",
+        "x": 643,
+        "y": 1205,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n83",
+        "type": "math/remap",
+        "x": 394,
+        "y": 1272,
+        "values": {
+          "T1": 1.5,
+          "T0": 0.6
+        }
+      },
+      {
+        "id": "n84",
+        "type": "params/slider",
+        "x": 239,
+        "y": 1591,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 1,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n85",
+        "type": "state/smooth",
+        "x": 600,
+        "y": 1481,
+        "values": {}
+      },
+      {
+        "id": "n87",
+        "type": "math/abs",
+        "x": 389,
+        "y": 677,
+        "values": {}
+      },
+      {
+        "id": "n88",
+        "type": "math/abs",
+        "x": 437,
+        "y": 745,
+        "values": {}
+      },
+      {
+        "id": "n89",
+        "type": "params/slider",
+        "x": 348,
+        "y": 475,
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "value": 67,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n91",
+        "type": "math/neg",
+        "x": 1035,
+        "y": 644,
+        "values": {},
+        "collapsed": true
+      }
+    ],
+    "wires": [
+      {
+        "id": "w25",
+        "from": [
+          "n13",
+          "C"
+        ],
+        "to": [
+          "n21",
+          "G"
+        ]
+      },
+      {
+        "id": "w35",
+        "from": [
+          "n24",
+          "P"
+        ],
+        "to": [
+          "n13",
+          "P"
+        ]
+      },
+      {
+        "id": "w36",
+        "from": [
+          "n25",
+          "X"
+        ],
+        "to": [
+          "n22",
+          "A"
+        ]
+      },
+      {
+        "id": "w37",
+        "from": [
+          "n22",
+          "R"
+        ],
+        "to": [
+          "n24",
+          "X"
+        ]
+      },
+      {
+        "id": "w38",
+        "from": [
+          "n25",
+          "Y"
+        ],
+        "to": [
+          "n24",
+          "Y"
+        ]
+      },
+      {
+        "id": "w44",
+        "from": [
+          "n27",
+          "R"
+        ],
+        "to": [
+          "n28",
+          "Y"
+        ]
+      },
+      {
+        "id": "w45",
+        "from": [
+          "n29",
+          "X"
+        ],
+        "to": [
+          "n28",
+          "X"
+        ]
+      },
+      {
+        "id": "w46",
+        "from": [
+          "n29",
+          "Y"
+        ],
+        "to": [
+          "n27",
+          "A"
+        ]
+      },
+      {
+        "id": "w47",
+        "from": [
+          "n28",
+          "P"
+        ],
+        "to": [
+          "n13",
+          "P"
+        ]
+      },
+      {
+        "id": "w49",
+        "from": [
+          "n28",
+          "P"
+        ],
+        "to": [
+          "n30",
+          "B"
+        ]
+      },
+      {
+        "id": "w50",
+        "from": [
+          "n24",
+          "P"
+        ],
+        "to": [
+          "n30",
+          "B"
+        ]
+      },
+      {
+        "id": "w51",
+        "from": [
+          "n30",
+          "C"
+        ],
+        "to": [
+          "n21",
+          "G"
+        ]
+      },
+      {
+        "id": "w53",
+        "from": [
+          "n31",
+          "P"
+        ],
+        "to": [
+          "n21",
+          "C"
+        ]
+      },
+      {
+        "id": "w54",
+        "from": [
+          "n31",
+          "P"
+        ],
+        "to": [
+          "n30",
+          "A"
+        ]
+      },
+      {
+        "id": "w55",
+        "from": [
+          "n31",
+          "P"
+        ],
+        "to": [
+          "n29",
+          "P"
+        ]
+      },
+      {
+        "id": "w56",
+        "from": [
+          "n31",
+          "P"
+        ],
+        "to": [
+          "n25",
+          "P"
+        ]
+      },
+      {
+        "id": "w60",
+        "from": [
+          "n10",
+          "N"
+        ],
+        "to": [
+          "n35",
+          "A"
+        ]
+      },
+      {
+        "id": "w62",
+        "from": [
+          "n10",
+          "N"
+        ],
+        "to": [
+          "n22",
+          "B"
+        ]
+      },
+      {
+        "id": "w63",
+        "from": [
+          "n35",
+          "R"
+        ],
+        "to": [
+          "n22",
+          "B"
+        ]
+      },
+      {
+        "id": "w66",
+        "from": [
+          "n35",
+          "R"
+        ],
+        "to": [
+          "n37",
+          "A"
+        ]
+      },
+      {
+        "id": "w67",
+        "from": [
+          "n37",
+          "R"
+        ],
+        "to": [
+          "n22",
+          "B"
+        ]
+      },
+      {
+        "id": "w75",
+        "from": [
+          "n10",
+          "N"
+        ],
+        "to": [
+          "n40",
+          "A"
+        ]
+      },
+      {
+        "id": "w77",
+        "from": [
+          "n40",
+          "R"
+        ],
+        "to": [
+          "n27",
+          "B"
+        ]
+      },
+      {
+        "id": "w78",
+        "from": [
+          "n38",
+          "R"
+        ],
+        "to": [
+          "n27",
+          "B"
+        ]
+      },
+      {
+        "id": "w79",
+        "from": [
+          "n40",
+          "R"
+        ],
+        "to": [
+          "n38",
+          "A"
+        ]
+      },
+      {
+        "id": "w82",
+        "from": [
+          "n41",
+          "R"
+        ],
+        "to": [
+          "n38",
+          "B"
+        ]
+      },
+      {
+        "id": "w83",
+        "from": [
+          "n41",
+          "R"
+        ],
+        "to": [
+          "n37",
+          "B"
+        ]
+      },
+      {
+        "id": "w84",
+        "from": [
+          "n41",
+          "R"
+        ],
+        "to": [
+          "n35",
+          "B"
+        ]
+      },
+      {
+        "id": "w93",
+        "from": [
+          "n21",
+          "G"
+        ],
+        "to": [
+          "n46",
+          "G"
+        ]
+      },
+      {
+        "id": "w94",
+        "from": [
+          "n46",
+          "G"
+        ],
+        "to": [
+          "n14",
+          "G"
+        ]
+      },
+      {
+        "id": "w97",
+        "from": [
+          "n47",
+          "C"
+        ],
+        "to": [
+          "n14",
+          "S"
+        ]
+      },
+      {
+        "id": "w98",
+        "from": [
+          "n48",
+          "N"
+        ],
+        "to": [
+          "n49",
+          "A"
+        ]
+      },
+      {
+        "id": "w99",
+        "from": [
+          "n49",
+          "R"
+        ],
+        "to": [
+          "n47",
+          "H"
+        ]
+      },
+      {
+        "id": "w101",
+        "from": [
+          "n49",
+          "R"
+        ],
+        "to": [
+          "n51",
+          "H"
+        ]
+      },
+      {
+        "id": "w102",
+        "from": [
+          "n50",
+          "N"
+        ],
+        "to": [
+          "n47",
+          "A"
+        ]
+      },
+      {
+        "id": "w103",
+        "from": [
+          "n52",
+          "N"
+        ],
+        "to": [
+          "n51",
+          "A"
+        ]
+      },
+      {
+        "id": "w104",
+        "from": [
+          "n51",
+          "C"
+        ],
+        "to": [
+          "n14",
+          "F"
+        ]
+      },
+      {
+        "id": "w122",
+        "from": [
+          "n45",
+          "N"
+        ],
+        "to": [
+          "n13",
+          "R"
+        ]
+      },
+      {
+        "id": "w133",
+        "from": [
+          "n68",
+          "N"
+        ],
+        "to": [
+          "n67",
+          "S"
+        ]
+      },
+      {
+        "id": "w137",
+        "from": [
+          "n58",
+          "P"
+        ],
+        "to": [
+          "n31",
+          "P"
+        ]
+      },
+      {
+        "id": "w139",
+        "from": [
+          "n68",
+          "N"
+        ],
+        "to": [
+          "n69",
+          "S"
+        ]
+      },
+      {
+        "id": "w148",
+        "from": [
+          "n75",
+          "N"
+        ],
+        "to": [
+          "n73",
+          "B"
+        ]
+      },
+      {
+        "id": "w151",
+        "from": [
+          "n75",
+          "N"
+        ],
+        "to": [
+          "n76",
+          "B"
+        ]
+      },
+      {
+        "id": "w152",
+        "from": [
+          "n67",
+          "R"
+        ],
+        "to": [
+          "n73",
+          "V"
+        ]
+      },
+      {
+        "id": "w153",
+        "from": [
+          "n69",
+          "R"
+        ],
+        "to": [
+          "n76",
+          "V"
+        ]
+      },
+      {
+        "id": "w155",
+        "from": [
+          "n73",
+          "R"
+        ],
+        "to": [
+          "n58",
+          "X"
+        ]
+      },
+      {
+        "id": "w158",
+        "from": [
+          "n66",
+          "X"
+        ],
+        "to": [
+          "n78",
+          "X"
+        ]
+      },
+      {
+        "id": "w159",
+        "from": [
+          "n66",
+          "Y"
+        ],
+        "to": [
+          "n78",
+          "Y"
+        ]
+      },
+      {
+        "id": "w160",
+        "from": [
+          "n78",
+          "P"
+        ],
+        "to": [
+          "n77",
+          "A"
+        ]
+      },
+      {
+        "id": "w166",
+        "from": [
+          "n81",
+          "N"
+        ],
+        "to": [
+          "n83",
+          "S1"
+        ]
+      },
+      {
+        "id": "w167",
+        "from": [
+          "n77",
+          "D"
+        ],
+        "to": [
+          "n83",
+          "V"
+        ]
+      },
+      {
+        "id": "w168",
+        "from": [
+          "n39",
+          "N"
+        ],
+        "to": [
+          "n82",
+          "A"
+        ]
+      },
+      {
+        "id": "w170",
+        "from": [
+          "n82",
+          "R"
+        ],
+        "to": [
+          "n41",
+          "A"
+        ]
+      },
+      {
+        "id": "w171",
+        "from": [
+          "n82",
+          "R"
+        ],
+        "to": [
+          "n41",
+          "B"
+        ]
+      },
+      {
+        "id": "w172",
+        "from": [
+          "n82",
+          "R"
+        ],
+        "to": [
+          "n40",
+          "B"
+        ]
+      },
+      {
+        "id": "w173",
+        "from": [
+          "n84",
+          "N"
+        ],
+        "to": [
+          "n85",
+          "S"
+        ]
+      },
+      {
+        "id": "w175",
+        "from": [
+          "n83",
+          "R"
+        ],
+        "to": [
+          "n85",
+          "V"
+        ]
+      },
+      {
+        "id": "w176",
+        "from": [
+          "n85",
+          "R"
+        ],
+        "to": [
+          "n82",
+          "B"
+        ]
+      },
+      {
+        "id": "w178",
+        "from": [
+          "n66",
+          "X"
+        ],
+        "to": [
+          "n87",
+          "V"
+        ]
+      },
+      {
+        "id": "w179",
+        "from": [
+          "n87",
+          "R"
+        ],
+        "to": [
+          "n67",
+          "V"
+        ]
+      },
+      {
+        "id": "w181",
+        "from": [
+          "n88",
+          "R"
+        ],
+        "to": [
+          "n69",
+          "V"
+        ]
+      },
+      {
+        "id": "w182",
+        "from": [
+          "n66",
+          "Y"
+        ],
+        "to": [
+          "n88",
+          "V"
+        ]
+      },
+      {
+        "id": "w183",
+        "from": [
+          "n89",
+          "N"
+        ],
+        "to": [
+          "n73",
+          "A"
+        ]
+      },
+      {
+        "id": "w184",
+        "from": [
+          "n89",
+          "N"
+        ],
+        "to": [
+          "n76",
+          "A"
+        ]
+      },
+      {
+        "id": "w189",
+        "from": [
+          "n76",
+          "R"
+        ],
+        "to": [
+          "n91",
+          "V"
+        ]
+      },
+      {
+        "id": "w190",
+        "from": [
+          "n91",
+          "R"
+        ],
+        "to": [
+          "n58",
+          "Y"
+        ]
+      }
+    ]
+  },
   'Living lattice': _EX([
     ['h1', 'input/viewport', 30, 40],
     ['h2', 'params/slider', 30, 180, { min: 26, max: 90, value: 46 }],
@@ -444,57 +4219,6 @@ const EXAMPLES = {
   /* page scroll as the master parameter: the sun climbs, the sky warms,
    * a windmill spins with scrolled distance, the hint fades out
    * (wheel over the cloth to scrub the editor's simulated page) */
-  'Scroll scene': _EX([
-    ['s1', 'input/scroll', 30, 60],
-    ['s2', 'math/remap', 250, 40, { S0: 0, S1: 1, T0: 180, T1: -140 }],
-    ['s4', 'math/remap', 250, 250, { S0: 0, S1: 1, T0: -220, T1: 220 }],
-    ['s13', 'math/mul', 250, 460, { B: 0.012 }],
-    ['s20', 'math/expr', 250, 580, { expr: '1 - X' }],
-    ['s5', 'vec/construct', 470, 40],
-    ['s14', 'math/add', 470, 380, { B: 1.5708 }],
-    ['s21', 'disp/hsl', 470, 540, { H: 0.55, S: 0.2, L: 0.88 }],
-    ['s9', 'disp/gradient', 250, 760, { A: { r: 11, g: 14, b: 20, a: 1 }, B: { r: 42, g: 74, b: 115, a: 1 } }],
-    ['s6', 'crv/circle', 690, 40, { R: 40 }],
-    ['s7', 'disp/gradient', 690, 200, { A: { r: 251, g: 146, b: 60, a: 1 }, B: { r: 250, g: 204, b: 21, a: 1 } }],
-    ['s15', 'crv/rect', 690, 380, { P: { x: 140, y: 80 }, W: 140, H: 7 }],
-    ['s22', 'disp/text', 690, 540, { T: 'scroll ↓', P: { x: 0, y: 10 }, S: 18 }],
-    ['s10', 'disp/bg', 690, 700],
-    ['s8', 'disp/draw', 910, 40, { S: { r: 0, g: 0, b: 0, a: 0 } }],
-    ['s11', 'crv/line', 910, 200, { A: { x: -2000, y: 120 }, B: { x: 2000, y: 120 } }],
-    ['s18', 'crv/line', 910, 318, { A: { x: 140, y: 80 }, B: { x: 140, y: 120 } }],
-    ['s16', 'xf/rotate', 910, 436, { C: { x: 140, y: 80 } }],
-    ['s12', 'disp/draw', 1130, 200, { S: { r: 139, g: 158, b: 191, a: 0.55 }, W: 1.5 }],
-    ['s17', 'disp/draw', 1130, 380, { S: { r: 230, g: 237, b: 250, a: 0.9 }, W: 2.5 }],
-    ['s23', 'disp/draw', 1130, 540, { S: { r: 0, g: 0, b: 0, a: 0 } }]
-  ], [
-    ['s1', 'N', 's2', 'V'], ['s1', 'N', 's4', 'V'],
-    ['s1', 'Y', 's13', 'A'],
-    ['s1', 'N', 's20', 'X'],
-    ['s1', 'N', 's7', 'T'], ['s1', 'N', 's9', 'T'],
-    ['s4', 'R', 's5', 'X'], ['s2', 'R', 's5', 'Y'],
-    ['s5', 'P', 's6', 'P'],
-    ['s6', 'C', 's8', 'G'], ['s7', 'C', 's8', 'F'],
-    ['s9', 'C', 's10', 'C'],
-    ['s11', 'C', 's12', 'G'], ['s18', 'C', 's12', 'G'],
-    ['s13', 'R', 's14', 'A'],
-    ['s13', 'R', 's16', 'A'], ['s14', 'R', 's16', 'A'],
-    ['s15', 'C', 's16', 'G'],
-    ['s16', 'G', 's17', 'G'],
-    ['s20', 'R', 's21', 'A'],
-    ['s22', 'G', 's23', 'G'], ['s21', 'C', 's23', 'F']
-  ]),
-
-  /* the solar system as a dataflow — one Kepler machine, eight planets.
-   * Real J2000 orbital elements (JPL) live in Text Lists: semi-major axis a,
-   * eccentricity e, sidereal period, longitude of perihelion ϖ, mean
-   * longitude L₀. The chain solves mean anomaly → true anomaly (equation of
-   * the center, 3rd order in e) → radius, per planet, by list matching —
-   * ellipses drawn with the sun at the focus, correct shape and orientation.
-   * Time starts at 2000-01-01, one year = 6 s; the date is read back out of
-   * the same clock. Planet sizes are true to each other but exaggerated vs
-   * the orbits; the moon rides Earth on its own ellipse with its distance
-   * exaggerated (slider ×1 = true scale). Angles are negated so the system
-   * turns counterclockwise, as seen from ecliptic north. */
   'Solar system': _EX([
     /* — data: J2000 elements, mercury → neptune, one line per planet — */
     ['da', 'params/textlist', 30, 40, { text: '0.38709927\n0.72333566\n1.00000261\n1.52371034\n5.20288700\n9.53667594\n19.18916464\n30.06992276' }],
@@ -658,82 +4382,1244 @@ const EXAMPLES = {
    * One Key node feeds root+scale to both pentatonic Scale nodes — change
    * the key in ONE place and the board and the theremin follow (the drone
    * snapper stays chromatic on purpose: drones land on exact notes). */
-  'Scale board': _EX([
-    ['k1', 'audio/key', 30, 190, { root: 9, scale: 'pentatonic' }],
-    ['s1', 'sets/series', 30, 40, { S: 57, N: 1, C: 25 }],
-    ['s2', 'audio/scale', 250, 40, { root: 9, scale: 'pentatonic' }],
-    ['s3', 'sets/union', 470, 40],
-    ['s4', 'math/remap', 690, 40, { S0: 57, S1: 81, T0: 150, T1: -190 }],
-    ['s5', 'vec/construct', 910, 40, { X: -200 }],
-    ['s6', 'vec/construct', 910, 190, { X: 0 }],
-    ['s7', 'crv/rect', 1130, 190, { W: 330, H: 1 }],
-    ['s8', 'disp/draw', 1350, 190, { S: { r: 142, g: 164, b: 195, a: 0.25 }, W: 1 }],
-    ['s9', 'math/mod', 690, 340, { B: 12 }],
-    ['s10', 'params/textlist', 690, 480, { text: 'C\nC#\nD\nD#\nE\nF\nF#\nG\nG#\nA\nA#\nB' }],
-    ['s11', 'sets/item', 910, 360],
-    ['s12', 'disp/text', 1130, 340, { S: 12 }],
-    ['s13', 'disp/draw', 1350, 340, { S: { r: 230, g: 237, b: 250, a: 0.65 } }],
-    ['v1', 'input/mouse', 30, 620],
-    ['v2', 'math/remap', 250, 620, { S0: 0, S1: 1, T0: 81, T1: 57 }],
-    ['v3', 'audio/scale', 470, 620, { root: 9, scale: 'pentatonic' }],
-    ['v4', 'audio/osc', 690, 620, { wave: 'sine' }],
-    ['v5', 'audio/gain', 910, 620, { G: 0.14 }],
-    ['v6', 'audio/out', 1570, 620],
-    ['v7', 'math/remap', 690, 770, { S0: 57, S1: 81, T0: 150, T1: -190 }],
-    ['v8', 'vec/construct', 910, 770, { X: -165 }],
-    ['v9', 'crv/circle', 1130, 770, { R: 7 }],
-    ['v10', 'disp/draw', 1350, 770, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.5 }, W: 1.5 }],
-    ['d1', 'params/number', 30, 950, { N: 45 }],
-    ['d2', 'params/number', 30, 1040, { N: 52 }],
-    ['d3', 'params/number', 30, 1130, { N: 57 }],
-    ['d4', 'audio/scale', 250, 990, { root: 0, scale: 'chromatic' }],
-    ['d5', 'audio/osc', 470, 990, { wave: 'sine' }],
-    ['d6', 'sets/series', 30, 1280, { S: 0, N: 1, C: 3 }],
-    ['d7', 'math/remap', 250, 1280, { S0: 0, S1: 2, T0: -120, T1: 120 }],
-    ['d8', 'vec/construct', 470, 1280, { Y: 220 }],
-    ['d9', 'crv/rect', 690, 1280, { W: 104, H: 32 }],
-    ['d10', 'params/textlist', 690, 1420, { text: 'drone A2\ndrone E3\ndrone A3' }],
-    ['d11', 'disp/element', 910, 1280, { T: 'button' }],
-    ['d12', 'state/latch', 1130, 1280],
-    ['d13', 'sets/select', 1350, 1280, { T: 0.12, F: 0 }],
-    ['d14', 'audio/gain', 1350, 1080],
-    ['b1', 'disp/bg', 1570, 770]
-  ], [
-    ['k1', 'R', 's2', 'R'], ['k1', 'S', 's2', 'S'],
-    ['k1', 'R', 'v3', 'R'], ['k1', 'S', 'v3', 'S'],
-    ['s1', 'S', 's2', 'V'],
-    ['s2', 'M', 's3', 'A'], ['s2', 'M', 's3', 'B'],
-    ['s3', 'U', 's4', 'V'],
-    ['s4', 'R', 's5', 'Y'], ['s4', 'R', 's6', 'Y'],
-    ['s6', 'P', 's7', 'P'], ['s7', 'C', 's8', 'G'],
-    ['s3', 'U', 's9', 'A'],
-    ['s10', 'L', 's11', 'L'], ['s9', 'R', 's11', 'i'],
-    ['s11', 'E', 's12', 'T'], ['s5', 'P', 's12', 'P'],
-    ['s12', 'G', 's13', 'G'],
-    ['v1', 'NY', 'v2', 'V'],
-    ['v2', 'R', 'v3', 'V'],
-    ['v3', 'F', 'v4', 'F'],
-    ['v4', 'A', 'v5', 'In'],
-    ['v5', 'A', 'v6', 'In'],
-    ['v3', 'M', 'v7', 'V'],
-    ['v7', 'R', 'v8', 'Y'],
-    ['v8', 'P', 'v9', 'P'],
-    ['v9', 'C', 'v10', 'G'],
-    ['d1', 'N', 'd4', 'V'], ['d2', 'N', 'd4', 'V'], ['d3', 'N', 'd4', 'V'],
-    ['d4', 'F', 'd5', 'F'],
-    ['d6', 'S', 'd7', 'V'],
-    ['d7', 'R', 'd8', 'X'],
-    ['d8', 'P', 'd9', 'P'],
-    ['d9', 'C', 'd11', 'G'], ['d10', 'L', 'd11', 'C'],
-    ['d11', 'K', 'd12', 'T'],
-    ['d12', 'B', 'd13', 'P'],
-    ['d5', 'A', 'd14', 'In'], ['d13', 'L', 'd14', 'G'],
-    ['d14', 'A', 'v6', 'In']
-  ]),
-
-  /* Sound made visible: sand on a vibrating plate migrates to the quiet
-   * nodal lines of whatever frequency is playing. Slide the pitch and watch
-   * the figure reorganize. */
+  'Scale board': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "s1",
+        "type": "sets/series",
+        "x": 30,
+        "y": 40,
+        "values": {
+          "S": 57,
+          "N": 1,
+          "C": 25
+        }
+      },
+      {
+        "id": "s2",
+        "type": "audio/scale",
+        "x": 250,
+        "y": 39,
+        "values": {
+          "root": 9,
+          "scale": "pentatonic"
+        }
+      },
+      {
+        "id": "s3",
+        "type": "sets/union",
+        "x": 470,
+        "y": 40,
+        "values": {}
+      },
+      {
+        "id": "s4",
+        "type": "math/remap",
+        "x": 690,
+        "y": 40,
+        "values": {
+          "S0": 57,
+          "S1": 81,
+          "T0": 150,
+          "T1": -190
+        }
+      },
+      {
+        "id": "s5",
+        "type": "vec/construct",
+        "x": 910,
+        "y": 40,
+        "values": {
+          "X": -200
+        }
+      },
+      {
+        "id": "s6",
+        "type": "vec/construct",
+        "x": 910,
+        "y": 190,
+        "values": {
+          "X": 0
+        }
+      },
+      {
+        "id": "s7",
+        "type": "crv/rect",
+        "x": 1130,
+        "y": 190,
+        "values": {
+          "W": 330,
+          "H": 1
+        }
+      },
+      {
+        "id": "s8",
+        "type": "disp/draw",
+        "x": 1350,
+        "y": 190,
+        "values": {
+          "S": {
+            "r": 142,
+            "g": 164,
+            "b": 195,
+            "a": 0.25
+          },
+          "W": 1
+        }
+      },
+      {
+        "id": "s9",
+        "type": "math/mod",
+        "x": 690,
+        "y": 340,
+        "values": {
+          "B": 12
+        }
+      },
+      {
+        "id": "s10",
+        "type": "params/textlist",
+        "x": 690,
+        "y": 480,
+        "values": {
+          "text": "C\nC#\nD\nD#\nE\nF\nF#\nG\nG#\nA\nA#\nB"
+        }
+      },
+      {
+        "id": "s11",
+        "type": "sets/item",
+        "x": 910,
+        "y": 360,
+        "values": {}
+      },
+      {
+        "id": "s12",
+        "type": "disp/text",
+        "x": 1130,
+        "y": 340,
+        "values": {
+          "S": 12
+        }
+      },
+      {
+        "id": "s13",
+        "type": "disp/draw",
+        "x": 1350,
+        "y": 340,
+        "values": {
+          "S": {
+            "r": 230,
+            "g": 237,
+            "b": 250,
+            "a": 0.65
+          }
+        }
+      },
+      {
+        "id": "v1",
+        "type": "input/mouse",
+        "x": -53,
+        "y": 590,
+        "values": {}
+      },
+      {
+        "id": "v2",
+        "type": "math/remap",
+        "x": 250,
+        "y": 620,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": 81,
+          "T1": 57
+        }
+      },
+      {
+        "id": "v3",
+        "type": "audio/scale",
+        "x": 471,
+        "y": 619,
+        "values": {
+          "root": 9,
+          "scale": "pentatonic"
+        }
+      },
+      {
+        "id": "v4",
+        "type": "audio/osc",
+        "x": 690,
+        "y": 620,
+        "values": {
+          "wave": "sine"
+        }
+      },
+      {
+        "id": "v5",
+        "type": "audio/gain",
+        "x": 910,
+        "y": 620,
+        "values": {
+          "G": 0.14
+        }
+      },
+      {
+        "id": "v6",
+        "type": "audio/out",
+        "x": 1570,
+        "y": 620,
+        "values": {}
+      },
+      {
+        "id": "v7",
+        "type": "math/remap",
+        "x": 690,
+        "y": 770,
+        "values": {
+          "S0": 57,
+          "S1": 81,
+          "T0": 150,
+          "T1": -190
+        }
+      },
+      {
+        "id": "v8",
+        "type": "vec/construct",
+        "x": 910,
+        "y": 770,
+        "values": {
+          "X": 160
+        }
+      },
+      {
+        "id": "v9",
+        "type": "crv/circle",
+        "x": 1130,
+        "y": 770,
+        "values": {
+          "R": 7
+        }
+      },
+      {
+        "id": "v10",
+        "type": "disp/draw",
+        "x": 1350,
+        "y": 770,
+        "values": {
+          "S": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 0.9
+          },
+          "F": {
+            "r": 177,
+            "g": 27,
+            "b": 165,
+            "a": 0.5
+          },
+          "W": 1.5
+        }
+      },
+      {
+        "id": "d1",
+        "type": "params/number",
+        "x": 30,
+        "y": 950,
+        "values": {
+          "N": 45
+        }
+      },
+      {
+        "id": "d2",
+        "type": "params/number",
+        "x": 30,
+        "y": 1040,
+        "values": {
+          "N": 52
+        }
+      },
+      {
+        "id": "d3",
+        "type": "params/number",
+        "x": 30,
+        "y": 1130,
+        "values": {
+          "N": 57
+        }
+      },
+      {
+        "id": "d4",
+        "type": "audio/scale",
+        "x": 249,
+        "y": 990,
+        "values": {
+          "root": 0,
+          "scale": "chromatic"
+        }
+      },
+      {
+        "id": "d5",
+        "type": "audio/osc",
+        "x": 470,
+        "y": 990,
+        "values": {
+          "wave": "sine"
+        }
+      },
+      {
+        "id": "d6",
+        "type": "sets/series",
+        "x": 30,
+        "y": 1280,
+        "values": {
+          "S": 0,
+          "N": 1,
+          "C": 3
+        }
+      },
+      {
+        "id": "d7",
+        "type": "math/remap",
+        "x": 250,
+        "y": 1280,
+        "values": {
+          "S0": 0,
+          "S1": 2,
+          "T0": -120,
+          "T1": 120
+        }
+      },
+      {
+        "id": "d8",
+        "type": "vec/construct",
+        "x": 470,
+        "y": 1280,
+        "values": {
+          "Y": 220
+        }
+      },
+      {
+        "id": "d9",
+        "type": "crv/rect",
+        "x": 690,
+        "y": 1280,
+        "values": {
+          "W": 104,
+          "H": 32
+        }
+      },
+      {
+        "id": "d10",
+        "type": "params/textlist",
+        "x": 663,
+        "y": 1488,
+        "values": {
+          "text": "drone A2\ndrone E3\ndrone A3"
+        }
+      },
+      {
+        "id": "d11",
+        "type": "disp/element",
+        "x": 910,
+        "y": 1280,
+        "values": {
+          "T": "button"
+        }
+      },
+      {
+        "id": "d12",
+        "type": "state/latch",
+        "x": 1130,
+        "y": 1280,
+        "values": {}
+      },
+      {
+        "id": "d13",
+        "type": "sets/select",
+        "x": 1350,
+        "y": 1280,
+        "values": {
+          "T": 0.12,
+          "F": 0
+        }
+      },
+      {
+        "id": "d14",
+        "type": "audio/gain",
+        "x": 1350,
+        "y": 1080,
+        "values": {}
+      },
+      {
+        "id": "b1",
+        "type": "disp/bg",
+        "x": 1570,
+        "y": 770,
+        "values": {}
+      },
+      {
+        "id": "n1",
+        "type": "params/timegraph",
+        "x": 1142,
+        "y": -80,
+        "values": {}
+      },
+      {
+        "id": "n3",
+        "type": "params/slider",
+        "x": -83,
+        "y": 282,
+        "values": {
+          "min": 0,
+          "max": 400,
+          "value": 158,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n4",
+        "type": "params/slider",
+        "x": -85,
+        "y": 223,
+        "values": {
+          "min": -400,
+          "max": 0,
+          "value": -340,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n10",
+        "type": "vec/construct",
+        "x": 456,
+        "y": 242,
+        "values": {
+          "X": 160
+        }
+      },
+      {
+        "id": "n11",
+        "type": "math/clamp",
+        "x": 243,
+        "y": 239,
+        "values": {}
+      },
+      {
+        "id": "n13",
+        "type": "disp/trace",
+        "x": 850,
+        "y": -214,
+        "values": {
+          "L": 500
+        }
+      },
+      {
+        "id": "n15",
+        "type": "math/sub",
+        "x": 415,
+        "y": -160,
+        "values": {}
+      },
+      {
+        "id": "n16",
+        "type": "math/neg",
+        "x": 608,
+        "y": -59,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n17",
+        "type": "params/swatch",
+        "x": 810,
+        "y": -411,
+        "values": {
+          "hex": "#ba26c5",
+          "a": 1
+        }
+      },
+      {
+        "id": "n18",
+        "type": "params/swatch",
+        "x": 772,
+        "y": -340,
+        "values": {
+          "hex": "#2c41dd",
+          "a": 1
+        }
+      },
+      {
+        "id": "n19",
+        "type": "params/slider",
+        "x": 210,
+        "y": -339,
+        "values": {
+          "min": 0,
+          "max": 400,
+          "value": 165,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n20",
+        "type": "vec/construct",
+        "x": 578,
+        "y": -307,
+        "values": {
+          "X": 160
+        }
+      },
+      {
+        "id": "n21",
+        "type": "params/slider",
+        "x": 258,
+        "y": -424,
+        "values": {
+          "min": 0,
+          "max": 400,
+          "value": 160,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n22",
+        "type": "crv/circle",
+        "x": 1409,
+        "y": -35,
+        "values": {
+          "R": 4
+        }
+      },
+      {
+        "id": "n23",
+        "type": "disp/draw",
+        "x": 1631,
+        "y": -7,
+        "values": {
+          "S": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 0.9
+          },
+          "F": {
+            "r": 177,
+            "g": 27,
+            "b": 165,
+            "a": 0.5
+          },
+          "W": 1.5
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": [
+          "s1",
+          "S"
+        ],
+        "to": [
+          "s2",
+          "V"
+        ]
+      },
+      {
+        "id": "w2",
+        "from": [
+          "s2",
+          "M"
+        ],
+        "to": [
+          "s3",
+          "A"
+        ]
+      },
+      {
+        "id": "w3",
+        "from": [
+          "s2",
+          "M"
+        ],
+        "to": [
+          "s3",
+          "B"
+        ]
+      },
+      {
+        "id": "w4",
+        "from": [
+          "s3",
+          "U"
+        ],
+        "to": [
+          "s4",
+          "V"
+        ]
+      },
+      {
+        "id": "w5",
+        "from": [
+          "s4",
+          "R"
+        ],
+        "to": [
+          "s5",
+          "Y"
+        ]
+      },
+      {
+        "id": "w6",
+        "from": [
+          "s4",
+          "R"
+        ],
+        "to": [
+          "s6",
+          "Y"
+        ]
+      },
+      {
+        "id": "w7",
+        "from": [
+          "s6",
+          "P"
+        ],
+        "to": [
+          "s7",
+          "P"
+        ]
+      },
+      {
+        "id": "w8",
+        "from": [
+          "s7",
+          "C"
+        ],
+        "to": [
+          "s8",
+          "G"
+        ]
+      },
+      {
+        "id": "w9",
+        "from": [
+          "s3",
+          "U"
+        ],
+        "to": [
+          "s9",
+          "A"
+        ]
+      },
+      {
+        "id": "w10",
+        "from": [
+          "s10",
+          "L"
+        ],
+        "to": [
+          "s11",
+          "L"
+        ]
+      },
+      {
+        "id": "w11",
+        "from": [
+          "s9",
+          "R"
+        ],
+        "to": [
+          "s11",
+          "i"
+        ]
+      },
+      {
+        "id": "w12",
+        "from": [
+          "s11",
+          "E"
+        ],
+        "to": [
+          "s12",
+          "T"
+        ]
+      },
+      {
+        "id": "w13",
+        "from": [
+          "s5",
+          "P"
+        ],
+        "to": [
+          "s12",
+          "P"
+        ]
+      },
+      {
+        "id": "w14",
+        "from": [
+          "s12",
+          "G"
+        ],
+        "to": [
+          "s13",
+          "G"
+        ]
+      },
+      {
+        "id": "w16",
+        "from": [
+          "v2",
+          "R"
+        ],
+        "to": [
+          "v3",
+          "V"
+        ]
+      },
+      {
+        "id": "w17",
+        "from": [
+          "v3",
+          "F"
+        ],
+        "to": [
+          "v4",
+          "F"
+        ]
+      },
+      {
+        "id": "w18",
+        "from": [
+          "v4",
+          "A"
+        ],
+        "to": [
+          "v5",
+          "In"
+        ]
+      },
+      {
+        "id": "w19",
+        "from": [
+          "v5",
+          "A"
+        ],
+        "to": [
+          "v6",
+          "In"
+        ]
+      },
+      {
+        "id": "w20",
+        "from": [
+          "v3",
+          "M"
+        ],
+        "to": [
+          "v7",
+          "V"
+        ]
+      },
+      {
+        "id": "w21",
+        "from": [
+          "v7",
+          "R"
+        ],
+        "to": [
+          "v8",
+          "Y"
+        ]
+      },
+      {
+        "id": "w22",
+        "from": [
+          "v8",
+          "P"
+        ],
+        "to": [
+          "v9",
+          "P"
+        ]
+      },
+      {
+        "id": "w23",
+        "from": [
+          "v9",
+          "C"
+        ],
+        "to": [
+          "v10",
+          "G"
+        ]
+      },
+      {
+        "id": "w24",
+        "from": [
+          "d1",
+          "N"
+        ],
+        "to": [
+          "d4",
+          "V"
+        ]
+      },
+      {
+        "id": "w25",
+        "from": [
+          "d2",
+          "N"
+        ],
+        "to": [
+          "d4",
+          "V"
+        ]
+      },
+      {
+        "id": "w26",
+        "from": [
+          "d3",
+          "N"
+        ],
+        "to": [
+          "d4",
+          "V"
+        ]
+      },
+      {
+        "id": "w27",
+        "from": [
+          "d4",
+          "F"
+        ],
+        "to": [
+          "d5",
+          "F"
+        ]
+      },
+      {
+        "id": "w28",
+        "from": [
+          "d6",
+          "S"
+        ],
+        "to": [
+          "d7",
+          "V"
+        ]
+      },
+      {
+        "id": "w29",
+        "from": [
+          "d7",
+          "R"
+        ],
+        "to": [
+          "d8",
+          "X"
+        ]
+      },
+      {
+        "id": "w30",
+        "from": [
+          "d8",
+          "P"
+        ],
+        "to": [
+          "d9",
+          "P"
+        ]
+      },
+      {
+        "id": "w31",
+        "from": [
+          "d9",
+          "C"
+        ],
+        "to": [
+          "d11",
+          "G"
+        ]
+      },
+      {
+        "id": "w32",
+        "from": [
+          "d10",
+          "L"
+        ],
+        "to": [
+          "d11",
+          "C"
+        ]
+      },
+      {
+        "id": "w33",
+        "from": [
+          "d11",
+          "K"
+        ],
+        "to": [
+          "d12",
+          "T"
+        ]
+      },
+      {
+        "id": "w34",
+        "from": [
+          "d12",
+          "B"
+        ],
+        "to": [
+          "d13",
+          "P"
+        ]
+      },
+      {
+        "id": "w35",
+        "from": [
+          "d5",
+          "A"
+        ],
+        "to": [
+          "d14",
+          "In"
+        ]
+      },
+      {
+        "id": "w36",
+        "from": [
+          "d13",
+          "L"
+        ],
+        "to": [
+          "d14",
+          "G"
+        ]
+      },
+      {
+        "id": "w37",
+        "from": [
+          "d14",
+          "A"
+        ],
+        "to": [
+          "v6",
+          "In"
+        ]
+      },
+      {
+        "id": "w38",
+        "from": [
+          "s4",
+          "R"
+        ],
+        "to": [
+          "n1",
+          "V"
+        ]
+      },
+      {
+        "id": "w39",
+        "from": [
+          "n4",
+          "N"
+        ],
+        "to": [
+          "s4",
+          "T1"
+        ]
+      },
+      {
+        "id": "w40",
+        "from": [
+          "n3",
+          "N"
+        ],
+        "to": [
+          "s4",
+          "T0"
+        ]
+      },
+      {
+        "id": "w53",
+        "from": [
+          "n4",
+          "N"
+        ],
+        "to": [
+          "n11",
+          "A"
+        ]
+      },
+      {
+        "id": "w54",
+        "from": [
+          "n3",
+          "N"
+        ],
+        "to": [
+          "n11",
+          "B"
+        ]
+      },
+      {
+        "id": "w55",
+        "from": [
+          "v1",
+          "Y"
+        ],
+        "to": [
+          "n11",
+          "V"
+        ]
+      },
+      {
+        "id": "w56",
+        "from": [
+          "n11",
+          "R"
+        ],
+        "to": [
+          "n10",
+          "Y"
+        ]
+      },
+      {
+        "id": "w57",
+        "from": [
+          "n4",
+          "N"
+        ],
+        "to": [
+          "v2",
+          "S0"
+        ]
+      },
+      {
+        "id": "w58",
+        "from": [
+          "n11",
+          "R"
+        ],
+        "to": [
+          "v2",
+          "V"
+        ]
+      },
+      {
+        "id": "w59",
+        "from": [
+          "n3",
+          "N"
+        ],
+        "to": [
+          "v2",
+          "S1"
+        ]
+      },
+      {
+        "id": "w60",
+        "from": [
+          "n4",
+          "N"
+        ],
+        "to": [
+          "v7",
+          "T1"
+        ]
+      },
+      {
+        "id": "w61",
+        "from": [
+          "n3",
+          "N"
+        ],
+        "to": [
+          "v7",
+          "T0"
+        ]
+      },
+      {
+        "id": "w66",
+        "from": [
+          "n11",
+          "R"
+        ],
+        "to": [
+          "n15",
+          "A"
+        ]
+      },
+      {
+        "id": "w67",
+        "from": [
+          "n3",
+          "N"
+        ],
+        "to": [
+          "n15",
+          "B"
+        ]
+      },
+      {
+        "id": "w69",
+        "from": [
+          "n15",
+          "R"
+        ],
+        "to": [
+          "n16",
+          "V"
+        ]
+      },
+      {
+        "id": "w70",
+        "from": [
+          "n16",
+          "R"
+        ],
+        "to": [
+          "n13",
+          "V"
+        ]
+      },
+      {
+        "id": "w72",
+        "from": [
+          "v7",
+          "R"
+        ],
+        "to": [
+          "n15",
+          "A"
+        ]
+      },
+      {
+        "id": "w73",
+        "from": [
+          "n18",
+          "C"
+        ],
+        "to": [
+          "n13",
+          "C"
+        ]
+      },
+      {
+        "id": "w74",
+        "from": [
+          "n17",
+          "C"
+        ],
+        "to": [
+          "n13",
+          "C"
+        ]
+      },
+      {
+        "id": "w75",
+        "from": [
+          "n19",
+          "N"
+        ],
+        "to": [
+          "n10",
+          "X"
+        ]
+      },
+      {
+        "id": "w78",
+        "from": [
+          "n19",
+          "N"
+        ],
+        "to": [
+          "n20",
+          "X"
+        ]
+      },
+      {
+        "id": "w80",
+        "from": [
+          "n20",
+          "P"
+        ],
+        "to": [
+          "n13",
+          "P"
+        ]
+      },
+      {
+        "id": "w83",
+        "from": [
+          "n19",
+          "N"
+        ],
+        "to": [
+          "v8",
+          "X"
+        ]
+      },
+      {
+        "id": "w84",
+        "from": [
+          "n21",
+          "N"
+        ],
+        "to": [
+          "n20",
+          "Y"
+        ]
+      },
+      {
+        "id": "w85",
+        "from": [
+          "n17",
+          "C"
+        ],
+        "to": [
+          "v10",
+          "S"
+        ]
+      },
+      {
+        "id": "w86",
+        "from": [
+          "n22",
+          "C"
+        ],
+        "to": [
+          "n23",
+          "G"
+        ]
+      },
+      {
+        "id": "w89",
+        "from": [
+          "n10",
+          "P"
+        ],
+        "to": [
+          "n22",
+          "P"
+        ]
+      },
+      {
+        "id": "w90",
+        "from": [
+          "n18",
+          "C"
+        ],
+        "to": [
+          "n23",
+          "S"
+        ]
+      }
+    ]
+  },
   'Cymatics': _EX([
     ['c1', 'params/slider', 30, 40, { min: 36, max: 96, value: 57 }],
     ['c2', 'audio/scale', 250, 40, { root: 9, scale: 'pentatonic' }],
@@ -934,94 +5820,6 @@ const EXAMPLES = {
    * frequency, Scale snaps the fractional MIDI to A pentatonic, an
    * oscillator plays the snapped note, gated by tracker clarity so silence
    * stays silent. The circle is the pitch, the number is the Hz. */
-  'Sing': _EX([
-    ['s1', 'audio/pitch', 30, 40],
-    ['s2', 'audio/scale', 250, 40],
-    ['s3', 'audio/osc', 470, 40],
-    ['s4', 'math/remap', 250, 300, { S0: 0.6, S1: 0.95, T0: 0, T1: 0.14 }],
-    ['s5', 'audio/gain', 690, 40],
-    ['s6', 'audio/out', 910, 40],
-    ['s8', 'math/remap', 250, 440, { S0: 45, S1: 81, T0: 20, T1: 170 }],
-    ['s7', 'math/clamp', 470, 440, { A: 12, B: 175 }],
-    ['s9', 'crv/circle', 690, 340],
-    ['s10', 'disp/draw', 910, 260, { S: { r: 255, g: 54, b: 163, a: 0.9 }, F: { r: 255, g: 54, b: 163, a: 0.12 }, W: 2 }],
-    ['s11', 'math/round', 250, 580, {}],
-    ['s12', 'disp/text', 470, 580, { P: { x: 0, y: 195 }, S: 20 }],
-    ['s13', 'disp/draw', 690, 580, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 230, g: 236, b: 246, a: 0.8 }, W: 0 }],
-    ['s14', 'disp/bg', 910, 620]
-  ], [
-    ['s1', 'M', 's2', 'V'],
-    ['s2', 'F', 's3', 'F'],
-    ['s3', 'A', 's5', 'In'],
-    ['s1', 'C', 's4', 'V'],
-    ['s4', 'R', 's5', 'G'],
-    ['s5', 'A', 's6', 'In'],
-    ['s2', 'M', 's8', 'V'],
-    ['s8', 'R', 's7', 'V'],
-    ['s7', 'R', 's9', 'R'],
-    ['s9', 'C', 's10', 'G'],
-    ['s1', 'F', 's11', 'V'],
-    ['s11', 'R', 's12', 'T'],
-    ['s12', 'G', 's13', 'G']
-  ]),
-
-  /* The full rig — share a music tab and the whole surface listens:
-   * Cymatics sand reorganizes to the melody (Pitch In reads the tune from
-   * Track In, no mic involved), the spectrum breathes as 12 circles whose
-   * colour follows the pitch, the goniometer draws the stereo field and
-   * two pink dots meter L/R. Everything here is one Track In, listened to
-   * five different ways. */
-  'Visualizer': _EX([
-    ['v1', 'audio/track', 30, 40],
-    ['v2', 'audio/pitch', 250, 40],
-    ['v3', 'disp/cymatics', 470, 40, { P: { x: 0, y: -30 }, S: 320, N: 1100, W: 0.8, C: { r: 94, g: 234, b: 212, a: 0.3 } }],
-    ['v12', 'audio/xyscope', 690, 40, { S: 150, P: { x: -200, y: -170 }, T: 25 }],
-    ['v18', 'audio/gain', 910, 40, { G: 0.8 }],
-    ['v19', 'audio/out', 1130, 40],
-    ['v4', 'math/remap', 470, 340, { S0: 45, S1: 85, T0: 0, T1: 0.92 }],
-    ['v5', 'disp/hsl', 690, 340, { S: 0.85, L: 0.6, A: 0.9 }],
-    ['v6', 'audio/fft', 250, 480, { N: 12 }],
-    ['v7', 'math/remap', 470, 480, { S0: 0, S1: 1, T0: 3, T1: 30 }],
-    ['v8', 'sets/series', 470, 640, { S: -165, N: 30, C: 12 }],
-    ['v9', 'vec/construct', 690, 640, { Y: 180 }],
-    ['v10', 'crv/circle', 910, 480],
-    ['v11', 'disp/draw', 1130, 480, { S: { r: 0, g: 0, b: 0, a: 0 }, W: 0 }],
-    ['v13', 'math/remap', 30, 340, { S0: 0, S1: 1, T0: 3, T1: 24 }],
-    ['v14', 'math/remap', 30, 500, { S0: 0, S1: 1, T0: 3, T1: 24 }],
-    ['v15', 'crv/circle', 250, 640, { P: { x: -235, y: -60 } }],
-    ['v16', 'crv/circle', 250, 790, { P: { x: -165, y: -60 } }],
-    ['v17', 'disp/draw', 470, 790, { S: { r: 255, g: 54, b: 163, a: 0.9 }, F: { r: 255, g: 54, b: 163, a: 0.25 }, W: 1.5 }],
-    ['v20', 'disp/bg', 910, 790]
-  ], [
-    ['v1', 'A', 'v2', 'In'],
-    ['v2', 'F', 'v3', 'F'],
-    ['v2', 'M', 'v4', 'V'],
-    ['v4', 'R', 'v5', 'H'],
-    ['v1', 'A', 'v6', 'In'],
-    ['v6', 'B', 'v7', 'V'],
-    ['v8', 'S', 'v9', 'X'],
-    ['v9', 'P', 'v10', 'P'],
-    ['v7', 'R', 'v10', 'R'],
-    ['v10', 'C', 'v11', 'G'],
-    ['v5', 'C', 'v11', 'F'],
-    ['v1', 'L', 'v12', 'X'],
-    ['v1', 'R', 'v12', 'Y'],
-    ['v1', 'VL', 'v13', 'V'],
-    ['v1', 'VR', 'v14', 'V'],
-    ['v13', 'R', 'v15', 'R'],
-    ['v14', 'R', 'v16', 'R'],
-    ['v15', 'C', 'v17', 'G'],
-    ['v16', 'C', 'v17', 'G'],
-    ['v1', 'A', 'v18', 'In'],
-    ['v18', 'A', 'v19', 'In']
-  ]),
-
-  /* The Phase 4 thesis demo (patches/kaleidoscope.md) — James's hand-coded
-   * mandala art test as 20 nodes: seeded particles in a symmetry slice, a
-   * distance-threshold connection web, the slice replicated symmetry × mirror
-   * times. Two Custom JS nodes hold the two genuinely code-shaped parts;
-   * everything else is sliders, seeded randoms and wires. Raw graph JSON —
-   * it carries a deliberate layout. */
   'Mandala': {
     format: 1,
     nodes: [
@@ -1119,6 +5917,1065 @@ const EXAMPLES = {
    * (the knob-extraction pattern). "each" mode: the code runs per angle,
    * longest-list matching against the single-valued knobs, exactly like a
    * native node. */
+  'Golden Rings': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "n2",
+        "type": "crv/circle",
+        "x": 1178,
+        "y": 447,
+        "values": {
+          "R": 137
+        },
+        "preview": false
+      },
+      {
+        "id": "n3",
+        "type": "crv/circle",
+        "x": 1232,
+        "y": 572,
+        "values": {
+          "R": 131,
+          "P": {
+            "x": 0,
+            "y": 2
+          }
+        }
+      },
+      {
+        "id": "n4",
+        "type": "crv/region",
+        "x": 1440,
+        "y": 468,
+        "values": {
+          "mode": "difference"
+        },
+        "preview": false
+      },
+      {
+        "id": "n5",
+        "type": "disp/draw",
+        "x": 2185,
+        "y": 176,
+        "values": {
+          "S": {
+            "r": 230,
+            "g": 237,
+            "b": 250,
+            "a": 0
+          },
+          "F": {
+            "r": 255,
+            "g": 255,
+            "b": 255,
+            "a": 1
+          }
+        }
+      },
+      {
+        "id": "n7",
+        "type": "params/swatch",
+        "x": 1703,
+        "y": -25,
+        "values": {
+          "hex": "#ffaf02",
+          "a": 1
+        }
+      },
+      {
+        "id": "n8",
+        "type": "disp/deconhsl",
+        "x": 1856,
+        "y": 67,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n9",
+        "type": "xf/kaleido",
+        "x": 1994,
+        "y": 716,
+        "values": {
+          "M": true
+        },
+        "preview": false
+      },
+      {
+        "id": "n14",
+        "type": "disp/hsl",
+        "x": 1965,
+        "y": 33,
+        "values": {}
+      },
+      {
+        "id": "n16",
+        "type": "sets/series",
+        "x": 1768,
+        "y": 189,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n18",
+        "type": "math/remap",
+        "x": 1840,
+        "y": 248,
+        "values": {
+          "S1": 1,
+          "T1": 1
+        },
+        "collapsed": true
+      },
+      {
+        "id": "n19",
+        "type": "params/slider",
+        "x": 1476,
+        "y": 237,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "value": 0.1,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n20",
+        "type": "params/slider",
+        "x": 1483,
+        "y": 284,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "value": 0.7,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n21",
+        "type": "params/slider",
+        "x": 1404,
+        "y": 174,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 8,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n22",
+        "type": "math/div",
+        "x": 1673,
+        "y": 164,
+        "values": {
+          "A": 1
+        },
+        "collapsed": true
+      },
+      {
+        "id": "n24",
+        "type": "params/slider",
+        "x": 1705,
+        "y": 786,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 10,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n29",
+        "type": "params/anchor",
+        "x": 946,
+        "y": 432,
+        "values": {
+          "x": 32,
+          "y": -173
+        },
+        "preview": false
+      },
+      {
+        "id": "n30",
+        "type": "params/anchor",
+        "x": 948,
+        "y": 574,
+        "values": {
+          "x": 32,
+          "y": -169
+        },
+        "preview": false
+      },
+      {
+        "id": "n31",
+        "type": "xf/rotate",
+        "x": 2266,
+        "y": 524,
+        "values": {},
+        "preview": false
+      },
+      {
+        "id": "n33",
+        "type": "params/slider",
+        "x": 1442,
+        "y": 339,
+        "values": {
+          "min": 0,
+          "max": 360,
+          "value": 203,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n34",
+        "type": "math/rad",
+        "x": 1704,
+        "y": 370,
+        "values": {}
+      },
+      {
+        "id": "n35",
+        "type": "xf/rotate",
+        "x": 1725,
+        "y": 553,
+        "values": {}
+      },
+      {
+        "id": "n37",
+        "type": "math/rad",
+        "x": 1728,
+        "y": 468,
+        "values": {}
+      },
+      {
+        "id": "n39",
+        "type": "math/mod",
+        "x": 1228,
+        "y": 241,
+        "values": {
+          "B": 360
+        }
+      },
+      {
+        "id": "n42",
+        "type": "math/mul",
+        "x": 1280,
+        "y": 170,
+        "values": {
+          "B": 100
+        },
+        "collapsed": true
+      },
+      {
+        "id": "n44",
+        "type": "input/turntable",
+        "x": 1252,
+        "y": 18,
+        "values": {
+          "Z": false
+        }
+      },
+      {
+        "id": "n45",
+        "type": "input/mouse",
+        "x": 827,
+        "y": -120,
+        "values": {}
+      },
+      {
+        "id": "n46",
+        "type": "vec/distance",
+        "x": 1158,
+        "y": -124,
+        "values": {}
+      },
+      {
+        "id": "n47",
+        "type": "vec/deconstruct",
+        "x": 919,
+        "y": -330,
+        "values": {}
+      },
+      {
+        "id": "n48",
+        "type": "vec/construct",
+        "x": 1060,
+        "y": -97,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n49",
+        "type": "input/mouse",
+        "x": 1574,
+        "y": -793,
+        "values": {}
+      },
+      {
+        "id": "n50",
+        "type": "vec/distance",
+        "x": 1876,
+        "y": -759,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n51",
+        "type": "vec/construct",
+        "x": 1791,
+        "y": -765,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n52",
+        "type": "params/slider",
+        "x": 1327,
+        "y": -508,
+        "values": {
+          "min": 0,
+          "max": 1000,
+          "value": 614,
+          "mode": "int"
+        }
+      },
+      {
+        "id": "n53",
+        "type": "math/remap",
+        "x": 1737,
+        "y": -482,
+        "values": {
+          "T1": 1,
+          "T0": 0
+        }
+      },
+      {
+        "id": "n54",
+        "type": "params/slider",
+        "x": 1678,
+        "y": -242,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 3.7,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n55",
+        "type": "state/smooth",
+        "x": 1942,
+        "y": -273,
+        "values": {}
+      },
+      {
+        "id": "n56",
+        "type": "params/slider",
+        "x": 1412,
+        "y": -382,
+        "values": {
+          "min": 0,
+          "max": 1,
+          "value": 0.3,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n57",
+        "type": "xf/move",
+        "x": 1467,
+        "y": -272,
+        "values": {}
+      },
+      {
+        "id": "n58",
+        "type": "vec/amp",
+        "x": 1446,
+        "y": -162,
+        "values": {
+          "V": {
+            "x": 0,
+            "y": 1
+          }
+        }
+      },
+      {
+        "id": "n60",
+        "type": "params/slider",
+        "x": 853,
+        "y": -534,
+        "values": {
+          "min": 0,
+          "max": 500,
+          "value": 500,
+          "mode": "float",
+          "prec": 2
+        }
+      },
+      {
+        "id": "n61",
+        "type": "math/mul",
+        "x": 1456,
+        "y": -52,
+        "values": {
+          "B": 100
+        },
+        "collapsed": true
+      },
+      {
+        "id": "n62",
+        "type": "vec/vec2pt",
+        "x": 1133,
+        "y": -295,
+        "values": {}
+      },
+      {
+        "id": "n64",
+        "type": "vec/construct",
+        "x": 1053,
+        "y": -202,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n65",
+        "type": "params/slider",
+        "x": 766,
+        "y": 141,
+        "values": {
+          "min": 0,
+          "max": 10,
+          "value": 1.2,
+          "mode": "float",
+          "prec": 1
+        }
+      },
+      {
+        "id": "n66",
+        "type": "state/smooth",
+        "x": 1034,
+        "y": 103,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n67",
+        "type": "state/smooth",
+        "x": 1041,
+        "y": 30,
+        "values": {},
+        "collapsed": true
+      },
+      {
+        "id": "n68",
+        "type": "state/smooth",
+        "x": 1937,
+        "y": -173,
+        "values": {}
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": [
+          "n3",
+          "C"
+        ],
+        "to": [
+          "n4",
+          "B"
+        ]
+      },
+      {
+        "id": "w2",
+        "from": [
+          "n2",
+          "C"
+        ],
+        "to": [
+          "n4",
+          "A"
+        ]
+      },
+      {
+        "id": "w4",
+        "from": [
+          "n7",
+          "C"
+        ],
+        "to": [
+          "n8",
+          "C"
+        ]
+      },
+      {
+        "id": "w10",
+        "from": [
+          "n8",
+          "H"
+        ],
+        "to": [
+          "n14",
+          "H"
+        ]
+      },
+      {
+        "id": "w11",
+        "from": [
+          "n8",
+          "S"
+        ],
+        "to": [
+          "n14",
+          "S"
+        ]
+      },
+      {
+        "id": "w12",
+        "from": [
+          "n8",
+          "L"
+        ],
+        "to": [
+          "n14",
+          "L"
+        ]
+      },
+      {
+        "id": "w13",
+        "from": [
+          "n14",
+          "C"
+        ],
+        "to": [
+          "n5",
+          "F"
+        ]
+      },
+      {
+        "id": "w15",
+        "from": [
+          "n16",
+          "S"
+        ],
+        "to": [
+          "n18",
+          "V"
+        ]
+      },
+      {
+        "id": "w17",
+        "from": [
+          "n19",
+          "N"
+        ],
+        "to": [
+          "n18",
+          "T0"
+        ]
+      },
+      {
+        "id": "w18",
+        "from": [
+          "n20",
+          "N"
+        ],
+        "to": [
+          "n18",
+          "T1"
+        ]
+      },
+      {
+        "id": "w19",
+        "from": [
+          "n21",
+          "N"
+        ],
+        "to": [
+          "n22",
+          "B"
+        ]
+      },
+      {
+        "id": "w20",
+        "from": [
+          "n22",
+          "R"
+        ],
+        "to": [
+          "n16",
+          "N"
+        ]
+      },
+      {
+        "id": "w21",
+        "from": [
+          "n21",
+          "N"
+        ],
+        "to": [
+          "n16",
+          "C"
+        ]
+      },
+      {
+        "id": "w26",
+        "from": [
+          "n24",
+          "N"
+        ],
+        "to": [
+          "n9",
+          "N"
+        ]
+      },
+      {
+        "id": "w31",
+        "from": [
+          "n29",
+          "P"
+        ],
+        "to": [
+          "n2",
+          "P"
+        ]
+      },
+      {
+        "id": "w32",
+        "from": [
+          "n30",
+          "P"
+        ],
+        "to": [
+          "n3",
+          "P"
+        ]
+      },
+      {
+        "id": "w35",
+        "from": [
+          "n18",
+          "R"
+        ],
+        "to": [
+          "n14",
+          "A"
+        ]
+      },
+      {
+        "id": "w41",
+        "from": [
+          "n33",
+          "N"
+        ],
+        "to": [
+          "n34",
+          "V"
+        ]
+      },
+      {
+        "id": "w42",
+        "from": [
+          "n34",
+          "R"
+        ],
+        "to": [
+          "n31",
+          "A"
+        ]
+      },
+      {
+        "id": "w44",
+        "from": [
+          "n9",
+          "G"
+        ],
+        "to": [
+          "n31",
+          "G"
+        ]
+      },
+      {
+        "id": "w45",
+        "from": [
+          "n31",
+          "G"
+        ],
+        "to": [
+          "n5",
+          "G"
+        ]
+      },
+      {
+        "id": "w47",
+        "from": [
+          "n37",
+          "R"
+        ],
+        "to": [
+          "n35",
+          "A"
+        ]
+      },
+      {
+        "id": "w49",
+        "from": [
+          "n35",
+          "G"
+        ],
+        "to": [
+          "n9",
+          "G"
+        ]
+      },
+      {
+        "id": "w51",
+        "from": [
+          "n39",
+          "R"
+        ],
+        "to": [
+          "n37",
+          "V"
+        ]
+      },
+      {
+        "id": "w60",
+        "from": [
+          "n44",
+          "T"
+        ],
+        "to": [
+          "n42",
+          "A"
+        ]
+      },
+      {
+        "id": "w61",
+        "from": [
+          "n42",
+          "R"
+        ],
+        "to": [
+          "n39",
+          "A"
+        ]
+      },
+      {
+        "id": "w62",
+        "from": [
+          "n45",
+          "X"
+        ],
+        "to": [
+          "n48",
+          "X"
+        ]
+      },
+      {
+        "id": "w64",
+        "from": [
+          "n48",
+          "P"
+        ],
+        "to": [
+          "n46",
+          "A"
+        ]
+      },
+      {
+        "id": "w65",
+        "from": [
+          "n49",
+          "X"
+        ],
+        "to": [
+          "n51",
+          "X"
+        ]
+      },
+      {
+        "id": "w66",
+        "from": [
+          "n49",
+          "Y"
+        ],
+        "to": [
+          "n51",
+          "Y"
+        ]
+      },
+      {
+        "id": "w67",
+        "from": [
+          "n51",
+          "P"
+        ],
+        "to": [
+          "n50",
+          "A"
+        ]
+      },
+      {
+        "id": "w68",
+        "from": [
+          "n52",
+          "N"
+        ],
+        "to": [
+          "n53",
+          "S1"
+        ]
+      },
+      {
+        "id": "w69",
+        "from": [
+          "n50",
+          "D"
+        ],
+        "to": [
+          "n53",
+          "V"
+        ]
+      },
+      {
+        "id": "w70",
+        "from": [
+          "n54",
+          "N"
+        ],
+        "to": [
+          "n55",
+          "S"
+        ]
+      },
+      {
+        "id": "w71",
+        "from": [
+          "n53",
+          "R"
+        ],
+        "to": [
+          "n55",
+          "V"
+        ]
+      },
+      {
+        "id": "w72",
+        "from": [
+          "n55",
+          "R"
+        ],
+        "to": [
+          "n44",
+          "R"
+        ]
+      },
+      {
+        "id": "w73",
+        "from": [
+          "n56",
+          "N"
+        ],
+        "to": [
+          "n53",
+          "T1"
+        ]
+      },
+      {
+        "id": "w76",
+        "from": [
+          "n4",
+          "C"
+        ],
+        "to": [
+          "n57",
+          "G"
+        ]
+      },
+      {
+        "id": "w77",
+        "from": [
+          "n58",
+          "V"
+        ],
+        "to": [
+          "n57",
+          "T"
+        ]
+      },
+      {
+        "id": "w80",
+        "from": [
+          "n61",
+          "R"
+        ],
+        "to": [
+          "n58",
+          "A"
+        ]
+      },
+      {
+        "id": "w82",
+        "from": [
+          "n62",
+          "V"
+        ],
+        "to": [
+          "n58",
+          "V"
+        ]
+      },
+      {
+        "id": "w83",
+        "from": [
+          "n60",
+          "N"
+        ],
+        "to": [
+          "n61",
+          "B"
+        ]
+      },
+      {
+        "id": "w89",
+        "from": [
+          "n57",
+          "G"
+        ],
+        "to": [
+          "n35",
+          "G"
+        ]
+      },
+      {
+        "id": "w92",
+        "from": [
+          "n64",
+          "P"
+        ],
+        "to": [
+          "n62",
+          "B"
+        ]
+      },
+      {
+        "id": "w93",
+        "from": [
+          "n65",
+          "N"
+        ],
+        "to": [
+          "n66",
+          "S"
+        ]
+      },
+      {
+        "id": "w95",
+        "from": [
+          "n45",
+          "Y"
+        ],
+        "to": [
+          "n66",
+          "V"
+        ]
+      },
+      {
+        "id": "w96",
+        "from": [
+          "n65",
+          "N"
+        ],
+        "to": [
+          "n67",
+          "S"
+        ]
+      },
+      {
+        "id": "w101",
+        "from": [
+          "n53",
+          "R"
+        ],
+        "to": [
+          "n68",
+          "V"
+        ]
+      },
+      {
+        "id": "w102",
+        "from": [
+          "n65",
+          "N"
+        ],
+        "to": [
+          "n68",
+          "S"
+        ]
+      },
+      {
+        "id": "w103",
+        "from": [
+          "n68",
+          "R"
+        ],
+        "to": [
+          "n61",
+          "A"
+        ]
+      },
+      {
+        "id": "w104",
+        "from": [
+          "n45",
+          "Y"
+        ],
+        "to": [
+          "n48",
+          "Y"
+        ]
+      },
+      {
+        "id": "w105",
+        "from": [
+          "n66",
+          "R"
+        ],
+        "to": [
+          "n64",
+          "Y"
+        ]
+      },
+      {
+        "id": "w106",
+        "from": [
+          "n67",
+          "R"
+        ],
+        "to": [
+          "n64",
+          "X"
+        ]
+      },
+      {
+        "id": "w107",
+        "from": [
+          "n45",
+          "X"
+        ],
+        "to": [
+          "n67",
+          "V"
+        ]
+      }
+    ]
+  },
   'Superformula': _EX([
     ['s1', 'params/slider', 30, 40, { min: 2, max: 16, value: 6, mode: 'int', label: 'symmetry' }],
     ['s2', 'params/slider', 30, 150, { min: 0.1, max: 2, value: 0.3, label: 'pinch' }],
@@ -1163,7 +7020,7 @@ const EXAMPLES = {
    * expressible before Curve Intersection and Region Boolean existed. Three
    * Draw nodes each take TWO wires into G — the merge is what keeps a family of
    * shapes on one style instead of one Draw per shape. */
-  'Vesica': _EX([
+  'Intersections': _EX([
     ['t1', 'input/time', 30, 40],
     ['mu', 'math/mul', 230, 40, { B: 0.5 }],
     ['sn', 'math/sin', 430, 40],
@@ -1279,38 +7136,7 @@ const EXAMPLES = {
    * import (exactly what params/svg stores after "load svg…"), moved off
    * centre and slowly rotated; Kaleidoscope takes the whole two-path motif
    * into every wedge, mirroring alternates, and K colours by wedge. */
-  'Rosette': _EX([
-    ['sv', 'params/svg', 30, 40, {
-      name: 'leaf',
-      paths: [{ "pts": [[0, -0.5], [0.0527, -0.4333], [0.0901, -0.3667], [0.1209, -0.3], [0.1459, -0.2333], [0.1649, -0.1667], [0.1777, -0.1], [0.1842, -0.0333], [0.1842, 0.0333], [0.1777, 0.1], [0.1649, 0.1667], [0.1459, 0.2333], [0.1209, 0.3], [0.0901, 0.3667], [0.0527, 0.4333], [0, 0.5], [-0.0527, 0.4333], [-0.0901, 0.3667], [-0.1209, 0.3], [-0.1459, 0.2333], [-0.1649, 0.1667], [-0.1777, 0.1], [-0.1842, 0.0333], [-0.1842, -0.0333], [-0.1777, -0.1], [-0.1649, -0.1667], [-0.1459, -0.2333], [-0.1209, -0.3], [-0.0901, -0.3667], [-0.0527, -0.4333]], "closed": true, "fill": { "r": 110, "g": 220, "b": 160, "a": 1 }, "stroke": { "r": 255, "g": 255, "b": 255, "a": 0 } },
-      { "pts": [[0, 0.44], [0.012, 0.15], [0, -0.2], [0, -0.42]], "closed": false, "fill": { "r": 255, "g": 255, "b": 255, "a": 0 }, "stroke": { "r": 16, "g": 60, "b": 42, "a": 1 } }],
-      S: 150
-    }],
-    ['t1', 'input/time', 30, 380, {}],
-    ['mv', 'xf/move', 260, 40, { T: { x: 62, y: -118 } }],
-    ['mu', 'math/mul', 260, 400, { B: 0.15 }, { collapsed: true }],
-    ['rt', 'xf/rotate', 470, 40, {}],
-    ['sl', 'params/slider', 440, 320, { min: 2, max: 24, value: 8, mode: 'int', label: 'wedges' }],
-    ['ka', 'xf/kaleido', 700, 40, {}],
-    ['dv', 'math/div', 930, 340, {}, { collapsed: true }],
-    ['rm', 'math/remap', 1030, 320, { S0: 0, S1: 1, T0: 0.3, T1: 0.85 }],
-    ['hs', 'disp/hsl', 1250, 320, { S: 0.6, L: 0.62, A: 0.85 }],
-    ['dw', 'disp/draw', 1250, 40, { S: { r: 255, g: 255, b: 255, a: 0.45 }, W: 1 }],
-    ['bg', 'disp/bg', 1480, 200, { C: { r: 10, g: 13, b: 19, a: 1 } }]
-  ], [
-    ['sv', 'G', 'mv', 'G'],
-    ['mv', 'G', 'rt', 'G'],
-    ['t1', 'T', 'mu', 'A'],
-    ['mu', 'R', 'rt', 'A'],
-    ['rt', 'G', 'ka', 'G'],
-    ['sl', 'N', 'ka', 'N'],
-    ['ka', 'G', 'dw', 'G'],
-    ['ka', 'K', 'dv', 'A'],
-    ['sl', 'N', 'dv', 'B'],
-    ['dv', 'R', 'rm', 'V'],
-    ['rm', 'R', 'hs', 'H'],
-    ['hs', 'C', 'dw', 'F']
-  ])
+
 };
 
 /* ---------------------------------------------------------------------------
@@ -1364,31 +7190,24 @@ const EXAMPLE_META = {
   },
   'Phyllotaxis': {
     cat: 'Fundamentals',
-    blurb: 'A golden-angle spiral of circles, sized by an expression and coloured by index.',
-    teaches: 'One Series fans a single Circle node into hundreds — the index drives angle, radius, size and hue at once.',
-    tags: ['series', 'spiral', 'golden angle', 'hsl'],
-    needs: [], frames: 40
+    blurb: 'The golden-angle seed head grown up — real SVG petals ride the spiral, the pointer leans into it, and a Time Graph watches the sway.',
+    teaches: 'Vector In geometry rides the same list-matched transforms as any circle — and Dispatch splits one spiral into seeds and petals.',
+    tags: ['spiral', 'golden angle', 'svg', 'smooth', 'dispatch'],
+    needs: [], frames: 90
   },
   'Noise blob': {
     cat: 'Fundamentals',
-    blurb: 'A closed spline through polar points whose radii breathe with noise and time.',
-    teaches: 'Interpolated curves through a list of points — noise on the radius is all it takes to make a shape feel alive.',
-    tags: ['noise', 'spline', 'polar', 'organic'],
+    blurb: 'Three interleaved noise blobs in graded colour — the same polar-spline idea three ways, layered into one organism.',
+    teaches: 'Colour as data: swatches deconstruct into HSL, shift per layer, and a gradient fills each breathing spline.',
+    tags: ['noise', 'spline', 'polar', 'gradient', 'layers'],
     needs: [], frames: 40
   },
-  'Iso field': {
+  'Iso-field': {
     cat: 'Lists & grids',
-    blurb: 'A 3-phase pulse across an isometric lattice, with no branching at all.',
-    teaches: 'Grid’s K colour class becomes a phase offset — the whole dispatch pattern in 8 nodes, with no branching.',
-    tags: ['grid', 'list matching', 'no branching', 'iso'],
-    needs: [], frames: 40
-  },
-  'Cursor wave': {
-    cat: 'Lists & grids',
-    blurb: 'Iso field plus the pointer: rings radiate from the cursor, and the field blooms under it while staying quiet far away.',
-    teaches: 'One Expression earns all four of its variables — distance drives both the phase and the amplitude of the same radius.',
-    tags: ['grid', 'mouse', 'expression', 'waves'],
-    needs: [], frames: 40
+    blurb: 'A line field folded through two kaleidoscopes — the pointer bends the weave and the mirrors carry it around the ring.',
+    teaches: 'Kaleidoscope takes whole lists: one bundle of lines becomes an isometric field, and Smooth turns the pointer into a soft brush.',
+    tags: ['kaleidoscope', 'lines', 'field', 'mouse', 'iso'],
+    needs: [], frames: 90
   },
   'Living lattice': {
     cat: 'State & interaction',
@@ -1404,13 +7223,6 @@ const EXAMPLE_META = {
     tags: ['hotspot', 'latch', 'counter', 'button', 'dom'],
     needs: [], frames: 40
   },
-  'Scroll scene': {
-    cat: 'State & interaction',
-    blurb: 'Page scroll as the master parameter: the sun climbs, the sky warms, a windmill spins, the hint fades out.',
-    teaches: 'Scroll is an ordinary input wire — wheel over the cloth to scrub the editor’s simulated page.',
-    tags: ['scroll', 'scene', 'gradient', 'landing page'],
-    needs: ['scroll'], frames: 40
-  },
   'Solar system': {
     cat: 'Lists & grids',
     blurb: 'The solar system as a dataflow — one Kepler machine, eight planets, real J2000 orbital elements from JPL.',
@@ -1420,9 +7232,9 @@ const EXAMPLE_META = {
   },
   'Scale board': {
     cat: 'Audio synthesis',
-    blurb: 'The theremin grown into an instrument you can see — every note a labelled rung, with three real button drones underneath.',
-    teaches: 'One Key node feeds root and scale to every Scale node at once — change the key in one place. Set Union dedupes the snapped notes into rungs, and one Element node list-matches into three actual HTML buttons.',
-    tags: ['scale', 'key', 'set union', 'dom', 'buttons', 'instrument'],
+    blurb: 'The theremin grown into an instrument you can see — labelled rungs, a live trace of the melody, and real button drones underneath.',
+    teaches: 'Scale snaps the pointer into key, Set Union dedupes the notes into rungs, and one Element node list-matches into actual HTML buttons.',
+    tags: ['scale', 'set union', 'dom', 'buttons', 'instrument', 'trace'],
     needs: ['gesture'], frames: 40
   },
   'Cymatics': {
@@ -1460,26 +7272,12 @@ const EXAMPLE_META = {
     tags: ['path to audio', 'oscilloscope music', 'polygon'],
     needs: ['gesture'], frames: 60
   },
-  'Sing': {
-    cat: 'Audio input',
-    blurb: 'Sing a note and the graph sings it back in key — Pitch In hears you, Scale snaps it, an oscillator answers.',
-    teaches: 'Clarity from the pitch tracker gates the voice, so silence stays silent.',
-    tags: ['pitch', 'mic', 'scale', 'gate', 'voice'],
-    needs: ['mic', 'gesture'], frames: 40
-  },
   'Loop pedal': {
     cat: 'Audio input',
     blurb: 'Space toggles recording, c clears; the mic pours into a feedback-1 Delay and circles forever — sing a layer, then sing over it.',
     teaches: 'Delay with feedback 1 IS a loop pedal: a Latch gates the audio in, one slider is the loop length, and the record dot pulses 8× per loop from a single Expression node.',
     tags: ['looper', 'loop pedal', 'delay', 'echo', 'mic', 'overdub'],
     needs: ['mic', 'gesture'], frames: 40
-  },
-  'Visualizer': {
-    cat: 'Audio input',
-    blurb: 'The full rig — sand, spectrum, goniometer and meters, all listening to one shared music tab.',
-    teaches: 'One Track In, listened to five different ways — the wire fans out, nothing is duplicated.',
-    tags: ['track in', 'fft', 'spectrum', 'goniometer', 'tab audio'],
-    needs: ['tab-audio', 'gesture'], frames: 60
   },
   'Mandala': {
     cat: 'Custom JS & meta',
@@ -1488,6 +7286,13 @@ const EXAMPLE_META = {
     tags: ['custom js', 'symmetry', 'particles', 'seeded random'],
     needs: [], frames: 40
   },
+  'Golden Rings': {
+    cat: 'Geometry',
+    blurb: 'Concentric rings carved by Region Boolean, fanned by a kaleidoscope, turning on a turntable — with two anchors to grab on the cloth.',
+    teaches: 'Region Boolean cuts true ring shapes with holes, Kaleidoscope fans them around the centre, and Anchor Points put handles right on the render.',
+    tags: ['rings', 'region boolean', 'kaleidoscope', 'turntable', 'anchors'],
+    needs: [], frames: 60
+  },
   'Superformula': {
     cat: 'Custom JS & meta',
     blurb: 'A shape no native node knows, wrapped in one code node with its magic numbers promoted to sliders.',
@@ -1495,7 +7300,7 @@ const EXAMPLE_META = {
     tags: ['custom js', 'knob extraction', 'superformula'],
     needs: [], frames: 40
   },
-  'Vesica': {
+  'Intersections': {
     cat: 'Geometry',
     blurb: 'Two drifting circles and everything the curve nodes can say about the pair — the lens, the crescents, the crossing points, and the area as a number.',
     teaches: 'Curve Intersection and Region Boolean cut shapes that were previously inexpressible, and three Draw nodes take two wires each so a family of shapes shares one style.',
@@ -1509,11 +7314,5 @@ const EXAMPLE_META = {
     tags: ['3d', 'extrude', 'project', 'orbit camera', 'shading', 'painter’s algorithm'],
     needs: [], frames: 60
   },
-  'Rosette': {
-    cat: 'Geometry',
-    blurb: 'A leaf loaded from an SVG, slowly turning inside an eight-wedge kaleidoscope — mirrored wedges breathe toward each other as it spins.',
-    teaches: 'Vector In makes any SVG file geometry every node can bend, and Kaleidoscope takes its whole input — all paths at once — into every wedge, with K colouring by wedge.',
-    tags: ['svg', 'vector', 'kaleidoscope', 'mirror', 'symmetry', 'import'],
-    needs: [], frames: 40
-  }
+
 };
