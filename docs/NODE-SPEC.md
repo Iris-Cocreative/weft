@@ -59,6 +59,10 @@ Rules:
   (dependency depth → columns). LLMs should omit positions rather than invent them.
 - `values` — literals for unwired inputs, plus node-specific state (a slider's
   `min`/`max`/`value`). Everything in `values` must be JSON-serializable.
+  Some editor widgets persist their size here too: a resized Number Slider
+  stores `values.w` (140–300), a resized Note Pad / Text List stores
+  `values.w`/`values.h`. Editor-managed — the runtime never reads them, and
+  authored patches may simply omit them.
 - `enabled` (optional, default true) — `false` bypasses the node: each output
   passes through the first same-type input untouched (n8n-style deactivation).
 - `preview` (optional, default true) — `false` hides the node's ghost preview

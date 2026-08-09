@@ -4657,8 +4657,9 @@ const EXAMPLES = {
         "x": 30,
         "y": 950,
         "values": {
-          "N": 45
-        }
+          "N": 36
+        },
+        "label": "root"
       },
       {
         "id": "d2",
@@ -4666,8 +4667,9 @@ const EXAMPLES = {
         "x": 30,
         "y": 1040,
         "values": {
-          "N": 52
-        }
+          "N": 43
+        },
+        "label": "fifth"
       },
       {
         "id": "d3",
@@ -4675,8 +4677,9 @@ const EXAMPLES = {
         "x": 30,
         "y": 1130,
         "values": {
-          "N": 57
-        }
+          "N": 48
+        },
+        "label": "octave"
       },
       {
         "id": "d4",
@@ -4684,8 +4687,8 @@ const EXAMPLES = {
         "x": 249,
         "y": 990,
         "values": {
-          "root": 0,
-          "scale": "chromatic"
+          "root": 9,
+          "scale": "pentatonic"
         }
       },
       {
@@ -4745,7 +4748,7 @@ const EXAMPLES = {
         "x": 663,
         "y": 1488,
         "values": {
-          "text": "drone A2\ndrone E3\ndrone A3"
+          "text": "root\nfifth\noctave"
         }
       },
       {
@@ -4941,6 +4944,25 @@ const EXAMPLES = {
           },
           "W": 1.5
         }
+      },
+      {
+        "id": "k1",
+        "type": "audio/key",
+        "x": -340,
+        "y": 380,
+        "values": {
+          "root": 9,
+          "scale": "pentatonic"
+        },
+        "label": "the key"
+      },
+      {
+        "id": "k2",
+        "type": "math/add",
+        "x": 30,
+        "y": 850,
+        "values": {},
+        "label": "transpose by key"
       }
     ],
     "wires": [
@@ -5193,8 +5215,8 @@ const EXAMPLES = {
           "N"
         ],
         "to": [
-          "d4",
-          "V"
+          "k2",
+          "A"
         ]
       },
       {
@@ -5204,8 +5226,8 @@ const EXAMPLES = {
           "N"
         ],
         "to": [
-          "d4",
-          "V"
+          "k2",
+          "A"
         ]
       },
       {
@@ -5215,8 +5237,8 @@ const EXAMPLES = {
           "N"
         ],
         "to": [
-          "d4",
-          "V"
+          "k2",
+          "A"
         ]
       },
       {
@@ -5647,83 +5669,3321 @@ const EXAMPLES = {
           "n23",
           "S"
         ]
+      },
+      {
+        "id": "w91",
+        "from": [
+          "k1",
+          "R"
+        ],
+        "to": [
+          "k2",
+          "B"
+        ]
+      },
+      {
+        "id": "w92",
+        "from": [
+          "k2",
+          "R"
+        ],
+        "to": [
+          "d4",
+          "V"
+        ]
+      },
+      {
+        "id": "w93",
+        "from": [
+          "k1",
+          "R"
+        ],
+        "to": [
+          "s2",
+          "R"
+        ]
+      },
+      {
+        "id": "w94",
+        "from": [
+          "k1",
+          "S"
+        ],
+        "to": [
+          "s2",
+          "S"
+        ]
+      },
+      {
+        "id": "w95",
+        "from": [
+          "k1",
+          "R"
+        ],
+        "to": [
+          "v3",
+          "R"
+        ]
+      },
+      {
+        "id": "w96",
+        "from": [
+          "k1",
+          "S"
+        ],
+        "to": [
+          "v3",
+          "S"
+        ]
+      },
+      {
+        "id": "w97",
+        "from": [
+          "k1",
+          "R"
+        ],
+        "to": [
+          "d4",
+          "R"
+        ]
+      },
+      {
+        "id": "w98",
+        "from": [
+          "k1",
+          "S"
+        ],
+        "to": [
+          "d4",
+          "S"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "id": "g1",
+        "x": -366,
+        "y": 330,
+        "w": 222,
+        "h": 176,
+        "title": "one key, whole board",
+        "nodes": [
+          "k1"
+        ]
       }
     ]
   },
-  'Cymatics': _EX([
-    ['c1', 'params/slider', 30, 40, { min: 36, max: 96, value: 57 }],
-    ['c2', 'audio/scale', 250, 40, { root: 9, scale: 'pentatonic' }],
-    ['c3', 'audio/osc', 470, 40, { wave: 'sine' }],
-    ['c4', 'audio/gain', 690, 40, { G: 0.12 }],
-    ['c5', 'audio/out', 910, 40],
-    ['c6', 'disp/cymatics', 470, 240, { S: 380, N: 1400 }],
-    ['c7', 'disp/bg', 690, 420]
-  ], [
-    ['c1', 'N', 'c2', 'V'],
-    ['c2', 'F', 'c3', 'F'],
-    ['c3', 'A', 'c4', 'In'],
-    ['c4', 'A', 'c5', 'In'],
-    ['c2', 'F', 'c6', 'F']
-  ]),
 
-  /* A loop pedal: space toggles recording, and the mic pours into a Delay
-   * whose feedback is 1 — whatever enters the loop circles forever, and each
-   * new recording pass overdubs on top of what's already going round. C
-   * clears the loop (the Delay's clear trigger swaps in a fresh silent
-   * buffer). The slider is the loop length (drag it live and the loop glides
-   * tape-style — but clear first if you want a clean start). While recording,
-   * a red dot pulses 8 times per loop interval: one Expression node,
-   * sin(2π·T·8/len), into the alpha of an HSL red. The Scope shows the loop;
-   * wear headphones or the speakers will overdub themselves acoustically. */
-  'Loop pedal': _EX([
-    ['l1', 'input/keyboard', 30, 40],
-    ['l2', 'state/latch', 250, 40],
-    ['l3', 'sets/select', 470, 40, { T: 1, F: 0 }],
-    ['l14', 'input/keyboard', 30, 460, { K: 'c' }],
-    ['l4', 'audio/mic', 250, 260],
-    ['l5', 'audio/gain', 690, 260],
-    ['l6', 'params/slider', 470, 460, { min: 0.5, max: 8, value: 2, label: 'loop seconds' }],
-    ['l7', 'audio/delay', 910, 260, { F: 1, M: 1 }],
-    ['l8', 'audio/out', 1350, 260],
-    ['l9', 'audio/scope', 1130, 40, { W: 460, H: 140, T: 60, P: { x: 0, y: -130 } }],
-    ['l10', 'sets/select', 470, 600, { T: 'recording', F: 'space = record · c = clear' }],
-    ['l11', 'disp/text', 690, 600, { S: 16, P: { x: 12, y: 150 } }],
-    ['l12', 'disp/draw', 910, 600, { S: { r: 230, g: 237, b: 250, a: 0.8 } }],
-    ['l15', 'math/expr', 250, 780, { expr: '0.5 + 0.5*sin(6.2832*T*8/X)' }],
-    ['l16', 'sets/select', 470, 780, { F: 0.12 }],
-    ['l17', 'disp/hsl', 690, 780, { H: 0, S: 0.85, L: 0.55 }],
-    ['l18', 'crv/circle', 690, 940, { R: 8, P: { x: -96, y: 156 } }],
-    ['l19', 'disp/draw', 910, 780, { W: 1.5 }],
-    ['l13', 'disp/bg', 1350, 600]
-  ], [
-    ['l1', 'P', 'l2', 'T'],
-    ['l2', 'B', 'l3', 'P'],
-    ['l4', 'A', 'l5', 'In'],
-    ['l3', 'L', 'l5', 'G'],
-    ['l5', 'A', 'l7', 'In'],
-    ['l6', 'N', 'l7', 'T'],
-    ['l14', 'P', 'l7', 'C'],
-    ['l7', 'A', 'l8', 'In'],
-    ['l7', 'A', 'l9', 'In'],
-    ['l2', 'B', 'l10', 'P'],
-    ['l10', 'L', 'l11', 'T'],
-    ['l11', 'G', 'l12', 'G'],
-    ['l6', 'N', 'l15', 'X'],
-    ['l15', 'R', 'l16', 'T'],
-    ['l2', 'B', 'l16', 'P'],
-    ['l16', 'L', 'l17', 'A'],
-    ['l18', 'C', 'l19', 'G'],
-    ['l17', 'C', 'l19', 'S'],
-    ['l17', 'C', 'l19', 'F']
-  ]),
-
-  /* A real oscilloscope AND a vectorscope. Top: the Scope node taps the
-   * audio wire and draws the actual samples, trigger-locked — a sawtooth
-   * through a lowpass whose cutoff rides mouse X (slide right and watch the
-   * hard edges melt). Mouse Y = volume. Bottom: a Vector Scope plots a sine
-   * pair against each other in XY — the ratio slider picks the harmonic
-   * (1 = circle/ellipse, 2 = figure-eight, 3 = trefoil weave…); park it
-   * between integers and the figure slowly tumbles. */
+  /* One sound, seen four ways. Two sliders are the whole instrument: a note
+   * snapped into key, and an interval above it. The interval becomes a ratio
+   * r, and r becomes k = (r+1)/(r−1) — which is at once the petal count of
+   * the rose and the pendulum ratio (k−1):(k+1) of the harmonograph, because
+   * a k-rose IS two partials at that ratio. A perfect fifth is a five-petal
+   * flower and a 2:3 Lissajous; an octave is three petals and a figure eight.
+   * Four rectangles go into ONE Hotspot (state is per list item, so each is
+   * its own button); each contributes its own number 1–4 to a Mass Addition
+   * when clicked, so the sum IS the tab pressed, and 0 when nothing is. A
+   * Select keeps that number or falls back through a Delay to last frame's —
+   * the one legal feedback edge, and the entire memory of the patch, whose
+   * initial value 1 is why the Chladni plate is what you see first. Hiding
+   * comes in two flavours: the wave and the flower are ordinary geometry, so
+   * a Select with nothing wired into F empties the list and Draw skips it
+   * (the flower's Path to Audio falls silent by the same wire — no geometry,
+   * no sound); the plate and the pendulum draw themselves, so they can only
+   * be hidden by taking their colour's alpha to zero, which means the sand
+   * keeps settling while you are away. */
+  'Seeing Sound': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "f1",
+        "type": "params/slider",
+        "x": 30,
+        "y": 40,
+        "values": {
+          "min": 40,
+          "max": 76,
+          "value": 57,
+          "mode": "int",
+          "label": "note"
+        },
+        "label": "the note"
+      },
+      {
+        "id": "f3",
+        "type": "params/slider",
+        "x": 30,
+        "y": 190,
+        "values": {
+          "min": 3,
+          "max": 12,
+          "value": 7,
+          "mode": "int",
+          "label": "interval"
+        },
+        "label": "the interval (semitones)"
+      },
+      {
+        "id": "f2",
+        "type": "audio/scale",
+        "x": 260,
+        "y": 40,
+        "values": {
+          "root": 9,
+          "scale": "pentatonic"
+        },
+        "label": "snapped into key"
+      },
+      {
+        "id": "f4",
+        "type": "math/expr",
+        "x": 260,
+        "y": 210,
+        "values": {
+          "expr": "pow(2, X/12)"
+        },
+        "label": "ratio r"
+      },
+      {
+        "id": "f5",
+        "type": "math/mul",
+        "x": 490,
+        "y": 40,
+        "values": {},
+        "label": "upper voice Hz"
+      },
+      {
+        "id": "k1",
+        "type": "math/expr",
+        "x": 490,
+        "y": 210,
+        "values": {
+          "expr": "(X+1)/(X-1)"
+        },
+        "label": "k = (r+1)/(r-1)"
+      },
+      {
+        "id": "k2",
+        "type": "math/round",
+        "x": 720,
+        "y": 210,
+        "values": {},
+        "label": "petal count k"
+      },
+      {
+        "id": "k3",
+        "type": "math/sub",
+        "x": 950,
+        "y": 150,
+        "values": {
+          "B": 1
+        },
+        "label": "k-1"
+      },
+      {
+        "id": "k4",
+        "type": "math/add",
+        "x": 950,
+        "y": 280,
+        "values": {
+          "B": 1
+        },
+        "label": "k+1"
+      },
+      {
+        "id": "v1",
+        "type": "audio/osc",
+        "x": 720,
+        "y": -80,
+        "values": {
+          "wave": "sine"
+        },
+        "label": "lower voice"
+      },
+      {
+        "id": "v2",
+        "type": "audio/osc",
+        "x": 720,
+        "y": 40,
+        "values": {
+          "wave": "sine",
+          "D": 2
+        },
+        "label": "upper voice"
+      },
+      {
+        "id": "v3",
+        "type": "audio/mix",
+        "x": 950,
+        "y": -60,
+        "values": {
+          "G": 0.5
+        }
+      },
+      {
+        "id": "v4",
+        "type": "audio/gain",
+        "x": 1180,
+        "y": -60,
+        "values": {
+          "G": 0.09
+        }
+      },
+      {
+        "id": "p1",
+        "type": "math/cmp",
+        "x": 1410,
+        "y": 480,
+        "values": {
+          "mode": "=",
+          "B": 1
+        },
+        "label": "on tab 1?"
+      },
+      {
+        "id": "p2",
+        "type": "math/mul",
+        "x": 1640,
+        "y": 480,
+        "values": {
+          "B": 0.9
+        },
+        "label": "alpha: 0.9 or nothing"
+      },
+      {
+        "id": "p3",
+        "type": "disp/hsl",
+        "x": 1870,
+        "y": 480,
+        "values": {
+          "H": 0.47,
+          "S": 0.75,
+          "L": 0.62
+        }
+      },
+      {
+        "id": "p4",
+        "type": "disp/cymatics",
+        "x": 2100,
+        "y": 480,
+        "values": {
+          "S": 400,
+          "N": 1500,
+          "W": 1.1,
+          "P": {
+            "x": 0,
+            "y": -20
+          }
+        },
+        "label": "the plate"
+      },
+      {
+        "id": "h1",
+        "type": "math/cmp",
+        "x": 1410,
+        "y": 700,
+        "values": {
+          "mode": "=",
+          "B": 2
+        },
+        "label": "on tab 2?"
+      },
+      {
+        "id": "h2",
+        "type": "math/mul",
+        "x": 1640,
+        "y": 700,
+        "values": {
+          "B": 0.85
+        },
+        "label": "alpha: 0.85 or nothing"
+      },
+      {
+        "id": "h3",
+        "type": "disp/hsl",
+        "x": 1870,
+        "y": 700,
+        "values": {
+          "H": 0.62,
+          "S": 0.7,
+          "L": 0.7
+        }
+      },
+      {
+        "id": "hT",
+        "type": "input/time",
+        "x": 1410,
+        "y": 840,
+        "values": {}
+      },
+      {
+        "id": "h5",
+        "type": "math/mul",
+        "x": 1640,
+        "y": 840,
+        "values": {
+          "B": 0.22
+        },
+        "label": "phase drift"
+      },
+      {
+        "id": "h6",
+        "type": "params/slider",
+        "x": 1410,
+        "y": 960,
+        "values": {
+          "min": 0,
+          "max": 0.2,
+          "value": 0.055,
+          "label": "damping"
+        }
+      },
+      {
+        "id": "h7",
+        "type": "disp/harmonograph",
+        "x": 2100,
+        "y": 700,
+        "values": {
+          "S": 400,
+          "T": 30,
+          "P": {
+            "x": 0,
+            "y": -20
+          }
+        },
+        "label": "pendulums (k-1):(k+1)"
+      },
+      {
+        "id": "w1",
+        "type": "math/cmp",
+        "x": 1410,
+        "y": 1100,
+        "values": {
+          "mode": "=",
+          "B": 3
+        },
+        "label": "on tab 3?"
+      },
+      {
+        "id": "w2",
+        "type": "sets/range",
+        "x": 1410,
+        "y": 1230,
+        "values": {
+          "A": 0,
+          "B": 1,
+          "N": 400
+        },
+        "label": "u across the window"
+      },
+      {
+        "id": "w3",
+        "type": "math/mul",
+        "x": 1640,
+        "y": 1100,
+        "values": {
+          "B": 0.025
+        },
+        "label": "cycles in view"
+      },
+      {
+        "id": "w4",
+        "type": "math/mul",
+        "x": 1640,
+        "y": 1230,
+        "values": {},
+        "label": "and r times as many"
+      },
+      {
+        "id": "w5",
+        "type": "math/expr",
+        "x": 1870,
+        "y": 1100,
+        "values": {
+          "expr": "sin(6.2832*(X*Y + T*2.2))"
+        },
+        "label": "lower voice"
+      },
+      {
+        "id": "w6",
+        "type": "math/expr",
+        "x": 1870,
+        "y": 1230,
+        "values": {
+          "expr": "sin(6.2832*(X*Y + T*2.2))"
+        },
+        "label": "upper voice"
+      },
+      {
+        "id": "w7",
+        "type": "math/add",
+        "x": 2100,
+        "y": 1160,
+        "values": {},
+        "label": "the two voices add"
+      },
+      {
+        "id": "w8",
+        "type": "math/expr",
+        "x": 2330,
+        "y": 1160,
+        "values": {
+          "expr": "X * -52 - 20"
+        },
+        "label": "to px, y-up"
+      },
+      {
+        "id": "w9",
+        "type": "math/remap",
+        "x": 2100,
+        "y": 1320,
+        "values": {
+          "S0": 0,
+          "S1": 1,
+          "T0": -350,
+          "T1": 350
+        }
+      },
+      {
+        "id": "w10",
+        "type": "vec/construct",
+        "x": 2560,
+        "y": 1230,
+        "values": {}
+      },
+      {
+        "id": "w11",
+        "type": "crv/polyline",
+        "x": 2790,
+        "y": 1230,
+        "values": {
+          "C": false
+        }
+      },
+      {
+        "id": "w13",
+        "type": "disp/hsl",
+        "x": 2790,
+        "y": 1370,
+        "values": {
+          "H": 0.13,
+          "S": 0.85,
+          "L": 0.66
+        }
+      },
+      {
+        "id": "w12",
+        "type": "sets/select",
+        "x": 3020,
+        "y": 1230,
+        "values": {},
+        "label": "gate: nothing wired into F"
+      },
+      {
+        "id": "w14",
+        "type": "disp/draw",
+        "x": 3250,
+        "y": 1230,
+        "values": {
+          "W": 1.6
+        }
+      },
+      {
+        "id": "r1",
+        "type": "sets/range",
+        "x": 1410,
+        "y": 1520,
+        "values": {
+          "A": 0,
+          "B": 6.28319,
+          "N": 511
+        },
+        "label": "theta, once round"
+      },
+      {
+        "id": "r14",
+        "type": "math/cmp",
+        "x": 1410,
+        "y": 1670,
+        "values": {
+          "mode": "=",
+          "B": 4
+        },
+        "label": "on tab 4?"
+      },
+      {
+        "id": "r2",
+        "type": "math/mul",
+        "x": 1640,
+        "y": 1520,
+        "values": {},
+        "label": "k * theta"
+      },
+      {
+        "id": "r4",
+        "type": "math/cos",
+        "x": 1640,
+        "y": 1650,
+        "values": {}
+      },
+      {
+        "id": "r5",
+        "type": "math/sin",
+        "x": 1640,
+        "y": 1770,
+        "values": {}
+      },
+      {
+        "id": "r3",
+        "type": "math/cos",
+        "x": 1870,
+        "y": 1520,
+        "values": {},
+        "label": "r = cos(k*theta)"
+      },
+      {
+        "id": "r6",
+        "type": "math/mul",
+        "x": 2100,
+        "y": 1520,
+        "values": {}
+      },
+      {
+        "id": "r7",
+        "type": "math/mul",
+        "x": 2100,
+        "y": 1650,
+        "values": {}
+      },
+      {
+        "id": "r8",
+        "type": "math/mul",
+        "x": 2330,
+        "y": 1520,
+        "values": {
+          "B": 188
+        }
+      },
+      {
+        "id": "r9",
+        "type": "math/mul",
+        "x": 2330,
+        "y": 1650,
+        "values": {
+          "B": 188
+        }
+      },
+      {
+        "id": "r10",
+        "type": "vec/construct",
+        "x": 2560,
+        "y": 1580,
+        "values": {}
+      },
+      {
+        "id": "r11",
+        "type": "crv/polyline",
+        "x": 2790,
+        "y": 1580,
+        "values": {
+          "C": true
+        }
+      },
+      {
+        "id": "r12",
+        "type": "xf/move",
+        "x": 3020,
+        "y": 1580,
+        "values": {
+          "T": {
+            "x": 0,
+            "y": -20
+          }
+        }
+      },
+      {
+        "id": "r15",
+        "type": "disp/hsl",
+        "x": 3020,
+        "y": 1740,
+        "values": {
+          "H": 0.92,
+          "S": 0.72,
+          "L": 0.7
+        }
+      },
+      {
+        "id": "r13",
+        "type": "sets/select",
+        "x": 3250,
+        "y": 1580,
+        "values": {},
+        "label": "gate: nothing wired into F"
+      },
+      {
+        "id": "r16",
+        "type": "disp/draw",
+        "x": 3480,
+        "y": 1580,
+        "values": {
+          "W": 1.6
+        }
+      },
+      {
+        "id": "r17",
+        "type": "audio/path",
+        "x": 3480,
+        "y": 1740,
+        "values": {},
+        "label": "the flower sings itself"
+      },
+      {
+        "id": "r18",
+        "type": "audio/gain",
+        "x": 3710,
+        "y": 1740,
+        "values": {
+          "G": 0.06
+        }
+      },
+      {
+        "id": "v5",
+        "type": "audio/out",
+        "x": 3940,
+        "y": 1740,
+        "values": {
+          "V": 0.8
+        },
+        "label": "click once to let sound in"
+      },
+      {
+        "id": "t1",
+        "type": "sets/series",
+        "x": 30,
+        "y": 2060,
+        "values": {
+          "S": -258,
+          "N": 172,
+          "C": 4
+        },
+        "label": "four tab positions"
+      },
+      {
+        "id": "t5",
+        "type": "sets/series",
+        "x": 30,
+        "y": 2210,
+        "values": {
+          "S": 1,
+          "N": 1,
+          "C": 4
+        },
+        "label": "tab numbers 1-4"
+      },
+      {
+        "id": "t2",
+        "type": "vec/construct",
+        "x": 260,
+        "y": 2060,
+        "values": {
+          "Y": 250
+        }
+      },
+      {
+        "id": "t3",
+        "type": "crv/rect",
+        "x": 490,
+        "y": 2060,
+        "values": {
+          "W": 158,
+          "H": 36
+        },
+        "label": "the four tabs"
+      },
+      {
+        "id": "t4",
+        "type": "input/hotspot",
+        "x": 720,
+        "y": 2060,
+        "values": {},
+        "label": "one hotspot, four buttons"
+      },
+      {
+        "id": "t6",
+        "type": "math/expr",
+        "x": 950,
+        "y": 2210,
+        "values": {
+          "expr": "Y > 0.5 ? X : 0"
+        },
+        "label": "my number, if I was clicked"
+      },
+      {
+        "id": "t7",
+        "type": "math/masadd",
+        "x": 1180,
+        "y": 2210,
+        "values": {},
+        "label": "the sum IS the tab pressed"
+      },
+      {
+        "id": "t8",
+        "type": "math/cmp",
+        "x": 1410,
+        "y": 2210,
+        "values": {
+          "mode": ">",
+          "B": 0
+        },
+        "label": "anything pressed at all?"
+      },
+      {
+        "id": "t9",
+        "type": "sets/select",
+        "x": 1640,
+        "y": 2210,
+        "values": {},
+        "label": "the new tab, or the old one"
+      },
+      {
+        "id": "t10",
+        "type": "state/delay",
+        "x": 1410,
+        "y": 2360,
+        "values": {
+          "I": 1
+        },
+        "label": "memory - starts on tab 1"
+      },
+      {
+        "id": "t11",
+        "type": "params/relay",
+        "x": 1180,
+        "y": 2480,
+        "values": {},
+        "label": "active view"
+      },
+      {
+        "id": "t12",
+        "type": "math/expr",
+        "x": 1410,
+        "y": 2610,
+        "values": {
+          "expr": "X == Y ? 1 : (Z > 0.5 ? 0.5 : 0.22)"
+        },
+        "label": "lit / hovered / resting"
+      },
+      {
+        "id": "t13",
+        "type": "disp/hsl",
+        "x": 1640,
+        "y": 2610,
+        "values": {
+          "H": 0.5,
+          "S": 0.3,
+          "L": 0.88
+        }
+      },
+      {
+        "id": "t15",
+        "type": "math/expr",
+        "x": 1410,
+        "y": 2750,
+        "values": {
+          "expr": "X == Y ? 0.18 : 0.04"
+        },
+        "label": "fill of the live tab"
+      },
+      {
+        "id": "t16",
+        "type": "disp/hsl",
+        "x": 1640,
+        "y": 2750,
+        "values": {
+          "H": 0.5,
+          "S": 0.55,
+          "L": 0.6
+        }
+      },
+      {
+        "id": "t14",
+        "type": "disp/draw",
+        "x": 1870,
+        "y": 2610,
+        "values": {
+          "W": 1.2
+        }
+      },
+      {
+        "id": "t17",
+        "type": "params/textlist",
+        "x": 1180,
+        "y": 2890,
+        "values": {
+          "text": "plate\npendulum\nwave\nflower"
+        }
+      },
+      {
+        "id": "t18",
+        "type": "disp/text",
+        "x": 1640,
+        "y": 2890,
+        "values": {
+          "S": 15
+        }
+      },
+      {
+        "id": "t19",
+        "type": "disp/draw",
+        "x": 1870,
+        "y": 2890,
+        "values": {
+          "W": 1
+        }
+      },
+      {
+        "id": "x1",
+        "type": "disp/text",
+        "x": 2400,
+        "y": 2060,
+        "values": {
+          "T": "seeing sound",
+          "S": 20,
+          "P": {
+            "x": 0,
+            "y": -272
+          }
+        }
+      },
+      {
+        "id": "x2",
+        "type": "math/round",
+        "x": 2400,
+        "y": 2210,
+        "values": {},
+        "label": "Hz, rounded"
+      },
+      {
+        "id": "x3",
+        "type": "disp/text",
+        "x": 2630,
+        "y": 2210,
+        "values": {
+          "S": 13,
+          "P": {
+            "x": 0,
+            "y": -246
+          }
+        }
+      },
+      {
+        "id": "x4",
+        "type": "disp/hsl",
+        "x": 2630,
+        "y": 2350,
+        "values": {
+          "H": 0.5,
+          "S": 0.15,
+          "L": 0.78,
+          "A": 0.55
+        }
+      },
+      {
+        "id": "x5",
+        "type": "disp/draw",
+        "x": 2860,
+        "y": 2060,
+        "values": {
+          "W": 1
+        }
+      },
+      {
+        "id": "bg",
+        "type": "disp/bg",
+        "x": 2860,
+        "y": 2210,
+        "values": {
+          "C": {
+            "r": 8,
+            "g": 10,
+            "b": 15,
+            "a": 1
+          }
+        }
+      }
+    ],
+    "wires": [
+      {
+        "from": [
+          "f1",
+          "N"
+        ],
+        "to": [
+          "f2",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "f3",
+          "N"
+        ],
+        "to": [
+          "f4",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "f2",
+          "F"
+        ],
+        "to": [
+          "f5",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "f4",
+          "R"
+        ],
+        "to": [
+          "f5",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "f4",
+          "R"
+        ],
+        "to": [
+          "k1",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "k1",
+          "R"
+        ],
+        "to": [
+          "k2",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "k2",
+          "R"
+        ],
+        "to": [
+          "k3",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "k2",
+          "R"
+        ],
+        "to": [
+          "k4",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "f2",
+          "F"
+        ],
+        "to": [
+          "v1",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "f5",
+          "R"
+        ],
+        "to": [
+          "v2",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "v1",
+          "A"
+        ],
+        "to": [
+          "v3",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "v2",
+          "A"
+        ],
+        "to": [
+          "v3",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "v3",
+          "A"
+        ],
+        "to": [
+          "v4",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "v4",
+          "A"
+        ],
+        "to": [
+          "v5",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "t11",
+          "V"
+        ],
+        "to": [
+          "p1",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "p1",
+          "R"
+        ],
+        "to": [
+          "p2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "p2",
+          "R"
+        ],
+        "to": [
+          "p3",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "p3",
+          "C"
+        ],
+        "to": [
+          "p4",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "f2",
+          "F"
+        ],
+        "to": [
+          "p4",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "t11",
+          "V"
+        ],
+        "to": [
+          "h1",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "h1",
+          "R"
+        ],
+        "to": [
+          "h2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "h2",
+          "R"
+        ],
+        "to": [
+          "h3",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "hT",
+          "T"
+        ],
+        "to": [
+          "h5",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "k3",
+          "R"
+        ],
+        "to": [
+          "h7",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "k4",
+          "R"
+        ],
+        "to": [
+          "h7",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "h5",
+          "R"
+        ],
+        "to": [
+          "h7",
+          "H"
+        ]
+      },
+      {
+        "from": [
+          "h6",
+          "N"
+        ],
+        "to": [
+          "h7",
+          "D"
+        ]
+      },
+      {
+        "from": [
+          "h3",
+          "C"
+        ],
+        "to": [
+          "h7",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "t11",
+          "V"
+        ],
+        "to": [
+          "w1",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "f2",
+          "F"
+        ],
+        "to": [
+          "w3",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "w3",
+          "R"
+        ],
+        "to": [
+          "w4",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "f4",
+          "R"
+        ],
+        "to": [
+          "w4",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "w2",
+          "R"
+        ],
+        "to": [
+          "w5",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "w3",
+          "R"
+        ],
+        "to": [
+          "w5",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "w2",
+          "R"
+        ],
+        "to": [
+          "w6",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "w4",
+          "R"
+        ],
+        "to": [
+          "w6",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "w5",
+          "R"
+        ],
+        "to": [
+          "w7",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "w6",
+          "R"
+        ],
+        "to": [
+          "w7",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "w7",
+          "R"
+        ],
+        "to": [
+          "w8",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "w2",
+          "R"
+        ],
+        "to": [
+          "w9",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "w9",
+          "R"
+        ],
+        "to": [
+          "w10",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "w8",
+          "R"
+        ],
+        "to": [
+          "w10",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "w10",
+          "P"
+        ],
+        "to": [
+          "w11",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "w11",
+          "C"
+        ],
+        "to": [
+          "w12",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "w1",
+          "R"
+        ],
+        "to": [
+          "w12",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "w12",
+          "L"
+        ],
+        "to": [
+          "w14",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "w13",
+          "C"
+        ],
+        "to": [
+          "w14",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "t11",
+          "V"
+        ],
+        "to": [
+          "r14",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "r1",
+          "R"
+        ],
+        "to": [
+          "r2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "k2",
+          "R"
+        ],
+        "to": [
+          "r2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "r2",
+          "R"
+        ],
+        "to": [
+          "r3",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "r1",
+          "R"
+        ],
+        "to": [
+          "r4",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "r1",
+          "R"
+        ],
+        "to": [
+          "r5",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "r3",
+          "R"
+        ],
+        "to": [
+          "r6",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "r4",
+          "R"
+        ],
+        "to": [
+          "r6",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "r3",
+          "R"
+        ],
+        "to": [
+          "r7",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "r5",
+          "R"
+        ],
+        "to": [
+          "r7",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "r6",
+          "R"
+        ],
+        "to": [
+          "r8",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "r7",
+          "R"
+        ],
+        "to": [
+          "r9",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "r8",
+          "R"
+        ],
+        "to": [
+          "r10",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "r9",
+          "R"
+        ],
+        "to": [
+          "r10",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "r10",
+          "P"
+        ],
+        "to": [
+          "r11",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "r11",
+          "C"
+        ],
+        "to": [
+          "r12",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "r12",
+          "G"
+        ],
+        "to": [
+          "r13",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "r14",
+          "R"
+        ],
+        "to": [
+          "r13",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "r13",
+          "L"
+        ],
+        "to": [
+          "r16",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "r15",
+          "C"
+        ],
+        "to": [
+          "r16",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "r13",
+          "L"
+        ],
+        "to": [
+          "r17",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "f2",
+          "F"
+        ],
+        "to": [
+          "r17",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "r17",
+          "X"
+        ],
+        "to": [
+          "r18",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "r18",
+          "A"
+        ],
+        "to": [
+          "v5",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "t1",
+          "S"
+        ],
+        "to": [
+          "t2",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "t2",
+          "P"
+        ],
+        "to": [
+          "t3",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "t3",
+          "C"
+        ],
+        "to": [
+          "t4",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "t5",
+          "S"
+        ],
+        "to": [
+          "t6",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "t4",
+          "C"
+        ],
+        "to": [
+          "t6",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "t6",
+          "R"
+        ],
+        "to": [
+          "t7",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "t7",
+          "R"
+        ],
+        "to": [
+          "t8",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "t7",
+          "R"
+        ],
+        "to": [
+          "t9",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "t10",
+          "V"
+        ],
+        "to": [
+          "t9",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "t8",
+          "R"
+        ],
+        "to": [
+          "t9",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "t9",
+          "L"
+        ],
+        "to": [
+          "t10",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "t9",
+          "L"
+        ],
+        "to": [
+          "t11",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "t5",
+          "S"
+        ],
+        "to": [
+          "t12",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "t11",
+          "V"
+        ],
+        "to": [
+          "t12",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "t4",
+          "H"
+        ],
+        "to": [
+          "t12",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "t12",
+          "R"
+        ],
+        "to": [
+          "t13",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "t5",
+          "S"
+        ],
+        "to": [
+          "t15",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "t11",
+          "V"
+        ],
+        "to": [
+          "t15",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "t15",
+          "R"
+        ],
+        "to": [
+          "t16",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "t3",
+          "C"
+        ],
+        "to": [
+          "t14",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "t13",
+          "C"
+        ],
+        "to": [
+          "t14",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "t16",
+          "C"
+        ],
+        "to": [
+          "t14",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "t17",
+          "L"
+        ],
+        "to": [
+          "t18",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "t2",
+          "P"
+        ],
+        "to": [
+          "t18",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "t18",
+          "G"
+        ],
+        "to": [
+          "t19",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "t13",
+          "C"
+        ],
+        "to": [
+          "t19",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "f2",
+          "F"
+        ],
+        "to": [
+          "x2",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "x2",
+          "R"
+        ],
+        "to": [
+          "x3",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "x1",
+          "G"
+        ],
+        "to": [
+          "x5",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "x3",
+          "G"
+        ],
+        "to": [
+          "x5",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "x4",
+          "C"
+        ],
+        "to": [
+          "x5",
+          "S"
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "id": "note1",
+        "x": 30,
+        "y": 430,
+        "w": 340,
+        "h": 250,
+        "text": "one sound, four ways\n\nTwo sliders make the whole patch. The note snaps into key and becomes a frequency; the interval becomes a ratio r, and r becomes k = (r+1)/(r-1).\n\nThat k is the petal count of the flower AND the pendulum ratio (k-1):(k+1) of the harmonograph — a perfect fifth is a five-petal rose. Move either slider and all four views change together, because there is only one sound to change."
+      },
+      {
+        "id": "note2",
+        "x": 2400,
+        "y": 2560,
+        "w": 340,
+        "h": 300,
+        "text": "the tabs, wired\n\nFour rectangles go into ONE Hotspot, so each is its own button (state is per list item). Each tab contributes its own number 1-4 to a sum when clicked — so the sum IS the tab you pressed, and 0 when you press nothing.\n\nSelect keeps that number, or falls back to last frame's through the Delay: the one legal feedback edge, and the entire memory of this patch. Its initial value is 1, which is why the plate is what you see before you touch anything."
+      },
+      {
+        "id": "note3",
+        "x": 2790,
+        "y": 2560,
+        "w": 340,
+        "h": 300,
+        "text": "two ways to hide a view\n\nThe wave and the flower are ordinary geometry, so they pass through a Select with NOTHING wired into F. Off means an empty list, and Draw skips an empty list silently. The flower's Path to Audio goes quiet the same way — no geometry, no sound.\n\nThe plate and the pendulum are display instruments: they draw themselves, so they can only be hidden by taking their colour's alpha to zero. The sand keeps settling while you are away — come back and the figure has moved on."
+      }
+    ],
+    "groups": [
+      {
+        "id": "g1",
+        "x": 10,
+        "y": -160,
+        "w": 1370,
+        "h": 540,
+        "title": "the voice — one note, one interval",
+        "nodes": [
+          "f1",
+          "f3",
+          "f2",
+          "f4",
+          "f5",
+          "k1",
+          "k2",
+          "k3",
+          "k4",
+          "v1",
+          "v2",
+          "v3",
+          "v4"
+        ]
+      },
+      {
+        "id": "g2",
+        "x": 1390,
+        "y": 400,
+        "w": 920,
+        "h": 260,
+        "title": "view 1 · the plate — the frequency as sand",
+        "nodes": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ]
+      },
+      {
+        "id": "g3",
+        "x": 1390,
+        "y": 620,
+        "w": 920,
+        "h": 480,
+        "title": "view 2 · the pendulum — the ratio as a lissajous web",
+        "nodes": [
+          "h1",
+          "h2",
+          "h3",
+          "hT",
+          "h5",
+          "h6",
+          "h7"
+        ]
+      },
+      {
+        "id": "g4",
+        "x": 1390,
+        "y": 1020,
+        "w": 2210,
+        "h": 480,
+        "title": "view 3 · the wave — the two voices, added",
+        "nodes": [
+          "w1",
+          "w2",
+          "w3",
+          "w4",
+          "w5",
+          "w6",
+          "w7",
+          "w8",
+          "w9",
+          "w10",
+          "w11",
+          "w13",
+          "w12",
+          "w14"
+        ]
+      },
+      {
+        "id": "g5",
+        "x": 1390,
+        "y": 1440,
+        "w": 2500,
+        "h": 500,
+        "title": "view 4 · the flower — the interval as a rose",
+        "nodes": [
+          "r1",
+          "r14",
+          "r2",
+          "r4",
+          "r5",
+          "r3",
+          "r6",
+          "r7",
+          "r8",
+          "r9",
+          "r10",
+          "r11",
+          "r12",
+          "r15",
+          "r13",
+          "r16",
+          "r17",
+          "r18"
+        ]
+      },
+      {
+        "id": "g6",
+        "x": 10,
+        "y": 1980,
+        "w": 2230,
+        "h": 1080,
+        "title": "the tabs — four hit areas, one remembered number",
+        "nodes": [
+          "t1",
+          "t5",
+          "t2",
+          "t3",
+          "t4",
+          "t6",
+          "t7",
+          "t8",
+          "t9",
+          "t10",
+          "t11",
+          "t12",
+          "t13",
+          "t15",
+          "t16",
+          "t14",
+          "t17",
+          "t18",
+          "t19"
+        ]
+      },
+      {
+        "id": "g7",
+        "x": 2380,
+        "y": 1980,
+        "w": 900,
+        "h": 460,
+        "title": "caption & ground",
+        "nodes": [
+          "x1",
+          "x2",
+          "x3",
+          "x4",
+          "x5",
+          "bg"
+        ]
+      }
+    ]
+  },
+  'Loop pedal': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "b1",
+        "type": "sets/series",
+        "x": 40,
+        "y": 0,
+        "values": {
+          "S": -150,
+          "N": 150,
+          "C": 3
+        },
+        "label": "button x"
+      },
+      {
+        "id": "b2",
+        "type": "vec/construct",
+        "x": 270,
+        "y": 0,
+        "values": {
+          "Y": 40
+        },
+        "label": "button centres"
+      },
+      {
+        "id": "b3",
+        "type": "crv/circle",
+        "x": 500,
+        "y": 0,
+        "values": {
+          "R": 34
+        },
+        "label": "three buttons"
+      },
+      {
+        "id": "b4",
+        "type": "input/hotspot",
+        "x": 730,
+        "y": 0,
+        "values": {},
+        "label": "one hotspot, three clicks"
+      },
+      {
+        "id": "b5",
+        "type": "sets/item",
+        "x": 960,
+        "y": -60,
+        "values": {
+          "i": 0
+        },
+        "label": "rec button"
+      },
+      {
+        "id": "b6",
+        "type": "sets/item",
+        "x": 960,
+        "y": 60,
+        "values": {
+          "i": 1
+        },
+        "label": "clear button"
+      },
+      {
+        "id": "b7",
+        "type": "sets/item",
+        "x": 960,
+        "y": 180,
+        "values": {
+          "i": 2
+        },
+        "label": "click button"
+      },
+      {
+        "id": "l1",
+        "type": "input/keyboard",
+        "x": 40,
+        "y": 150,
+        "values": {
+          "K": "space"
+        },
+        "label": "space"
+      },
+      {
+        "id": "l14",
+        "type": "input/keyboard",
+        "x": 40,
+        "y": 270,
+        "values": {
+          "K": "c"
+        },
+        "label": "c"
+      },
+      {
+        "id": "k3",
+        "type": "input/keyboard",
+        "x": 40,
+        "y": 390,
+        "values": {
+          "K": "m"
+        },
+        "label": "m"
+      },
+      {
+        "id": "g1",
+        "type": "math/logic",
+        "x": 1190,
+        "y": -60,
+        "values": {
+          "mode": "or"
+        },
+        "label": "space or rec"
+      },
+      {
+        "id": "g2",
+        "type": "math/logic",
+        "x": 1190,
+        "y": 60,
+        "values": {
+          "mode": "or"
+        },
+        "label": "c or clear"
+      },
+      {
+        "id": "g3",
+        "type": "math/logic",
+        "x": 1190,
+        "y": 180,
+        "values": {
+          "mode": "or"
+        },
+        "label": "m or click"
+      },
+      {
+        "id": "l2",
+        "type": "state/latch",
+        "x": 1420,
+        "y": -60,
+        "values": {},
+        "label": "recording"
+      },
+      {
+        "id": "m0",
+        "type": "state/latch",
+        "x": 1420,
+        "y": 180,
+        "values": {},
+        "label": "metronome on"
+      },
+      {
+        "id": "b8",
+        "type": "sets/select",
+        "x": 960,
+        "y": 310,
+        "values": {
+          "T": 0.34,
+          "F": 0.16
+        },
+        "label": "hover lift"
+      },
+      {
+        "id": "b9",
+        "type": "disp/hsl",
+        "x": 1190,
+        "y": 310,
+        "values": {
+          "H": 0.55,
+          "S": 0.3,
+          "A": 1
+        },
+        "label": "button fill"
+      },
+      {
+        "id": "b10",
+        "type": "disp/draw",
+        "x": 1420,
+        "y": 310,
+        "values": {
+          "S": {
+            "r": 158,
+            "g": 180,
+            "b": 210,
+            "a": 0.9
+          },
+          "W": 1.5
+        },
+        "label": "draw buttons"
+      },
+      {
+        "id": "b11",
+        "type": "params/textlist",
+        "x": 500,
+        "y": 440,
+        "values": {
+          "text": "rec\nclear\nclick"
+        },
+        "label": "button labels"
+      },
+      {
+        "id": "b15",
+        "type": "vec/construct",
+        "x": 730,
+        "y": 440,
+        "values": {
+          "Y": 94
+        },
+        "label": "label centres"
+      },
+      {
+        "id": "b13",
+        "type": "disp/text",
+        "x": 960,
+        "y": 440,
+        "values": {
+          "S": 13
+        },
+        "label": "three labels, one node"
+      },
+      {
+        "id": "b14",
+        "type": "disp/draw",
+        "x": 1190,
+        "y": 440,
+        "values": {
+          "S": {
+            "r": 206,
+            "g": 217,
+            "b": 236,
+            "a": 0.85
+          }
+        },
+        "label": "draw labels"
+      },
+      {
+        "id": "l4",
+        "type": "audio/mic",
+        "x": 40,
+        "y": 700,
+        "values": {},
+        "label": "mic"
+      },
+      {
+        "id": "l6",
+        "type": "params/slider",
+        "x": 40,
+        "y": 840,
+        "values": {
+          "min": 0.5,
+          "max": 8,
+          "value": 2,
+          "label": "loop seconds"
+        }
+      },
+      {
+        "id": "l3",
+        "type": "sets/select",
+        "x": 1650,
+        "y": 700,
+        "values": {
+          "T": 1,
+          "F": 0
+        },
+        "label": "record gate"
+      },
+      {
+        "id": "l5",
+        "type": "audio/gain",
+        "x": 1880,
+        "y": 700,
+        "values": {},
+        "label": "let the mic in"
+      },
+      {
+        "id": "l7",
+        "type": "audio/delay",
+        "x": 2110,
+        "y": 700,
+        "values": {
+          "F": 1,
+          "M": 1
+        },
+        "label": "the loop — feedback 1"
+      },
+      {
+        "id": "l8",
+        "type": "audio/out",
+        "x": 2340,
+        "y": 700,
+        "values": {},
+        "label": "speakers"
+      },
+      {
+        "id": "l9",
+        "type": "audio/scope",
+        "x": 2340,
+        "y": 860,
+        "values": {
+          "W": 460,
+          "H": 140,
+          "T": 60,
+          "P": {
+            "x": 0,
+            "y": -150
+          }
+        },
+        "label": "the loop, seen"
+      },
+      {
+        "id": "m1",
+        "type": "params/slider",
+        "x": 40,
+        "y": 1180,
+        "values": {
+          "min": 40,
+          "max": 200,
+          "value": 96,
+          "mode": "int",
+          "label": "metronome bpm"
+        }
+      },
+      {
+        "id": "m8",
+        "type": "params/slider",
+        "x": 40,
+        "y": 1320,
+        "values": {
+          "min": 0,
+          "max": 0.5,
+          "value": 0.22,
+          "label": "click level"
+        }
+      },
+      {
+        "id": "m2",
+        "type": "math/expr",
+        "x": 500,
+        "y": 1180,
+        "values": {
+          "expr": "(T * X / 60) % 1"
+        },
+        "label": "beat phase 0..1"
+      },
+      {
+        "id": "m3",
+        "type": "math/expr",
+        "x": 960,
+        "y": 1180,
+        "values": {
+          "expr": "pow(1 - X, 40)"
+        },
+        "label": "click envelope"
+      },
+      {
+        "id": "m4",
+        "type": "sets/select",
+        "x": 1650,
+        "y": 1180,
+        "values": {
+          "F": 0
+        },
+        "label": "gate — silent when off"
+      },
+      {
+        "id": "m5",
+        "type": "math/mul",
+        "x": 1880,
+        "y": 1180,
+        "values": {},
+        "label": "× level"
+      },
+      {
+        "id": "m6",
+        "type": "audio/osc",
+        "x": 1650,
+        "y": 1320,
+        "values": {
+          "wave": "sine",
+          "F": 1320
+        },
+        "label": "click tone"
+      },
+      {
+        "id": "m7",
+        "type": "audio/gain",
+        "x": 1880,
+        "y": 1320,
+        "values": {},
+        "label": "blip"
+      },
+      {
+        "id": "m9",
+        "type": "crv/circle",
+        "x": 1650,
+        "y": 1460,
+        "values": {
+          "R": 6,
+          "P": {
+            "x": 150,
+            "y": -14
+          }
+        },
+        "label": "beat dot"
+      },
+      {
+        "id": "m10",
+        "type": "disp/hsl",
+        "x": 1880,
+        "y": 1460,
+        "values": {
+          "H": 0.12,
+          "S": 0.9,
+          "L": 0.62
+        },
+        "label": "flash"
+      },
+      {
+        "id": "m11",
+        "type": "disp/draw",
+        "x": 2110,
+        "y": 1460,
+        "values": {
+          "W": 1
+        },
+        "label": "draw beat dot"
+      },
+      {
+        "id": "l15",
+        "type": "math/expr",
+        "x": 500,
+        "y": 1700,
+        "values": {
+          "expr": "0.5 + 0.5*sin(6.2832*T*8/X)"
+        },
+        "label": "8 pulses per loop"
+      },
+      {
+        "id": "l10",
+        "type": "sets/select",
+        "x": 1650,
+        "y": 1700,
+        "values": {
+          "T": "recording",
+          "F": "space / rec  ·  c / clear  ·  m / click"
+        },
+        "label": "status line"
+      },
+      {
+        "id": "l11",
+        "type": "disp/text",
+        "x": 1880,
+        "y": 1700,
+        "values": {
+          "S": 16,
+          "P": {
+            "x": 20,
+            "y": 150
+          }
+        }
+      },
+      {
+        "id": "l12",
+        "type": "disp/draw",
+        "x": 2110,
+        "y": 1700,
+        "values": {
+          "S": {
+            "r": 230,
+            "g": 237,
+            "b": 250,
+            "a": 0.8
+          }
+        },
+        "label": "draw status"
+      },
+      {
+        "id": "l16",
+        "type": "sets/select",
+        "x": 1650,
+        "y": 1840,
+        "values": {
+          "F": 0.12
+        },
+        "label": "pulse only while recording"
+      },
+      {
+        "id": "l17",
+        "type": "disp/hsl",
+        "x": 1880,
+        "y": 1840,
+        "values": {
+          "H": 0,
+          "S": 0.85,
+          "L": 0.55
+        },
+        "label": "record red"
+      },
+      {
+        "id": "l18",
+        "type": "crv/circle",
+        "x": 1650,
+        "y": 1980,
+        "values": {
+          "R": 8,
+          "P": {
+            "x": -180,
+            "y": 150
+          }
+        },
+        "label": "record dot"
+      },
+      {
+        "id": "l19",
+        "type": "disp/draw",
+        "x": 2110,
+        "y": 1840,
+        "values": {
+          "W": 1.5
+        },
+        "label": "draw record dot"
+      },
+      {
+        "id": "l13",
+        "type": "disp/bg",
+        "x": 2340,
+        "y": 1700,
+        "values": {}
+      }
+    ],
+    "wires": [
+      {
+        "from": [
+          "b1",
+          "S"
+        ],
+        "to": [
+          "b2",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "b2",
+          "P"
+        ],
+        "to": [
+          "b3",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "b3",
+          "C"
+        ],
+        "to": [
+          "b4",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "b4",
+          "C"
+        ],
+        "to": [
+          "b5",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "b4",
+          "C"
+        ],
+        "to": [
+          "b6",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "b4",
+          "C"
+        ],
+        "to": [
+          "b7",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "l1",
+          "P"
+        ],
+        "to": [
+          "g1",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "b5",
+          "E"
+        ],
+        "to": [
+          "g1",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "l14",
+          "P"
+        ],
+        "to": [
+          "g2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "b6",
+          "E"
+        ],
+        "to": [
+          "g2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "k3",
+          "P"
+        ],
+        "to": [
+          "g3",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "b7",
+          "E"
+        ],
+        "to": [
+          "g3",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "g1",
+          "R"
+        ],
+        "to": [
+          "l2",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "g3",
+          "R"
+        ],
+        "to": [
+          "m0",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "b4",
+          "H"
+        ],
+        "to": [
+          "b8",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "b8",
+          "L"
+        ],
+        "to": [
+          "b9",
+          "L"
+        ]
+      },
+      {
+        "from": [
+          "b3",
+          "C"
+        ],
+        "to": [
+          "b10",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "b9",
+          "C"
+        ],
+        "to": [
+          "b10",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "b1",
+          "S"
+        ],
+        "to": [
+          "b15",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "b11",
+          "L"
+        ],
+        "to": [
+          "b13",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "b15",
+          "P"
+        ],
+        "to": [
+          "b13",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "b13",
+          "G"
+        ],
+        "to": [
+          "b14",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "l2",
+          "B"
+        ],
+        "to": [
+          "l3",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "l4",
+          "A"
+        ],
+        "to": [
+          "l5",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "l3",
+          "L"
+        ],
+        "to": [
+          "l5",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "l5",
+          "A"
+        ],
+        "to": [
+          "l7",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "l6",
+          "N"
+        ],
+        "to": [
+          "l7",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "g2",
+          "R"
+        ],
+        "to": [
+          "l7",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "l7",
+          "A"
+        ],
+        "to": [
+          "l8",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "l7",
+          "A"
+        ],
+        "to": [
+          "l9",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "m1",
+          "N"
+        ],
+        "to": [
+          "m2",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "m2",
+          "R"
+        ],
+        "to": [
+          "m3",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "m3",
+          "R"
+        ],
+        "to": [
+          "m4",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "m0",
+          "B"
+        ],
+        "to": [
+          "m4",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "m4",
+          "L"
+        ],
+        "to": [
+          "m5",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "m8",
+          "N"
+        ],
+        "to": [
+          "m5",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "m6",
+          "A"
+        ],
+        "to": [
+          "m7",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "m5",
+          "R"
+        ],
+        "to": [
+          "m7",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "m7",
+          "A"
+        ],
+        "to": [
+          "l8",
+          "In"
+        ]
+      },
+      {
+        "from": [
+          "m4",
+          "L"
+        ],
+        "to": [
+          "m10",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "m9",
+          "C"
+        ],
+        "to": [
+          "m11",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "m10",
+          "C"
+        ],
+        "to": [
+          "m11",
+          "F"
+        ]
+      },
+      {
+        "from": [
+          "m10",
+          "C"
+        ],
+        "to": [
+          "m11",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "l2",
+          "B"
+        ],
+        "to": [
+          "l10",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "l10",
+          "L"
+        ],
+        "to": [
+          "l11",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "l11",
+          "G"
+        ],
+        "to": [
+          "l12",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "l6",
+          "N"
+        ],
+        "to": [
+          "l15",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "l15",
+          "R"
+        ],
+        "to": [
+          "l16",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "l2",
+          "B"
+        ],
+        "to": [
+          "l16",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "l16",
+          "L"
+        ],
+        "to": [
+          "l17",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "l18",
+          "C"
+        ],
+        "to": [
+          "l19",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "l17",
+          "C"
+        ],
+        "to": [
+          "l19",
+          "S"
+        ]
+      },
+      {
+        "from": [
+          "l17",
+          "C"
+        ],
+        "to": [
+          "l19",
+          "F"
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "id": "t1",
+        "x": 1700,
+        "y": -140,
+        "w": 360,
+        "h": 470,
+        "text": "transport\n\nthree circles on the cloth are ONE Hotspot — List Item pulls each button's click out of the three-item list, and one Select paints all three hover states.\n\nthe keys still work: space = record, c = clear, m = metronome. each key meets its button in a Logic (or), so both paths drive the same wire and neither one wins."
+      },
+      {
+        "id": "t2",
+        "x": 2370,
+        "y": 1180,
+        "w": 320,
+        "h": 340,
+        "text": "the click track\n\nno metronome node needed: time modulo the beat period is a 0..1 ramp, and pow(1 - phase, 40) turns that ramp into an 11 ms spike.\n\nthe spike is the gain of a steady 1320 Hz tone — and the same number is the alpha of the beat dot, so you see what you hear."
+      }
+    ],
+    "groups": [
+      {
+        "id": "g_a",
+        "x": -20,
+        "y": -140,
+        "w": 1680,
+        "h": 740,
+        "title": "transport — three buttons on the cloth, three keys, one Logic (or) each",
+        "nodes": [
+          "b1",
+          "b2",
+          "b3",
+          "b4",
+          "b5",
+          "b6",
+          "b7",
+          "l1",
+          "l14",
+          "k3",
+          "g1",
+          "g2",
+          "g3",
+          "l2",
+          "m0",
+          "b8",
+          "b9",
+          "b10",
+          "b11",
+          "b15",
+          "b13",
+          "b14"
+        ]
+      },
+      {
+        "id": "g_b",
+        "x": -20,
+        "y": 650,
+        "w": 2580,
+        "h": 450,
+        "title": "the loop — mic through a gate into a Delay whose feedback is 1",
+        "nodes": [
+          "l4",
+          "l6",
+          "l3",
+          "l5",
+          "l7",
+          "l8",
+          "l9"
+        ]
+      },
+      {
+        "id": "g_c",
+        "x": -20,
+        "y": 1130,
+        "w": 2350,
+        "h": 500,
+        "title": "metronome — one blip per beat, silent until you press click",
+        "nodes": [
+          "m1",
+          "m8",
+          "m2",
+          "m3",
+          "m4",
+          "m5",
+          "m6",
+          "m7",
+          "m9",
+          "m10",
+          "m11"
+        ]
+      },
+      {
+        "id": "g_d",
+        "x": -20,
+        "y": 1680,
+        "w": 2580,
+        "h": 480,
+        "title": "readout — the status line and the pulsing record dot",
+        "nodes": [
+          "l15",
+          "l10",
+          "l11",
+          "l12",
+          "l16",
+          "l17",
+          "l18",
+          "l19",
+          "l13"
+        ]
+      }
+    ]
+  },
   'Oscilloscope': _EX([
     ['o1', 'params/slider', 30, 40, { min: 55, max: 440, value: 110 }],
     ['o2', 'audio/osc', 250, 40, { wave: 'sawtooth' }],
@@ -5768,88 +9028,6 @@ const EXAMPLES = {
    * flower, odd k → k petals. In audio terms a k-rose is two partials at
    * the ratio (k+1):(k−1) in quadrature — the interval IS the flower.
    * Unwire Round for fractional k: the rose stops closing and precesses. */
-  'Rose window': _EX([
-    ['r1', 'sets/range', 30, 40, { A: 0, B: 6.28319, N: 511 }],
-    ['r2', 'params/slider', 30, 200, { min: 2, max: 7, value: 2 }],
-    ['r3', 'math/round', 250, 200],
-    ['r4', 'math/mul', 470, 120],
-    ['r5', 'math/cos', 690, 120],
-    ['r6', 'math/cos', 470, 280],
-    ['r7', 'math/sin', 470, 400],
-    ['r8', 'math/mul', 910, 200],
-    ['r9', 'math/mul', 910, 360],
-    ['r10', 'math/mul', 1130, 200, { B: 130 }],
-    ['r11', 'math/mul', 1130, 360, { B: 130 }],
-    ['r12', 'vec/construct', 1350, 280],
-    ['r13', 'crv/polyline', 1570, 280, { C: true }],
-    ['r14', 'audio/path', 1790, 280, { F: 96 }],
-    ['r15', 'audio/xyscope', 2010, 160, { S: 330 }],
-    ['r16', 'audio/gain', 2010, 420, { G: 0.07 }],
-    ['r17', 'audio/out', 2230, 420],
-    ['r18', 'disp/bg', 2230, 160]
-  ], [
-    ['r2', 'N', 'r3', 'V'],
-    ['r1', 'R', 'r4', 'A'], ['r3', 'R', 'r4', 'B'],
-    ['r4', 'R', 'r5', 'V'],
-    ['r1', 'R', 'r6', 'V'],
-    ['r1', 'R', 'r7', 'V'],
-    ['r5', 'R', 'r8', 'A'], ['r6', 'R', 'r8', 'B'],
-    ['r5', 'R', 'r9', 'A'], ['r7', 'R', 'r9', 'B'],
-    ['r8', 'R', 'r10', 'A'],
-    ['r9', 'R', 'r11', 'A'],
-    ['r10', 'R', 'r12', 'X'], ['r11', 'R', 'r12', 'Y'],
-    ['r12', 'P', 'r13', 'V'],
-    ['r13', 'C', 'r14', 'G'],
-    ['r14', 'X', 'r15', 'X'], ['r14', 'Y', 'r15', 'Y'],
-    ['r14', 'X', 'r16', 'In'],
-    ['r16', 'A', 'r17', 'In']
-  ]),
-
-  /* The Vector Scope's math twin — no sound at all. Two damped pendulums
-   * swing a pen: the sliders pick the frequency ratio (3:2, 5:4, 7:3…),
-   * damping nests the figure inward, and Time drifts the phase so the
-   * whole web slowly revolves. */
-  'Harmonograph': _EX([
-    ['h1', 'params/slider', 30, 40, { min: 1, max: 9, value: 3 }],
-    ['h2', 'params/slider', 30, 140, { min: 1, max: 9, value: 2 }],
-    ['h3', 'params/slider', 30, 240, { min: 0, max: 0.2, value: 0.04 }],
-    ['h4', 'input/time', 30, 360],
-    ['h5', 'math/mul', 250, 360, { B: 0.25 }],
-    ['h6', 'disp/harmonograph', 470, 140, { S: 360, T: 50 }],
-    ['h7', 'disp/bg', 690, 320]
-  ], [
-    ['h1', 'N', 'h6', 'X'],
-    ['h2', 'N', 'h6', 'Y'],
-    ['h3', 'N', 'h6', 'D'],
-    ['h4', 'T', 'h5', 'A'],
-    ['h5', 'R', 'h6', 'H']
-  ]),
-
-  /* Oscilloscope music, the Weft way: a polygon's outline becomes a looped
-   * stereo waveform (Path to Audio), the Vector Scope's beam retraces it
-   * 108 times a second, and the same signal — quietly — IS the sound you
-   * hear. Slide the sides: the shape and the timbre change together. */
-  'Shape song': _EX([
-    ['p1', 'params/slider', 30, 40, { min: 3, max: 9, value: 5 }],
-    ['p2', 'crv/polygon', 250, 40, { R: 100 }],
-    ['p3', 'audio/path', 470, 40, { F: 108 }],
-    ['p4', 'audio/xyscope', 690, 40, { S: 300 }],
-    ['p5', 'audio/gain', 690, 260, { G: 0.08 }],
-    ['p6', 'audio/out', 910, 260],
-    ['p7', 'disp/bg', 910, 40]
-  ], [
-    ['p1', 'N', 'p2', 'N'],
-    ['p2', 'C', 'p3', 'G'],
-    ['p3', 'X', 'p4', 'X'],
-    ['p3', 'Y', 'p4', 'Y'],
-    ['p3', 'X', 'p5', 'In'],
-    ['p5', 'A', 'p6', 'In']
-  ]),
-
-  /* Sing a note and the graph sings it back in key — Pitch In hears the
-   * frequency, Scale snaps the fractional MIDI to A pentatonic, an
-   * oscillator plays the snapped note, gated by tracker clarity so silence
-   * stays silent. The circle is the pitch, the number is the Hz. */
   'Mandala': {
     format: 1,
     nodes: [
@@ -7158,78 +10336,2140 @@ const EXAMPLES = {
    * expressible before Curve Intersection and Region Boolean existed. Three
    * Draw nodes each take TWO wires into G — the merge is what keeps a family of
    * shapes on one style instead of one Draw per shape. */
-  'Intersections': _EX([
-    ['t1', 'input/time', 30, 40],
-    ['mu', 'math/mul', 230, 40, { B: 0.5 }],
-    ['sn', 'math/sin', 430, 40],
-    ['rm', 'math/remap', 630, 40, { S0: -1, S1: 1, T0: 30, T1: 95 }],
-    ['ng', 'math/neg', 860, 40],
-    ['pb', 'vec/construct', 860, 200],
-    ['pa', 'vec/construct', 1060, 40],
-    ['ca', 'crv/circle', 1260, 40, { R: 110 }],
-    ['cb', 'crv/circle', 1260, 200, { R: 110 }],
-    ['ix', 'crv/intersect', 1480, 40],
-    ['rg1', 'crv/region', 1480, 240, { mode: 'intersection' }],
-    ['rg2', 'crv/region', 1480, 460, { mode: 'difference' }],
-    ['pl', 'crv/polyline', 1720, 40, { C: false }],
-    ['ar', 'crv/area', 1720, 240],
-    ['mi', 'xf/mirror', 1720, 460],
-    ['rd', 'math/round', 1920, 240],
-    ['tx', 'disp/text', 2120, 240, { P: { x: 0, y: 196 }, S: 13 }],
-    ['dwMark', 'disp/draw', 2360, 40, { S: { r: 251, g: 172, b: 0, a: 0.95 }, W: 1.4 }],
-    ['dwLens', 'disp/draw', 2360, 200, { S: { r: 94, g: 234, b: 212, a: 0.9 }, F: { r: 94, g: 234, b: 212, a: 0.16 }, W: 1.6 }],
-    ['dwCres', 'disp/draw', 2360, 380, { S: { r: 129, g: 140, b: 248, a: 0.85 }, F: { r: 129, g: 140, b: 248, a: 0.1 }, W: 1.4 }],
-    ['dwCirc', 'disp/draw', 2360, 560, { S: { r: 110, g: 125, b: 160, a: 0.32 }, W: 1 }],
-    ['dwTx', 'disp/draw', 2360, 720, { S: { r: 130, g: 141, b: 163, a: 0.9 } }],
-    ['bg', 'disp/bg', 2360, 860, { C: { r: 9, g: 11, b: 17, a: 1 } }]
-  ], [
-    ['t1', 'T', 'mu', 'A'],
-    ['mu', 'R', 'sn', 'V'],
-    ['sn', 'R', 'rm', 'V'],
-    ['rm', 'R', 'ng', 'V'],
-    ['rm', 'R', 'pb', 'X'],
-    ['ng', 'R', 'pa', 'X'],
-    ['pa', 'P', 'ca', 'P'],
-    ['pb', 'P', 'cb', 'P'],
-    ['ca', 'C', 'ix', 'C1'],
-    ['cb', 'C', 'ix', 'C2'],
-    ['ca', 'C', 'rg1', 'A'],
-    ['cb', 'C', 'rg1', 'B'],
-    ['ca', 'C', 'rg2', 'A'],
-    ['cb', 'C', 'rg2', 'B'],
-    ['ix', 'P', 'pl', 'V'],
-    ['rg1', 'C', 'ar', 'C'],
-    ['ar', 'A', 'rd', 'V'],
-    ['rd', 'R', 'tx', 'T'],
-    ['rg2', 'C', 'mi', 'G'],
-    ['pl', 'C', 'dwMark', 'G'],
-    ['ix', 'P', 'dwMark', 'G'],
-    ['rg1', 'C', 'dwLens', 'G'],
-    ['rg2', 'C', 'dwCres', 'G'],
-    ['mi', 'G', 'dwCres', 'G'],
-    ['ca', 'C', 'dwCirc', 'G'],
-    ['cb', 'C', 'dwCirc', 'G'],
-    ['tx', 'G', 'dwTx', 'G']
-  ]),
-
-  /* Native 3D (v0.12) — nine hexagons on a ring, extruded into stones, laid flat
-   * by a quarter turn about x and then spun about y. A second, smaller ring comes
-   * from scaling the first about the origin, which shrinks its radius too.
-   *
-   * The whole 3D idiom is the last four nodes. Project takes the geometry as ONE
-   * list (both rings arrive on two wires into G), so its back-to-front sort is
-   * global and the near stones of one ring correctly hide the far stones of the
-   * other. It emits three parallel lists — screen faces, shade, depth — so the
-   * shade goes through Remap into Colour HSL and a SINGLE Draw paints all 144
-   * faces. No camera on ctx, no second renderer: what reaches the draw list is
-   * ordinary 2D geometry, which is why the export renders exactly this.
-   *
-   * Drag the cloth to orbit; the wheel pulls the camera back. The projection's
-   * pixel scale comes from the canvas HEIGHT (a vertical field of view, the
-   * usual convention), so the scene keeps its proportions at any size — but a
-   * tall narrow cloth crops it at the sides, which is why the camera sits far
-   * enough back to clear the editor's portrait preview pane as well as the
-   * squarer gallery thumbnail. */
+  'Intersections': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "sdSpd",
+        "type": "params/slider",
+        "x": 30,
+        "y": 40,
+        "values": {
+          "min": 0.1,
+          "max": 1.5,
+          "value": 0.5,
+          "label": "speed"
+        }
+      },
+      {
+        "id": "sdR",
+        "type": "params/slider",
+        "x": 30,
+        "y": 170,
+        "values": {
+          "min": 40,
+          "max": 110,
+          "value": 78,
+          "label": "circle radius"
+        }
+      },
+      {
+        "id": "sdD",
+        "type": "params/slider",
+        "x": 30,
+        "y": 300,
+        "values": {
+          "min": 34,
+          "max": 112,
+          "value": 70,
+          "label": "drift"
+        }
+      },
+      {
+        "id": "t1",
+        "type": "input/time",
+        "x": 300,
+        "y": 40,
+        "values": {}
+      },
+      {
+        "id": "mu",
+        "type": "math/mul",
+        "x": 530,
+        "y": 40,
+        "values": {}
+      },
+      {
+        "id": "sn",
+        "type": "math/sin",
+        "x": 760,
+        "y": 40,
+        "values": {},
+        "label": "the one drift"
+      },
+      {
+        "id": "rm",
+        "type": "math/remap",
+        "x": 990,
+        "y": 40,
+        "values": {
+          "S0": -1,
+          "S1": 1,
+          "T0": 24
+        },
+        "label": "hero offset"
+      },
+      {
+        "id": "ng",
+        "type": "math/neg",
+        "x": 1220,
+        "y": 40,
+        "values": {}
+      },
+      {
+        "id": "pa",
+        "type": "vec/construct",
+        "x": 1480,
+        "y": 420,
+        "values": {
+          "Y": -152
+        }
+      },
+      {
+        "id": "pb",
+        "type": "vec/construct",
+        "x": 1480,
+        "y": 560,
+        "values": {
+          "Y": -152
+        }
+      },
+      {
+        "id": "ca",
+        "type": "crv/circle",
+        "x": 1710,
+        "y": 420,
+        "values": {},
+        "label": "circle A"
+      },
+      {
+        "id": "cb",
+        "type": "crv/circle",
+        "x": 1710,
+        "y": 560,
+        "values": {},
+        "label": "circle B"
+      },
+      {
+        "id": "ix",
+        "type": "crv/intersect",
+        "x": 1940,
+        "y": 420,
+        "values": {},
+        "label": "crossing points"
+      },
+      {
+        "id": "rg1",
+        "type": "crv/region",
+        "x": 1940,
+        "y": 570,
+        "values": {
+          "mode": "intersection"
+        },
+        "label": "the lens"
+      },
+      {
+        "id": "rg2",
+        "type": "crv/region",
+        "x": 1940,
+        "y": 720,
+        "values": {
+          "mode": "difference"
+        },
+        "label": "crescent"
+      },
+      {
+        "id": "pl",
+        "type": "crv/polyline",
+        "x": 2170,
+        "y": 420,
+        "values": {
+          "C": false
+        },
+        "label": "the chord"
+      },
+      {
+        "id": "ar",
+        "type": "crv/area",
+        "x": 2170,
+        "y": 570,
+        "values": {}
+      },
+      {
+        "id": "mi",
+        "type": "xf/mirror",
+        "x": 2170,
+        "y": 720,
+        "values": {},
+        "label": "other crescent"
+      },
+      {
+        "id": "rd",
+        "type": "math/round",
+        "x": 2400,
+        "y": 570,
+        "values": {}
+      },
+      {
+        "id": "txArea",
+        "type": "disp/text",
+        "x": 2630,
+        "y": 570,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": -46
+          },
+          "S": 15
+        }
+      },
+      {
+        "id": "txCap",
+        "type": "disp/text",
+        "x": 2630,
+        "y": 720,
+        "values": {
+          "T": "lens area (px²)",
+          "P": {
+            "x": 0,
+            "y": -25
+          },
+          "S": 11
+        }
+      },
+      {
+        "id": "sdM",
+        "type": "params/slider",
+        "x": 30,
+        "y": 980,
+        "values": {
+          "min": 0.2,
+          "max": 0.5,
+          "value": 0.36,
+          "label": "vignette scale"
+        }
+      },
+      {
+        "id": "mrad",
+        "type": "math/mul",
+        "x": 300,
+        "y": 980,
+        "values": {},
+        "label": "small radius"
+      },
+      {
+        "id": "moff",
+        "type": "math/expr",
+        "x": 530,
+        "y": 980,
+        "values": {
+          "expr": "Y * (0.42 + 0.22 * X)"
+        },
+        "label": "small offset"
+      },
+      {
+        "id": "nof",
+        "type": "math/neg",
+        "x": 760,
+        "y": 980,
+        "values": {}
+      },
+      {
+        "id": "spa",
+        "type": "vec/construct",
+        "x": 990,
+        "y": 980,
+        "values": {}
+      },
+      {
+        "id": "spb",
+        "type": "vec/construct",
+        "x": 990,
+        "y": 1120,
+        "values": {}
+      },
+      {
+        "id": "sca",
+        "type": "crv/circle",
+        "x": 1220,
+        "y": 980,
+        "values": {},
+        "label": "small A"
+      },
+      {
+        "id": "scb",
+        "type": "crv/circle",
+        "x": 1220,
+        "y": 1120,
+        "values": {},
+        "label": "small B"
+      },
+      {
+        "id": "v1",
+        "type": "params/vector",
+        "x": 1480,
+        "y": 1320,
+        "values": {
+          "V": {
+            "x": -204,
+            "y": 42
+          }
+        },
+        "label": "slot 1"
+      },
+      {
+        "id": "rgU",
+        "type": "crv/region",
+        "x": 1710,
+        "y": 1320,
+        "values": {
+          "mode": "union"
+        },
+        "label": "union"
+      },
+      {
+        "id": "mvU",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 1320,
+        "values": {}
+      },
+      {
+        "id": "mvG1",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 1470,
+        "values": {},
+        "label": "ghost pair"
+      },
+      {
+        "id": "v2",
+        "type": "params/vector",
+        "x": 1480,
+        "y": 1660,
+        "values": {
+          "V": {
+            "x": 0,
+            "y": 42
+          }
+        },
+        "label": "slot 2"
+      },
+      {
+        "id": "rgI",
+        "type": "crv/region",
+        "x": 1710,
+        "y": 1660,
+        "values": {
+          "mode": "intersection"
+        },
+        "label": "intersection"
+      },
+      {
+        "id": "mvI",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 1660,
+        "values": {}
+      },
+      {
+        "id": "mvG2",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 1810,
+        "values": {},
+        "label": "ghost pair"
+      },
+      {
+        "id": "v3",
+        "type": "params/vector",
+        "x": 1480,
+        "y": 2000,
+        "values": {
+          "V": {
+            "x": 204,
+            "y": 42
+          }
+        },
+        "label": "slot 3"
+      },
+      {
+        "id": "rgD",
+        "type": "crv/region",
+        "x": 1710,
+        "y": 2000,
+        "values": {
+          "mode": "difference"
+        },
+        "label": "difference"
+      },
+      {
+        "id": "mvD",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 2000,
+        "values": {}
+      },
+      {
+        "id": "mvG3",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 2150,
+        "values": {},
+        "label": "ghost pair"
+      },
+      {
+        "id": "v4",
+        "type": "params/vector",
+        "x": 1480,
+        "y": 2340,
+        "values": {
+          "V": {
+            "x": -204,
+            "y": 196
+          }
+        },
+        "label": "slot 4"
+      },
+      {
+        "id": "trm",
+        "type": "crv/trim",
+        "x": 1710,
+        "y": 2340,
+        "values": {
+          "mode": "outside"
+        },
+        "label": "A trimmed by B"
+      },
+      {
+        "id": "mvT",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 2340,
+        "values": {}
+      },
+      {
+        "id": "mvG4",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 2490,
+        "values": {},
+        "label": "ghost pair"
+      },
+      {
+        "id": "v5",
+        "type": "params/vector",
+        "x": 1480,
+        "y": 2680,
+        "values": {
+          "V": {
+            "x": 0,
+            "y": 196
+          }
+        },
+        "label": "slot 5"
+      },
+      {
+        "id": "sdF",
+        "type": "params/slider",
+        "x": 1480,
+        "y": 2830,
+        "values": {
+          "min": 0,
+          "max": 30,
+          "value": 14,
+          "label": "fillet radius"
+        }
+      },
+      {
+        "id": "sxs",
+        "type": "crv/intersect",
+        "x": 1710,
+        "y": 2680,
+        "values": {},
+        "label": "crossings"
+      },
+      {
+        "id": "hl",
+        "type": "crv/hull",
+        "x": 1940,
+        "y": 2680,
+        "values": {},
+        "label": "kite: centres + crossings"
+      },
+      {
+        "id": "fil",
+        "type": "crv/fillet",
+        "x": 2170,
+        "y": 2680,
+        "values": {
+          "N": 8
+        },
+        "label": "fillet"
+      },
+      {
+        "id": "mvF",
+        "type": "xf/move",
+        "x": 2400,
+        "y": 2680,
+        "values": {}
+      },
+      {
+        "id": "mvG5",
+        "type": "xf/move",
+        "x": 2400,
+        "y": 2830,
+        "values": {},
+        "label": "ghosts + sharp kite"
+      },
+      {
+        "id": "rn",
+        "type": "sets/range",
+        "x": 1480,
+        "y": 3100,
+        "values": {
+          "A": 0,
+          "B": 6.283185307179586,
+          "N": 72
+        }
+      },
+      {
+        "id": "ek",
+        "type": "math/remap",
+        "x": 1480,
+        "y": 3240,
+        "values": {
+          "S0": -1,
+          "S1": 1,
+          "T0": -0.55,
+          "T1": 0.55
+        },
+        "label": "lobe bias"
+      },
+      {
+        "id": "v6",
+        "type": "params/vector",
+        "x": 1480,
+        "y": 3400,
+        "values": {
+          "V": {
+            "x": 204,
+            "y": 196
+          }
+        },
+        "label": "slot 6"
+      },
+      {
+        "id": "ex",
+        "type": "math/expr",
+        "x": 1710,
+        "y": 3100,
+        "values": {
+          "Y": 44,
+          "expr": "Y * cos(X)"
+        }
+      },
+      {
+        "id": "ey",
+        "type": "math/expr",
+        "x": 1710,
+        "y": 3240,
+        "values": {
+          "Y": 30,
+          "expr": "Y * sin(X) * (cos(X) + Z)"
+        }
+      },
+      {
+        "id": "vc8",
+        "type": "vec/construct",
+        "x": 1940,
+        "y": 3100,
+        "values": {}
+      },
+      {
+        "id": "pl8",
+        "type": "crv/polyline",
+        "x": 2170,
+        "y": 3100,
+        "values": {
+          "C": false
+        },
+        "label": "lemniscate"
+      },
+      {
+        "id": "xs8",
+        "type": "crv/intersect",
+        "x": 2400,
+        "y": 3240,
+        "values": {
+          "mode": "self"
+        },
+        "label": "where it crosses itself"
+      },
+      {
+        "id": "mvE",
+        "type": "xf/move",
+        "x": 2630,
+        "y": 3100,
+        "values": {}
+      },
+      {
+        "id": "mvX",
+        "type": "xf/move",
+        "x": 2630,
+        "y": 3240,
+        "values": {}
+      },
+      {
+        "id": "txt",
+        "type": "params/textlist",
+        "x": 1480,
+        "y": 3660,
+        "values": {
+          "text": "union\nintersection\ndifference\ntrim\nfillet\nself-crossing"
+        },
+        "label": "captions"
+      },
+      {
+        "id": "tcap",
+        "type": "disp/text",
+        "x": 1710,
+        "y": 3660,
+        "values": {
+          "P": {
+            "x": 0,
+            "y": 46
+          },
+          "S": 12
+        }
+      },
+      {
+        "id": "mvCap",
+        "type": "xf/move",
+        "x": 1940,
+        "y": 3660,
+        "values": {},
+        "label": "one caption per slot"
+      },
+      {
+        "id": "dwCirc",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 40,
+        "values": {
+          "S": {
+            "r": 110,
+            "g": 125,
+            "b": 160,
+            "a": 0.34
+          },
+          "W": 1
+        },
+        "label": "sources (faint)"
+      },
+      {
+        "id": "dwFill",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 300,
+        "values": {
+          "S": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 0.9
+          },
+          "F": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 0.15
+          },
+          "W": 1.6
+        },
+        "label": "regions kept"
+      },
+      {
+        "id": "dwCres",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 560,
+        "values": {
+          "S": {
+            "r": 129,
+            "g": 140,
+            "b": 248,
+            "a": 0.85
+          },
+          "F": {
+            "r": 129,
+            "g": 140,
+            "b": 248,
+            "a": 0.12
+          },
+          "W": 1.4
+        },
+        "label": "regions removed"
+      },
+      {
+        "id": "dwTrim",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 820,
+        "values": {
+          "S": {
+            "r": 251,
+            "g": 172,
+            "b": 0,
+            "a": 0.9
+          },
+          "W": 2.4
+        },
+        "label": "trimmed arc"
+      },
+      {
+        "id": "dwEight",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 1080,
+        "values": {
+          "S": {
+            "r": 129,
+            "g": 140,
+            "b": 248,
+            "a": 0.9
+          },
+          "W": 1.6
+        }
+      },
+      {
+        "id": "dwMark",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 1340,
+        "values": {
+          "S": {
+            "r": 251,
+            "g": 172,
+            "b": 0,
+            "a": 0.95
+          },
+          "W": 1.4
+        },
+        "label": "crossing points"
+      },
+      {
+        "id": "dwNum",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 1600,
+        "values": {
+          "S": {
+            "r": 94,
+            "g": 234,
+            "b": 212,
+            "a": 0.9
+          }
+        }
+      },
+      {
+        "id": "dwTx",
+        "type": "disp/draw",
+        "x": 2900,
+        "y": 1860,
+        "values": {
+          "S": {
+            "r": 132,
+            "g": 143,
+            "b": 166,
+            "a": 0.95
+          }
+        }
+      },
+      {
+        "id": "bg",
+        "type": "disp/bg",
+        "x": 2900,
+        "y": 2120,
+        "values": {
+          "C": {
+            "r": 9,
+            "g": 11,
+            "b": 17,
+            "a": 1
+          }
+        }
+      }
+    ],
+    "wires": [
+      {
+        "from": [
+          "t1",
+          "T"
+        ],
+        "to": [
+          "mu",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sdSpd",
+          "N"
+        ],
+        "to": [
+          "mu",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "mu",
+          "R"
+        ],
+        "to": [
+          "sn",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "sn",
+          "R"
+        ],
+        "to": [
+          "rm",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "sdD",
+          "N"
+        ],
+        "to": [
+          "rm",
+          "T1"
+        ]
+      },
+      {
+        "from": [
+          "rm",
+          "R"
+        ],
+        "to": [
+          "ng",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "ng",
+          "R"
+        ],
+        "to": [
+          "pa",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "rm",
+          "R"
+        ],
+        "to": [
+          "pb",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "pa",
+          "P"
+        ],
+        "to": [
+          "ca",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sdR",
+          "N"
+        ],
+        "to": [
+          "ca",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "pb",
+          "P"
+        ],
+        "to": [
+          "cb",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sdR",
+          "N"
+        ],
+        "to": [
+          "cb",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "ca",
+          "C"
+        ],
+        "to": [
+          "ix",
+          "C1"
+        ]
+      },
+      {
+        "from": [
+          "cb",
+          "C"
+        ],
+        "to": [
+          "ix",
+          "C2"
+        ]
+      },
+      {
+        "from": [
+          "ca",
+          "C"
+        ],
+        "to": [
+          "rg1",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "cb",
+          "C"
+        ],
+        "to": [
+          "rg1",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "ca",
+          "C"
+        ],
+        "to": [
+          "rg2",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "cb",
+          "C"
+        ],
+        "to": [
+          "rg2",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "ix",
+          "P"
+        ],
+        "to": [
+          "pl",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "rg1",
+          "C"
+        ],
+        "to": [
+          "ar",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "ar",
+          "A"
+        ],
+        "to": [
+          "rd",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "rd",
+          "R"
+        ],
+        "to": [
+          "txArea",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "rg2",
+          "C"
+        ],
+        "to": [
+          "mi",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "sdR",
+          "N"
+        ],
+        "to": [
+          "mrad",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "sdM",
+          "N"
+        ],
+        "to": [
+          "mrad",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "sn",
+          "R"
+        ],
+        "to": [
+          "moff",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "mrad",
+          "R"
+        ],
+        "to": [
+          "moff",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "moff",
+          "R"
+        ],
+        "to": [
+          "nof",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "nof",
+          "R"
+        ],
+        "to": [
+          "spa",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "moff",
+          "R"
+        ],
+        "to": [
+          "spb",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "spa",
+          "P"
+        ],
+        "to": [
+          "sca",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "mrad",
+          "R"
+        ],
+        "to": [
+          "sca",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "spb",
+          "P"
+        ],
+        "to": [
+          "scb",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "mrad",
+          "R"
+        ],
+        "to": [
+          "scb",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "rgU",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "rgU",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "rgU",
+          "C"
+        ],
+        "to": [
+          "mvU",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v1",
+          "V"
+        ],
+        "to": [
+          "mvU",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "mvG1",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "mvG1",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v1",
+          "V"
+        ],
+        "to": [
+          "mvG1",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "rgI",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "rgI",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "rgI",
+          "C"
+        ],
+        "to": [
+          "mvI",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v2",
+          "V"
+        ],
+        "to": [
+          "mvI",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "mvG2",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "mvG2",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v2",
+          "V"
+        ],
+        "to": [
+          "mvG2",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "rgD",
+          "A"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "rgD",
+          "B"
+        ]
+      },
+      {
+        "from": [
+          "rgD",
+          "C"
+        ],
+        "to": [
+          "mvD",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v3",
+          "V"
+        ],
+        "to": [
+          "mvD",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "mvG3",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "mvG3",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v3",
+          "V"
+        ],
+        "to": [
+          "mvG3",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "trm",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "trm",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "trm",
+          "C"
+        ],
+        "to": [
+          "mvT",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v4",
+          "V"
+        ],
+        "to": [
+          "mvT",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "mvG4",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "mvG4",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v4",
+          "V"
+        ],
+        "to": [
+          "mvG4",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "sxs",
+          "C1"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "sxs",
+          "C2"
+        ]
+      },
+      {
+        "from": [
+          "spa",
+          "P"
+        ],
+        "to": [
+          "hl",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "spb",
+          "P"
+        ],
+        "to": [
+          "hl",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "sxs",
+          "P"
+        ],
+        "to": [
+          "hl",
+          "P"
+        ]
+      },
+      {
+        "from": [
+          "hl",
+          "C"
+        ],
+        "to": [
+          "fil",
+          "C"
+        ]
+      },
+      {
+        "from": [
+          "sdF",
+          "N"
+        ],
+        "to": [
+          "fil",
+          "R"
+        ]
+      },
+      {
+        "from": [
+          "fil",
+          "C"
+        ],
+        "to": [
+          "mvF",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v5",
+          "V"
+        ],
+        "to": [
+          "mvF",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "sca",
+          "C"
+        ],
+        "to": [
+          "mvG5",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "scb",
+          "C"
+        ],
+        "to": [
+          "mvG5",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "hl",
+          "C"
+        ],
+        "to": [
+          "mvG5",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v5",
+          "V"
+        ],
+        "to": [
+          "mvG5",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "rn",
+          "R"
+        ],
+        "to": [
+          "ex",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "rn",
+          "R"
+        ],
+        "to": [
+          "ey",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "sn",
+          "R"
+        ],
+        "to": [
+          "ek",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "ek",
+          "R"
+        ],
+        "to": [
+          "ey",
+          "Z"
+        ]
+      },
+      {
+        "from": [
+          "ex",
+          "R"
+        ],
+        "to": [
+          "vc8",
+          "X"
+        ]
+      },
+      {
+        "from": [
+          "ey",
+          "R"
+        ],
+        "to": [
+          "vc8",
+          "Y"
+        ]
+      },
+      {
+        "from": [
+          "vc8",
+          "P"
+        ],
+        "to": [
+          "pl8",
+          "V"
+        ]
+      },
+      {
+        "from": [
+          "pl8",
+          "C"
+        ],
+        "to": [
+          "xs8",
+          "C1"
+        ]
+      },
+      {
+        "from": [
+          "pl8",
+          "C"
+        ],
+        "to": [
+          "mvE",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v6",
+          "V"
+        ],
+        "to": [
+          "mvE",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "xs8",
+          "P"
+        ],
+        "to": [
+          "mvX",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v6",
+          "V"
+        ],
+        "to": [
+          "mvX",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "txt",
+          "L"
+        ],
+        "to": [
+          "tcap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "tcap",
+          "G"
+        ],
+        "to": [
+          "mvCap",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "v1",
+          "V"
+        ],
+        "to": [
+          "mvCap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "v2",
+          "V"
+        ],
+        "to": [
+          "mvCap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "v3",
+          "V"
+        ],
+        "to": [
+          "mvCap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "v4",
+          "V"
+        ],
+        "to": [
+          "mvCap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "v5",
+          "V"
+        ],
+        "to": [
+          "mvCap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "v6",
+          "V"
+        ],
+        "to": [
+          "mvCap",
+          "T"
+        ]
+      },
+      {
+        "from": [
+          "ca",
+          "C"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "cb",
+          "C"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvG1",
+          "G"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvG2",
+          "G"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvG3",
+          "G"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvG4",
+          "G"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvG5",
+          "G"
+        ],
+        "to": [
+          "dwCirc",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "rg1",
+          "C"
+        ],
+        "to": [
+          "dwFill",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvU",
+          "G"
+        ],
+        "to": [
+          "dwFill",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvI",
+          "G"
+        ],
+        "to": [
+          "dwFill",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvF",
+          "G"
+        ],
+        "to": [
+          "dwFill",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "rg2",
+          "C"
+        ],
+        "to": [
+          "dwCres",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mi",
+          "G"
+        ],
+        "to": [
+          "dwCres",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvD",
+          "G"
+        ],
+        "to": [
+          "dwCres",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvT",
+          "G"
+        ],
+        "to": [
+          "dwTrim",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvE",
+          "G"
+        ],
+        "to": [
+          "dwEight",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "pl",
+          "C"
+        ],
+        "to": [
+          "dwMark",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "ix",
+          "P"
+        ],
+        "to": [
+          "dwMark",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvX",
+          "G"
+        ],
+        "to": [
+          "dwMark",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "txArea",
+          "G"
+        ],
+        "to": [
+          "dwNum",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "txCap",
+          "G"
+        ],
+        "to": [
+          "dwTx",
+          "G"
+        ]
+      },
+      {
+        "from": [
+          "mvCap",
+          "G"
+        ],
+        "to": [
+          "dwTx",
+          "G"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "id": "g1",
+        "x": 12,
+        "y": -6,
+        "w": 1420,
+        "h": 480,
+        "title": "one drift for the whole board",
+        "nodes": [
+          "sdSpd",
+          "sdR",
+          "sdD",
+          "t1",
+          "mu",
+          "sn",
+          "rm",
+          "ng"
+        ]
+      },
+      {
+        "id": "g2",
+        "x": 1462,
+        "y": 374,
+        "w": 1370,
+        "h": 520,
+        "title": "hero — the vesica",
+        "nodes": [
+          "pa",
+          "pb",
+          "ca",
+          "cb",
+          "ix",
+          "rg1",
+          "rg2",
+          "pl",
+          "ar",
+          "mi",
+          "rd",
+          "txArea",
+          "txCap"
+        ]
+      },
+      {
+        "id": "g3",
+        "x": 12,
+        "y": 934,
+        "w": 1420,
+        "h": 380,
+        "title": "the shared small pair (every vignette reads these)",
+        "nodes": [
+          "sdM",
+          "mrad",
+          "moff",
+          "nof",
+          "spa",
+          "spb",
+          "sca",
+          "scb"
+        ]
+      },
+      {
+        "id": "g4",
+        "x": 1462,
+        "y": 1274,
+        "w": 680,
+        "h": 400,
+        "title": "1 · union",
+        "nodes": [
+          "v1",
+          "rgU",
+          "mvU",
+          "mvG1"
+        ]
+      },
+      {
+        "id": "g5",
+        "x": 1462,
+        "y": 1614,
+        "w": 680,
+        "h": 400,
+        "title": "2 · intersection",
+        "nodes": [
+          "v2",
+          "rgI",
+          "mvI",
+          "mvG2"
+        ]
+      },
+      {
+        "id": "g6",
+        "x": 1462,
+        "y": 1954,
+        "w": 680,
+        "h": 400,
+        "title": "3 · difference",
+        "nodes": [
+          "v3",
+          "rgD",
+          "mvD",
+          "mvG3"
+        ]
+      },
+      {
+        "id": "g7",
+        "x": 1462,
+        "y": 2294,
+        "w": 680,
+        "h": 400,
+        "title": "4 · trim",
+        "nodes": [
+          "v4",
+          "trm",
+          "mvT",
+          "mvG4"
+        ]
+      },
+      {
+        "id": "g8",
+        "x": 1462,
+        "y": 2634,
+        "w": 1140,
+        "h": 400,
+        "title": "5 · fillet on the kite through the crossings",
+        "nodes": [
+          "v5",
+          "sdF",
+          "sxs",
+          "hl",
+          "fil",
+          "mvF",
+          "mvG5"
+        ]
+      },
+      {
+        "id": "g9",
+        "x": 1462,
+        "y": 3054,
+        "w": 1370,
+        "h": 500,
+        "title": "6 · self-crossing",
+        "nodes": [
+          "rn",
+          "ek",
+          "v6",
+          "ex",
+          "ey",
+          "vc8",
+          "pl8",
+          "xs8",
+          "mvE",
+          "mvX"
+        ]
+      },
+      {
+        "id": "g10",
+        "x": 1462,
+        "y": 3614,
+        "w": 680,
+        "h": 260,
+        "title": "captions — one Text node, six slots",
+        "nodes": [
+          "txt",
+          "tcap",
+          "mvCap"
+        ]
+      },
+      {
+        "id": "g11",
+        "x": 2882,
+        "y": -6,
+        "w": 240,
+        "h": 2320,
+        "title": "ink",
+        "nodes": [
+          "dwCirc",
+          "dwFill",
+          "dwCres",
+          "dwTrim",
+          "dwEight",
+          "dwMark",
+          "dwNum",
+          "dwTx",
+          "bg"
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "id": "t1n",
+        "x": 12,
+        "y": 500,
+        "w": 400,
+        "h": 130,
+        "text": "every vignette hangs off the same Sine — the whole board breathes together. Each cluster does one operation on the SAME two small circles, then Move drops the result into its slot."
+      }
+    ]
+  },
   'Henge': _EX([
     ['t1', 'input/time', 30, 40],
     ['sr', 'sets/series', 30, 200, { S: 0, N: 1, C: 9 }],
@@ -7370,17 +12610,17 @@ const EXAMPLE_META = {
   },
   'Scale board': {
     cat: 'Audio synthesis',
-    blurb: 'The theremin grown into an instrument you can see — labelled rungs, a live trace of the melody, and real button drones underneath.',
-    teaches: 'Scale snaps the pointer into key, Set Union dedupes the notes into rungs, and one Element node list-matches into actual HTML buttons.',
-    tags: ['scale', 'set union', 'dom', 'buttons', 'instrument', 'trace'],
+    blurb: 'The theremin grown into an instrument you can see — labelled rungs, a live trace of the melody, and real button drones underneath, the whole board tuned from one Key node.',
+    teaches: 'One Key node is the tuning: its root and scale wire into every Scale node, so changing the key in one place retunes the rungs, the pointer and the drone triad together.',
+    tags: ['key', 'scale', 'set union', 'dom', 'buttons', 'instrument', 'trace'],
     needs: ['gesture'], frames: 40
   },
-  'Cymatics': {
+  'Seeing Sound': {
     cat: 'Scopes & figures',
-    blurb: 'Sand on a vibrating plate migrates to the quiet nodal lines of whatever frequency is playing.',
-    teaches: 'Sound made visible — slide the pitch and the whole figure reorganizes.',
-    tags: ['cymatics', 'nodal', 'frequency', 'pattern'],
-    needs: ['gesture'], frames: 60
+    blurb: 'One note, one interval, four ways of looking at them — sand on a plate, a pendulum web, the waveform, and the interval as a flower. Click the tabs.',
+    teaches: 'Tabs are just geometry: four rects into one Hotspot, each contributing its own number to a sum, remembered through a Delay — and a view is hidden either by a Select with nothing wired into F, or by taking its colour’s alpha to zero.',
+    tags: ['tabs', 'hotspot', 'delay', 'select', 'cymatics', 'harmonograph', 'rose', 'interval', 'ui'],
+    needs: ['gesture'], frames: 110
   },
   'Oscilloscope': {
     cat: 'Scopes & figures',
@@ -7389,32 +12629,11 @@ const EXAMPLE_META = {
     tags: ['scope', 'vectorscope', 'filter', 'lissajous'],
     needs: ['gesture'], frames: 60
   },
-  'Rose window': {
-    cat: 'Scopes & figures',
-    blurb: 'A rose curve built from pure list math, turned into sound by Path to Audio and retraced by the vectorscope’s beam.',
-    teaches: 'A k-rose is two partials at the ratio (k+1):(k−1) in quadrature — the interval IS the flower.',
-    tags: ['rose', 'path to audio', 'vectorscope', 'harmony', 'petals'],
-    needs: ['gesture'], frames: 60
-  },
-  'Harmonograph': {
-    cat: 'Scopes & figures',
-    blurb: 'The vectorscope’s math twin, with no sound at all — two damped pendulums swing a pen.',
-    teaches: 'Frequency ratio and damping alone produce the whole family of figures; Time drifts the phase so the web revolves.',
-    tags: ['harmonograph', 'ratio', 'damping', 'pendulum', 'no audio'],
-    needs: [], frames: 60
-  },
-  'Shape song': {
-    cat: 'Scopes & figures',
-    blurb: 'A polygon’s outline becomes a looped stereo waveform — the beam retraces it 108 times a second, and it IS the sound you hear.',
-    teaches: 'Path to Audio makes geometry and timbre the same object: slide the sides and both change together.',
-    tags: ['path to audio', 'oscilloscope music', 'polygon'],
-    needs: ['gesture'], frames: 60
-  },
   'Loop pedal': {
     cat: 'Audio input',
-    blurb: 'Space toggles recording, c clears; the mic pours into a feedback-1 Delay and circles forever — sing a layer, then sing over it.',
-    teaches: 'Delay with feedback 1 IS a loop pedal: a Latch gates the audio in, one slider is the loop length, and the record dot pulses 8× per loop from a single Expression node.',
-    tags: ['looper', 'loop pedal', 'delay', 'echo', 'mic', 'overdub'],
+    blurb: 'Space or the rec button toggles recording, c or clear empties the loop; the mic pours into a feedback-1 Delay and circles forever — with a click track to keep you honest.',
+    teaches: 'Delay with feedback 1 IS a loop pedal — and three circles through one Hotspot become three transport buttons that meet the keyboard in a Logic (or), so both paths drive the same wire.',
+    tags: ['looper', 'loop pedal', 'delay', 'overdub', 'mic', 'metronome', 'hotspot buttons'],
     needs: ['mic', 'gesture'], frames: 40
   },
   'Mandala': {
@@ -7454,9 +12673,9 @@ const EXAMPLE_META = {
   },
   'Intersections': {
     cat: 'Geometry',
-    blurb: 'Two drifting circles and everything the curve nodes can say about the pair — the lens, the crescents, the crossing points, and the area as a number.',
-    teaches: 'Curve Intersection and Region Boolean cut shapes that were previously inexpressible, and three Draw nodes take two wires each so a family of shapes shares one style.',
-    tags: ['intersection', 'region boolean', 'mirror', 'area', 'multi-wire'],
+    blurb: 'The drifting vesica as the hero, with a plate of six vignettes below it — union, intersection, difference, trim, a fillet on the kite through the crossings, and a figure-eight crossing itself.',
+    teaches: 'One small pair of circles feeds every vignette and a Move drops each result into its slot, so the whole intersection toolkit breathes off a single Sine — and one Text node list-matched against six slot vectors captions all of them.',
+    tags: ['intersection', 'region boolean', 'trim', 'fillet', 'self-intersection', 'multi-wire'],
     needs: [], frames: 40
   },
   'Henge': {
