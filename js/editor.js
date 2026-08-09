@@ -1039,6 +1039,12 @@ const Editor = (() => {
     const num = parseFloat(q);
     if (!Number.isFinite(num)) return null;
     const decimals = (q.split('.')[1] || '').length;
+    // angle numbers make a degree slider pre-wired into a Radians node
+    if (!decimals && (num === 90 || num === 180 || num === 360) && App.setting('angle-sliders', true))
+      return { min: 0, max: num, value: num, mode: 'int', label: 'degrees', rad: true };
+    // small integers make a 0–12 integer slider (counts, symmetries, steps)
+    if (!decimals && num >= 0 && num <= 12 && App.setting('smallint-sliders', true))
+      return { min: 0, max: 12, value: num, mode: 'int' };
     const mag = Math.abs(num);
     let max = mag ? Math.pow(10, Math.ceil(Math.log10(mag))) : 10;
     if (max <= mag) max *= 10; // an exact power of ten still gets headroom
@@ -1097,10 +1103,18 @@ const Editor = (() => {
       const spec = qaNum;
       closeQA();
       if (!spec) return;
+      const wantRad = spec.rad;
+      delete spec.rad;
       const n = addNode('params/slider', qaPos.x, qaPos.y);
       if (n) {
         Object.assign(n.values, spec);
         Editor.rebuildNode(n.id);
+        if (wantRad) {
+          // a degree slider is almost always feeding an angle — hand it over
+          // in radians already converted
+          const r = addNode('math/rad', qaPos.x + 240, qaPos.y + 4);
+          if (r) connect(n.id, 'N', r.id, 'V');
+        }
         selectOnly(n.id);
         changed();
       }
@@ -1674,6 +1688,8 @@ const Editor = (() => {
     duplicateSelection,
     collapseSelection,
     zoomToFit,
+    zoom: () => S.zoom,
+    redrawWires: drawWires,
 
     /* rebuild one node's card in place — dynamic-port nodes (Custom JS) edit
      * their own ports; wires to a port that no longer exists are pruned */

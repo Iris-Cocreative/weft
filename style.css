@@ -180,6 +180,21 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
  * Deliberately NOT the .disabled look: bypass and dead-end are different facts. */
 .wire.dead { filter: saturate(0.25); opacity: 0.4; }
 
+/* settings popover (⚙ in loom tools) */
+#settingsPop {
+  position: absolute; top: 46px; right: 12px; z-index: 30;
+  display: flex; flex-direction: column; gap: 2px; min-width: 172px;
+  background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); padding: 7px;
+}
+.set-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 7px; border-radius: 6px; cursor: pointer;
+  font: 11.5px var(--font-ui); color: var(--text);
+}
+.set-row:hover { background: var(--dark-150); }
+.set-row input { accent-color: var(--accent); }
+
 /* ---------------- canvas annotations (graph format 2) ---------------- */
 
 /* sticky note — text on the canvas itself; never evaluated, never exported */
@@ -357,42 +372,56 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 /* custom bodies */
 .node-body { padding: 4px 12px 2px; }
 
-/* --- Number Slider: ruler track, number-blue fill-to-thumb, value below (Figma) ---
- * the widget wears the wire colour of its output type (number) */
+/* --- Number Slider "Hairline" (design doc 1a, 2026-08-09) ---
+ * the number is the widget: big mono value, 2px rule + ticks, faint end marks.
+ * The widget wears the wire colour of its output type (number). */
 .sl { width: 100%; padding: 2px 0; position: relative; }
+.sl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; }
 .sl-label {
-  text-align: center; padding: 0 2px 1px;
-  color: var(--white-80); font: 11px var(--font-ui); letter-spacing: 0.02em;
-}
-.sl-minmax { display: flex; justify-content: space-between; padding: 0 2px; }
-.sl-minmax input {
-  width: 44px; padding: 0 2px; background: transparent; border: 1px solid transparent;
-  border-radius: 3px; color: var(--white-80); font: 10px var(--font-ui); outline: none;
-}
-.sl-minmax input:last-child { text-align: right; }
-.sl-minmax input:hover, .sl-minmax input:focus { border-color: var(--dark-400); background: var(--dark-150); }
-.sl-track { position: relative; margin-top: 1px; }
-.sl-range {
-  -webkit-appearance: none; appearance: none; display: block;
-  width: 100%; height: 20px; margin: 0; cursor: ew-resize;
-  border: 1px solid var(--white-40); border-radius: 10px;
-  background:
-    linear-gradient(90deg, rgba(62, 154, 255, 0.45) var(--p, 50%), transparent var(--p, 50%)),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0 1px, transparent 1px 9px) 6px 50% / calc(100% - 12px) 8px no-repeat,
-    var(--dark-200);
-  outline: none;
-}
-.sl-range::-webkit-slider-thumb {
-  -webkit-appearance: none; appearance: none;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--type-number); border: none;
-  box-shadow: 0 0 6px rgba(62, 154, 255, 0.6);
+  min-height: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--white-40); font: 10px var(--font-ui); letter-spacing: 0.14em; text-transform: uppercase;
 }
 .sl-val {
-  display: block; margin: 1px auto 0; width: 72px; text-align: center;
+  flex: 1; min-width: 0; text-align: right;
   background: transparent; border: 1px solid transparent; border-radius: 3px;
-  color: var(--type-number); font: 11px var(--font-ui); outline: none;
+  color: var(--type-number); font: 22px/1 var(--font-val); letter-spacing: -0.02em;
+  outline: none;
 }
+.sl-track { position: relative; margin-top: 8px; height: 16px; display: flex; align-items: center; cursor: ew-resize; touch-action: none; }
+.sl-rule { position: relative; width: 100%; height: 2px; border-radius: 1px; background: var(--dark-400); }
+.sl-rule::before {  /* minor ticks, hanging under the rule */
+  content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 4px;
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.20) 0 1px, transparent 1px 10px);
+}
+.sl-rule::after {   /* major ticks */
+  content: ''; position: absolute; left: 0; right: 0; top: 3px; height: 7px;
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.34) 0 1px, transparent 1px 50px);
+}
+.sl-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 1px; background: var(--type-number); }
+.sl-thumb {
+  position: absolute; top: 50%; width: 9px; height: 9px; margin-left: -4.5px;
+  transform: translateY(-50%); border-radius: 50%;
+  background: var(--type-number); box-shadow: 0 0 8px rgba(62, 154, 255, 0.7);
+}
+.sl-ends { display: flex; justify-content: space-between; margin-top: 7px; padding: 0 2px; }
+.sl-ends input {
+  width: 52px; padding: 0 2px; background: transparent; border: 1px solid transparent;
+  border-radius: 3px; color: rgba(255, 255, 255, 0.22); font: 9px var(--font-val); outline: none;
+}
+.sl-ends input:last-child { text-align: right; }
+.sl-ends input:hover, .sl-ends input:focus { border-color: var(--dark-400); background: var(--dark-150); color: var(--white-80); }
+
+/* selected sliders resize from either edge (1a spec: 140–300px) */
+.sl-grip-l, .sl-grip-r { position: absolute; top: 0; bottom: 0; width: 7px; display: none; cursor: ew-resize; z-index: 3; }
+.sl-grip-l { left: -4px; }
+.sl-grip-r { right: -4px; }
+.node.selected .sl-grip-l, .node.selected .sl-grip-r { display: block; }
+.node.selected .sl-grip-l::after, .node.selected .sl-grip-r::after {
+  content: ''; position: absolute; top: calc(50% - 10px); width: 4px; height: 20px;
+  border-radius: 2px; background: var(--accent); opacity: 0.85;
+}
+.sl-grip-l::after { left: 0; }
+.sl-grip-r::after { right: 0; }
 
 /* slider options popover (double-click): label, rounding mode, precision */
 .sl-opts {
@@ -821,15 +850,18 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   border-color: var(--accent-dim);
 }
 /* keep the deliberate ghost styling of bare-widget text fields despite the
-   generic rule above (the slider's range track keeps its own layered bg) */
-.node-body .sl-minmax input, .node-body input.sl-val {
+   generic rule above */
+.node-body .sl-ends input, .node-body input.sl-val {
   background: transparent; border-color: transparent;
 }
-.node-body .sl-minmax input:hover, .node-body .sl-minmax input:focus,
+.node-body .sl-ends input:hover, .node-body .sl-ends input:focus {
+  border-color: var(--dark-400); background: var(--dark-150);
+}
 .node-body input.sl-val:hover, .node-body input.sl-val:focus {
   border-color: var(--dark-400); background: var(--dark-150);
 }
-.node-body input.sl-val { color: var(--type-number); }
+.node-body input.sl-val { color: var(--type-number); font: 22px/1 var(--font-val); }
+.node-body .sl-ends input { color: rgba(255, 255, 255, 0.22); font: 9px var(--font-val); }
 
 #ctxMenu {
   position: absolute; z-index: 30; min-width: 130px;

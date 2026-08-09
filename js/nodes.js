@@ -282,42 +282,95 @@ defNode('params/slider', {
       const p = Math.pow(10, v.prec === undefined ? 3 : v.prec);
       return Math.round(x * p) / p;
     };
+    /* "Hairline" (design doc 1a): the number is the widget — big mono value,
+     * 2px rule with tick marks, min/max shrink to faint end marks below */
+    const nodeEl = () => body.closest('.node');
+    const applyW = () => {
+      const el = nodeEl();
+      if (el) el.style.width = (v.w ? LM.clamp(v.w, 140, 300) : 200) + 'px';
+    };
+    applyW();
     const sl = _mk('div', 'sl', body);
-    const lab = _mk('div', 'sl-label', sl);
-    const mm = _mk('div', 'sl-minmax', sl);
-    const mn = _numInput('sl-min', v.min, mm); mn.title = 'min';
-    const mx = _numInput('sl-max', v.max, mm); mx.title = 'max';
+    const head = _mk('div', 'sl-head', sl);
+    const lab = _mk('span', 'sl-label', head);
+    const num = _numInput('sl-val', v.value, head);
     const track = _mk('div', 'sl-track', sl);
-    const range = _mk('input', 'sl-range', track);
-    range.type = 'range'; range.min = v.min; range.max = v.max; range.value = v.value;
-    const num = _numInput('sl-val', v.value, sl);
-    const paintLabel = () => {
-      lab.textContent = v.label || '';
-      lab.style.display = v.label ? '' : 'none';
-    };
-    const step = () => {
-      const m = v.mode || 'float';
-      range.step = m === 'int' ? 1 : (m === 'odd' || m === 'even') ? 2 : 'any';
-    };
+    const rule = _mk('div', 'sl-rule', track);
+    const fillEl = _mk('div', 'sl-fill', rule);
+    const thumb = _mk('div', 'sl-thumb', rule);
+    const ends = _mk('div', 'sl-ends', sl);
+    const mn = _numInput('sl-min', v.min, ends); mn.title = 'min';
+    const mx = _numInput('sl-max', v.max, ends); mx.title = 'max';
+    const paintLabel = () => { lab.textContent = v.label || ''; };
     const fill = () => {
       const span = (v.max - v.min) || 1;
-      range.style.setProperty('--p', (LM.clamp((v.value - v.min) / span, 0, 1) * 100) + '%');
+      const p = LM.clamp((v.value - v.min) / span, 0, 1) * 100;
+      fillEl.style.width = p + '%';
+      thumb.style.left = p + '%';
     };
-    paintLabel(); step(); fill();
+    paintLabel(); fill();
     const setVal = x => {
       if (!isFinite(x)) x = 0;
       v.value = x; num.value = x;
-      if (parseFloat(range.value) !== x) range.value = x;
       fill(); changed();
     };
-    range.addEventListener('input', () => setVal(_weftShift ? Math.round(parseFloat(range.value)) : quant(parseFloat(range.value))));
+    /* the track is a pointer surface, not a native range: absolute
+     * positioning, captured drag, shift snaps to integers */
+    track.addEventListener('pointerdown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      try { track.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
+      const apply = ev => {
+        const r = rule.getBoundingClientRect();
+        const t = LM.clamp((ev.clientX - r.left) / (r.width || 1), 0, 1);
+        const raw = v.min + t * (v.max - v.min);
+        setVal(_weftShift || ev.shiftKey ? Math.round(raw) : quant(raw));
+      };
+      apply(e);
+      const mv = ev => apply(ev);
+      const up = () => {
+        track.removeEventListener('pointermove', mv);
+        track.removeEventListener('pointerup', up);
+        track.removeEventListener('pointercancel', up);
+      };
+      track.addEventListener('pointermove', mv);
+      track.addEventListener('pointerup', up);
+      track.addEventListener('pointercancel', up);
+    });
     num.addEventListener('change', () => setVal(quant(parseFloat(num.value) || 0)));
-    mn.addEventListener('change', () => { v.min = parseFloat(mn.value) || 0; range.min = v.min; fill(); changed(); });
-    mx.addEventListener('change', () => { v.max = parseFloat(mx.value) || 0; range.max = v.max; fill(); changed(); });
+    mn.addEventListener('change', () => { v.min = parseFloat(mn.value) || 0; fill(); changed(); });
+    mx.addEventListener('change', () => { v.max = parseFloat(mx.value) || 0; fill(); changed(); });
+
+    /* selected sliders resize from either edge (140–300px), per the 1a spec */
+    for (const side of ['l', 'r']) {
+      const grip = _mk('div', 'sl-grip sl-grip-' + side, body);
+      grip.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+        e.preventDefault();
+        const el = nodeEl();
+        if (!el || !el.classList.contains('selected')) return;
+        const z = (typeof Editor !== 'undefined' && Editor.zoom) ? Editor.zoom() : 1;
+        const startX = e.clientX, base = v.w || 200, startNX = node.x;
+        const mv = ev => {
+          const d = (ev.clientX - startX) / z * (side === 'l' ? -1 : 1);
+          v.w = Math.round(LM.clamp(base + d, 140, 300));
+          if (side === 'l') { node.x = Math.round(startNX + (base - v.w)); el.style.transform = `translate(${node.x}px, ${node.y}px)`; }
+          applyW();
+          if (typeof Editor !== 'undefined' && Editor.redrawWires) Editor.redrawWires();
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', mv);
+          window.removeEventListener('pointerup', up);
+          changed();
+        };
+        window.addEventListener('pointermove', mv);
+        window.addEventListener('pointerup', up);
+      });
+    }
 
     /* double-click → options popover: label, rounding mode, decimal precision */
     sl.addEventListener('dblclick', e => {
-      if (e.target.tagName === 'INPUT' && e.target !== range) return; // typing fields keep native dblclick
+      if (e.target.tagName === 'INPUT') return; // typing fields keep native dblclick
       e.stopPropagation();
       const nodeEl = body.closest('.node');
       const old = body.querySelector('.sl-opts');
@@ -349,7 +402,7 @@ defNode('params/slider', {
           v.mode = m[1];
           seg.querySelectorAll('.seg-b').forEach(x => x.classList.remove('on'));
           b.classList.add('on');
-          step(); paintPrec(); setVal(quant(v.value));
+          paintPrec(); setVal(quant(v.value));
         });
       });
       paintPrec();

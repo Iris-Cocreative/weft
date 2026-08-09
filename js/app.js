@@ -80,6 +80,61 @@ const App = {
     try { localStorage.setItem('weft:autosave', JSON.stringify(App.serialize())); } catch (e) { /* storage unavailable */ }
   },
 
+  /* ------------------------------ user settings ------------------------------
+   * flat booleans under weft:set-<key>; absent = the given default */
+  setting(key, def) {
+    try {
+      const raw = localStorage.getItem('weft:set-' + key);
+      return raw === null ? def : raw === '1';
+    } catch (e) { return def; }
+  },
+  setSetting(key, on) {
+    try { localStorage.setItem('weft:set-' + key, on ? '1' : '0'); } catch (e) {}
+  },
+
+  SETTINGS: [
+    { key: 'angle-sliders', label: 'angle sliders', hint: 'typing 90 / 180 / 360 makes a degree slider wired into a Radians node', def: true },
+    { key: 'smallint-sliders', label: '0–12 sliders', hint: 'typing a small integer makes a 0–12 integer slider', def: true },
+    { key: 'live-colour-wires', label: 'live colour wires', hint: 'colour wires take the colour flowing through them', def: false }
+  ],
+
+  bindSettings() {
+    const tools = document.getElementById('loomTools');
+    if (!tools) return;
+    const btn = document.createElement('button');
+    btn.id = 'btnSettings';
+    btn.title = 'Settings';
+    btn.textContent = '⚙';
+    tools.appendChild(btn);
+    let pop = null;
+    const close = () => { if (pop) { pop.remove(); pop = null; } };
+    btn.addEventListener('click', () => {
+      if (pop) return close();
+      pop = document.createElement('div');
+      pop.id = 'settingsPop';
+      for (const s of App.SETTINGS) {
+        const row = document.createElement('label');
+        row.className = 'set-row';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = App.setting(s.key, s.def);
+        cb.addEventListener('change', () => App.setSetting(s.key, cb.checked));
+        const txt = document.createElement('span');
+        txt.textContent = s.label;
+        row.title = s.hint;
+        row.appendChild(cb); row.appendChild(txt);
+        pop.appendChild(row);
+      }
+      document.getElementById('editor').appendChild(pop);
+      const closer = ev => {
+        if (pop && (pop.contains(ev.target) || ev.target === btn)) return;
+        close();
+        window.removeEventListener('pointerdown', closer, true);
+      };
+      window.addEventListener('pointerdown', closer, true);
+    });
+  },
+
   restore() {
     try {
       const raw = localStorage.getItem('weft:autosave');
@@ -328,6 +383,7 @@ const App = {
     App.bindSplitter();
     App.bindExport();
     App.bindGallery();
+    App.bindSettings();
 
     const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Hexa graph'])));
     App.setGraph(g);
