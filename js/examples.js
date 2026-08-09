@@ -4294,6 +4294,23 @@ const EXAMPLES = {
     ['c1', 'math/expr', 960, 1970, { expr: '-X / 2 + 24' }],
     ['c2', 'vec/construct', 1400, 2040],
     ['c3', 'disp/text', 1620, 2040, { T: 'J2000 orbits · 1 year = 6 s · sizes + moon distance exaggerated — the sliders zoom', S: 12 }],
+    /* — the zodiac: twelve glyphs on the ecliptic ring, boundary ticks every
+       30° of longitude — same frame as the orbits, so the planets really do
+       transit the signs (angles negated for screen-y like everything else) — */
+    ['za', 'params/textlist', 260, 1460, { text: '♈︎\n♉︎\n♊︎\n♋︎\n♌︎\n♍︎\n♎︎\n♏︎\n♐︎\n♑︎\n♒︎\n♓︎' }],
+    ['zs', 'sets/series', 520, 2140, { S: 0, N: 1, C: 12 }],
+    ['ze', 'math/expr', 740, 2140, { expr: '-(30 * X + 15) * PI / 180' }],
+    ['zr', 'math/mul', 740, 2280, { B: 34 }],
+    ['zp', 'vec/polar', 960, 2140],
+    ['zt', 'disp/text', 1180, 2140, { S: 13 }],
+    ['zd', 'disp/draw', 1400, 2140, { S: { r: 139, g: 158, b: 191, a: 0.5 } }],
+    ['zk', 'math/expr', 520, 2300, { expr: '-(30 * X) * PI / 180' }],
+    ['z31', 'math/mul', 520, 2440, { B: 32.4 }],
+    ['z33', 'math/mul', 520, 2580, { B: 35.6 }],
+    ['zq1', 'vec/polar', 740, 2440],
+    ['zq2', 'vec/polar', 740, 2600],
+    ['zl', 'crv/line', 960, 2500],
+    ['zw', 'disp/draw', 1180, 2500, { S: { r: 110, g: 125, b: 160, a: 0.22 }, W: 1 }],
     /* — draws, back to front — */
     ['o8', 'disp/draw', 1620, 550, { S: { r: 110, g: 125, b: 160, a: 0.35 }, W: 1 }],
     ['m16', 'disp/draw', 1840, 1400, { S: { r: 110, g: 125, b: 160, a: 0.35 }, W: 1 }],
@@ -4371,7 +4388,20 @@ const EXAMPLES = {
     ['v1', 'H', 'c1', 'X'],
     ['c1', 'R', 'c2', 'Y'],
     ['c2', 'P', 'c3', 'P'],
-    ['c3', 'G', 'c4', 'G']
+    ['c3', 'G', 'c4', 'G'],
+    /* zodiac ring */
+    ['zs', 'S', 'ze', 'X'],
+    ['u1', 'N', 'zr', 'A'],
+    ['ze', 'R', 'zp', 'A'], ['zr', 'R', 'zp', 'R'],
+    ['za', 'L', 'zt', 'T'], ['zp', 'P', 'zt', 'P'],
+    ['zt', 'G', 'zd', 'G'],
+    ['zs', 'S', 'zk', 'X'],
+    ['u1', 'N', 'z31', 'A'],
+    ['u1', 'N', 'z33', 'A'],
+    ['zk', 'R', 'zq1', 'A'], ['z31', 'R', 'zq1', 'R'],
+    ['zk', 'R', 'zq2', 'A'], ['z33', 'R', 'zq2', 'R'],
+    ['zq1', 'P', 'zl', 'A'], ['zq2', 'P', 'zl', 'B'],
+    ['zl', 'C', 'zw', 'G']
   ]),
 
   /* The theremin grown into an instrument you can see: every note of A
@@ -7013,6 +7043,114 @@ const EXAMPLES = {
     ['ro', 'G', 'dr', 'G']
   ]),
 
+  /* Superformula variants — same code node, different personalities. II fans
+   * one shape into three breathing ember layers; III is two counter-rotating
+   * indigo/teal shells. Layer variation is pure list matching. */
+  'Superformula II': _EX([
+    ['s1', 'params/slider', 30, 40, { min: 2, max: 16, value: 5, mode: 'int', label: 'symmetry' }],
+    ['s4', 'params/slider', 30, 150, { min: 60, max: 220, value: 150, mode: 'int', label: 'size' }],
+    ['rg', 'sets/range', 30, 260, { A: 0, B: 6.2832, N: 256 }],
+    ['t1', 'input/time', 30, 370],
+    ['mb', 'math/mul', 210, 370, { B: 0.9 }],
+    ['sn', 'math/sin', 390, 370],
+    ['rb', 'math/remap', 570, 370, { S0: -1, S1: 1, T0: 0.18, T1: 0.42 }],
+    ['js', 'meta/js', 280, 130, {
+      title: 'superformula', mode: 'each',
+      ins: [
+        { name: 'T', type: 'number', default: 0 },
+        { name: 'M', type: 'number', default: 5 },
+        { name: 'N1', type: 'number', default: 0.3 },
+        { name: 'N2', type: 'number', default: 1.6 },
+        { name: 'R', type: 'number', default: 150 }
+      ],
+      outs: [{ name: 'P', type: 'point' }],
+      code: 'const q = M * T / 4;\nconst f = Math.abs(Math.cos(q)), g = Math.abs(Math.sin(q));\nconst r = R * Math.pow(Math.pow(f, N2) + Math.pow(g, N2), -1 / N1);\nreturn { P: { x: r * Math.cos(T), y: r * Math.sin(T) } };'
+    }],
+    ['pl', 'crv/polyline', 560, 130, { C: true }],
+    ['sr', 'sets/series', 560, 480, { S: 0, N: 1, C: 3 }],
+    ['ma', 'math/mul', 740, 480, { B: 0.35 }],
+    ['mt', 'math/mul', 740, 590, { B: 0.06 }],
+    ['ad', 'math/add', 920, 480],
+    ['ro', 'xf/rotate', 920, 130],
+    ['rs', 'math/remap', 740, 260, { S0: 0, S1: 2, T0: 1, T1: 0.45 }],
+    ['sc', 'xf/scale', 1100, 130],
+    ['rc', 'math/remap', 920, 620, { S0: 0, S1: 2, T0: 0, T1: 1 }],
+    ['gr', 'disp/gradient', 1100, 480, { A: { r: 255, g: 122, b: 40, a: 0.95 }, B: { r: 244, g: 63, b: 180, a: 0.95 } }],
+    ['dr', 'disp/draw', 1320, 130, { F: { r: 255, g: 122, b: 40, a: 0.06 }, W: 2 }],
+    ['bg', 'disp/bg', 1320, 330, { C: { r: 9, g: 8, b: 14, a: 1 } }]
+  ], [
+    ['rg', 'R', 'js', 'T'],
+    ['s1', 'N', 'js', 'M'],
+    ['s4', 'N', 'js', 'R'],
+    ['t1', 'T', 'mb', 'A'],
+    ['mb', 'R', 'sn', 'V'],
+    ['sn', 'R', 'rb', 'V'],
+    ['rb', 'R', 'js', 'N1'],
+    ['js', 'P', 'pl', 'V'],
+    ['pl', 'C', 'ro', 'G'],
+    ['sr', 'S', 'ma', 'A'],
+    ['t1', 'T', 'mt', 'A'],
+    ['ma', 'R', 'ad', 'A'],
+    ['mt', 'R', 'ad', 'B'],
+    ['ad', 'R', 'ro', 'A'],
+    ['ro', 'G', 'sc', 'G'],
+    ['sr', 'S', 'rs', 'V'],
+    ['rs', 'R', 'sc', 'F'],
+    ['sc', 'G', 'dr', 'G'],
+    ['sr', 'S', 'rc', 'V'],
+    ['rc', 'R', 'gr', 'T'],
+    ['gr', 'C', 'dr', 'S']
+  ]),
+
+  'Superformula III': _EX([
+    ['s1', 'params/slider', 30, 40, { min: 4, max: 24, value: 12, mode: 'int', label: 'petals' }],
+    ['s4', 'params/slider', 30, 150, { min: 60, max: 220, value: 140, mode: 'int', label: 'size' }],
+    ['rg', 'sets/range', 30, 260, { A: 0, B: 6.2832, N: 256 }],
+    ['js', 'meta/js', 280, 130, {
+      title: 'superformula', mode: 'each',
+      ins: [
+        { name: 'T', type: 'number', default: 0 },
+        { name: 'M', type: 'number', default: 12 },
+        { name: 'N1', type: 'number', default: 0.85 },
+        { name: 'N2', type: 'number', default: 3.2 },
+        { name: 'R', type: 'number', default: 140 }
+      ],
+      outs: [{ name: 'P', type: 'point' }],
+      code: 'const q = M * T / 4;\nconst f = Math.abs(Math.cos(q)), g = Math.abs(Math.sin(q));\nconst r = R * Math.pow(Math.pow(f, N2) + Math.pow(g, N2), -1 / N1);\nreturn { P: { x: r * Math.cos(T), y: r * Math.sin(T) } };'
+    }],
+    ['pl', 'crv/polyline', 560, 130, { C: true }],
+    ['sr', 'sets/series', 560, 400, { S: 0, N: 1, C: 2 }],
+    ['rd', 'math/remap', 740, 400, { S0: 0, S1: 1, T0: 1, T1: -1 }],
+    ['t1', 'input/time', 560, 540],
+    ['mt', 'math/mul', 740, 540, { B: 0.08 }],
+    ['ml', 'math/mul', 920, 400],
+    ['ro', 'xf/rotate', 920, 130],
+    ['rs', 'math/remap', 1100, 400, { S0: 0, S1: 1, T0: 1, T1: 0.62 }],
+    ['sc', 'xf/scale', 1100, 130],
+    ['rc', 'math/remap', 920, 560, { S0: 0, S1: 1, T0: 0, T1: 1 }],
+    ['gr', 'disp/gradient', 1100, 560, { A: { r: 99, g: 102, b: 241, a: 0.95 }, B: { r: 94, g: 234, b: 212, a: 0.95 } }],
+    ['dr', 'disp/draw', 1320, 130, { F: { r: 99, g: 102, b: 241, a: 0.1 }, W: 1.5 }],
+    ['bg', 'disp/bg', 1320, 330, { C: { r: 7, g: 10, b: 18, a: 1 } }]
+  ], [
+    ['rg', 'R', 'js', 'T'],
+    ['s1', 'N', 'js', 'M'],
+    ['s4', 'N', 'js', 'R'],
+    ['js', 'P', 'pl', 'V'],
+    ['pl', 'C', 'ro', 'G'],
+    ['sr', 'S', 'rd', 'V'],
+    ['t1', 'T', 'mt', 'A'],
+    ['rd', 'R', 'ml', 'A'],
+    ['mt', 'R', 'ml', 'B'],
+    ['ml', 'R', 'ro', 'A'],
+    ['ro', 'G', 'sc', 'G'],
+    ['sr', 'S', 'rs', 'V'],
+    ['rs', 'R', 'sc', 'F'],
+    ['sc', 'G', 'dr', 'G'],
+    ['sr', 'S', 'rc', 'V'],
+    ['rc', 'R', 'gr', 'T'],
+    ['gr', 'C', 'dr', 'S']
+  ]),
+
   /* The geometry pass (v0.11) — two circles drifting apart, and everything the
    * new curve nodes can say about the pair: the lens where they overlap, the
    * crescent left over, its mirror image, the two crossing points, the axis
@@ -7225,9 +7363,9 @@ const EXAMPLE_META = {
   },
   'Solar system': {
     cat: 'Lists & grids',
-    blurb: 'The solar system as a dataflow — one Kepler machine, eight planets, real J2000 orbital elements from JPL.',
-    teaches: 'List matching at full scale: mean anomaly → true anomaly → radius, solved once and answered for eight bodies, from Text List data.',
-    tags: ['list matching', 'kepler', 'text list', 'data', 'orbits', 'planets'],
+    blurb: 'The solar system as a dataflow — one Kepler machine, eight planets, real J2000 elements, and a zodiac ring the planets truly transit.',
+    teaches: 'List matching at full scale: mean anomaly → true anomaly → radius, solved once and answered for eight bodies — and the zodiac is twelve glyphs in the same ecliptic frame.',
+    tags: ['list matching', 'kepler', 'text list', 'data', 'orbits', 'planets', 'zodiac'],
     needs: [], frames: 40
   },
   'Scale board': {
@@ -7299,6 +7437,20 @@ const EXAMPLE_META = {
     teaches: 'The knob-extraction pattern: in “each” mode the code runs per angle and list-matches against single-valued knobs, exactly like a native node.',
     tags: ['custom js', 'knob extraction', 'superformula'],
     needs: [], frames: 40
+  },
+  'Superformula II': {
+    cat: 'Custom JS & meta',
+    blurb: 'The same code node pushed to embers — three nested layers breathe their pinch with time and grade from ember orange to magenta.',
+    teaches: 'Layer variation is list matching: one three-step Series fans the shape into three scales, three spins and three colours through a single Gradient node.',
+    tags: ['custom js', 'superformula', 'layers', 'gradient', 'ember'],
+    needs: [], frames: 60
+  },
+  'Superformula III': {
+    cat: 'Custom JS & meta',
+    blurb: 'A twelve-petal night bloom — two counter-rotating superformula shells in indigo and teal.',
+    teaches: 'Two items are enough for choreography: a two-step Series remapped to +1/−1 drives opposite spins and complementary colours off the same wires.',
+    tags: ['custom js', 'superformula', 'counter-rotation', 'bloom'],
+    needs: [], frames: 60
   },
   'Intersections': {
     cat: 'Geometry',
