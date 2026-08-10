@@ -165,7 +165,12 @@ const Editor = (() => {
 
     el.style.setProperty('--cat', CATS[def.cat] || '#888');
     if (def.bare) el.classList.add('bare');
-    if (def.relay) el.classList.add('relay');
+    if (def.relay) {
+      el.classList.add('relay');
+      // double-click a relay to dissolve it — the wire it carried heals
+      el.addEventListener('dblclick', e => { e.stopPropagation(); dissolveRelay(n.id); });
+      el.title = 'relay — double-click to dissolve (the wire heals)';
+    }
     if (def.dynamic) el.classList.add('cluster');
     if (def.id === 'params/anchor') el.classList.add('is-anchor');
     if (n.collapsed) applyCollapsed(el, n, true);
@@ -437,6 +442,25 @@ const Editor = (() => {
     connect(from[0], from[1], n.id, 'V');
     connect(n.id, 'V', to[0], to[1]);
     selectOnly(n.id);
+  }
+
+  /* the inverse of insertRelayOnWire: dissolving a relay heals the connection
+   * it carried — its source rewires to every destination it fed. Reached by
+   * double-clicking the relay, or by deleting it. */
+  function dissolveRelay(id) {
+    const n = nodeById(id);
+    const def = n && defOf(n);
+    if (!def || !def.relay) return false;
+    const inW = S.graph.wires.find(w => w.to[0] === id);
+    const src = inW && inW.from.slice();
+    const outs = S.graph.wires.filter(w => w.from[0] === id).map(w => w.to.slice());
+    removeNode(id);
+    let bridged = false;
+    if (src) for (const t of outs) {
+      if (nodeById(t[0]) && connect(src[0], src[1], t[0], t[1])) bridged = true;
+    }
+    if (!bridged) changed(); // connect() records history itself
+    return true;
   }
 
   function drawWires() {
@@ -879,7 +903,12 @@ const Editor = (() => {
     if (S.selNote) { removeNote(S.selNote); S.selNote = null; changed(); return; }
     if (S.selWire) { removeWire(S.selWire); return; }
     if (!S.sel.size) return;
-    for (const id of [...S.sel]) removeNode(id);
+    for (const id of [...S.sel]) {
+      const n = nodeById(id);
+      const def = n && defOf(n);
+      // deleting a relay dissolves it — the connection it carried survives
+      if (def && def.relay) dissolveRelay(id); else removeNode(id);
+    }
     changed();
   }
 

@@ -279,7 +279,7 @@ Node values (`values` keys, not ports): `{"text":"one\ntwo\nthree"}`
 
 ### `params/timegraph` — Time Graph
 
-Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines)
+Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines); double-click for line count and window
 
 | in | type | default | note |
 |---|---|---|---|

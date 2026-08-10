@@ -271,6 +271,12 @@ is now in, so any of these can be picked up in a workshop pass):
   bar hint); corpus 15 (one Superformula, Oscilloscope out, Hexa's dead
   vec/grid pruned, Iso-field card uses a curated still via
   `EXAMPLE_META.img`).
+- [shipped v0.17.2, 2026-08-09] **Round two** — corner resize actually
+  engages (editor node-drag no longer captures pointerdowns in the grip
+  corner); Graph Data + Time Graph resizable, Time Graph dblclick options
+  (lines 1–8, window 1–60s); relay dissolve (dblclick or Delete heals the
+  wire through it — `dissolveRelay`); rounded selection outlines
+  everywhere; gallery order curated, Stonehenge first.
 - [idea] multi-document editing — several graphs open at once (tabs or a
   window-per-file via the FS-API handles). The v0.17 save overhaul laid
   the plumbing (per-file handles); the UI is the open question.

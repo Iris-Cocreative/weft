@@ -752,18 +752,22 @@ defNode('params/graph', {
   outputs: [{ name: 'X', type: 'number' }, { name: 'Y', type: 'number' }],
   listInputs: ['X', 'Y'],
   compute: a => ({ X: a.X || [], Y: a.Y || [] }),
-  buildBody: (node, body) => {
+  buildBody: (node, body, changed) => {
     const gp = _mk('div', 'np gph', body);
     const cv = _mk('canvas', 'gph-cv', gp);
     cv.width = 2; cv.height = 2;
+    _resizable(node, gp, changed, 196);
   },
   postEval: (node, el) => {
     const cv = el.querySelector('.gph-cv');
     if (!cv) return;
     const ins = (node._last && node._last.ins) || {};
     const X = ins.X || [], Y = ins.Y || [];
-    const W = 176, H = 92, dpr = window.devicePixelRatio || 1;
-    if (cv.width !== Math.round(W * dpr)) {
+    // the plot fills the resizable box (values.w/h minus the .np chrome)
+    const W = node.values.w ? Math.max(60, node.values.w - 20) : 176;
+    const H = node.values.h ? Math.max(40, node.values.h - 14) : 92;
+    const dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       cv.style.width = W + 'px'; cv.style.height = H + 'px';
     }
@@ -826,20 +830,55 @@ defNode('params/graph', {
 
 defNode('params/timegraph', {
   title: 'Time Graph', cat: 'Params', width: 200, bare: true, inspect: true,
-  desc: 'Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines)',
+  desc: 'Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines); double-click for line count and window',
   inputs: [{ name: 'V', type: 'number' }],
   outputs: [{ name: 'V', type: 'number' }],
   listInputs: ['V'],
   compute: a => ({ V: a.V || [] }),
-  buildBody: (node, body) => {
+  buildBody: (node, body, changed) => {
+    const v = node.values;
     const gp = _mk('div', 'np gph', body);
     const cv = _mk('canvas', 'gph-cv', gp);
     cv.width = 2; cv.height = 2;
+    _resizable(node, gp, changed, 196);
+    /* double-click → options: how many list items get a line, window seconds */
+    gp.addEventListener('dblclick', e => {
+      if (e.target.tagName === 'INPUT') return;
+      e.stopPropagation();
+      const nodeEl = body.closest('.node');
+      const old = body.querySelector('.sl-opts');
+      if (old) { old.remove(); if (nodeEl) nodeEl.style.zIndex = ''; return; }
+      const op = _mk('div', 'sl-opts', body);
+      if (nodeEl) nodeEl.style.zIndex = 25;
+      op.addEventListener('pointerdown', ev => ev.stopPropagation());
+      op.addEventListener('dblclick', ev => ev.stopPropagation());
+      const row = (cap, val, min, max, fn) => {
+        const r = _mk('div', 'sl-opt-row', op);
+        _mk('span', 'sl-opt-cap', r).textContent = cap;
+        const i = _numInput('', val, r);
+        i.addEventListener('change', () => {
+          fn(LM.clamp(Math.round(parseFloat(i.value) || 0), min, max));
+          i.value = cap === 'lines' ? (v.lines || 8) : (v.span || 6);
+          changed();
+        });
+      };
+      row('lines', v.lines || 8, 1, 8, x => { v.lines = x; });
+      row('window s', v.span || 6, 1, 60, x => { v.span = x; });
+      const closer = ev => {
+        if (op.contains(ev.target)) return;
+        op.remove();
+        if (nodeEl) nodeEl.style.zIndex = '';
+        window.removeEventListener('pointerdown', closer, true);
+      };
+      window.addEventListener('pointerdown', closer, true);
+    });
   },
   postEval: (node, el, ctx) => {
     const cv = el.querySelector('.gph-cv');
     if (!cv || !ctx) return;
-    const SPAN = 6, MAXL = 8; /* seconds visible, max lines */
+    /* seconds visible + max lines — user options (double-click the graph) */
+    const SPAN = LM.clamp(node.values.span || 6, 1, 60);
+    const MAXL = LM.clamp(node.values.lines || 8, 1, 8);
     const tg = node._tg || (node._tg = { samples: [], t: null });
     /* sample once per play-time tick — paused time freezes the trace */
     if (ctx.t !== tg.t) {
@@ -851,8 +890,10 @@ defNode('params/timegraph', {
       while (drop < tg.samples.length && tg.samples[drop].t < ctx.t - SPAN) drop++;
       if (drop) tg.samples.splice(0, drop);
     }
-    const W = 176, H = 92, dpr = window.devicePixelRatio || 1;
-    if (cv.width !== Math.round(W * dpr)) {
+    const W = node.values.w ? Math.max(60, node.values.w - 20) : 176;
+    const H = node.values.h ? Math.max(40, node.values.h - 14) : 92;
+    const dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
       cv.style.width = W + 'px'; cv.style.height = H + 'px';
     }
@@ -865,6 +906,7 @@ defNode('params/timegraph', {
       if (s.v.length > lines) lines = s.v.length;
       for (const y of s.v) { if (y < y0) y0 = y; if (y > y1) y1 = y; }
     }
+    lines = Math.min(lines, MAXL); // a lowered line count applies to history too
     if (!lines) {
       g.fillStyle = 'rgba(255,255,255,0.25)';
       g.font = '10px Consolas, ui-monospace, monospace';
@@ -928,17 +970,24 @@ defNode('params/anchor', {
 /* editor-only: drag-resize for text boxes (Note Pad, Text List) — the
  * browser's own corner grip on the box, persisted to values.w/h, and the
  * card follows the box */
-function _resizable(node, box, changed) {
+function _resizable(node, box, changed, defW) {
   const v = node.values;
   box.classList.toggle('sized', !!(v.w || v.h));
   box.style.resize = 'both';
   box.style.overflow = 'hidden';
   // the box always has an explicit width and the card shrink-wraps it — sizes
   // flow one way only (grip → box → card), so there is no measure-feedback loop
-  box.style.width = LM.clamp(v.w || 174, 120, 420) + 'px';
+  box.style.width = LM.clamp(v.w || defW || 174, 120, 420) + 'px';
   if (v.h) box.style.height = LM.clamp(v.h, 44, 400) + 'px';
   const card = box.closest('.node');
   if (card) card.style.width = 'max-content';
+  // the native grip lives in the bottom-right corner — the editor's node-drag
+  // must not see pointerdowns there, or its pointer capture kills the resize
+  box.addEventListener('pointerdown', e => {
+    const r = box.getBoundingClientRect();
+    const z = (typeof Editor !== 'undefined' && Editor.zoom) ? Editor.zoom() : 1;
+    if (r.right - e.clientX < 18 * z && r.bottom - e.clientY < 18 * z) e.stopPropagation();
+  });
   let aw = box.style.width, ah = box.style.height, t = null;
   new ResizeObserver(() => {
     // only the native grip writes inline sizes — content growth (textarea

@@ -448,7 +448,8 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 /* --- Number Slider "Hairline" (design doc 1a, 2026-08-09) ---
  * the number is the widget: big mono value, 2px rule + ticks, faint end marks.
  * The widget wears the wire colour of its output type (number). */
-.sl { width: 100%; padding: 3px 11px 4px; position: relative; }
+/* border-radius here rounds the selection outline too (outlines follow it) */
+.sl { width: 100%; padding: 3px 11px 4px; position: relative; border-radius: 8px; }
 .sl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; }
 .sl-label {
   min-height: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -524,7 +525,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .sl-val:hover, .sl-val:focus { border-color: var(--dark-400); background: var(--dark-150); }
 
 /* --- Knob / Angle: rotary dials in the number wire colour --- */
-.kn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px 8px; }
+.kn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px 8px; border-radius: 8px; }
 .kn-label { text-align: center; align-self: stretch; }
 .dial { width: 64px; height: 64px; flex: none; touch-action: none; cursor: crosshair; overflow: visible; }
 .dial-track { fill: none; stroke: var(--dark-400); stroke-width: 2; stroke-linecap: round; }

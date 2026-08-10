@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.1 — polish-pass fixes (resize runaway, persistent wire tints, relay dblclick), slider smart ticks + zero mark, Knob & Angle params, cloth-camera pan discoverability; corpus at 15.** v0.1 (2026-07-12): editor,
+**Status: v0.17.2 — corner resize unblocked (+ resizable graphs w/ Time Graph options), relay dissolve heals wires, rounded selections, curated gallery order (Stonehenge first); corpus at 15.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -435,6 +435,21 @@ examples — Superformula II is now the one Superformula (I and III retired),
 Oscilloscope retired, Hexa graph's dead vec/grid pruned, and Iso-field's
 gallery card shows a curated still (`EXAMPLE_META.img` beats a rendered
 frame when the charm is interactive).
+
+v0.17.2 (2026-08-09): **second round of test notes.** The native corner
+resize on Note Pad / Text List never engaged — the editor's node-drag
+captured the pointer before the browser's grip could act; `_resizable` now
+stops propagation in the 18px corner so the grip owns it (drag from any
+other edge still moves the node). Graph Data and Time Graph are resizable
+the same way (canvas re-fits the box each postEval), and the Time Graph
+grew a double-click options popover: line count (1–8) and window seconds
+(1–60). Relays dissolve: double-click one (or Delete it) and the wire it
+carried heals — `dissolveRelay` reconnects the source to every destination
+the relay fed. Selection outlines are rounded everywhere (outlines follow
+border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
+curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
+Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
+pedal, then the rest.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
