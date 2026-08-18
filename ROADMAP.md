@@ -214,6 +214,11 @@ is now in, so any of these can be picked up in a workshop pass):
   Figma originals + 94 code-drafted, marked in icons.js; redraw in Figma at
   leisure — a Figma export replaces a draft entry). Still open: D5 wire
   language, D7 atmosphere (`docs/DESIGN-PLAN.md` method still applies).
+- [shipped v0.17.3, 2026-08-17] **3D glyphs** — the 24 `d3/*` nodes and
+  `params/point3` were the last nodes drawing the category fallback; each has
+  its own icon now, on one iso grammar shared with the category cube (ghosted
+  "before" states, 2D siblings' idioms reused). 180 icons, every node covered.
+  Contact sheet: `docs/icons.html` (`test/gen-icon-preview.js`).
 - [shipped 2026-07-14] **D8 brand mark** — `weftLogoSVG()` in js/icons.js: the
   weft thread woven over-under-over through three warp threads, port dots at
   both ends, brand gradient; faint `.weft-under` segment where it passes behind

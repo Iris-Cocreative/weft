@@ -2494,4 +2494,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-156 node glyphs + 3 category fallback(s) in `js/icons.js`. Nodes still using the category-dot fallback (1): `params/point3`
+181 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

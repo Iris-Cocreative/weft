@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.2 — corner resize unblocked (+ resizable graphs w/ Time Graph options), relay dissolve heals wires, rounded selections, curated gallery order (Stonehenge first); corpus at 15.** v0.1 (2026-07-12): editor,
+**Status: v0.17.3 — the 3D pack has its own glyphs (25 new icons on one iso grammar); every node in the library now carries one.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,27 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.17.3 (2026-08-17): **glyphs for the 3D pack.** The 24 `d3/*` nodes and the
+`params/point3` param were the last of the library without their own icon —
+they fell back to the category cube, or to a bare colour dot. Each has one now,
+and coverage is complete (180 icons; the only node still without an entry is
+the Colour Swatch, whose conic-gradient glyph is CSS by design). One grammar
+holds the family together: the axonometric of the category cube (top face
+9 × 5.25), y up the screen, the two depth axes to the lower left and right, and
+everything that is *not* the subject — the "before" of a transform, a back
+face, a projection ray, an un-normalized vector — dropped to low opacity, so a
+single shape reads at 27px. Where a 2D sibling already exists the 3D one
+inherits its idiom: Deconstruct3 fans out to three dots like Deconstruct
+Colour, Move3 and Scale3 keep the ghost-and-arrow of Move and Scale. Three
+glyphs were redrawn after seeing them rendered rather than imagined: Orbit
+Camera was an ellipse with a wedge on its edge and a dot at its centre, which
+read as the app's own visibility eye (it is now a cube on an orbit ring with
+the camera riding it); Torus as three concentric ellipses read as pond ripples
+(two ellipses and a near-side tube arc); Cross Product needed arrowheads before
+its two in-plane vectors read as vectors instead of table legs. Code drafts,
+marked as such in `js/icons.js` — a Figma export replaces an entry whenever one
+gets redrawn. Sheet: `docs/icons.html` via `test/gen-icon-preview.js`.
 
 **Development docs:** `CLAUDE.md` = agent standards & invariants (read before any
 change) · `ROADMAP.md` = tracks & next steps · `test/smoke.js` = headless test
