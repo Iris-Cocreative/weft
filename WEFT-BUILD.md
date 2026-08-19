@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.3 — the 3D pack has its own glyphs (25 new icons on one iso grammar); every node in the library now carries one.** v0.1 (2026-07-12): editor,
+**Status: v0.17.4 — share links are chat-safe and 23% shorter, the stranded-marquee bug is gone, and the corpus is 16 with *Figure visualizer*.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,32 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.17.4 (2026-08-19): **two bugs James hit in one sitting, both from the same
+blind spot — the browser taking something away mid-gesture.** (1) *Stranded
+marquee.* Track In armed its `getDisplayMedia` picker on `pointerdown`, so a
+click on empty loom started a marquee **and** opened a native modal; the modal
+ate the `pointerup`, and `S.drag` stayed live with a selection box following
+the cursor forever. Fixed at both ends: the picker now arms on `pointerup`
+(still a valid user gesture, and the editor's own window handler runs first),
+and `Editor.cancelDrag()` tears down any gesture on `pointercancel`, on window
+`blur`, or on a `pointermove` with `e.buttons === 0` — the general signal that
+the release happened where the page could not see it. It *drops* rather than
+commits, so no wire lands on whatever the cursor drifted over. (2) *Share
+links died in WhatsApp.* base64url is URL-safe but not chat-safe: linkifiers
+refuse to end a link on a trailing `_`, and WhatsApp reads `_…_` as italics.
+The hash is now `#w2=` — **pack → deflate-raw → base62**, letters and digits
+only. The packer is where the length went: dictionaries for the repeated type
+and port names, node ids collapsed to array index, every JSON key dropped
+(wire/note/group ids aren't carried; `setGraph` reissues them). ~60% off the
+pre-compression JSON, 23% off the finished link across all 16 examples — worst
+case 6408 → 4872 chars — after paying base62's 0.8% density tax. Old `#w=` /
+`#wj=` links still open, never written. Also new: ***Figure visualizer***, the
+corpus's second *Audio input* example and its argument that Spring is a
+physics engine — a stick figure whose arms are pendulums hung off Springs, one
+per stereo channel, with a second Spring per arm trailing the first as an
+elbow (`math/max` against the upper-arm angle stops it hyperextending) and a
+bob that lifts hips and feet together so the legs keep their length.
 
 v0.17.3 (2026-08-17): **glyphs for the 3D pack.** The 24 `d3/*` nodes and the
 `params/point3` param were the last of the library without their own icon —

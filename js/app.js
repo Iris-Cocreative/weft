@@ -265,8 +265,9 @@ const App = {
   },
 
   /* ------------------------------ share links ------------------------------
-   * The whole graph rides in the URL hash: #w= deflate-raw + base64url (or
-   * #wj= plain base64url JSON where CompressionStream is unavailable).
+   * The whole graph rides in the URL hash: #w2= pack + deflate-raw + base62
+   * (or #j2= pack + base62 where CompressionStream is unavailable). The older
+   * #w= / #wj= base64url links still open — read below, never written.
    * Zero-backend sharing — the hash never reaches a server. */
 
   _b64(u8) {
@@ -289,14 +290,114 @@ const App = {
     return new Uint8Array(await r.arrayBuffer());
   },
 
+  /* base62 — letters and digits only. base64url's "-" and "_" are what break
+   * a pasted link in chat clients: most stop autolinking at a trailing "_",
+   * and WhatsApp reads _like this_ as italics, so it eats the tail of the
+   * hash. Costs 0.8% over base64 and buys a link that survives any client.
+   * Radix conversion is O(n^2); the biggest patch in the shipped corpus is
+   * ~3 KB deflated, which encodes in well under 20 ms. */
+  _A62: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
+
+  _b62(u8) {
+    let zeros = 0;
+    while (zeros < u8.length && u8[zeros] === 0) zeros++; // leading zero bytes carry no value — kept as digit 0s
+    const d = [];
+    for (const byte of u8) {
+      let c = byte;
+      for (let j = 0; j < d.length; j++) { c += d[j] << 8; d[j] = c % 62; c = (c / 62) | 0; }
+      while (c) { d.push(c % 62); c = (c / 62) | 0; }
+    }
+    let s = '';
+    for (let i = 0; i < zeros; i++) s += App._A62[0];
+    for (let i = d.length - 1; i >= 0; i--) s += App._A62[d[i]];
+    return s;
+  },
+
+  _unb62(str) {
+    if (!App._A62map) {
+      App._A62map = {};
+      for (let i = 0; i < 62; i++) App._A62map[App._A62[i]] = i;
+    }
+    let zeros = 0;
+    while (zeros < str.length && str[zeros] === App._A62[0]) zeros++;
+    const d = [];
+    for (let k = zeros; k < str.length; k++) {
+      let c = App._A62map[str[k]];
+      if (c === undefined) throw new Error('unexpected character in the link');
+      for (let j = 0; j < d.length; j++) { c += d[j] * 62; d[j] = c & 255; c >>= 8; }
+      while (c) { d.push(c & 255); c >>= 8; }
+    }
+    const u8 = new Uint8Array(zeros + d.length);
+    for (let i = 0; i < d.length; i++) u8[zeros + d.length - 1 - i] = d[i];
+    return u8;
+  },
+
+  /* Pack a serialized graph for the hash: one dictionary for the repeated
+   * type names and one for port names, node ids collapsed to array position,
+   * and every JSON key dropped. Roughly 60% off the pre-compression JSON,
+   * which survives deflate as a ~25% shorter link. Wire / note / group ids
+   * are not carried — Editor.setGraph reissues the ones it needs. */
+  _pack(g) {
+    const types = [], ports = [], tIdx = new Map(), pIdx = new Map(), nIdx = new Map();
+    const ti = t => { if (!tIdx.has(t)) { tIdx.set(t, types.length); types.push(t); } return tIdx.get(t); };
+    const pi = p => { if (!pIdx.has(p)) { pIdx.set(p, ports.length); ports.push(p); } return pIdx.get(p); };
+    g.nodes.forEach((n, i) => nIdx.set(n.id, i));
+    const nodes = g.nodes.map(n => {
+      const t = [ti(n.type), n.x, n.y,
+        (n.values && Object.keys(n.values).length) ? n.values : 0,
+        (n.enabled === false ? 1 : 0) | (n.preview === false ? 2 : 0) | (n.collapsed ? 4 : 0),
+        n.label || 0];
+      while (t.length > 4 && !t[t.length - 1]) t.pop();
+      return t;
+    });
+    const wires = [];
+    for (const w of g.wires) {
+      const a = nIdx.get(w.from[0]), b = nIdx.get(w.to[0]);
+      if (a === undefined || b === undefined) continue; // dangling wire — drop it rather than ship a broken index
+      wires.push([a, pi(w.from[1]), b, pi(w.to[1])]);
+    }
+    const notes = (g.notes || []).map(t => [t.x, t.y, t.w, t.h, t.text || '']);
+    const groups = (g.groups || []).map(f => [f.x, f.y, f.w, f.h, f.title || 0,
+      (f.nodes || []).map(id => nIdx.get(id)).filter(i => i !== undefined), f.collapsed ? 1 : 0]);
+    const out = [g.format || 2, types, ports, nodes, wires,
+      notes.length ? notes : 0, groups.length ? groups : 0, (g.meta && g.meta.tuneA4) || 0];
+    while (out.length > 5 && !out[out.length - 1]) out.pop();
+    return out;
+  },
+
+  _unpack(a) {
+    if (!Array.isArray(a) || !Array.isArray(a[3]) || !Array.isArray(a[1])) throw new Error('not a weft graph');
+    const types = a[1], ports = a[2] || [], notes = a[5], groups = a[6];
+    const g = {
+      format: a[0] || 2,
+      nodes: a[3].map((t, i) => {
+        const n = { id: 'n' + i, type: types[t[0]], x: t[1] || 0, y: t[2] || 0, values: t[3] || {} };
+        const f = t[4] || 0;
+        if (f & 1) n.enabled = false;
+        if (f & 2) n.preview = false;
+        if (f & 4) n.collapsed = true;
+        if (t[5]) n.label = t[5];
+        return n;
+      }),
+      wires: (a[4] || []).map(w => ({ from: ['n' + w[0], ports[w[1]]], to: ['n' + w[2], ports[w[3]]] }))
+    };
+    if (notes) g.notes = notes.map(t => ({ x: t[0], y: t[1], w: t[2], h: t[3], text: t[4] || '' }));
+    if (groups) g.groups = groups.map(f => ({
+      x: f[0], y: f[1], w: f[2], h: f[3], title: f[4] || '',
+      nodes: (f[5] || []).map(i => 'n' + i), collapsed: !!f[6]
+    }));
+    if (a[7]) g.meta = { tuneA4: a[7] };
+    return g;
+  },
+
   async shareLink() {
     if (!App.graph.nodes.length) { App.flash('nothing to share — the canvas is empty'); return; }
     App._flushPending();
-    const bytes = new TextEncoder().encode(JSON.stringify(App.serialize()));
+    const bytes = new TextEncoder().encode(JSON.stringify(App._pack(App.serialize())));
     const canDeflate = typeof CompressionStream !== 'undefined';
     const hash = canDeflate
-      ? '#w=' + App._b64(await App._pipe(bytes, new CompressionStream('deflate-raw')))
-      : '#wj=' + App._b64(bytes);
+      ? '#w2=' + App._b62(await App._pipe(bytes, new CompressionStream('deflate-raw')))
+      : '#j2=' + App._b62(bytes);
     const url = location.origin + location.pathname + location.search + hash;
     let copied = false;
     try {
@@ -324,13 +425,15 @@ const App = {
   },
 
   async loadFromHash() {
-    const m = /^#(w|wj)=([A-Za-z0-9_-]+)$/.exec(location.hash || '');
+    const m = /^#(w2|j2|w|wj)=([A-Za-z0-9_-]+)$/.exec(location.hash || '');
     if (!m) return false;
+    const kind = m[1], packed = kind === 'w2' || kind === 'j2';
     const clear = () => { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} };
     try {
-      let bytes = App._unb64(m[2]);
-      if (m[1] === 'w') bytes = await App._pipe(bytes, new DecompressionStream('deflate-raw'));
-      const g = App.migrate(JSON.parse(new TextDecoder().decode(bytes)));
+      let bytes = packed ? App._unb62(m[2]) : App._unb64(m[2]);
+      if (kind === 'w' || kind === 'w2') bytes = await App._pipe(bytes, new DecompressionStream('deflate-raw'));
+      const data = JSON.parse(new TextDecoder().decode(bytes));
+      const g = App.migrate(packed ? App._unpack(data) : data);
       try { localStorage.setItem('weft:backup', JSON.stringify(App.serialize())); } catch (e) {}
       App.setGraph(g);
       Editor.zoomToFit(false);

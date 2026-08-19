@@ -1050,8 +1050,28 @@ const Editor = (() => {
     editorEl.appendChild(marqueeEl);
   }
 
+  /* A native modal — the screen-share picker, a file dialog, a permission
+   * prompt — takes the pointer mid-gesture and swallows the pointerup that
+   * would have ended it, leaving S.drag live and the marquee box stranded on
+   * the loom. Drop the gesture instead of committing it to wherever the
+   * cursor has wandered since; a detached wire counts as dropped on empty
+   * space, exactly as completeWire treats a release over nothing. */
+  function cancelDrag() {
+    if (!S.drag) return;
+    const d = S.drag;
+    S.drag = null;
+    if (marqueeEl) { marqueeEl.remove(); marqueeEl = null; }
+    if (S.hotPort) { S.hotPort.classList.remove('hot'); S.hotPort = null; }
+    editorEl.classList.remove('panning');
+    if (d.kind === 'noteresize' || (d.moved && (d.kind === 'node' || d.kind === 'note' || d.kind === 'frame'))) changed();
+    else if (d.kind === 'wire' && d.detached) changed();
+    drawWires();
+  }
+
   function onPointerMove(e) {
     if (!S.drag) return;
+    // no button still held: the release happened where we could not see it
+    if (e.buttons === 0) { cancelDrag(); return; }
     const d = S.drag;
     if (d.kind === 'pan') {
       S.pan.x = d.ox + (e.clientX - d.sx);
@@ -1752,6 +1772,10 @@ const Editor = (() => {
       editorEl.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', cancelDrag);
+      // focus lost mid-drag (native picker, alt-tab) ends the gesture too, so
+      // the box never gets a chance to strand itself
+      window.addEventListener('blur', cancelDrag);
       editorEl.addEventListener('wheel', onWheel, { passive: false });
       window.addEventListener('keydown', onKeyDown);
 

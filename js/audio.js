@@ -184,7 +184,11 @@ const WeftAudio = {
               e.src.connect(g);
             }).catch(() => { });
           };
-          window.addEventListener('pointerdown', e.arm, { once: true });
+          /* on pointerUP, not down: the picker is a native modal that eats the
+           * rest of the gesture, so arming on pointerdown opened it with the
+           * loom mid-drag. A release still counts as the user gesture the API
+           * demands, and the editor's own pointerup lands first. */
+          window.addEventListener('pointerup', e.arm, { once: true });
         }
       }
       return e;
@@ -347,7 +351,7 @@ const WeftAudio = {
       try { if (e.kind === 'osc' || e.kind === 'noise') e.main.stop(); } catch (err) { }
       try { if (e.srcNode) { e.srcNode.stop(); e.srcNode.disconnect(); } } catch (err) { }
       try { if (e.stream) e.stream.getTracks().forEach(t => t.stop()); } catch (err) { }
-      try { if (e.arm) window.removeEventListener('pointerdown', e.arm); } catch (err) { }
+      try { if (e.arm) window.removeEventListener('pointerup', e.arm); } catch (err) { }
       try { if (e.an) e.an.disconnect(); } catch (err) { }
       try { if (e.anL) e.anL.disconnect(); } catch (err) { }
       try { if (e.anR) e.anR.disconnect(); } catch (err) { }

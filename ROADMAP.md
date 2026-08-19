@@ -19,9 +19,30 @@ per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
 - [shipped v0.2] **Undo/redo** — coalescing snapshot stack, Ctrl+Z/Shift+Ctrl+Z/Ctrl+Y.
 - [shipped v0.2] Marquee (shift-drag) select; copy/paste of subgraphs as
   graph-JSON fragments with id-remap + auto-layout for coordinate-less patches.
+  *Fix v0.17.4 (2026-08-19), found by James while wiring Track In: a native
+  modal takes the pointer and swallows the `pointerup`, stranding the marquee
+  box on the loom forever. Two halves — Track In arms its share picker on
+  `pointerup` instead of `pointerdown`, so the picker no longer opens
+  mid-gesture; and `Editor.cancelDrag()` drops any gesture on `pointercancel`,
+  on window `blur`, or on a `pointermove` arriving with `e.buttons === 0`.
+  It drops rather than commits: no wire lands on wherever the cursor wandered,
+  and the selection is left alone. Covers file dialogs and permission prompts
+  too, not just the share picker.*
 - [shipped v0.9] **Share links** — Share button: graph → deflate-raw →
   base64url → `#w=` URL hash (plain-JSON `#wj=` fallback); opening the link
   restores the patch, previous work backed up. Zero-backend sharing.
+  *Update v0.17.4 (2026-08-19), from James pasting one into WhatsApp: the link
+  died at an underscore. base64url's `-`/`_` are URL-safe but not chat-safe —
+  linkifiers won't end a link on a trailing `_`, and WhatsApp reads `_…_` as
+  italics. Links are now `#w2=` = **pack → deflate-raw → base62**
+  (`#j2=` fallback), letters and digits only. The packer dictionaries the
+  repeated type and port names, collapses node ids to array position and drops
+  every JSON key — wire/note/group ids aren't carried, `Editor.setGraph`
+  reissues them. ~60% off the pre-compression JSON, **23% off the finished
+  link** across the corpus (worst case 6408 → 4872 chars) even after paying
+  base62's 0.8% density tax. Old `#w=`/`#wj=` links still open, never written.
+  base62 is O(n²) radix conversion; the biggest patch in the corpus is ~3 KB
+  deflated (~17 ms), so the simple version stands.*
 - [shipped v0.5] **GHX importer** (`tools/ghx-import.html`) — .ghx → Weft patch
   JSON; unmapped GH types become `?` placeholder nodes so imports double as gap
   reports (verified against all 7 demos in `Grasshopper Demos/`). "Weft opens
@@ -399,6 +420,12 @@ is now in, so any of these can be picked up in a workshop pass):
   **v0.17.1 trim**: 18 → 15 — one Superformula (the ember II), Oscilloscope
   retired, Hexa graph's dead vec/grid pruned, Iso-field's card wears a
   curated still (`EXAMPLE_META.img`).
+  **v0.17.4 add**: 15 → 16 — ***Figure visualizer*** (James, 2026-08-19), the
+  second *Audio input* example: a stick figure dancing to the computer's own
+  sound, each stereo channel driving its own bar and its own arm. It is the
+  corpus's argument that Spring is a physics engine — an arm hung off one is a
+  pendulum, a second Spring chasing the first is an elbow that whips on the
+  beat, and `math/max` against the upper-arm angle stops it hyperextending.
 
 ### Legibility pass — [next], James 2026-07-14
 
