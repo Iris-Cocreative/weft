@@ -462,7 +462,7 @@ TB with the inner control points at A + TA and B − TB, GH's reading, sampled
 to a 48-segment `poly`), **NURBS Curve** (`crv/nurbs` — `LM.bsplinePts`, a
 uniform B-spline by de Boor with a clamped knot vector when open and a
 wrapped control polygon when periodic; degree clamps to 1..min(7, n−1);
-degree 1 is the control polygon) and **Extend Curve** (`crv/extend` —
+degree 1 is the control polygon; sampling is ~96 points per *curve*, not per span — James's first test was four points at degree 3, a single span, and a per-span count drew it as a 12-gon) and **Extend Curve** (`crv/extend` —
 `LM.extendGeom`, L0/L1 px at either end, negative trims by arc length; lines
 and arcs stay their own kind, everything else is sampled and continued
 straight along its end tangents; closed curves pass through). Both new

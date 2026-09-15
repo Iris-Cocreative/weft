@@ -1900,7 +1900,7 @@ defNode('crv/nurbs', {
   compute: a => {
     const V = (a.V || []).filter(p => p && p.x !== undefined);
     if (V.length < 2) return {};
-    const pts = LM.bsplinePts(V, a.D, !!a.P, 12);
+    const pts = LM.bsplinePts(V, a.D, !!a.P);
     return { C: { kind: 'poly', pts, closed: !!a.P }, L: LM.polyLength(pts, !!a.P) };
   }
 });

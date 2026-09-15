@@ -825,12 +825,14 @@ const LM = {
      weights — what Grasshopper's NURBS Curve component builds). Open curves
      get a clamped knot vector so they start and end on the first and last
      control point; periodic ones wrap the control polygon and come back with
-     no seam. seg = samples per knot span. */
+     no seam. seg = samples per knot span; leave it out and the curve gets ~96
+     samples overall however few spans it has (four points at degree 3 is ONE
+     span — a fixed per-span count drew that as a 12-gon). */
   bsplinePts: (pts, deg, periodic, seg) => {
     const n = pts.length;
     if (n < 2) return pts.slice();
-    seg = LM.clamp(Math.floor(seg || 12), 1, 64);
     deg = LM.clamp(Math.floor(deg || 3), 1, periodic ? 7 : Math.min(7, n - 1));
+    seg = LM.clamp(Math.floor(seg || Math.ceil(96 / (periodic ? n : n - deg))), 1, 96);
     let P, knots, u0, u1;
     if (periodic) {
       P = pts.concat(pts.slice(0, deg));
