@@ -46,8 +46,10 @@ The proof is `patches/organic-nav-v2.md`: 92 flat nodes → one 28-node cluster.
 
 Still open from that harvest:
 
-- **Bezier** `crv/bezier` — needs the `path` kind (phase 5). Until then the
-  nav's necks are circular fillets. (Join Curves shipped in v0.11.)
+- ~~**Bezier** `crv/bezier`~~ — shipped v0.17.5 as **Bezier Span** (sampled
+  to a `poly`, GH's control-point reading of the tangents). A `path` kind
+  (phase 5) would make it exact under transforms; the nav's necks can use it
+  now. (Join Curves shipped in v0.11.)
 - **Active-index idiom** — "index of the item whose trigger last fired" costs 6
   nodes (clicks × indices → Mass Addition → Sample & Hold). Candidate node, but
   per principle 7 wait for a second patch to pay the same cost before adding it.
@@ -89,6 +91,17 @@ Still open from that harvest:
 
 ### Curve *(the geometry pass shipped in v0.11)*
 
+**v0.17.5 (2026-09-15), James's harvest from a wiring session:** **End Points**
+`crv/endpoints` (S/E, closed curves return the seam twice), **Line to Vector**
+`vec/line2vec` (start → end chord of any curve, unitize + length — the
+"turn this line into a vector" question with no detour through Vector 2Pt),
+**Bezier Span** `crv/bezier` (A, TA, B, TB — inner control points at A + TA
+and B − TB, GH's reading), **NURBS Curve** `crv/nurbs` (uniform B-spline by de
+Boor, clamped when open, wrapped when periodic; degree 1 is the control
+polygon), **Extend Curve** `crv/extend` (L0/L1 px, negative trims; lines and
+arcs stay exact, everything else is sampled and continued along its tangent).
+Engine helpers: `LM.curveEnds`, `LM.bezierPts`, `LM.bsplinePts`, `LM.extendGeom`.
+
 Curve Intersection, Curve Closest Point, Point In Curve, Curve Length, Area,
 Bounding Box, Convex Hull, Join Curves, Trim, Fillet and Region Boolean all
 shipped together with the engine primitive layer they sit on (`segInt`,
@@ -98,7 +111,11 @@ question was answered **written out**, per invariant #7.
 
 Still open here:
 
-- **Bezier** `crv/bezier` — waits on the `path` kind (phase 5).
+- ~~**Bezier** `crv/bezier`~~ — shipped v0.17.5 (see the Curve harvest above).
+  An exact `path` kind is still the phase-5 upgrade.
+- **Extend Curve modes** — v0.17.5 extends straight along the end tangents
+  (arcs keep curving). GH's *arc* and *smooth* modes are the follow-up if a
+  patch asks for them.
 - **Holes.** `clipPoly` cannot express a ring, so Region Boolean's difference
   returns A unchanged when the cutter lands wholly inside it. A `holes` field on
   the `poly` kind (drawn with a second sub-path, `evenodd` fill) is the honest

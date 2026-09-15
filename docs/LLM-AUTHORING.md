@@ -183,6 +183,7 @@ and/or/xor/not).
 | `vec/grid` | P S:spacing W H | P:point C:col R:row K:colour-class | values.iso for iso lattice |
 | `vec/vecxy` | X Y | V:vector | |
 | `vec/vec2pt` | A B U:unit | V:vector L | |
+| `vec/line2vec` | C:geometry U:unit | V:vector L | start → end of any curve; a Line becomes the vector it draws |
 | `vec/pt2vec` | P | V | · `vec/unit` V→V · `vec/amp` V A→V · `vec/reverse` V→V |
 | `vec/dot` | A B | D:number | A·B — 0 means perpendicular |
 | `vec/cross` | A B | C:number | 2D cross is a scalar (the perp-dot) |
@@ -198,6 +199,8 @@ and/or/xor/not).
 | `crv/arc` | P R A0 A1 | radians |
 | `crv/polyline` | V:point (list-in) C:closed | straight segments through the list |
 | `crv/interp` | V:point (list-in) C:closed | spline through the list |
+| `crv/nurbs` | V:point (list-in) D=3:degree P:periodic | B-spline *toward* the points (also emits L) |
+| `crv/bezier` | A TA:vector B TB:vector | one cubic span, handles at A+TA and B−TB (also emits L) |
 | `crv/hull` | P:point (list-in) | the convex outline round the points |
 
 ### Curve — sampling, analysis, reshaping
@@ -212,6 +215,8 @@ means the same place on the curve in every other.
 | `crv/closest` | C P:point | P:point T D:distance | the attractor engine |
 | `crv/incurve` | C P:point | B:bool | closed curves only |
 | `crv/length` | C | L | · `crv/area` C → A:number C:centroid |
+| `crv/endpoints` | C | S:point E:point | closed curves: both are the seam |
+| `crv/extend` | C L0=20 L1=20 | C | px at start/end, negative trims; lines and arcs stay exact |
 | `crv/bbox` | G (list-in) | B:rect C:centre W H | `values.mode` `'each'`\|`'all'` |
 | `crv/offset` | C D=10 | C | +D grows closed curves outward; circles/arcs/lines stay exact, others → poly |
 | `crv/join` | C (list-in) T=1 | C | chains curves whose ends meet within T px |

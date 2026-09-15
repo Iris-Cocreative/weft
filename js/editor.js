@@ -1255,8 +1255,9 @@ const Editor = (() => {
   let qaPos = { x: 0, y: 0 }, qaIndex = 0, qaItems = [], qaNum = null;
 
   /* typing a number instead of a node name offers a ready-made slider:
-   * value = what you typed, max = the next power of ten (66 → 0–100,
-   * 6.6 → 0–10 with one decimal), integers get integer rounding;
+   * value = what you typed, max = the power of ten that holds it (66 → 0–100,
+   * 6.6 → 0–10 with one decimal, 100 → 0–100 — an exact power of ten is its
+   * own ceiling, not a step below the next), integers get integer rounding;
    * negative numbers get a symmetric ±range so there's room to swing */
   function sliderSpec(q) {
     if (!/^-?(\d+\.?\d*|\.\d+)$/.test(q)) return null;
@@ -1270,8 +1271,7 @@ const Editor = (() => {
     if (!decimals && num >= 0 && num <= 12 && App.setting('smallint-sliders', true))
       return { min: 0, max: 12, value: num, mode: 'int' };
     const mag = Math.abs(num);
-    let max = mag ? Math.pow(10, Math.ceil(Math.log10(mag))) : 10;
-    if (max <= mag) max *= 10; // an exact power of ten still gets headroom
+    const max = mag ? Math.pow(10, Math.ceil(Math.log10(mag))) : 10;
     const spec = { min: num < 0 ? -max : 0, max, value: num, mode: decimals ? 'float' : 'int' };
     if (decimals) spec.prec = decimals;
     return spec;

@@ -268,6 +268,16 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 
+- [shipped v0.17.5, 2026-09-15] **Wiring-session harvest** (James, five
+  nodes + two editor fixes in one sitting): End Points, Line to Vector,
+  Bezier Span, NURBS Curve, Extend Curve (see NODE-LIBRARY › Curve). Quick-add
+  `100` now makes a 0–100 slider, not 0–1000 — an exact power of ten is its
+  own ceiling (the old "headroom" bump only made sense for 66 → 100, which
+  still works). Card titles truncate with an ellipsis instead of pushing the
+  preview eye off a fixed-width card; every def was measured in Chrome and the
+  six that overflowed (Curve Intersection 168 → 216, Region Boolean → 196,
+  Bounding Box → 184, Divide Curve / Vector Scope → 176, Harmonograph → 172)
+  got wider cards rather than shorter names.
 - [shipped v0.17, 2026-08-09] **The polish pass** (James's whole-app
   test-drive, six phases): Hairline slider (design doc 1a — number-first,
   ticked 2px rule, edge-resize on selection into `values.w`); angle + 0–12

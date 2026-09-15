@@ -30,7 +30,12 @@ geometry that reaches no Draw node is invisible.
 - **Regular shapes** — `crv/circle` `crv/polygon(N sides)` `crv/rect`
   `crv/ellipse` `crv/arc(A0,A1 radians)`.
 - **Free curve through points** — points list → `crv/interp(V, C:closed)`
-  (spline) or `crv/polyline(V)` (straight).
+  (spline) or `crv/polyline(V)` (straight). `crv/nurbs(V, D, P)` steers
+  *toward* the points instead (control polygon, GH's NURBS Curve);
+  `crv/bezier(A, TA, B, TB)` is a single cubic span with tangent handles.
+- **Line → vector / endpoints** — `vec/line2vec(C)` gives the start → end
+  vector (and length) of any curve; `crv/endpoints(C)` gives S and E as points.
+  `crv/extend(C, L0, L1)` lengthens (or, negative, trims) either end.
 - **Rose / parametric curve from math** — `sets/range(A:0 B:6.2832 N:256 → R)`
   as θ → per-angle math (`math/expr` or `meta/js`) → `vec/polar` or
   `vec/construct` → `crv/polyline(V, C:true)`.

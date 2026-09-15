@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.4 — share links are chat-safe and 23% shorter, the stranded-marquee bug is gone, and the corpus is 16 with *Figure visualizer*.** v0.1 (2026-07-12): editor,
+**Status: v0.17.5 — five curve/vector nodes from a wiring session (End Points, Line to Vector, Bezier Span, NURBS Curve, Extend Curve), the 0–100 slider fix and no more titles overflowing their cards.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,29 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.17.5 (2026-09-15): **a wiring-session harvest.** James asked how to turn a
+line into a vector and the honest answer was "re-feed the endpoints into
+Vector 2Pt" — so now there is **End Points** (`crv/endpoints`, S/E of any
+curve, exact for lines/arcs, first/last sample otherwise, the seam twice for
+closed curves) and **Line to Vector** (`vec/line2vec`, start → end chord with
+unitize + length), both on one `LM.curveEnds` helper. Three Grasshopper
+curve primitives came with them: **Bezier Span** (`crv/bezier` — A, TA, B,
+TB with the inner control points at A + TA and B − TB, GH's reading, sampled
+to a 48-segment `poly`), **NURBS Curve** (`crv/nurbs` — `LM.bsplinePts`, a
+uniform B-spline by de Boor with a clamped knot vector when open and a
+wrapped control polygon when periodic; degree clamps to 1..min(7, n−1);
+degree 1 is the control polygon) and **Extend Curve** (`crv/extend` —
+`LM.extendGeom`, L0/L1 px at either end, negative trims by arc length; lines
+and arcs stay their own kind, everything else is sampled and continued
+straight along its end tangents; closed curves pass through). Both new
+curves are sampled polys — a `path` kind stays the phase-5 upgrade. Two
+editor fixes rode along: quick-add `100` made a 0–1000 slider because an
+exact power of ten got "headroom" — it is now its own ceiling (66 → 0–100
+unchanged); and node titles truncate with an ellipsis (`min-width: 0` on the
+flex child) instead of shoving the preview eye past the card edge. Every def
+was measured in Chrome — six fixed-width cards overflowed (Curve
+Intersection by 43px) and got wider rather than renamed.
 
 v0.17.4 (2026-08-19): **two bugs James hit in one sitting, both from the same
 blind spot — the browser taking something away mid-gesture.** (1) *Stranded

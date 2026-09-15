@@ -1670,6 +1670,20 @@ defNode('vec/vec2pt', {
   }
 });
 
+defNode('vec/line2vec', {
+  title: 'Line to Vector', cat: 'Vector', desc: 'The vector from the start of curve C to its end (optionally unitized) — a Line becomes the vector it draws',
+  inputs: [{ name: 'C', type: 'geometry' }, { name: 'U', type: 'bool', default: false, label: 'unitize' }],
+  outputs: [{ name: 'V', type: 'vector' }, { name: 'L', type: 'number', label: 'length' }],
+  compute: a => {
+    const e = LM.curveEnds(a.C);
+    if (!e) return {};
+    let x = e.e.x - e.s.x, y = e.e.y - e.s.y;
+    const L = Math.hypot(x, y);
+    if (a.U && L > 0) { x /= L; y /= L; }
+    return { V: { x, y }, L };
+  }
+});
+
 defNode('vec/amp', {
   title: 'Amplitude', cat: 'Vector', desc: 'Scale vector V to length A',
   inputs: [{ name: 'V', type: 'vector', default: { x: 1, y: 0 } }, { name: 'A', type: 'number', default: 1, label: 'length' }],
@@ -1859,8 +1873,40 @@ defNode('crv/interp', {
   compute: a => ({ C: { kind: 'spline', pts: (a.V || []).filter(p => p && p.x !== undefined), closed: !!a.C } })
 });
 
+defNode('crv/bezier', {
+  title: 'Bezier Span', cat: 'Curve',
+  desc: 'One cubic bezier from A to B. TA and TB are the tangent handles — the inner control points sit at A + TA and B − TB, so a longer vector pulls harder',
+  inputs: [
+    { name: 'A', type: 'point', default: { x: -100, y: 0 }, label: 'start' },
+    { name: 'TA', type: 'vector', default: { x: 80, y: -120 }, label: 'start tangent' },
+    { name: 'B', type: 'point', default: { x: 100, y: 0 }, label: 'end' },
+    { name: 'TB', type: 'vector', default: { x: 80, y: 120 }, label: 'end tangent' }],
+  outputs: [{ name: 'C', type: 'geometry' }, { name: 'L', type: 'number', label: 'length' }],
+  compute: a => {
+    const pts = LM.bezierPts(a.A, LM.vadd(a.A, a.TA), LM.vsub(a.B, a.TB), a.B, 48);
+    return { C: { kind: 'poly', pts, closed: false }, L: LM.polyLength(pts, false) };
+  }
+});
+
+defNode('crv/nurbs', {
+  title: 'NURBS Curve', cat: 'Curve',
+  desc: 'B-spline steered by control points V (the curve is pulled toward them, not through them — use Interpolate for that). Degree 1 is the polyline itself, 3 is the classic smooth curve. Periodic closes it without a seam',
+  inputs: [
+    { name: 'V', type: 'point', label: 'control points' },
+    { name: 'D', type: 'number', default: 3, label: 'degree' },
+    { name: 'P', type: 'bool', default: false, label: 'periodic' }],
+  outputs: [{ name: 'C', type: 'geometry' }, { name: 'L', type: 'number', label: 'length' }],
+  listInputs: ['V'],
+  compute: a => {
+    const V = (a.V || []).filter(p => p && p.x !== undefined);
+    if (V.length < 2) return {};
+    const pts = LM.bsplinePts(V, a.D, !!a.P, 12);
+    return { C: { kind: 'poly', pts, closed: !!a.P }, L: LM.polyLength(pts, !!a.P) };
+  }
+});
+
 defNode('crv/divide', {
-  title: 'Divide Curve', cat: 'Curve', width: 168,
+  title: 'Divide Curve', cat: 'Curve', width: 176,
   desc: 'Division points along curve C, evenly by arc length. N is the segment count, or the spacing in px in by-length mode. V is the unit tangent — T is already taken by the parameters, GH’s letter or not',
   inputs: [{ name: 'C', type: 'geometry' }, { name: 'N', type: 'number', default: 10, label: 'segments (px in by-length mode)' }],
   outputs: [
@@ -1911,7 +1957,7 @@ defNode('crv/offset', {
 });
 
 defNode('crv/intersect', {
-  title: 'Curve Intersection', cat: 'Curve', width: 168,
+  title: 'Curve Intersection', cat: 'Curve', width: 216,
   desc: 'Where two curves cross — points P plus the parameter on each curve (T1, T2), ready to feed back into Evaluate Curve. In self mode C2 is ignored and the node finds where C1 crosses itself',
   inputs: [{ name: 'C1', type: 'geometry' }, { name: 'C2', type: 'geometry' }],
   outputs: [
@@ -1961,6 +2007,27 @@ defNode('crv/length', {
   compute: a => a.C === undefined ? {} : ({ L: LM.curveLength(a.C) })
 });
 
+defNode('crv/endpoints', {
+  title: 'End Points', cat: 'Curve', desc: 'Start point S and end point E of curve C. A closed curve starts and ends at its seam, so both are the same point',
+  inputs: [{ name: 'C', type: 'geometry' }],
+  outputs: [{ name: 'S', type: 'point', label: 'start' }, { name: 'E', type: 'point', label: 'end' }],
+  compute: a => {
+    const e = LM.curveEnds(a.C);
+    return e ? { S: e.s, E: e.e } : {};
+  }
+});
+
+defNode('crv/extend', {
+  title: 'Extend Curve', cat: 'Curve',
+  desc: 'Lengthen curve C by L0 px at its start and L1 px at its end, straight along the end tangents (arcs keep curving). Negative lengths trim instead. Closed curves have no ends and pass through untouched',
+  inputs: [
+    { name: 'C', type: 'geometry' },
+    { name: 'L0', type: 'number', default: 20, label: 'start length' },
+    { name: 'L1', type: 'number', default: 20, label: 'end length' }],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  compute: a => a.C === undefined ? {} : ({ C: LM.extendGeom(a.C, a.L0, a.L1) })
+});
+
 defNode('crv/area', {
   title: 'Area', cat: 'Curve', desc: 'Enclosed area of curve C in px² and its area centroid. Open curves are treated as if closed',
   inputs: [{ name: 'C', type: 'geometry' }],
@@ -1976,7 +2043,7 @@ defNode('crv/area', {
 });
 
 defNode('crv/bbox', {
-  title: 'Bounding Box', cat: 'Curve', width: 168,
+  title: 'Bounding Box', cat: 'Curve', width: 184,
   desc: 'Axis-aligned bounds of geometry G — one box per item, or a single box around the whole list',
   inputs: [{ name: 'G', type: 'geometry' }],
   outputs: [
@@ -2117,7 +2184,7 @@ defNode('crv/fillet', {
 });
 
 defNode('crv/region', {
-  title: 'Region Boolean', cat: 'Curve', width: 176,
+  title: 'Region Boolean', cat: 'Curve', width: 196,
   desc: 'Union, intersection or difference (A minus B) of two closed regions. A cutter sitting entirely inside A carves a real hole (one level — a further boolean on the result sees only its outer outline)',
   inputs: [{ name: 'A', type: 'geometry' }, { name: 'B', type: 'geometry' }],
   outputs: [{ name: 'C', type: 'geometry' }],
@@ -2454,7 +2521,7 @@ defNode('disp/trace', {
 });
 
 defNode('disp/harmonograph', {
-  title: 'Harmonograph', cat: 'Display', width: 168,
+  title: 'Harmonograph', cat: 'Display', width: 172,
   desc: 'The Victorian drawing machine, and the Vector Scope’s math twin — two damped pendulums (frequencies X and Y) swing a pen for T seconds: integer ratios give Lissajous figures, damping D nests them inward, phase H rotates the figure (wire Time for a slow spin). Pure numbers, no sound.',
   inputs: [
     { name: 'X', type: 'number', default: 3, label: 'x pendulum frequency' },
@@ -2927,7 +2994,7 @@ defNode('audio/path', {
 });
 
 defNode('audio/xyscope', {
-  title: 'Vector Scope', cat: 'Audio', width: 168,
+  title: 'Vector Scope', cat: 'Audio', width: 176,
   desc: 'XY oscilloscope — signal X deflects the beam horizontally, Y vertically, plotting sound against sound: harmonic ratios draw Lissajous roses and knots. Taps only (never routed onward); ±1 fills the S×S square at P.',
   inputs: [
     { name: 'X', type: 'audio', label: 'horizontal' },

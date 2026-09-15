@@ -1164,6 +1164,20 @@ Point lattice filling a W×H region, square or isometric — wire Viewport into 
 
 Node values (`values` keys, not ports): `{"iso":true}`
 
+### `vec/line2vec` — Line to Vector
+
+The vector from the start of curve C to its end (optionally unitized) — a Line becomes the vector it draws
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| U | bool | `false` | unitize |
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+| L | number | length |
+
 ### `vec/polar` — Point Polar
 
 Point at angle A (radians) and radius R from origin O
@@ -1271,6 +1285,22 @@ Enclosed area of curve C in px² and its area centroid. Open curves are treated 
 |---|---|---|
 | A | number | area |
 | C | point | centroid |
+
+### `crv/bezier` — Bezier Span
+
+One cubic bezier from A to B. TA and TB are the tangent handles — the inner control points sit at A + TA and B − TB, so a longer vector pulls harder
+
+| in | type | default | note |
+|---|---|---|---|
+| A | point | `{"x":-100,"y":0}` | start |
+| TA | vector | `{"x":80,"y":-120}` | start tangent |
+| B | point | `{"x":100,"y":0}` | end |
+| TB | vector | `{"x":80,"y":120}` | end tangent |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+| L | number | length |
 
 ### `crv/bbox` — Bounding Box
 
@@ -1390,6 +1420,19 @@ Ellipse at P with radii RX, RY, rotation A
 |---|---|---|
 | C | geometry |  |
 
+### `crv/endpoints` — End Points
+
+Start point S and end point E of curve C. A closed curve starts and ends at its seam, so both are the same point
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+
+| out | type | note |
+|---|---|---|
+| S | point | start |
+| E | point | end |
+
 ### `crv/eval` — Evaluate Curve
 
 Point on curve C at parameter T (0..1 by arc length; wraps on closed curves), with the unit tangent V and the normal N beside it
@@ -1404,6 +1447,20 @@ Point on curve C at parameter T (0..1 by arc length; wraps on closed curves), wi
 | P | point |  |
 | V | vector | unit tangent |
 | N | vector | unit normal (tangent turned +90°) |
+
+### `crv/extend` — Extend Curve
+
+Lengthen curve C by L0 px at its start and L1 px at its end, straight along the end tangents (arcs keep curving). Negative lengths trim instead. Closed curves have no ends and pass through untouched
+
+| in | type | default | note |
+|---|---|---|---|
+| C | geometry |  |  |
+| L0 | number | `20` | start length |
+| L1 | number | `20` | end length |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
 
 ### `crv/fillet` — Fillet
 
@@ -1457,6 +1514,21 @@ Line between two points
 | out | type | note |
 |---|---|---|
 | C | geometry |  |
+
+### `crv/nurbs` — NURBS Curve
+
+B-spline steered by control points V (the curve is pulled toward them, not through them — use Interpolate for that). Degree 1 is the polyline itself, 3 is the classic smooth curve. Periodic closes it without a seam
+
+| in | type | default | note |
+|---|---|---|---|
+| V | point |  | control points · receives whole list |
+| D | number | `3` | degree |
+| P | bool | `false` | periodic |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+| L | number | length |
 
 ### `crv/offset` — Offset Curve
 
@@ -2494,4 +2566,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-181 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+186 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

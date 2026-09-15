@@ -791,6 +791,119 @@ const LM = {
     return LM.polyLength(P.pts, P.closed);
   },
 
+  /* start and end point of a curve — exact for the analytic kinds, first/last
+     sample otherwise. A closed curve starts and ends at its seam, so both are
+     the same point. */
+  curveEnds: g => {
+    if (!g) return null;
+    switch (g.kind) {
+      case 'line': return { s: { x: g.a.x, y: g.a.y }, e: { x: g.b.x, y: g.b.y } };
+      case 'arc': return { s: LM.curvePoint(g, 0), e: LM.curvePoint(g, 1) };
+      case 'circle': return { s: LM.curvePoint(g, 0), e: LM.curvePoint(g, 0) };
+      default: {
+        const P = LM.toPoly(g, 96);
+        if (!P.pts.length) return null;
+        const s = P.pts[0], e = P.closed ? s : P.pts[P.pts.length - 1];
+        return { s: { x: s.x, y: s.y }, e: { x: e.x, y: e.y } };
+      }
+    }
+  },
+
+  /* one cubic bezier span through control points p0..p3, sampled into seg
+     segments (seg + 1 points, both ends exact) */
+  bezierPts: (p0, p1, p2, p3, seg) => {
+    seg = LM.clamp(Math.floor(seg || 32), 1, 512);
+    const out = [];
+    for (let i = 0; i <= seg; i++) {
+      const t = i / seg, u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+      out.push({ x: a * p0.x + b * p1.x + c * p2.x + d * p3.x, y: a * p0.y + b * p1.y + c * p2.y + d * p3.y });
+    }
+    return out;
+  },
+
+  /* uniform B-spline of degree deg over control points pts (de Boor, no
+     weights — what Grasshopper's NURBS Curve component builds). Open curves
+     get a clamped knot vector so they start and end on the first and last
+     control point; periodic ones wrap the control polygon and come back with
+     no seam. seg = samples per knot span. */
+  bsplinePts: (pts, deg, periodic, seg) => {
+    const n = pts.length;
+    if (n < 2) return pts.slice();
+    seg = LM.clamp(Math.floor(seg || 12), 1, 64);
+    deg = LM.clamp(Math.floor(deg || 3), 1, periodic ? 7 : Math.min(7, n - 1));
+    let P, knots, u0, u1;
+    if (periodic) {
+      P = pts.concat(pts.slice(0, deg));
+      knots = []; for (let i = 0; i <= P.length + deg; i++) knots.push(i);
+      u0 = deg; u1 = P.length;
+    } else {
+      P = pts;
+      knots = [];
+      for (let i = 0; i <= deg; i++) knots.push(0);
+      for (let i = 1; i < n - deg; i++) knots.push(i);
+      for (let i = 0; i <= deg; i++) knots.push(n - deg);
+      u0 = 0; u1 = n - deg;
+    }
+    const spans = u1 - u0, N = spans * seg, out = [];
+    const last = periodic ? N - 1 : N;
+    for (let s = 0; s <= last; s++) {
+      const u = u0 + spans * s / N;
+      // knot span k with knots[k] <= u < knots[k+1] (the end lands in the last span)
+      let k = Math.min(Math.floor(u) + (periodic ? 0 : deg), P.length - 1);
+      const d = [];
+      for (let j = 0; j <= deg; j++) d.push(P[j + k - deg]);
+      for (let r = 1; r <= deg; r++) for (let j = deg; j >= r; j--) {
+        const i = j + k - deg, den = knots[i + deg + 1 - r] - knots[i];
+        const al = den ? (u - knots[i]) / den : 0;
+        d[j] = { x: (1 - al) * d[j - 1].x + al * d[j].x, y: (1 - al) * d[j - 1].y + al * d[j].y };
+      }
+      out.push(d[deg]);
+    }
+    return out;
+  },
+
+  /* extend (or, with negative lengths, shorten) an open curve at its start
+     by L0 and its end by L1. Lines and arcs stay exact; everything else is
+     sampled and continued straight along its end tangents. Closed curves
+     have no ends and come back untouched. */
+  extendGeom: (g, L0, L1) => {
+    if (!g || LM.isClosedGeom(g)) return g;
+    L0 = L0 || 0; L1 = L1 || 0;
+    if (!L0 && !L1) return g;
+    if (g.kind === 'line') {
+      const d = LM.vunit(LM.vsub(g.b, g.a));
+      return { kind: 'line', a: LM.vsub(g.a, LM.vmul(d, L0)), b: LM.vadd(g.b, LM.vmul(d, L1)) };
+    }
+    if (g.kind === 'arc' && g.r) {
+      const s = g.a1 < g.a0 ? -1 : 1;
+      return { kind: 'arc', cx: g.cx, cy: g.cy, r: g.r, a0: g.a0 - s * L0 / Math.abs(g.r), a1: g.a1 + s * L1 / Math.abs(g.r) };
+    }
+    const P = LM.toPoly(g, 96);
+    if (P.pts.length < 2) return g;
+    /* trim: walk L px of arc length in from one end, then extend by the rest */
+    const cut = (pts, L) => {
+      let left = L;
+      while (pts.length > 1 && left > 0) {
+        const seg = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+        if (seg > left) { pts[0] = LM.vlerp(pts[0], pts[1], left / seg); left = 0; }
+        else { pts.shift(); left -= seg; }
+      }
+      return pts;
+    };
+    const push = (pts, L) => {
+      if (pts.length < 2) return pts;
+      const d = LM.vunit(LM.vsub(pts[0], pts[1]));
+      pts.unshift(LM.vadd(pts[0], LM.vmul(d, L)));
+      return pts;
+    };
+    let pts = P.pts.map(p => ({ x: p.x, y: p.y }));
+    pts = L0 < 0 ? cut(pts, -L0) : L0 > 0 ? push(pts, L0) : pts;
+    pts.reverse();
+    pts = L1 < 0 ? cut(pts, -L1) : L1 > 0 ? push(pts, L1) : pts;
+    pts.reverse();
+    return { kind: 'poly', pts: pts, closed: false };
+  },
+
   /* ---------- affine transforms: m = [a,b,c,d,e,f], canvas convention ---------- */
   matIdentity: () => [1, 0, 0, 1, 0, 0],
   matMove: (dx, dy) => [1, 0, 0, 1, dx, dy],

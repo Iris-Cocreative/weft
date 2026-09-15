@@ -347,7 +347,10 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   cursor: grab;
 }
 .node-head:active { cursor: grabbing; }
-.node-head .title { white-space: nowrap; font-size: 15px; color: var(--white-100); }
+.node-head .title {
+  white-space: nowrap; font-size: 15px; color: var(--white-100);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;   /* a long label truncates instead of pushing the eye off the card */
+}
 .node-head .head-gap { flex: 1; min-width: 4px; }
 
 .node-head .icon {
