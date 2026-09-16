@@ -10,12 +10,12 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 
 | # | Decision | Locked | How |
 |---|---|---|---|
-| D1 | **Node silhouette** — one uniform card for every role: 13px radius, 1px `dark/300` border, icon + title + preview-eye header, body band with inputs left / outputs right (outputs settle to the bottom edge). Four params are **chromeless**: Boolean Toggle, Number Slider, Colour Swatch, Note Pad — the control *is* the node, ports overlay its edges. | 2026-07-13 | designed in Figma (supersedes the D1 option board) |
-| D2 | **Category colour** — a gradient wash: category colour at 40% alpha entering from the card's left edge, fading out by 50% width, over `dark/200`. The header icon is stroked in the category colour. No header tint, no edge stripe. | 2026-07-13 | Figma |
-| D3 | **Port encoding** — colour per type only (no shapes yet); dots grow to 13px with a 2px canvas-colour ring. Type palette rebuilt (see tokens). | 2026-07-13 | Figma |
-| D4 | **Icon style** — 27×27 grid, 1px stroke, geometric-literal (a clock for Time, a hexagon for Polygon), stroked in the node's category colour via `currentColor`. Partial coverage is fine: nodes without a glyph fall back to the small category dot. | 2026-07-13 | Figma (12 drawn so far) |
+| D1 | **Node silhouette** — one uniform card for every role: 13px radius, 1px `dark/300` border, icon + title + preview-eye header, body band with inputs left / outputs right (outputs settle to the bottom edge). Four params are **chromeless**: Boolean Toggle, Number Slider, Color Swatch, Note Pad — the control *is* the node, ports overlay its edges. | 2026-07-13 | designed in Figma (supersedes the D1 option board) |
+| D2 | **Category color** — a gradient wash: category color at 40% alpha entering from the card's left edge, fading out by 50% width, over `dark/200`. The header icon is stroked in the category color. No header tint, no edge stripe. | 2026-07-13 | Figma |
+| D3 | **Port encoding** — color per type only (no shapes yet); dots grow to 13px with a 2px canvas-color ring. Type palette rebuilt (see tokens). | 2026-07-13 | Figma |
+| D4 | **Icon style** — 27×27 grid, 1px stroke, geometric-literal (a clock for Time, a hexagon for Polygon), stroked in the node's category color via `currentColor`. Partial coverage is fine: nodes without a glyph fall back to the small category dot. | 2026-07-13 | Figma (12 drawn so far) |
 | D6 | **Typography** — UI: Neue Kabel (Book for titles at 15–16px, Regular for port labels at 12px), falling back to Inter. Values & readouts: Consolas 11px. Output readouts inline in the out-row at `white/40`. | 2026-07-13 | Figma |
-| D5 | Wire language — carried over unchanged (colour = source type, 2px). Trigger/list ideas still open. | — | pending |
+| D5 | Wire language — carried over unchanged (color = source type, 2px). Trigger/list ideas still open. | — | pending |
 | D7 | Cloth & atmosphere — current dark canvas kept. | — | pending |
 | D8 | Brand mark — deferred to the Phase 6 naming decision. | — | pending |
 
@@ -36,7 +36,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | `Primary` | `#2dd4bf` | selection, slider fill/thumb/value, toggle |
 | eye-on | `#14c50e` | preview-eye when showing |
 
-### Category colours (`Node Groups/*`, → `CATS` in nodes.js)
+### Category colors (`Node Groups/*`, → `CATS` in nodes.js)
 
 | category | hex |
 |---|---|
@@ -50,10 +50,10 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | Transform | `#ff6767` |
 | Display | `#f009fc` |
 | Meta | `#8494ad` *(provisional slate — not yet through Figma; clusters also stack a card-shadow to say "there's more inside")* |
-| Audio | `#ff36a3` *(code-side decision 2026-07-16, not yet through Figma: "signal pink" — the open hue slot; replaced the provisional teal `#0fb5ba`, which sat on top of Params. Rose maximizes wire contrast against number-blue, the wire most often beside audio. CRT-phosphor teal `#5eead4` stays as the default beam colour on Scope / Vector Scope / Cymatics — instrument screens, not category identity)* |
+| Audio | `#ff36a3` *(code-side decision 2026-07-16, not yet through Figma: "signal pink" — the open hue slot; replaced the provisional teal `#0fb5ba`, which sat on top of Params. Rose maximizes wire contrast against number-blue, the wire most often beside audio. CRT-phosphor teal `#5eead4` stays as the default beam color on Scope / Vector Scope / Cymatics — instrument screens, not category identity)* |
 | 3D | `#00b8d4` **awaiting James / Figma** *(code draft 2026-07-30: cyan was the remaining open space on the wheel. Deliberately clear of Params teal `#2dd4bf` and of the geometry wire `#7057ff`, which runs into every 3D node. The category glyph — an isometric cube with its top face lit — is a code draft too, in `WEFT_CAT_ICONS`, not yet in Figma.)* |
 
-### Type colours (`Line Types/*`, → `TYPE_COLORS` in nodes.js — ports AND wires)
+### Type colors (`Line Types/*`, → `TYPE_COLORS` in nodes.js — ports AND wires)
 
 | type | hex |
 |---|---|
@@ -72,9 +72,9 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 ## Card anatomy (reference: Figma "Node Card" component / the Polygon instance)
 
 - **Card**: min 150px wide, radius 13, border 1px `dark/300`, drop shadow, background = `linear-gradient(90deg, cat 40% → transparent 50%)` over `dark/200`.
-- **Header**: padding 5px (9px right), 27px icon slot (glyph in category colour, category dot as fallback), title 15px `white/100`, spacer, 13px preview-eye (green shown / dim hidden) on geometry-producing nodes.
+- **Header**: padding 5px (9px right), 27px icon slot (glyph in category color, category dot as fallback), title 15px `white/100`, spacer, 13px preview-eye (green shown / dim hidden) on geometry-producing nodes.
 - **Body**: `rgba(21,27,41,.7)` band, radius 12 bottom. Two columns: inputs stack top-left (gap 4), outputs stack bottom-right. Rows 19px min-height.
-- **Ports**: 13px dots, type colour, 2px `dark/100` ring, centered on the card edge (±7px overhang).
+- **Ports**: 13px dots, type color, 2px `dark/100` ring, centered on the card edge (±7px overhang).
 - **Fields**: 42px wide, `dark/150` bg, 1px `dark/400`, radius 3, Consolas 11 `white/80`. Hidden when the input is wired.
 - **Readouts**: per-output, inline, Consolas 11 `white/40` (`LM.fmt` first item + ×count).
 - **Selected**: border `Primary` + 7.5px glow at 33%. **Error**: same shape in `#ff3b41`.
@@ -95,7 +95,7 @@ a wrapping variant (`.seg.wrap`) for the longer labels.
 
 Toggle (31×52 vertical pill, knob slides down = on) · Slider (min/max corners,
 ruler-tick track, teal fill-to-thumb, value below in Primary) · Swatch (36px
-colour circle, alpha ghost-field below) · Note Pad (dark/100 sheet, Consolas).
+color circle, alpha ghost-field below) · Note Pad (dark/100 sheet, Consolas).
 All drag as nodes (click-vs-drag distinguished by a 4px movement threshold) and
 keep their ports overlaying the widget edges.
 

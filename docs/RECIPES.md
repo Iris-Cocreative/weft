@@ -53,13 +53,13 @@ geometry that reaches no Draw node is invisible.
   both halves.
 - **Kaleidoscope / rosette / mandala ring** — `xf/kaleido(G, N, M, C → G, K)`:
   the whole input (all wired items) lands in every one of N wedges, alternates
-  mirrored when M is on. Keep the motif off centre (`xf/move` first) or the
-  copies coincide; `K/N → disp/hsl(H)` colours by wedge; rotate the motif with
+  mirrored when M is on. Keep the motif off center (`xf/move` first) or the
+  copies coincide; `K/N → disp/hsl(H)` colors by wedge; rotate the motif with
   Time *before* the node and mirrored wedges counter-rotate into each other.
   M off = plain rotational symmetry. Example: *Rosette*.
 - **Bring in a logo / drawing** — `params/svg` (Vector In): the human clicks
-  "load svg…" on the node; outlines come out as polylines centred on (0,0)
-  scaled to S px, with per-path fill F and stroke K colours for Draw. From
+  "load svg…" on the node; outlines come out as polylines centered on (0,0)
+  scaled to S px, with per-path fill F and stroke K colors for Draw. From
   there it is ordinary geometry — offset it, divide it, extrude it, kaleido it.
 - **A row or field of identical copies** — `xf/tile(G, V1, N1, V2, N2 → G, I, J)`.
   Only for *identical* copies: if the cells differ, use `vec/grid` + list
@@ -94,12 +94,12 @@ geometry that reaches no Draw node is invisible.
 ## 3D
 
 The whole idiom is four nodes, and the last one is an ordinary Draw:
-**something 3D → `d3/project` → a colour from its shade → one `disp/draw`.**
+**something 3D → `d3/project` → a color from its shade → one `disp/draw`.**
 Project emits ordinary 2D geometry already sorted back to front, so nothing
 downstream knows 3D happened.
 
 - **Turn any 2D shape into a solid** — `d3/extrude(G, H, C:cap)`. Every curve node
-  in the library is now a modelling tool: Polygon, Region Boolean, Offset,
+  in the library is now a modeling tool: Polygon, Region Boolean, Offset,
   Convex Hull, a spline through mouse-driven points — extrude any of them.
   `d3/revolve(G, N, A)` spins a profile about the world y axis instead.
 - **Shade it** — `d3/project(G, C:camera, L:light → F, S, D)`, then
@@ -144,8 +144,8 @@ downstream knows 3D happened.
 
 - **N things in a row** — `sets/series(S:start N:step C:count → S) →
   vec/construct(X)`.
-- **A grid of things** — `vec/grid(S:spacing → P, C:col R:row K:colour-class)`;
-  `values.iso:true` for a triangular lattice. K 3-colours the iso grid.
+- **A grid of things** — `vec/grid(S:spacing → P, C:col R:row K:color-class)`;
+  `values.iso:true` for a triangular lattice. K 3-colors the iso grid.
 - **Vary each item by its index** — Series feeds both the position *and* any
   per-item parameter (radius, hue) — longest-list matching lines them up.
 - **Random scatter** — `sets/random(N A B S:seed → R)` twice (different seeds) →
@@ -178,9 +178,9 @@ downstream knows 3D happened.
 - **Hand-picked color** — `params/swatch(→ C)` into `disp/draw(S stroke /
   F fill)`. A fill with a:0 is skipped; the strip under the circle sets alpha.
 - **Color from channel numbers** — `disp/rgb(R, G, B 0–255, A → C)`.
-- **Nudge a colour that came from somewhere else** — `disp/deconhsl(C → H, S,
+- **Nudge a color that came from somewhere else** — `disp/deconhsl(C → H, S,
   L, A)`, do math on the channels, rebuild with `disp/hsl`. The classic move:
-  Vector In's fill F → Deconstruct HSL → add a per-item offset to H → Colour
+  Vector In's fill F → Deconstruct HSL → add a per-item offset to H → Color
   HSL → Draw F — the imported artwork's own palette, hue-shifted per copy.
   `disp/deconrgb` is the same round trip in RGB.
 
@@ -220,7 +220,7 @@ downstream knows 3D happened.
   field draws itself (mono = diagonal line, wide mix = blooming figure).
 - **Spectrum visualizer** — `audio/fft(In, N:12 → B list) → math/remap →
   crv/circle(R)` with `sets/series → vec/construct` for positions: list
-  matching turns N band levels into N pulsing shapes. Colour by pitch:
+  matching turns N band levels into N pulsing shapes. Color by pitch:
   `audio/pitch(M) → remap → disp/hsl → Draw F`.
 - **See the wave** — tap any audio wire into `audio/scope(In → G)`; XY figures:
   `audio/xyscope(X, Y)`. Geometry as sound: `audio/path(G → X Y)`.

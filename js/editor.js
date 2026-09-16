@@ -6,7 +6,7 @@ const Editor = (() => {
     graph: { nodes: [], wires: [] },
     pan: { x: 60, y: 40 }, zoom: 1,
     sel: new Set(), selWire: null, selNote: null,
-    wirePaths: new Map(),    // wireId -> svg path (live-colour tint)
+    wirePaths: new Map(),    // wireId -> svg path (live-color tint)
     wireTint: new Map(),     // wireId -> last seen hex — survives wire rebuilds (node drags)
     lastWireClick: null,     // {id,t,x,y} — manual dblclick detection across SVG rebuilds
     idc: 1, widc: 1, tidc: 1, gidc: 1,
@@ -410,7 +410,7 @@ const Editor = (() => {
   function outputTypeColor(from, depth) {
     const n = nodeById(from[0]);
     const d = n && defOf(n);
-    // relays are transparent: their wires (and ports) take the colour of
+    // relays are transparent: their wires (and ports) take the color of
     // whatever feeds them; a disconnected relay speaks 'any'
     if (d && d.relay) return (depth || 0) > 32 ? TYPE_COLORS.any : relayColor(n.id, (depth || 0) + 1);
     const o = n && outsOf(n).find(o => o.name === from[1]);
@@ -493,7 +493,7 @@ const Editor = (() => {
       path.setAttribute('d', d);
       path.setAttribute('class', 'wire' + (S.selWire === w.id ? ' selected' : '') + (alive.has(w.to[0]) ? '' : ' dead'));
       path.setAttribute('stroke', (liveTint && S.wireTint.get(w.id)) || outputTypeColor(w.from));
-      S.wirePaths.set(w.id, path); // addressable for the live-colour tint
+      S.wirePaths.set(w.id, path); // addressable for the live-color tint
       svgEl.appendChild(path);
 
       const hit = document.createElementNS(NS, 'path');
@@ -733,9 +733,9 @@ const Editor = (() => {
     return { x: dir === 'out' ? f.x + f.w : f.x, y: f.y + 14 };
   }
 
-  /* ------------------------------ colour picker ------------------------------
-   * One hand-rolled popover for every colour in the app (port literals, the
-   * Colour Swatch): SV square + hue strip + alpha strip + hex + recents.
+  /* ------------------------------ color picker ------------------------------
+   * One hand-rolled popover for every color in the app (port literals, the
+   * Color Swatch): SV square + hue strip + alpha strip + hex + recents.
    * Mounted on document.body with position:fixed — transformed ancestors in
    * the node canvas can't skew it. No dependencies (invariant #7).
    */
@@ -1901,8 +1901,8 @@ const Editor = (() => {
           });
         }
       }
-      // colour wires take the colour flowing through them (optional setting) —
-      // same 150ms cadence as the readouts, only wires whose type is colour
+      // color wires take the color flowing through them (optional setting) —
+      // same 150ms cadence as the readouts, only wires whose type is color
       if (readouts && typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true)) {
         for (const w of S.graph.wires) {
           const path = S.wirePaths.get(w.id);

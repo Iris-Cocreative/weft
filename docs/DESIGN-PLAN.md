@@ -1,7 +1,7 @@
 # Weft design plan — visual language, icons, and how we decide
 
 > **2026-07-13 — largely superseded.** James took the design into Figma
-> directly (the Weft Figma file) and designed the node card, colour systems,
+> directly (the Weft Figma file) and designed the node card, color systems,
 > icons, and chromeless custom nodes there. D1–D4 + D6 are locked and
 > implemented — see `DESIGN.md` (now the live document). This plan's
 > option-board method remains available for the still-open decisions

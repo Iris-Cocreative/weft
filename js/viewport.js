@@ -314,9 +314,11 @@ const Viewport = {
       const selIds = Editor.selectedIds();
       for (const n of App.graph.nodes) {
         if (n.enabled === false || n.preview === false) continue;
-        if (n.type === 'params/anchor') continue; // its handle is its preview
+        if (n.type === 'params/anchor') continue; // its handle is its preview (drawAnchors greens it)
         const def = NODE_DEFS[n.type];
-        if (!def || def.cat === 'Display') continue;
+        // Display nodes never ghost (they already draw) — but a selected one
+        // outlines what it drew, so clicking a Draw card shows its geometry
+        if (!def || (def.cat === 'Display' && !wantSelected)) continue;
         const selected = selIds.has(n.id);
         if (selected !== wantSelected) continue;
         const outs = ctx.out[n.id];
@@ -352,22 +354,27 @@ const Viewport = {
 
     const drawAnchors = () => {
       const iz = 1 / cam.z; // handles stay screen-sized whatever the camera does
+      const selIds = Editor.selectedIds();
       for (const n of anchors()) {
         const x = n.values.x || 0, y = n.values.y || 0;
         const hot = n === anchorDrag || n === anchorHot;
+        // a selected anchor goes selection-green like any other geometry
+        const sel = selIds.has(n.id);
+        const ring = sel ? (hot ? '#4ade80' : 'rgba(74,222,128,0.9)') : hot ? '#5eead4' : 'rgba(94,234,212,0.75)';
+        const ticks = sel ? (hot ? '#4ade80' : 'rgba(74,222,128,0.6)') : hot ? '#5eead4' : 'rgba(94,234,212,0.45)';
         g2.beginPath();
         g2.arc(x, y, 6.5 * iz, 0, Math.PI * 2);
-        g2.fillStyle = 'rgba(11,14,20,0.85)';
+        g2.fillStyle = sel ? 'rgba(74,222,128,0.18)' : 'rgba(11,14,20,0.85)';
         g2.fill();
-        g2.strokeStyle = hot ? '#5eead4' : 'rgba(94,234,212,0.75)';
-        g2.lineWidth = (hot ? 2 : 1.5) * iz;
+        g2.strokeStyle = ring;
+        g2.lineWidth = (hot || sel ? 2 : 1.5) * iz;
         g2.stroke();
         g2.beginPath();
         g2.moveTo(x - 10 * iz, y); g2.lineTo(x - 4 * iz, y);
         g2.moveTo(x + 4 * iz, y); g2.lineTo(x + 10 * iz, y);
         g2.moveTo(x, y - 10 * iz); g2.lineTo(x, y - 4 * iz);
         g2.moveTo(x, y + 4 * iz); g2.lineTo(x, y + 10 * iz);
-        g2.strokeStyle = hot ? '#5eead4' : 'rgba(94,234,212,0.45)';
+        g2.strokeStyle = ticks;
         g2.lineWidth = iz;
         g2.stroke();
         if (hot) {

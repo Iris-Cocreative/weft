@@ -404,7 +404,7 @@ defNode('params/slider', {
       const old = body.querySelector('.sl-opts');
       if (old) { old.remove(); if (nodeEl) nodeEl.style.zIndex = ''; return; }
       const op = _mk('div', 'sl-opts', body);
-      if (nodeEl) nodeEl.style.zIndex = 25; // float the popover over neighbouring nodes
+      if (nodeEl) nodeEl.style.zIndex = 25; // float the popover over neighboring nodes
       op.addEventListener('pointerdown', ev => ev.stopPropagation());
       op.addEventListener('dblclick', ev => ev.stopPropagation());
       const lrow = _mk('div', 'sl-opt-row', op);
@@ -684,14 +684,14 @@ defNode('params/toggle', {
 });
 
 defNode('params/swatch', {
-  title: 'Colour Swatch', cat: 'Params', desc: 'Pick a colour', bare: true,
+  title: 'Color Swatch', cat: 'Params', desc: 'Pick a color', bare: true,
   inputs: [], outputs: [{ name: 'C', type: 'color' }],
   defaults: { hex: '#5eead4', a: 1 },
   compute: (a, c, node) => ({ C: LM.hexToColor(node.values.hex, node.values.a) }),
   buildBody: (node, body, changed) => {
     const sw = _mk('div', 'sw', body);
     const circle = _mk('div', 'sw-circle', sw);
-    circle.title = 'Colour Swatch';
+    circle.title = 'Color Swatch';
     const al = _mk('input', 'sw-alpha', sw);
     al.type = 'range'; al.min = 0; al.max = 1; al.step = 0.01;
     al.value = node.values.a === undefined ? 1 : node.values.a;
@@ -830,7 +830,7 @@ defNode('params/graph', {
 
 defNode('params/timegraph', {
   title: 'Time Graph', cat: 'Params', width: 200, bare: true, inspect: true,
-  desc: 'Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines); double-click for line count and window',
+  desc: 'Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own colored line (wire several sources into V for several lines); double-click for line count and window',
   inputs: [{ name: 'V', type: 'number' }],
   outputs: [{ name: 'V', type: 'number' }],
   listInputs: ['V'],
@@ -1076,8 +1076,8 @@ function _rdp(pts, eps) {
   return pts.filter((p, i) => keep[i]);
 }
 
-/* editor-only: a computed style colour ("rgb(…)" / "rgba(…)" / "none") as a
- * Weft colour object; paint servers (gradients) fall back to mid-grey */
+/* editor-only: a computed style color ("rgb(…)" / "rgba(…)" / "none") as a
+ * Weft color object; paint servers (gradients) fall back to mid-gray */
 function _svgColor(s) {
   if (!s || s === 'none') return { r: 255, g: 255, b: 255, a: 0 };
   const m = /rgba?\(([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s/]+([\d.]+%?))?\)/.exec(s);
@@ -1090,7 +1090,7 @@ function _svgColor(s) {
  * The file is mounted offscreen (getPointAtLength / getScreenCTM need layout),
  * every visible shape is arc-length sampled in its own coordinate system, run
  * through its CTM into root user space, simplified, and normalized so the
- * drawing is centred on (0,0) with its long side = 1 — compute just scales.
+ * drawing is centered on (0,0) with its long side = 1 — compute just scales.
  * Multi-subpath `d`s are sampled per subpath (cumulative-prefix lengths keep
  * relative `m` commands honest), so no phantom connecting segments appear. */
 function _svgImport(text) {
@@ -1207,7 +1207,7 @@ function _svgImport(text) {
 
 defNode('params/svg', {
   title: 'Vector In', cat: 'Params', width: 176,
-  desc: 'Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; compound paths keep their holes',
+  desc: 'Load an SVG file — every outline becomes a polyline centered on (0,0) and scaled so its long side is S px, with each path’s fill and stroke color beside it. Curves are sampled; compound paths keep their holes',
   inputs: [{ name: 'S', type: 'number', default: 200, label: 'size (px, long side)' }],
   outputs: [
     { name: 'G', type: 'geometry' },
@@ -1753,7 +1753,7 @@ defNode('vec/grid', {
   title: 'Grid', cat: 'Vector', width: 156,
   desc: 'Point lattice filling a W×H region, square or isometric — wire Viewport into W/H for a grid that always fills the canvas',
   inputs: [
-    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
     { name: 'S', type: 'number', default: 40, label: 'spacing' },
     { name: 'W', type: 'number', default: 800, label: 'region width' },
     { name: 'H', type: 'number', default: 600, label: 'region height' }
@@ -1762,7 +1762,7 @@ defNode('vec/grid', {
     { name: 'P', type: 'point' },
     { name: 'C', type: 'number', label: 'column' },
     { name: 'R', type: 'number', label: 'row' },
-    { name: 'K', type: 'number', label: 'colour class — 2 square · 3 iso' }
+    { name: 'K', type: 'number', label: 'color class — 2 square · 3 iso' }
   ],
   defaults: { iso: true },
   compute: (a, ctx, node) => {
@@ -1774,16 +1774,16 @@ defNode('vec/grid', {
     const x0 = a.P.x - (nx - 1) * s / 2, y0 = a.P.y - (ny - 1) * vs / 2;
     const P = [], C = [], R = [], K = [];
     for (let j = 0; j < ny && P.length < 20000; j++) {
-      /* iso rows half-stagger; ±s/4 keeps the lattice centred on P */
+      /* iso rows half-stagger; ±s/4 keeps the lattice centered on P */
       const dx = iso ? ((j & 1) ? s / 4 : -s / 4) : 0;
       for (let i = 0; i < nx && P.length < 20000; i++) {
         P.push({ x: x0 + i * s + dx, y: y0 + j * vs });
         C.push(i); R.push(j);
-        /* K = the lattice's canonical colouring: the fewest classes such that no
-           two neighbours share one. Square needs 2 (checkerboard). Iso needs 3,
+        /* K = the lattice's canonical coloring: the fewest classes such that no
+           two neighbors share one. Square needs 2 (checkerboard). Iso needs 3,
            and it is NOT (i % 3) — the half-stagger means you must go through
            axial coords: q = i - floor(j/2), r = j, k = (q + 2r) mod 3. Then each
-           point's six neighbours carry the other two classes. Wire K into a phase
+           point's six neighbors carry the other two classes. Wire K into a phase
            offset and one Circle node gives you the whole three-phase field. */
         K.push(iso ? ((((i - Math.floor(j / 2) + 2 * j) % 3) + 3) % 3) : (i + j) % 2);
       }
@@ -2048,7 +2048,7 @@ defNode('crv/bbox', {
   inputs: [{ name: 'G', type: 'geometry' }],
   outputs: [
     { name: 'B', type: 'geometry', label: 'bounding rect' },
-    { name: 'C', type: 'point', label: 'centre' },
+    { name: 'C', type: 'point', label: 'center' },
     { name: 'W', type: 'number', label: 'width' },
     { name: 'H', type: 'number', label: 'height' }],
   listInputs: ['G'],
@@ -2279,12 +2279,12 @@ defNode('xf/tile', {
 
 defNode('xf/kaleido', {
   title: 'Kaleidoscope', cat: 'Transform', width: 176,
-  desc: 'The whole input — every wired item — replicated N times around centre C. With M on, alternate copies are mirrored so neighbouring wedges reflect each other like a real kaleidoscope; K is the wedge index beside each copy',
+  desc: 'The whole input — every wired item — replicated N times around center C. With M on, alternate copies are mirrored so neighboring wedges reflect each other like a real kaleidoscope; K is the wedge index beside each copy',
   inputs: [
     { name: 'G', type: 'geometry' },
     { name: 'N', type: 'number', default: 6, label: 'wedges' },
     { name: 'M', type: 'bool', default: true, label: 'mirror alternate wedges' },
-    { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'centre' }],
+    { name: 'C', type: 'point', default: { x: 0, y: 0 }, label: 'center' }],
   outputs: [
     { name: 'G', type: 'geometry' },
     { name: 'K', type: 'number', label: 'wedge index' }],
@@ -2338,14 +2338,14 @@ defNode('disp/text', {
 });
 
 defNode('disp/hsl', {
-  title: 'Colour HSL', cat: 'Display', desc: 'Colour from hue, saturation, lightness (all 0..1; hue wraps)',
+  title: 'Color HSL', cat: 'Display', desc: 'Color from hue, saturation, lightness (all 0..1; hue wraps)',
   inputs: [{ name: 'H', type: 'number', default: 0.5 }, { name: 'S', type: 'number', default: 0.7 }, { name: 'L', type: 'number', default: 0.6 }, { name: 'A', type: 'number', default: 1 }],
   outputs: [{ name: 'C', type: 'color' }],
   compute: a => ({ C: LM.hslToColor(a.H, a.S, a.L, LM.clamp(a.A, 0, 1)) })
 });
 
 defNode('disp/gradient', {
-  title: 'Gradient', cat: 'Display', desc: 'Blend colour A → B by T (0..1)',
+  title: 'Gradient', cat: 'Display', desc: 'Blend color A → B by T (0..1)',
   inputs: [
     { name: 'T', type: 'number', default: 0.5 },
     { name: 'A', type: 'color', default: { r: 94, g: 234, b: 212, a: 1 } },
@@ -2355,7 +2355,7 @@ defNode('disp/gradient', {
 });
 
 defNode('disp/rgb', {
-  title: 'Colour RGB', cat: 'Display', desc: 'Colour from red, green, blue (0..255) and alpha (0..1)',
+  title: 'Color RGB', cat: 'Display', desc: 'Color from red, green, blue (0..255) and alpha (0..1)',
   inputs: [
     { name: 'R', type: 'number', default: 255 },
     { name: 'G', type: 'number', default: 255 },
@@ -2367,7 +2367,7 @@ defNode('disp/rgb', {
 
 defNode('disp/deconhsl', {
   title: 'Deconstruct HSL', cat: 'Display',
-  desc: 'Split a colour into hue, saturation, lightness and alpha (all 0..1) — the inverse of Colour HSL, for nudging a colour that came from somewhere else',
+  desc: 'Split a color into hue, saturation, lightness and alpha (all 0..1) — the inverse of Color HSL, for nudging a color that came from somewhere else',
   inputs: [{ name: 'C', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 } }],
   outputs: [
     { name: 'H', type: 'number', label: 'hue' },
@@ -2383,7 +2383,7 @@ defNode('disp/deconhsl', {
 
 defNode('disp/deconrgb', {
   title: 'Deconstruct RGB', cat: 'Display',
-  desc: 'Split a colour into red, green, blue (0..255) and alpha (0..1)',
+  desc: 'Split a color into red, green, blue (0..255) and alpha (0..1)',
   inputs: [{ name: 'C', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 } }],
   outputs: [
     { name: 'R', type: 'number', label: 'red' },
@@ -2396,7 +2396,7 @@ defNode('disp/deconrgb', {
 });
 
 defNode('disp/bg', {
-  title: 'Background', cat: 'Display', desc: 'Set the canvas background colour',
+  title: 'Background', cat: 'Display', desc: 'Set the canvas background color',
   inputs: [{ name: 'C', type: 'color', default: { r: 11, g: 14, b: 20, a: 1 } }],
   outputs: [],
   compute: (a, ctx) => { ctx.bg = a.C; return {}; }
@@ -2404,11 +2404,11 @@ defNode('disp/bg', {
 
 defNode('disp/measure', {
   title: 'Measure Text', cat: 'Display',
-  desc: 'Width and height of text T at size S px, plus its bounding rect centred at P — measured by the host with the same font Draw uses',
+  desc: 'Width and height of text T at size S px, plus its bounding rect centered at P — measured by the host with the same font Draw uses',
   inputs: [
     { name: 'T', type: 'string', default: 'weft', label: 'text' },
     { name: 'S', type: 'number', default: 24, label: 'size px' },
-    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'rect centre' }],
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'rect center' }],
   outputs: [
     { name: 'W', type: 'number', label: 'width' },
     { name: 'H', type: 'number', label: 'height' },
@@ -2459,10 +2459,10 @@ defNode('disp/element', {
 
 defNode('disp/trace', {
   title: 'Trace', cat: 'Display',
-  desc: 'Seismograph on the cloth — streams the values in V away from pen point P; L is the trail length in px (always true px), D sets direction and scroll speed (px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail',
+  desc: 'Seismograph on the cloth — streams the values in V away from pen point P; L is the trail length in px (always true px), D sets direction and scroll speed (px/s); each list item is its own line (up to 16), colored by C, values are px offsets across the trail',
   inputs: [
     { name: 'V', type: 'number', label: 'values (px offset)' },
-    { name: 'C', type: 'color', label: 'line colours' },
+    { name: 'C', type: 'color', label: 'line colors' },
     { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'pen point' },
     { name: 'D', type: 'vector', default: { x: -60, y: 0 }, label: 'direction + speed px/s' },
     { name: 'L', type: 'number', default: 240, label: 'trail length px' },
@@ -2529,9 +2529,9 @@ defNode('disp/harmonograph', {
     { name: 'H', type: 'number', default: 0, label: 'phase (rad) — wire Time to spin' },
     { name: 'D', type: 'number', default: 0.05, label: 'damping (0 = pure lissajous)' },
     { name: 'T', type: 'number', default: 44, label: 'swing time (s of pen travel)' },
-    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
     { name: 'S', type: 'number', default: 320, label: 'size px' },
-    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.8 }, label: 'pen colour' }],
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.8 }, label: 'pen color' }],
   outputs: [
     { name: 'G', type: 'geometry', label: 'figure' },
     { name: 'P', type: 'point', label: 'pen points' }],
@@ -2561,10 +2561,10 @@ defNode('disp/cymatics', {
   desc: 'Chladni plate — sand grains shake off the vibrating regions and settle along the nodal lines of frequency F, so the figure reorganizes as the pitch changes; drive F from the same value feeding an oscillator. Flip R (button, trigger, toggle) to re-throw the sand.',
   inputs: [
     { name: 'F', type: 'number', default: 220, label: 'frequency Hz' },
-    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
     { name: 'S', type: 'number', default: 320, label: 'plate size px' },
     { name: 'N', type: 'number', default: 900, label: 'grains' },
-    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.85 }, label: 'grain colour' },
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.85 }, label: 'grain color' },
     { name: 'W', type: 'number', default: 1, label: 'grain size' },
     { name: 'R', type: 'bool', default: false, label: 'reset — any change re-throws the sand' }],
   outputs: [{ name: 'P', type: 'point', label: 'grain points' }],
@@ -2884,11 +2884,11 @@ defNode('audio/scope', {
   desc: 'Oscilloscope — taps the audio wire In (an analyser, never routed onward) and draws the actual waveform: T ms of signal, W×H px at P, trigger-locked on a rising zero crossing so the trace holds still. V is the drawn samples, L the RMS level.',
   inputs: [
     { name: 'In', type: 'audio', label: 'audio in' },
-    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
     { name: 'W', type: 'number', default: 320, label: 'width px' },
     { name: 'H', type: 'number', default: 120, label: 'height px (±1 fills it)' },
     { name: 'T', type: 'number', default: 20, label: 'time window ms' },
-    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.95 }, label: 'beam colour' }],
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.95 }, label: 'beam color' }],
   outputs: [
     { name: 'G', type: 'geometry', label: 'waveform' },
     { name: 'V', type: 'number', label: 'samples -1..1' },
@@ -2901,7 +2901,7 @@ defNode('audio/scope', {
     const W = Math.max(10, +a.W || 320), H = Math.max(2, +a.H || 120);
     const none = { r: 0, g: 0, b: 0, a: 0 };
     const dim = { r: a.C.r, g: a.C.g, b: a.C.b, a: (a.C.a === undefined ? 1 : a.C.a) * 0.22 };
-    ctx.drawList.push({ /* the graticule centre line — zero volts */
+    ctx.drawList.push({ /* the graticule center line — zero volts */
       geom: { kind: 'line', a: { x: a.P.x - W / 2, y: a.P.y }, b: { x: a.P.x + W / 2, y: a.P.y } },
       stroke: dim, fill: none, width: 1
     });
@@ -2999,10 +2999,10 @@ defNode('audio/xyscope', {
   inputs: [
     { name: 'X', type: 'audio', label: 'horizontal' },
     { name: 'Y', type: 'audio', label: 'vertical' },
-    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'centre' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
     { name: 'S', type: 'number', default: 300, label: 'size px' },
     { name: 'T', type: 'number', default: 30, label: 'time window ms' },
-    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.95 }, label: 'beam colour' }],
+    { name: 'C', type: 'color', default: { r: 94, g: 234, b: 212, a: 0.95 }, label: 'beam color' }],
   outputs: [
     { name: 'G', type: 'geometry', label: 'figure' },
     { name: 'P', type: 'point', label: 'beam points' }],

@@ -52,7 +52,7 @@ defNode('d3/grid3', {
   title: 'Grid3', cat: '3D', width: 160,
   desc: 'A 3D point lattice, with the cell indices I, J and K beside it — the 3D sibling of Grid, and the same trick: the indices are what you drive everything else with',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' },
     { name: 'S', type: 'number', default: 60, label: 'spacing' },
     { name: 'NX', type: 'number', default: 4, label: 'count along x' },
     { name: 'NY', type: 'number', default: 4, label: 'count along y' },
@@ -157,7 +157,7 @@ defNode('d3/orbit', {
 
 defNode('d3/project', {
   title: 'Project', cat: '3D', width: 184,
-  desc: 'Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a colour node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh',
+  desc: 'Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a color node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh',
   inputs: [
     { name: 'G', type: 'geometry', label: 'geometry (whole list)' },
     { name: 'C', type: 'camera' },
@@ -180,9 +180,9 @@ defNode('d3/project', {
 /* ============================== PRIMITIVES ============================== */
 
 defNode('d3/box', {
-  title: 'Box', cat: '3D', desc: 'A box centred at P, W wide, H tall, D deep',
+  title: 'Box', cat: '3D', desc: 'A box centered at P, W wide, H tall, D deep',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' },
     { name: 'W', type: 'number', default: 140 },
     { name: 'H', type: 'number', default: 140 },
     { name: 'D', type: 'number', default: 140 }],
@@ -205,7 +205,7 @@ defNode('d3/box', {
 defNode('d3/sphere', {
   title: 'Sphere', cat: '3D', desc: 'A UV sphere at P: U segments round, V rings from pole to pole (the poles are along y, so it stands up on screen)',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' },
     { name: 'R', type: 'number', default: 90, label: 'radius' },
     { name: 'U', type: 'number', default: 18, label: 'segments round' },
     { name: 'V', type: 'number', default: 12, label: 'rings' }],
@@ -234,7 +234,7 @@ defNode('d3/sphere', {
 defNode('d3/cylinder', {
   title: 'Cylinder', cat: '3D', desc: 'An N-sided cylinder at P, standing along y (H tall). Caps included — turn them off for a tube',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' },
     { name: 'R', type: 'number', default: 70, label: 'radius' },
     { name: 'H', type: 'number', default: 160, label: 'height (along y)' },
     { name: 'N', type: 'number', default: 20, label: 'sides' },
@@ -261,7 +261,7 @@ defNode('d3/cylinder', {
 defNode('d3/cone', {
   title: 'Cone', cat: '3D', desc: 'An N-sided cone at P, apex up along −y, base radius R',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' },
     { name: 'R', type: 'number', default: 80, label: 'base radius' },
     { name: 'H', type: 'number', default: 170, label: 'height (along y)' },
     { name: 'N', type: 'number', default: 20, label: 'sides' },
@@ -285,7 +285,7 @@ defNode('d3/cone', {
 defNode('d3/torus', {
   title: 'Torus', cat: '3D', desc: 'A torus at P lying in the xz plane (the hole runs along y): R1 to the middle of the tube, R2 the tube itself',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' },
     { name: 'R1', type: 'number', default: 100, label: 'ring radius' },
     { name: 'R2', type: 'number', default: 34, label: 'tube radius' },
     { name: 'N', type: 'number', default: 28, label: 'segments round the ring' },
@@ -314,7 +314,7 @@ defNode('d3/torus', {
 defNode('d3/plane', {
   title: 'Plane', cat: '3D', desc: 'A flat W×D grid in the xz plane at P — the ground under everything. N cells a side, so each one can take its own shade. (For a wall in the canvas plane, a 2D Rectangle already projects as a face.)',
   inputs: [
-    { name: 'P', type: 'point3', default: { x: 0, y: 110, z: 0 }, label: 'centre' },
+    { name: 'P', type: 'point3', default: { x: 0, y: 110, z: 0 }, label: 'center' },
     { name: 'W', type: 'number', default: 420, label: 'width (x)' },
     { name: 'D', type: 'number', default: 420, label: 'depth (z)' },
     { name: 'N', type: 'number', default: 6, label: 'cells a side' }],
@@ -337,7 +337,7 @@ defNode('d3/plane', {
 
 defNode('d3/extrude', {
   title: 'Extrude', cat: '3D',
-  desc: 'Push any 2D geometry out along z into a mesh, centred on its own plane so it stays put. Closed curves get caps, open ones become ribbons — which makes every curve node in the library a 3D modelling tool',
+  desc: 'Push any 2D geometry out along z into a mesh, centered on its own plane so it stays put. Closed curves get caps, open ones become ribbons — which makes every curve node in the library a 3D modeling tool',
   inputs: [
     { name: 'G', type: 'geometry', label: '2D profile' },
     { name: 'H', type: 'number', default: 120, label: 'height (along z)' },
@@ -407,12 +407,12 @@ defNode('d3/move3', {
 });
 
 defNode('d3/rotate3', {
-  title: 'Rotate3', cat: '3D', desc: 'Rotate geometry by R radians about the axis A through centre C. Default axis is y, so it spins like a turntable',
+  title: 'Rotate3', cat: '3D', desc: 'Rotate geometry by R radians about the axis A through center C. Default axis is y, so it spins like a turntable',
   inputs: [
     { name: 'G', type: 'geometry' },
     { name: 'R', type: 'number', default: 0, label: 'angle (rad)' },
     { name: 'A', type: 'point3', default: { x: 0, y: 1, z: 0 }, label: 'axis' },
-    { name: 'C', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' }],
+    { name: 'C', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' }],
   outputs: [{ name: 'G', type: 'geometry' }],
   compute: a => a.G === undefined ? {} : ({
     G: LM.xform3(a.G, LM.mat4Mul(LM.mat4Mul(
@@ -423,11 +423,11 @@ defNode('d3/rotate3', {
 });
 
 defNode('d3/scale3', {
-  title: 'Scale3', cat: '3D', desc: 'Scale geometry about centre C. Wire a single number into F and it scales uniformly; give it three components and each axis goes its own way',
+  title: 'Scale3', cat: '3D', desc: 'Scale geometry about center C. Wire a single number into F and it scales uniformly; give it three components and each axis goes its own way',
   inputs: [
     { name: 'G', type: 'geometry' },
     { name: 'F', type: 'point3', default: { x: 1, y: 1, z: 1 }, label: 'factor (a number scales uniformly)' },
-    { name: 'C', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'centre' }],
+    { name: 'C', type: 'point3', default: { x: 0, y: 0, z: 0 }, label: 'center' }],
   outputs: [{ name: 'G', type: 'geometry' }],
   compute: a => a.G === undefined ? {} : ({
     G: LM.xform3(a.G, LM.mat4Mul(LM.mat4Mul(

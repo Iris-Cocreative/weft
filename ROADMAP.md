@@ -268,6 +268,19 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 
+- [shipped v0.17.6, 2026-09-16] **Connector study + three editor asks.** New
+  example ***Card connectors*** (17th, Geometry): James's Collab OS connector
+  research tidied into one bench — straight, outline-normal, snap-S (one-sided
+  / symmetric / mirror), arc and responsive-orthogonal, each band behind a
+  toggle, all landing on the card's real outline via Curve Intersection.
+  Editor: a selected Anchor Point goes selection-green on the cloth and a
+  selected Draw node outlines what it drew (Display nodes now ghost in the
+  selected pass only); slider resize grips moved to opposite corners (top-left
+  / bottom-right, past the radius) and the bare-node selection outline stands
+  6px off so it clears the port dot; British spellings swept to American in
+  app text, comments and the living docs (`Color Swatch`, `center`, …) —
+  identifiers untouched (`weft:recent-colours`, `live-colour-wires`,
+  `createAnalyser`, GH names in the ghx importer), history docs left as written.
 - [shipped v0.17.5, 2026-09-15] **Wiring-session harvest** (James, five
   nodes + two editor fixes in one sitting): End Points, Line to Vector,
   Bezier Span, NURBS Curve, Extend Curve (see NODE-LIBRARY › Curve). Quick-add

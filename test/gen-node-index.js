@@ -29,8 +29,8 @@ const catDesc = {
   Vector: 'points and vectors — construct them, split them, measure distance and angle, swing them polar.',
   Curve: 'drawable geometry — lines, circles, polygons, rects and arcs, plus the tools that divide and evaluate along them.',
   Transform: 'reshape geometry — move, rotate, scale; transforms stack, and lists of transforms fan one shape into many.',
-  '3D': 'native software 3D, shipped as a pack (js/nodes-3d.js) — points, cameras, primitives, and the Extrude and Revolve bridges that turn every curve node into a modelling tool. Project is the hinge: it takes a camera and emits ordinary 2D geometry already sorted back to front, so the renderer, the export and the ctx contract never learned about 3D at all.',
-  Display: 'where the graph touches the cloth — strokes and fills, colour tools, text, backgrounds, streaming traces, real DOM elements.',
+  '3D': 'native software 3D, shipped as a pack (js/nodes-3d.js) — points, cameras, primitives, and the Extrude and Revolve bridges that turn every curve node into a modeling tool. Project is the hinge: it takes a camera and emits ordinary 2D geometry already sorted back to front, so the renderer, the export and the ctx contract never learned about 3D at all.',
+  Display: 'where the graph touches the cloth — strokes and fills, color tools, text, backgrounds, streaming traces, real DOM elements.',
   Audio: 'sound as dataflow — pitch pickers, oscillators, filters and mixers whose wires carry handles into a live Web Audio graph, plus the mic, scopes and geometry-to-waveform bridges.',
   Meta: 'composition — clusters fold subgraphs into named, reusable nodes, and Custom JS wraps code that has no node yet, its magic numbers promoted to ports.'
 };
@@ -117,8 +117,8 @@ const html = `<!doctype html>
   </nav>
   <h1>node index</h1>
   <p class="sub">every node in the library — what it does and the ports it speaks through.
-  wires carry <em>lists</em>; every node maps over what it's given. port colours are the wire
-  colours in the editor. this page is generated from the app itself, so it never drifts.</p>
+  wires carry <em>lists</em>; every node maps over what it's given. port colors are the wire
+  colors in the editor. this page is generated from the app itself, so it never drifts.</p>
   <input id="q" placeholder="search ${items.length} nodes…" spellcheck="false">
   <div id="app"></div>
   <p class="empty" id="empty">nothing matches — try a looser word.</p>

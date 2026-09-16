@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.5 — five curve/vector nodes from a wiring session (End Points, Line to Vector, Bezier Span, NURBS Curve, Extend Curve), the 0–100 slider fix and no more titles overflowing their cards.** v0.1 (2026-07-12): editor,
+**Status: v0.17.6 — *Card connectors* example (17th), green selected anchors and Draw outlines on the cloth, slider grips in the corners, American spelling throughout the app.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,32 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.17.6 (2026-09-16): **the connector study lands as an example.** James spent
+a session in Weft working out how Collab OS should draw the line between two
+cards — a soft-snap bezier whose leaving angle is a raised cosine of the chord
+angle, then an arc (turn one ray the other way), a lime "normal" connector
+(chord hits the outline, handles along the outline's normal there), the plain
+chord, and four fixed-port orthogonal variants. ***Card connectors*** is that
+patch rebuilt clean by a generator script: two cards (filleted hexagon,
+rounded rect — any closed shape drops in), a shared band (chord, θ, a handle
+length that scales with distance and clamps), then one band per type with a
+toggle at its end, the four orthogonal variants folded into one responsive
+version that picks the facing ports from θ. Two things the study taught:
+the one-sided snap `k(1−cos4θ)/2` always turns the same way (straight at 4
+angles, and its k wants to be small, ~0.35) while the symmetric
+`(axis−θ)·k·cos²2θ` pulls toward the nearest axis with zero weight on the
+diagonals (straight at 8) — both are in the patch behind a toggle, plus a
+mirror; and the normal connector needs its normal made *outward* regardless
+of winding (dot against center→exit, flip on negative), which is four nodes
+per card and worth every one. Editor asks from the same session: a selected
+Anchor goes selection-green on the cloth and a selected Draw outlines what it
+drew (Display nodes ghost in the selected pass only); slider grips sit
+top-left / bottom-right past the corner radius and the bare-node outline
+stands 6px off, so neither crowds the output dot; and the British spellings
+went American across app text, comments and the living docs — identifiers
+(`weft:recent-colours`, `live-colour-wires`, `createAnalyser`, GH component
+names in the importer) untouched, history docs left as written.
 
 v0.17.5 (2026-09-15): **a wiring-session harvest.** James asked how to turn a
 line into a vector and the honest answer was "re-feed the endpoints into

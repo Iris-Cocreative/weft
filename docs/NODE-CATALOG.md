@@ -147,9 +147,9 @@ Momentary push button — true while pressed, false again on release (an editor 
 |---|---|---|
 | B | bool |  |
 
-### `params/swatch` — Colour Swatch
+### `params/swatch` — Color Swatch
 
-Pick a colour
+Pick a color
 
 | out | type | note |
 |---|---|---|
@@ -279,7 +279,7 @@ Node values (`values` keys, not ports): `{"text":"one\ntwo\nthree"}`
 
 ### `params/timegraph` — Time Graph
 
-Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own coloured line (wire several sources into V for several lines); double-click for line count and window
+Seismograph — scrolls the values flowing through it across a rolling time window; each list item is its own colored line (wire several sources into V for several lines); double-click for line count and window
 
 | in | type | default | note |
 |---|---|---|---|
@@ -303,7 +303,7 @@ Pass-through container — wire a source through it, or set it directly; swap th
 
 ### `params/svg` — Vector In
 
-Load an SVG file — every outline becomes a polyline centred on (0,0) and scaled so its long side is S px, with each path’s fill and stroke colour beside it. Curves are sampled; compound paths keep their holes
+Load an SVG file — every outline becomes a polyline centered on (0,0) and scaled so its long side is S px, with each path’s fill and stroke color beside it. Curves are sampled; compound paths keep their holes
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1150,7 +1150,7 @@ Point lattice filling a W×H region, square or isometric — wire Viewport into 
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point | `{"x":0,"y":0}` | centre |
+| P | point | `{"x":0,"y":0}` | center |
 | S | number | `40` | spacing |
 | W | number | `800` | region width |
 | H | number | `600` | region height |
@@ -1160,7 +1160,7 @@ Point lattice filling a W×H region, square or isometric — wire Viewport into 
 | P | point |  |
 | C | number | column |
 | R | number | row |
-| K | number | colour class — 2 square · 3 iso |
+| K | number | color class — 2 square · 3 iso |
 
 Node values (`values` keys, not ports): `{"iso":true}`
 
@@ -1313,7 +1313,7 @@ Axis-aligned bounds of geometry G — one box per item, or a single box around t
 | out | type | note |
 |---|---|---|
 | B | geometry | bounding rect |
-| C | point | centre |
+| C | point | center |
 | W | number | width |
 | H | number | height |
 
@@ -1651,14 +1651,14 @@ Replicate geometry N1 × N2 times along two basis vectors, with the cell indices
 
 ### `xf/kaleido` — Kaleidoscope
 
-The whole input — every wired item — replicated N times around centre C. With M on, alternate copies are mirrored so neighbouring wedges reflect each other like a real kaleidoscope; K is the wedge index beside each copy
+The whole input — every wired item — replicated N times around center C. With M on, alternate copies are mirrored so neighboring wedges reflect each other like a real kaleidoscope; K is the wedge index beside each copy
 
 | in | type | default | note |
 |---|---|---|---|
 | G | geometry |  | receives whole list |
 | N | number | `6` | wedges |
 | M | bool | `true` | mirror alternate wedges |
-| C | point | `{"x":0,"y":0}` | centre |
+| C | point | `{"x":0,"y":0}` | center |
 
 | out | type | note |
 |---|---|---|
@@ -1740,11 +1740,11 @@ Scale V to length A, keeping its direction
 
 ### `d3/box` — Box
 
-A box centred at P, W wide, H tall, D deep
+A box centered at P, W wide, H tall, D deep
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":0,"z":0}` | center |
 | W | number | `140` |  |
 | H | number | `140` |  |
 | D | number | `140` |  |
@@ -1777,7 +1777,7 @@ An N-sided cone at P, apex up along −y, base radius R
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":0,"z":0}` | center |
 | R | number | `80` | base radius |
 | H | number | `170` | height (along y) |
 | N | number | `20` | sides |
@@ -1806,7 +1806,7 @@ An N-sided cylinder at P, standing along y (H tall). Caps included — turn them
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":0,"z":0}` | center |
 | R | number | `70` | radius |
 | H | number | `160` | height (along y) |
 | N | number | `20` | sides |
@@ -1845,7 +1845,7 @@ A · B in 3D — with unit vectors it is the cosine of the angle between them, w
 
 ### `d3/extrude` — Extrude
 
-Push any 2D geometry out along z into a mesh, centred on its own plane so it stays put. Closed curves get caps, open ones become ribbons — which makes every curve node in the library a 3D modelling tool
+Push any 2D geometry out along z into a mesh, centered on its own plane so it stays put. Closed curves get caps, open ones become ribbons — which makes every curve node in the library a 3D modeling tool
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1877,7 +1877,7 @@ A 3D point lattice, with the cell indices I, J and K beside it — the 3D siblin
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":0,"z":0}` | center |
 | S | number | `60` | spacing |
 | NX | number | `4` | count along x |
 | NY | number | `4` | count along y |
@@ -1939,7 +1939,7 @@ A flat W×D grid in the xz plane at P — the ground under everything. N cells a
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":110,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":110,"z":0}` | center |
 | W | number | `420` | width (x) |
 | D | number | `420` | depth (z) |
 | N | number | `6` | cells a side |
@@ -1977,7 +1977,7 @@ Straight segments through 3D points V — closed, it also counts as a face and t
 
 ### `d3/project` — Project
 
-Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a colour node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh
+Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a color node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2009,14 +2009,14 @@ Spin a 2D profile about the world y axis into a mesh of revolution — the profi
 
 ### `d3/rotate3` — Rotate3
 
-Rotate geometry by R radians about the axis A through centre C. Default axis is y, so it spins like a turntable
+Rotate geometry by R radians about the axis A through center C. Default axis is y, so it spins like a turntable
 
 | in | type | default | note |
 |---|---|---|---|
 | G | geometry |  |  |
 | R | number | `0` | angle (rad) |
 | A | point3 | `{"x":0,"y":1,"z":0}` | axis |
-| C | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| C | point3 | `{"x":0,"y":0,"z":0}` | center |
 
 | out | type | note |
 |---|---|---|
@@ -2024,13 +2024,13 @@ Rotate geometry by R radians about the axis A through centre C. Default axis is 
 
 ### `d3/scale3` — Scale3
 
-Scale geometry about centre C. Wire a single number into F and it scales uniformly; give it three components and each axis goes its own way
+Scale geometry about center C. Wire a single number into F and it scales uniformly; give it three components and each axis goes its own way
 
 | in | type | default | note |
 |---|---|---|---|
 | G | geometry |  |  |
 | F | point3 | `{"x":1,"y":1,"z":1}` | factor (a number scales uniformly) |
-| C | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| C | point3 | `{"x":0,"y":0,"z":0}` | center |
 
 | out | type | note |
 |---|---|---|
@@ -2042,7 +2042,7 @@ A UV sphere at P: U segments round, V rings from pole to pole (the poles are alo
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":0,"z":0}` | center |
 | R | number | `90` | radius |
 | U | number | `18` | segments round |
 | V | number | `12` | rings |
@@ -2057,7 +2057,7 @@ A torus at P lying in the xz plane (the hole runs along y): R1 to the middle of 
 
 | in | type | default | note |
 |---|---|---|---|
-| P | point3 | `{"x":0,"y":0,"z":0}` | centre |
+| P | point3 | `{"x":0,"y":0,"z":0}` | center |
 | R1 | number | `100` | ring radius |
 | R2 | number | `34` | tube radius |
 | N | number | `28` | segments round the ring |
@@ -2083,15 +2083,15 @@ Normalize V to length 1 (a zero vector stays zero)
 
 ### `disp/bg` — Background
 
-Set the canvas background colour
+Set the canvas background color
 
 | in | type | default | note |
 |---|---|---|---|
 | C | color | `{"r":11,"g":14,"b":20,"a":1}` |  |
 
-### `disp/hsl` — Colour HSL
+### `disp/hsl` — Color HSL
 
-Colour from hue, saturation, lightness (all 0..1; hue wraps)
+Color from hue, saturation, lightness (all 0..1; hue wraps)
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2104,9 +2104,9 @@ Colour from hue, saturation, lightness (all 0..1; hue wraps)
 |---|---|---|
 | C | color |  |
 
-### `disp/rgb` — Colour RGB
+### `disp/rgb` — Color RGB
 
-Colour from red, green, blue (0..255) and alpha (0..1)
+Color from red, green, blue (0..255) and alpha (0..1)
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2126,10 +2126,10 @@ Chladni plate — sand grains shake off the vibrating regions and settle along t
 | in | type | default | note |
 |---|---|---|---|
 | F | number | `220` | frequency Hz |
-| P | point | `{"x":0,"y":0}` | centre |
+| P | point | `{"x":0,"y":0}` | center |
 | S | number | `320` | plate size px |
 | N | number | `900` | grains |
-| C | color | `{"r":94,"g":234,"b":212,"a":0.85}` | grain colour |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.85}` | grain color |
 | W | number | `1` | grain size |
 | R | bool | `false` | reset — any change re-throws the sand |
 
@@ -2139,7 +2139,7 @@ Chladni plate — sand grains shake off the vibrating regions and settle along t
 
 ### `disp/deconhsl` — Deconstruct HSL
 
-Split a colour into hue, saturation, lightness and alpha (all 0..1) — the inverse of Colour HSL, for nudging a colour that came from somewhere else
+Split a color into hue, saturation, lightness and alpha (all 0..1) — the inverse of Color HSL, for nudging a color that came from somewhere else
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2154,7 +2154,7 @@ Split a colour into hue, saturation, lightness and alpha (all 0..1) — the inve
 
 ### `disp/deconrgb` — Deconstruct RGB
 
-Split a colour into red, green, blue (0..255) and alpha (0..1)
+Split a color into red, green, blue (0..255) and alpha (0..1)
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2202,7 +2202,7 @@ A real DOM element (link, heading, button…) laid over the canvas filling G’s
 
 ### `disp/gradient` — Gradient
 
-Blend colour A → B by T (0..1)
+Blend color A → B by T (0..1)
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2225,9 +2225,9 @@ The Victorian drawing machine, and the Vector Scope’s math twin — two damped
 | H | number | `0` | phase (rad) — wire Time to spin |
 | D | number | `0.05` | damping (0 = pure lissajous) |
 | T | number | `44` | swing time (s of pen travel) |
-| P | point | `{"x":0,"y":0}` | centre |
+| P | point | `{"x":0,"y":0}` | center |
 | S | number | `320` | size px |
-| C | color | `{"r":94,"g":234,"b":212,"a":0.8}` | pen colour |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.8}` | pen color |
 
 | out | type | note |
 |---|---|---|
@@ -2236,13 +2236,13 @@ The Victorian drawing machine, and the Vector Scope’s math twin — two damped
 
 ### `disp/measure` — Measure Text
 
-Width and height of text T at size S px, plus its bounding rect centred at P — measured by the host with the same font Draw uses
+Width and height of text T at size S px, plus its bounding rect centered at P — measured by the host with the same font Draw uses
 
 | in | type | default | note |
 |---|---|---|---|
 | T | string | `"weft"` | text |
 | S | number | `24` | size px |
-| P | point | `{"x":0,"y":0}` | rect centre |
+| P | point | `{"x":0,"y":0}` | rect center |
 
 | out | type | note |
 |---|---|---|
@@ -2266,12 +2266,12 @@ Text geometry at point P — wire into Draw
 
 ### `disp/trace` — Trace
 
-Seismograph on the cloth — streams the values in V away from pen point P; L is the trail length in px (always true px), D sets direction and scroll speed (px/s); each list item is its own line (up to 16), coloured by C, values are px offsets across the trail
+Seismograph on the cloth — streams the values in V away from pen point P; L is the trail length in px (always true px), D sets direction and scroll speed (px/s); each list item is its own line (up to 16), colored by C, values are px offsets across the trail
 
 | in | type | default | note |
 |---|---|---|---|
 | V | number |  | values (px offset) · receives whole list |
-| C | color |  | line colours · receives whole list |
+| C | color |  | line colors · receives whole list |
 | P | point | `{"x":0,"y":0}` | pen point |
 | D | vector | `{"x":-60,"y":0}` | direction + speed px/s |
 | L | number | `240` | trail length px |
@@ -2482,11 +2482,11 @@ Oscilloscope — taps the audio wire In (an analyser, never routed onward) and d
 | in | type | default | note |
 |---|---|---|---|
 | In | audio |  | audio in |
-| P | point | `{"x":0,"y":0}` | centre |
+| P | point | `{"x":0,"y":0}` | center |
 | W | number | `320` | width px |
 | H | number | `120` | height px (±1 fills it) |
 | T | number | `20` | time window ms |
-| C | color | `{"r":94,"g":234,"b":212,"a":0.95}` | beam colour |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.95}` | beam color |
 
 | out | type | note |
 |---|---|---|
@@ -2520,10 +2520,10 @@ XY oscilloscope — signal X deflects the beam horizontally, Y vertically, plott
 |---|---|---|---|
 | X | audio |  | horizontal |
 | Y | audio |  | vertical |
-| P | point | `{"x":0,"y":0}` | centre |
+| P | point | `{"x":0,"y":0}` | center |
 | S | number | `300` | size px |
 | T | number | `30` | time window ms |
-| C | color | `{"r":94,"g":234,"b":212,"a":0.95}` | beam colour |
+| C | color | `{"r":94,"g":234,"b":212,"a":0.95}` | beam color |
 
 | out | type | note |
 |---|---|---|

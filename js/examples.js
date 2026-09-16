@@ -15,7 +15,7 @@ const EXAMPLES = {
 
   /* James's hexagraph (2026-07-15) — a breathing hexagon lattice: hover wakes it,
    * springs ripple the radius, and six rotated Trace pens draw the motion as a
-   * mandala of seismograph trails around the centre. Raw graph JSON (not _EX):
+   * mandala of seismograph trails around the center. Raw graph JSON (not _EX):
    * it carries collapsed / preview flags the helper doesn't. */
   'Stonehenge': {
     "format": 2,
@@ -328,7 +328,7 @@ const EXAMPLES = {
         "values": {
           "Y": -7
         },
-        "label": "toppled centre"
+        "label": "toppled center"
       },
       {
         "id": "snot",
@@ -521,7 +521,7 @@ const EXAMPLES = {
         "values": {
           "mode": "and"
         },
-        "label": "both neighbours up"
+        "label": "both neighbors up"
       },
       {
         "id": "lbox",
@@ -3133,7 +3133,7 @@ const EXAMPLES = {
         "x": 1940,
         "y": 2680,
         "values": {},
-        "label": "kite: centres + crossings"
+        "label": "kite: centers + crossings"
       },
       {
         "id": "fil",
@@ -4821,7 +4821,7 @@ const EXAMPLES = {
    * fallen and gone, and Cull Pattern takes the geometry list rather than the
    * parameters, so one node does the work. Shift List moves the standing
    * pattern one place and ANDs it with itself — a lintel exists only where two
-   * neighbours are both still up, which is why the run of lintels comes out
+   * neighbors are both still up, which is why the run of lintels comes out
    * continuous, exactly as it is on Salisbury Plain.
    *
    * Two things worth stealing. The sun rides the camera: Orbit's A output goes
@@ -4830,9 +4830,319 @@ const EXAMPLES = {
    * dead. And the plain is a SECOND Project and Draw whose nodes sit first in
    * the graph — draw order follows node order, so the ground is painted before
    * a single stone and no depth sort can ever put it in front of the monument.
-   * That is also why it can be a flat revolved disc in one colour: subdivided
+   * That is also why it can be a flat revolved disc in one color: subdivided
    * into rings only so that a camera wheeled in close loses the cell it stands
    * on rather than the whole plain. */
+  /* Card connectors (2026-09-16) — James's connector study for Collab OS, tidied
+   * into one bench: five ways to join two cards, each behind a toggle, all of
+   * them finding the card's real outline. Generated from a script (the bands
+   * are laid out by column), which is why it is raw JSON rather than _EX. */
+  'Card connectors': {
+    "format": 2,
+    "nodes": [
+      {"id": "n0", "type": "params/anchor", "x": 0, "y": 0, "values": {"x": -215, "y": -105}},
+      {"id": "n1", "type": "crv/polygon", "x": 230, "y": 0, "values": {"R": 110, "N": 6, "A": 0.3}, "preview": false},
+      {"id": "n2", "type": "crv/fillet", "x": 460, "y": 0, "values": {"R": 18, "N": 8}, "preview": false},
+      {"id": "n3", "type": "params/relay", "x": 690, "y": 20, "values": {}, "label": "card A", "preview": false},
+      {"id": "n4", "type": "params/anchor", "x": 0, "y": 150, "values": {"x": 170, "y": 100}},
+      {"id": "n5", "type": "crv/rect", "x": 230, "y": 150, "values": {"W": 240, "H": 150, "A": 0}, "preview": false},
+      {"id": "n6", "type": "crv/fillet", "x": 460, "y": 150, "values": {"R": 26, "N": 8}, "preview": false},
+      {"id": "n7", "type": "params/relay", "x": 690, "y": 170, "values": {}, "label": "card B", "preview": false},
+      {"id": "n8", "type": "disp/draw", "x": 1610, "y": 60, "values": {"S": {"r": 190, "g": 200, "b": 220, "a": 0.9}, "W": 1.2}, "preview": false},
+      {"id": "n9", "type": "params/swatch", "x": 1380, "y": 200, "values": {"hex": "#0a0f14", "a": 1}, "preview": false},
+      {"id": "n10", "type": "disp/bg", "x": 1610, "y": 200, "values": {}, "preview": false},
+      {"id": "n11", "type": "crv/line", "x": 230, "y": 360, "values": {}, "label": "A → B", "preview": false},
+      {"id": "n12", "type": "crv/line", "x": 230, "y": 490, "values": {}, "label": "B → A", "preview": false},
+      {"id": "n13", "type": "vec/angle", "x": 230, "y": 620, "values": {}, "label": "θ chord angle", "preview": false},
+      {"id": "n14", "type": "vec/distance", "x": 460, "y": 620, "values": {}, "preview": false},
+      {"id": "n15", "type": "params/slider", "x": 460, "y": 740, "values": {"min": 0, "max": 1, "value": 0.3, "mode": "float", "prec": 2, "label": "handle ÷ chord"}, "preview": false},
+      {"id": "n16", "type": "math/mul", "x": 690, "y": 640, "values": {}, "preview": false},
+      {"id": "n17", "type": "math/clamp", "x": 920, "y": 640, "values": {"A": 24, "B": 200}, "label": "handle length", "preview": false},
+      {"id": "n18", "type": "params/slider", "x": 1150, "y": 740, "values": {"min": 0, "max": 12, "value": 6, "mode": "int", "label": "dot radius"}, "preview": false},
+      {"id": "n19", "type": "math/neg", "x": 1380, "y": 740, "values": {}, "label": "trim", "preview": false},
+      {"id": "n20", "type": "crv/intersect", "x": 460, "y": 950, "values": {"mode": "pair"}, "label": "exit A", "preview": false},
+      {"id": "n21", "type": "crv/intersect", "x": 460, "y": 1080, "values": {"mode": "pair"}, "label": "exit B", "preview": false},
+      {"id": "n22", "type": "crv/line", "x": 690, "y": 1010, "values": {}, "preview": false},
+      {"id": "n23", "type": "crv/extend", "x": 1150, "y": 950, "values": {}, "preview": false},
+      {"id": "n24", "type": "crv/circle", "x": 1150, "y": 1060, "values": {}, "preview": false},
+      {"id": "n25", "type": "sets/merge", "x": 1380, "y": 990, "values": {}, "preview": false},
+      {"id": "n26", "type": "params/toggle", "x": 1380, "y": 1110, "values": {"on": true}, "preview": false},
+      {"id": "n27", "type": "sets/select", "x": 1610, "y": 950, "values": {}, "label": "straight", "preview": false},
+      {"id": "n28", "type": "disp/draw", "x": 1610, "y": 1080, "values": {"S": {"r": 111, "g": 123, "b": 15, "a": 1}, "W": 1.6}, "preview": false},
+      {"id": "n29", "type": "crv/eval", "x": 690, "y": 1340, "values": {}, "label": "normal at exit A", "preview": false},
+      {"id": "n30", "type": "vec/vec2pt", "x": 690, "y": 1460, "values": {"U": true}, "label": "center → exit", "preview": false},
+      {"id": "n31", "type": "vec/dot", "x": 920, "y": 1400, "values": {}, "preview": false},
+      {"id": "n32", "type": "math/expr", "x": 920, "y": 1490, "values": {"expr": "X < 0 ? -1 : 1"}, "label": "outward sign", "preview": false},
+      {"id": "n33", "type": "math/mul", "x": 1150, "y": 1490, "values": {}, "preview": false},
+      {"id": "n34", "type": "vec/amp", "x": 1150, "y": 1380, "values": {}, "preview": false},
+      {"id": "n35", "type": "crv/eval", "x": 690, "y": 1600, "values": {}, "label": "normal at exit B", "preview": false},
+      {"id": "n36", "type": "vec/vec2pt", "x": 690, "y": 1720, "values": {"U": true}, "label": "center → exit", "preview": false},
+      {"id": "n37", "type": "vec/dot", "x": 920, "y": 1660, "values": {}, "preview": false},
+      {"id": "n38", "type": "math/expr", "x": 920, "y": 1750, "values": {"expr": "X < 0 ? -1 : 1"}, "label": "outward sign", "preview": false},
+      {"id": "n39", "type": "math/mul", "x": 1150, "y": 1750, "values": {}, "preview": false},
+      {"id": "n40", "type": "vec/amp", "x": 1150, "y": 1640, "values": {}, "preview": false},
+      {"id": "n41", "type": "vec/reverse", "x": 1380, "y": 1640, "values": {}, "label": "arrive at B", "preview": false},
+      {"id": "n42", "type": "crv/bezier", "x": 1380, "y": 1460, "values": {}, "preview": false},
+      {"id": "n43", "type": "crv/extend", "x": 1610, "y": 1340, "values": {}, "preview": false},
+      {"id": "n44", "type": "crv/circle", "x": 1610, "y": 1450, "values": {}, "preview": false},
+      {"id": "n45", "type": "sets/merge", "x": 1610, "y": 1560, "values": {}, "preview": false},
+      {"id": "n46", "type": "params/toggle", "x": 1610, "y": 1680, "values": {"on": true}, "preview": false},
+      {"id": "n47", "type": "sets/select", "x": 1840, "y": 1460, "values": {}, "label": "normal", "preview": false},
+      {"id": "n48", "type": "disp/draw", "x": 1840, "y": 1590, "values": {"S": {"r": 183, "g": 255, "b": 30, "a": 1}, "W": 1.6}, "preview": false},
+      {"id": "n49", "type": "params/slider", "x": 0, "y": 1890, "values": {"min": 0, "max": 1, "value": 0.35, "mode": "float", "prec": 2, "label": "strength · one-sided"}, "preview": false},
+      {"id": "n50", "type": "params/slider", "x": 0, "y": 2020, "values": {"min": 0, "max": 1, "value": 0.8, "mode": "float", "prec": 2, "label": "strength · symmetric"}, "preview": false},
+      {"id": "n51", "type": "math/expr", "x": 230, "y": 1890, "values": {"expr": "Y * (1 - cos(4*X)) / 2"}, "label": "one-sided: straight at 4 angles", "preview": false},
+      {"id": "n52", "type": "math/expr", "x": 230, "y": 2020, "values": {"expr": "(round(X/(PI/2))*(PI/2) - X) * Y * cos(2*X)**2"}, "label": "symmetric: straight at 8", "preview": false},
+      {"id": "n53", "type": "params/toggle", "x": 230, "y": 2160, "values": {"on": false}, "preview": false},
+      {"id": "n54", "type": "sets/select", "x": 460, "y": 1950, "values": {}, "label": "symmetric?", "preview": false},
+      {"id": "n55", "type": "math/neg", "x": 460, "y": 2090, "values": {}, "preview": false},
+      {"id": "n56", "type": "params/toggle", "x": 460, "y": 2210, "values": {"on": false}, "preview": false},
+      {"id": "n57", "type": "sets/select", "x": 690, "y": 2010, "values": {}, "label": "mirror?", "preview": false},
+      {"id": "n58", "type": "params/relay", "x": 920, "y": 2030, "values": {}, "label": "α", "preview": false},
+      {"id": "n59", "type": "math/neg", "x": 920, "y": 2130, "values": {}, "label": "−α", "preview": false},
+      {"id": "n60", "type": "xf/rotate", "x": 1150, "y": 1890, "values": {}, "label": "ray A (θ+α)", "preview": false},
+      {"id": "n61", "type": "xf/rotate", "x": 1150, "y": 2010, "values": {}, "label": "ray B (θ+α)", "preview": false},
+      {"id": "n62", "type": "xf/rotate", "x": 1150, "y": 2130, "values": {}, "label": "ray A′ (θ−α)", "preview": false},
+      {"id": "n63", "type": "crv/intersect", "x": 1380, "y": 1890, "values": {"mode": "pair"}, "label": "exit A", "preview": false},
+      {"id": "n64", "type": "crv/intersect", "x": 1380, "y": 2010, "values": {"mode": "pair"}, "label": "exit B", "preview": false},
+      {"id": "n65", "type": "crv/intersect", "x": 1380, "y": 2130, "values": {"mode": "pair"}, "label": "exit A′", "preview": false},
+      {"id": "n66", "type": "vec/line2vec", "x": 1610, "y": 1890, "values": {"U": true}, "label": "leave A", "preview": false},
+      {"id": "n67", "type": "vec/line2vec", "x": 1610, "y": 2010, "values": {"U": true}, "label": "leave B", "preview": false},
+      {"id": "n68", "type": "vec/line2vec", "x": 1610, "y": 2130, "values": {"U": true}, "label": "leave A′", "preview": false},
+      {"id": "n69", "type": "vec/amp", "x": 1840, "y": 1890, "values": {}, "preview": false},
+      {"id": "n70", "type": "vec/amp", "x": 1840, "y": 2010, "values": {}, "preview": false},
+      {"id": "n71", "type": "vec/reverse", "x": 2070, "y": 2010, "values": {}, "label": "arrive at B", "preview": false},
+      {"id": "n72", "type": "vec/amp", "x": 1840, "y": 2130, "values": {}, "preview": false},
+      {"id": "n73", "type": "crv/bezier", "x": 2300, "y": 1890, "values": {}, "label": "S — parallel handles", "preview": false},
+      {"id": "n74", "type": "crv/bezier", "x": 2300, "y": 2130, "values": {}, "label": "arc — mirrored handles", "preview": false},
+      {"id": "n75", "type": "crv/extend", "x": 2530, "y": 1890, "values": {}, "preview": false},
+      {"id": "n76", "type": "crv/circle", "x": 2530, "y": 2000, "values": {}, "preview": false},
+      {"id": "n77", "type": "sets/merge", "x": 2760, "y": 1930, "values": {}, "preview": false},
+      {"id": "n78", "type": "params/toggle", "x": 2760, "y": 2050, "values": {"on": true}, "preview": false},
+      {"id": "n79", "type": "sets/select", "x": 2990, "y": 1890, "values": {}, "label": "snap S", "preview": false},
+      {"id": "n80", "type": "disp/draw", "x": 2990, "y": 2020, "values": {"S": {"r": 255, "g": 45, "b": 45, "a": 1}, "W": 1.6}, "preview": false},
+      {"id": "n81", "type": "crv/extend", "x": 2530, "y": 2130, "values": {}, "preview": false},
+      {"id": "n82", "type": "crv/circle", "x": 2530, "y": 2240, "values": {}, "preview": false},
+      {"id": "n83", "type": "sets/merge", "x": 2760, "y": 2170, "values": {}, "preview": false},
+      {"id": "n84", "type": "params/toggle", "x": 2760, "y": 2290, "values": {"on": true}, "preview": false},
+      {"id": "n85", "type": "sets/select", "x": 2990, "y": 2130, "values": {}, "label": "arc", "preview": false},
+      {"id": "n86", "type": "disp/draw", "x": 2990, "y": 2260, "values": {"S": {"r": 30, "g": 170, "b": 220, "a": 1}, "W": 1.6}, "preview": false},
+      {"id": "n87", "type": "math/expr", "x": 230, "y": 2440, "values": {"expr": "abs(cos(X)) >= abs(sin(X)) ? sign(cos(X)) : 0"}, "label": "side x", "preview": false},
+      {"id": "n88", "type": "math/expr", "x": 230, "y": 2570, "values": {"expr": "abs(cos(X)) >= abs(sin(X)) ? 0 : sign(sin(X))"}, "label": "side y", "preview": false},
+      {"id": "n89", "type": "vec/vecxy", "x": 460, "y": 2500, "values": {}, "label": "axis A → B", "preview": false},
+      {"id": "n90", "type": "vec/reverse", "x": 460, "y": 2620, "values": {}, "label": "axis B → A", "preview": false},
+      {"id": "n91", "type": "vec/amp", "x": 690, "y": 2440, "values": {"A": 2000}, "label": "far along axis", "preview": false},
+      {"id": "n92", "type": "vec/amp", "x": 690, "y": 2620, "values": {"A": 2000}, "preview": false},
+      {"id": "n93", "type": "xf/move", "x": 920, "y": 2440, "values": {}, "preview": false},
+      {"id": "n94", "type": "xf/move", "x": 920, "y": 2620, "values": {}, "preview": false},
+      {"id": "n95", "type": "crv/line", "x": 1150, "y": 2440, "values": {}, "label": "port ray A", "preview": false},
+      {"id": "n96", "type": "crv/line", "x": 1150, "y": 2620, "values": {}, "label": "port ray B", "preview": false},
+      {"id": "n97", "type": "crv/intersect", "x": 1380, "y": 2440, "values": {"mode": "pair"}, "label": "port A", "preview": false},
+      {"id": "n98", "type": "crv/intersect", "x": 1380, "y": 2620, "values": {"mode": "pair"}, "label": "port B", "preview": false},
+      {"id": "n99", "type": "vec/amp", "x": 1380, "y": 2760, "values": {}, "label": "both handles", "preview": false},
+      {"id": "n100", "type": "crv/bezier", "x": 1610, "y": 2540, "values": {}, "label": "port to port", "preview": false},
+      {"id": "n101", "type": "crv/extend", "x": 1840, "y": 2440, "values": {}, "preview": false},
+      {"id": "n102", "type": "crv/circle", "x": 1840, "y": 2550, "values": {}, "preview": false},
+      {"id": "n103", "type": "sets/merge", "x": 2070, "y": 2480, "values": {}, "preview": false},
+      {"id": "n104", "type": "params/toggle", "x": 2070, "y": 2600, "values": {"on": true}, "preview": false},
+      {"id": "n105", "type": "sets/select", "x": 2300, "y": 2440, "values": {}, "label": "orthogonal", "preview": false},
+      {"id": "n106", "type": "disp/draw", "x": 2300, "y": 2570, "values": {"S": {"r": 255, "g": 125, "b": 30, "a": 1}, "W": 1.6}, "preview": false}
+    ],
+    "wires": [
+      {"from": ["n0", "P"], "to": ["n1", "P"]},
+      {"from": ["n1", "C"], "to": ["n2", "C"]},
+      {"from": ["n2", "C"], "to": ["n3", "V"]},
+      {"from": ["n4", "P"], "to": ["n5", "P"]},
+      {"from": ["n5", "C"], "to": ["n6", "C"]},
+      {"from": ["n6", "C"], "to": ["n7", "V"]},
+      {"from": ["n3", "V"], "to": ["n8", "G"]},
+      {"from": ["n7", "V"], "to": ["n8", "G"]},
+      {"from": ["n9", "C"], "to": ["n10", "C"]},
+      {"from": ["n0", "P"], "to": ["n11", "A"]},
+      {"from": ["n4", "P"], "to": ["n11", "B"]},
+      {"from": ["n4", "P"], "to": ["n12", "A"]},
+      {"from": ["n0", "P"], "to": ["n12", "B"]},
+      {"from": ["n0", "P"], "to": ["n13", "A"]},
+      {"from": ["n4", "P"], "to": ["n13", "B"]},
+      {"from": ["n0", "P"], "to": ["n14", "A"]},
+      {"from": ["n4", "P"], "to": ["n14", "B"]},
+      {"from": ["n14", "D"], "to": ["n16", "A"]},
+      {"from": ["n15", "N"], "to": ["n16", "B"]},
+      {"from": ["n16", "R"], "to": ["n17", "V"]},
+      {"from": ["n18", "N"], "to": ["n19", "V"]},
+      {"from": ["n3", "V"], "to": ["n20", "C1"]},
+      {"from": ["n11", "C"], "to": ["n20", "C2"]},
+      {"from": ["n7", "V"], "to": ["n21", "C1"]},
+      {"from": ["n11", "C"], "to": ["n21", "C2"]},
+      {"from": ["n20", "P"], "to": ["n22", "A"]},
+      {"from": ["n21", "P"], "to": ["n22", "B"]},
+      {"from": ["n22", "C"], "to": ["n23", "C"]},
+      {"from": ["n19", "R"], "to": ["n23", "L0"]},
+      {"from": ["n19", "R"], "to": ["n23", "L1"]},
+      {"from": ["n20", "P"], "to": ["n24", "P"]},
+      {"from": ["n21", "P"], "to": ["n24", "P"]},
+      {"from": ["n18", "N"], "to": ["n24", "R"]},
+      {"from": ["n23", "C"], "to": ["n25", "A"]},
+      {"from": ["n24", "C"], "to": ["n25", "B"]},
+      {"from": ["n25", "M"], "to": ["n27", "T"]},
+      {"from": ["n26", "B"], "to": ["n27", "P"]},
+      {"from": ["n27", "L"], "to": ["n28", "G"]},
+      {"from": ["n3", "V"], "to": ["n29", "C"]},
+      {"from": ["n20", "T1"], "to": ["n29", "T"]},
+      {"from": ["n0", "P"], "to": ["n30", "A"]},
+      {"from": ["n20", "P"], "to": ["n30", "B"]},
+      {"from": ["n29", "N"], "to": ["n31", "A"]},
+      {"from": ["n30", "V"], "to": ["n31", "B"]},
+      {"from": ["n31", "D"], "to": ["n32", "X"]},
+      {"from": ["n32", "R"], "to": ["n33", "A"]},
+      {"from": ["n17", "R"], "to": ["n33", "B"]},
+      {"from": ["n29", "N"], "to": ["n34", "V"]},
+      {"from": ["n33", "R"], "to": ["n34", "A"]},
+      {"from": ["n7", "V"], "to": ["n35", "C"]},
+      {"from": ["n21", "T1"], "to": ["n35", "T"]},
+      {"from": ["n4", "P"], "to": ["n36", "A"]},
+      {"from": ["n21", "P"], "to": ["n36", "B"]},
+      {"from": ["n35", "N"], "to": ["n37", "A"]},
+      {"from": ["n36", "V"], "to": ["n37", "B"]},
+      {"from": ["n37", "D"], "to": ["n38", "X"]},
+      {"from": ["n38", "R"], "to": ["n39", "A"]},
+      {"from": ["n17", "R"], "to": ["n39", "B"]},
+      {"from": ["n35", "N"], "to": ["n40", "V"]},
+      {"from": ["n39", "R"], "to": ["n40", "A"]},
+      {"from": ["n40", "V"], "to": ["n41", "V"]},
+      {"from": ["n20", "P"], "to": ["n42", "A"]},
+      {"from": ["n34", "V"], "to": ["n42", "TA"]},
+      {"from": ["n21", "P"], "to": ["n42", "B"]},
+      {"from": ["n41", "V"], "to": ["n42", "TB"]},
+      {"from": ["n42", "C"], "to": ["n43", "C"]},
+      {"from": ["n19", "R"], "to": ["n43", "L0"]},
+      {"from": ["n19", "R"], "to": ["n43", "L1"]},
+      {"from": ["n20", "P"], "to": ["n44", "P"]},
+      {"from": ["n21", "P"], "to": ["n44", "P"]},
+      {"from": ["n18", "N"], "to": ["n44", "R"]},
+      {"from": ["n43", "C"], "to": ["n45", "A"]},
+      {"from": ["n44", "C"], "to": ["n45", "B"]},
+      {"from": ["n45", "M"], "to": ["n47", "T"]},
+      {"from": ["n46", "B"], "to": ["n47", "P"]},
+      {"from": ["n47", "L"], "to": ["n48", "G"]},
+      {"from": ["n13", "R"], "to": ["n51", "X"]},
+      {"from": ["n49", "N"], "to": ["n51", "Y"]},
+      {"from": ["n13", "R"], "to": ["n52", "X"]},
+      {"from": ["n50", "N"], "to": ["n52", "Y"]},
+      {"from": ["n52", "R"], "to": ["n54", "T"]},
+      {"from": ["n51", "R"], "to": ["n54", "F"]},
+      {"from": ["n53", "B"], "to": ["n54", "P"]},
+      {"from": ["n54", "L"], "to": ["n55", "V"]},
+      {"from": ["n55", "R"], "to": ["n57", "T"]},
+      {"from": ["n54", "L"], "to": ["n57", "F"]},
+      {"from": ["n56", "B"], "to": ["n57", "P"]},
+      {"from": ["n57", "L"], "to": ["n58", "V"]},
+      {"from": ["n58", "V"], "to": ["n59", "V"]},
+      {"from": ["n11", "C"], "to": ["n60", "G"]},
+      {"from": ["n58", "V"], "to": ["n60", "A"]},
+      {"from": ["n0", "P"], "to": ["n60", "C"]},
+      {"from": ["n12", "C"], "to": ["n61", "G"]},
+      {"from": ["n58", "V"], "to": ["n61", "A"]},
+      {"from": ["n4", "P"], "to": ["n61", "C"]},
+      {"from": ["n11", "C"], "to": ["n62", "G"]},
+      {"from": ["n59", "R"], "to": ["n62", "A"]},
+      {"from": ["n0", "P"], "to": ["n62", "C"]},
+      {"from": ["n3", "V"], "to": ["n63", "C1"]},
+      {"from": ["n60", "G"], "to": ["n63", "C2"]},
+      {"from": ["n7", "V"], "to": ["n64", "C1"]},
+      {"from": ["n61", "G"], "to": ["n64", "C2"]},
+      {"from": ["n3", "V"], "to": ["n65", "C1"]},
+      {"from": ["n62", "G"], "to": ["n65", "C2"]},
+      {"from": ["n60", "G"], "to": ["n66", "C"]},
+      {"from": ["n61", "G"], "to": ["n67", "C"]},
+      {"from": ["n62", "G"], "to": ["n68", "C"]},
+      {"from": ["n66", "V"], "to": ["n69", "V"]},
+      {"from": ["n17", "R"], "to": ["n69", "A"]},
+      {"from": ["n67", "V"], "to": ["n70", "V"]},
+      {"from": ["n17", "R"], "to": ["n70", "A"]},
+      {"from": ["n70", "V"], "to": ["n71", "V"]},
+      {"from": ["n68", "V"], "to": ["n72", "V"]},
+      {"from": ["n17", "R"], "to": ["n72", "A"]},
+      {"from": ["n63", "P"], "to": ["n73", "A"]},
+      {"from": ["n69", "V"], "to": ["n73", "TA"]},
+      {"from": ["n64", "P"], "to": ["n73", "B"]},
+      {"from": ["n71", "V"], "to": ["n73", "TB"]},
+      {"from": ["n65", "P"], "to": ["n74", "A"]},
+      {"from": ["n72", "V"], "to": ["n74", "TA"]},
+      {"from": ["n64", "P"], "to": ["n74", "B"]},
+      {"from": ["n71", "V"], "to": ["n74", "TB"]},
+      {"from": ["n73", "C"], "to": ["n75", "C"]},
+      {"from": ["n19", "R"], "to": ["n75", "L0"]},
+      {"from": ["n19", "R"], "to": ["n75", "L1"]},
+      {"from": ["n63", "P"], "to": ["n76", "P"]},
+      {"from": ["n64", "P"], "to": ["n76", "P"]},
+      {"from": ["n18", "N"], "to": ["n76", "R"]},
+      {"from": ["n75", "C"], "to": ["n77", "A"]},
+      {"from": ["n76", "C"], "to": ["n77", "B"]},
+      {"from": ["n77", "M"], "to": ["n79", "T"]},
+      {"from": ["n78", "B"], "to": ["n79", "P"]},
+      {"from": ["n79", "L"], "to": ["n80", "G"]},
+      {"from": ["n74", "C"], "to": ["n81", "C"]},
+      {"from": ["n19", "R"], "to": ["n81", "L0"]},
+      {"from": ["n19", "R"], "to": ["n81", "L1"]},
+      {"from": ["n65", "P"], "to": ["n82", "P"]},
+      {"from": ["n64", "P"], "to": ["n82", "P"]},
+      {"from": ["n18", "N"], "to": ["n82", "R"]},
+      {"from": ["n81", "C"], "to": ["n83", "A"]},
+      {"from": ["n82", "C"], "to": ["n83", "B"]},
+      {"from": ["n83", "M"], "to": ["n85", "T"]},
+      {"from": ["n84", "B"], "to": ["n85", "P"]},
+      {"from": ["n85", "L"], "to": ["n86", "G"]},
+      {"from": ["n13", "R"], "to": ["n87", "X"]},
+      {"from": ["n13", "R"], "to": ["n88", "X"]},
+      {"from": ["n87", "R"], "to": ["n89", "X"]},
+      {"from": ["n88", "R"], "to": ["n89", "Y"]},
+      {"from": ["n89", "V"], "to": ["n90", "V"]},
+      {"from": ["n89", "V"], "to": ["n91", "V"]},
+      {"from": ["n90", "V"], "to": ["n92", "V"]},
+      {"from": ["n0", "P"], "to": ["n93", "G"]},
+      {"from": ["n91", "V"], "to": ["n93", "T"]},
+      {"from": ["n4", "P"], "to": ["n94", "G"]},
+      {"from": ["n92", "V"], "to": ["n94", "T"]},
+      {"from": ["n0", "P"], "to": ["n95", "A"]},
+      {"from": ["n93", "G"], "to": ["n95", "B"]},
+      {"from": ["n4", "P"], "to": ["n96", "A"]},
+      {"from": ["n94", "G"], "to": ["n96", "B"]},
+      {"from": ["n3", "V"], "to": ["n97", "C1"]},
+      {"from": ["n95", "C"], "to": ["n97", "C2"]},
+      {"from": ["n7", "V"], "to": ["n98", "C1"]},
+      {"from": ["n96", "C"], "to": ["n98", "C2"]},
+      {"from": ["n89", "V"], "to": ["n99", "V"]},
+      {"from": ["n17", "R"], "to": ["n99", "A"]},
+      {"from": ["n97", "P"], "to": ["n100", "A"]},
+      {"from": ["n99", "V"], "to": ["n100", "TA"]},
+      {"from": ["n98", "P"], "to": ["n100", "B"]},
+      {"from": ["n99", "V"], "to": ["n100", "TB"]},
+      {"from": ["n100", "C"], "to": ["n101", "C"]},
+      {"from": ["n19", "R"], "to": ["n101", "L0"]},
+      {"from": ["n19", "R"], "to": ["n101", "L1"]},
+      {"from": ["n97", "P"], "to": ["n102", "P"]},
+      {"from": ["n98", "P"], "to": ["n102", "P"]},
+      {"from": ["n18", "N"], "to": ["n102", "R"]},
+      {"from": ["n101", "C"], "to": ["n103", "A"]},
+      {"from": ["n102", "C"], "to": ["n103", "B"]},
+      {"from": ["n103", "M"], "to": ["n105", "T"]},
+      {"from": ["n104", "B"], "to": ["n105", "P"]},
+      {"from": ["n105", "L"], "to": ["n106", "G"]}
+    ],
+    "notes": [
+      {"id": "t0", "x": 960, "y": -20, "w": 420, "h": 250, "text": "CARD CONNECTORS — five ways to join two cards\n\nDrag the two anchors on the cloth. Every connector finds the card's real outline (swap the hexagon or the rounded rect for any closed shape), so nothing is pinned to a port unless the type wants one.\n\nEach band below is one connector type; the toggle at its right end shows or hides it. Sliders: handle length as a share of the chord, dot radius, and the two snap strengths.\n\n1 straight  ·  2 normal (lime)  ·  3 snap S (red)  ·  4 arc (blue)  ·  5 orthogonal (orange)"}
+    ],
+    "groups": [
+      {"id": "g0", "x": -30, "y": -50, "w": 1860, "h": 320, "title": "cards — hexagon A, rounded rect B (swap any closed shape in)", "nodes": ["n0", "n1", "n2", "n3", "n4", "n5", "n6", "n7", "n8", "n9", "n10"]},
+      {"id": "g1", "x": -30, "y": 310, "w": 1860, "h": 520, "title": "shared — the chord, its angle, a handle length that scales with distance", "nodes": ["n11", "n12", "n13", "n14", "n15", "n16", "n17", "n18", "n19"]},
+      {"id": "g2", "x": 430, "y": 900, "w": 1400, "h": 340, "title": "1 · straight — the chord, clipped to the two outlines", "nodes": ["n20", "n21", "n22", "n23", "n24", "n25", "n26", "n27", "n28"]},
+      {"id": "g3", "x": 660, "y": 1290, "w": 1400, "h": 480, "title": "2 · normal — handles perpendicular to the outline where the chord leaves it", "nodes": ["n29", "n30", "n31", "n32", "n33", "n34", "n35", "n36", "n37", "n38", "n39", "n40", "n41", "n42", "n43", "n44", "n45", "n46", "n47", "n48"]},
+      {"id": "g4", "x": -30, "y": 1840, "w": 3280, "h": 480, "title": "3 · snap S (red) & 4 · arc (blue) — both rays turn by α off the chord; the arc turns A the other way", "nodes": ["n49", "n50", "n51", "n52", "n53", "n54", "n55", "n56", "n57", "n58", "n59", "n60", "n61", "n62", "n63", "n64", "n65", "n66", "n67", "n68", "n69", "n70", "n71", "n72", "n73", "n74", "n75", "n76", "n77", "n78", "n79", "n80", "n81", "n82", "n83", "n84", "n85", "n86"]},
+      {"id": "g5", "x": -30, "y": 2390, "w": 2590, "h": 460, "title": "5 · orthogonal — each card offers four ports on its axes; the pair facing each other is chosen from θ", "nodes": ["n87", "n88", "n89", "n90", "n91", "n92", "n93", "n94", "n95", "n96", "n97", "n98", "n99", "n100", "n101", "n102", "n103", "n104", "n105", "n106"]}
+    ]
+  },
+
   'Mandala': {
     format: 1,
     nodes: [
@@ -6795,7 +7105,7 @@ const EXAMPLES = {
         "y": 2560,
         "w": 340,
         "h": 300,
-        "text": "two ways to hide a view\n\nThe wave and the flower are ordinary geometry, so they pass through a Select with NOTHING wired into F. Off means an empty list, and Draw skips an empty list silently. The flower's Path to Audio goes quiet the same way — no geometry, no sound.\n\nThe plate and the pendulum are display instruments: they draw themselves, so they can only be hidden by taking their colour's alpha to zero. The sand keeps settling while you are away — come back and the figure has moved on."
+        "text": "two ways to hide a view\n\nThe wave and the flower are ordinary geometry, so they pass through a Select with NOTHING wired into F. Off means an empty list, and Draw skips an empty list silently. The flower's Path to Audio goes quiet the same way — no geometry, no sound.\n\nThe plate and the pendulum are display instruments: they draw themselves, so they can only be hidden by taking their color's alpha to zero. The sand keeps settling while you are away — come back and the figure has moved on."
       }
     ],
     "groups": [
@@ -6980,7 +7290,7 @@ const EXAMPLES = {
     ['k9', 'math/mul', 1400, 280],
     ['k10', 'math/max', 1620, 280, { B: 1 }],
     ['k11', 'crv/circle', 1840, 160],
-    /* — orbit ellipses: centre sits a·e from the focus, toward aphelion — */
+    /* — orbit ellipses: center sits a·e from the focus, toward aphelion — */
     ['o1', 'math/mul', 740, 480],
     ['o2', 'math/expr', 740, 620, { expr: 'X * sqrt(1 - Y*Y) * Z' }],
     ['o3', 'math/expr', 740, 760, { expr: '-X * PI / 180' }],
@@ -7138,7 +7448,7 @@ const EXAMPLES = {
   ]),
 
   /* The theremin grown into an instrument you can see: every note of A
-   * pentatonic drawn as a labelled rung (Series → Scale → Set Union dedupes
+   * pentatonic drawn as a labeled rung (Series → Scale → Set Union dedupes
    * the snapped notes), a marker riding the rung you're playing, and three
    * REAL <button> drones (one Element node, list-matched ×3) latching
    * A2 / E3 / A3 under everything. Buttons on the interface itself.
@@ -9500,7 +9810,7 @@ const EXAMPLES = {
     ]
   },
 
-  /* series → golden-angle spiral of circles, sized by expression, coloured by index */
+  /* series → golden-angle spiral of circles, sized by expression, colored by index */
   'Click toy': {
     "format": 2,
     "nodes": [
@@ -9609,7 +9919,7 @@ const EXAMPLES = {
         "values": {
           "expr": "(X - (Y - 1) / 2) * 78"
         },
-        "label": "centred x"
+        "label": "centered x"
       },
       {
         "id": "ppt",
@@ -11718,7 +12028,7 @@ const EXAMPLES = {
         "y": 900,
         "w": 990,
         "h": 660,
-        "title": "the figure — shape, colour and spin of the scene",
+        "title": "the figure — shape, color and spin of the scene",
         "nodes": [
           "hmul",
           "spinr",
@@ -12957,7 +13267,7 @@ const EXAMPLES = {
         "values": {
           "Y": 40
         },
-        "label": "button centres"
+        "label": "button centers"
       },
       {
         "id": "b3",
@@ -13140,7 +13450,7 @@ const EXAMPLES = {
         "values": {
           "Y": 94
         },
-        "label": "label centres"
+        "label": "label centers"
       },
       {
         "id": "b13",
@@ -16144,7 +16454,7 @@ const EXAMPLES = {
    * a Select with nothing wired into F empties the list and Draw skips it
    * (the flower's Path to Audio falls silent by the same wire — no geometry,
    * no sound); the plate and the pendulum draw themselves, so they can only
-   * be hidden by taking their colour's alpha to zero, which means the sand
+   * be hidden by taking their color's alpha to zero, which means the sand
    * keeps settling while you are away. */
   'Golden Rings': {
     "format": 2,
@@ -17503,9 +17813,16 @@ const EXAMPLE_META = {
     tags: ['intersection', 'region boolean', 'trim', 'fillet', 'self-intersection', 'multi-wire'],
     needs: [], frames: 40
   },
+  'Card connectors': {
+    cat: 'Geometry',
+    blurb: 'Five ways to join two cards — straight, outline-normal, snap-S, arc and orthogonal — each behind a toggle, all of them landing on the card’s real outline. Drag the anchors.',
+    teaches: 'Curve Intersection as a port finder: a ray from the center hits whatever outline the card has, Evaluate Curve gives the normal there, and a Select with nothing in F is the on/off switch for a whole band.',
+    tags: ['connectors', 'bezier', 'intersection', 'normal', 'snap', 'orthogonal', 'ui', 'collab os', 'cards'],
+    needs: [], frames: 40
+  },
   'Mandala': {
     cat: 'Custom JS & meta',
-    blurb: 'Seeded particles in a symmetry slice, joined by a distance-threshold web, replicated around the centre.',
+    blurb: 'Seeded particles in a symmetry slice, joined by a distance-threshold web, replicated around the center.',
     teaches: 'Two Custom JS nodes hold the genuinely code-shaped parts; everything else is sliders, seeded randoms and wires.',
     tags: ['custom js', 'symmetry', 'particles', 'seeded random'],
     needs: [], frames: 40
@@ -17513,7 +17830,7 @@ const EXAMPLE_META = {
   'Seeing Sound': {
     cat: 'Scopes & figures',
     blurb: 'One note, one interval, four ways of looking at them — sand on a plate, a pendulum web, the waveform, and the interval as a flower. Click the tabs.',
-    teaches: 'Tabs are just geometry: four rects into one Hotspot, each contributing its own number to a sum, remembered through a Delay — and a view is hidden either by a Select with nothing wired into F, or by taking its colour’s alpha to zero.',
+    teaches: 'Tabs are just geometry: four rects into one Hotspot, each contributing its own number to a sum, remembered through a Delay — and a view is hidden either by a Select with nothing wired into F, or by taking its color’s alpha to zero.',
     tags: ['tabs', 'hotspot', 'delay', 'select', 'cymatics', 'harmonograph', 'rose', 'interval', 'ui'],
     needs: ['gesture'], frames: 110
   },
@@ -17562,8 +17879,8 @@ const EXAMPLE_META = {
   },
   'Noise blob': {
     cat: 'Fundamentals',
-    blurb: 'Three interleaved noise blobs in graded colour — the same polar-spline idea three ways, layered into one organism.',
-    teaches: 'Colour as data: swatches deconstruct into HSL, shift per layer, and a gradient fills each breathing spline.',
+    blurb: 'Three interleaved noise blobs in graded color — the same polar-spline idea three ways, layered into one organism.',
+    teaches: 'Color as data: swatches deconstruct into HSL, shift per layer, and a gradient fills each breathing spline.',
     tags: ['noise', 'spline', 'polar', 'gradient', 'layers'],
     needs: [], frames: 40
   },
@@ -17576,7 +17893,7 @@ const EXAMPLE_META = {
   },
   'Scale board': {
     cat: 'Audio synthesis',
-    blurb: 'The theremin grown into an instrument you can see — labelled rungs, a live trace of the melody, and real button drones underneath, the whole board tuned from one Key node.',
+    blurb: 'The theremin grown into an instrument you can see — labeled rungs, a live trace of the melody, and real button drones underneath, the whole board tuned from one Key node.',
     teaches: 'One Key node is the tuning: its root and scale wire into every Scale node, so changing the key in one place retunes the rungs, the pointer and the drone triad together.',
     tags: ['key', 'scale', 'set union', 'dom', 'buttons', 'instrument', 'trace'],
     needs: ['gesture'], frames: 40
@@ -17584,14 +17901,14 @@ const EXAMPLE_META = {
   'Golden Rings': {
     cat: 'Geometry',
     blurb: 'Concentric rings carved by Region Boolean, fanned by a kaleidoscope, turning on a turntable — with two anchors to grab on the cloth.',
-    teaches: 'Region Boolean cuts true ring shapes with holes, Kaleidoscope fans them around the centre, and Anchor Points put handles right on the render.',
+    teaches: 'Region Boolean cuts true ring shapes with holes, Kaleidoscope fans them around the center, and Anchor Points put handles right on the render.',
     tags: ['rings', 'region boolean', 'kaleidoscope', 'turntable', 'anchors'],
     needs: [], frames: 60
   },
   'Superformula': {
     cat: 'Custom JS & meta',
     blurb: 'One superformula in a Custom JS node, pushed to embers — three nested layers breathe their pinch with time and grade from ember orange to magenta.',
-    teaches: 'Layer variation is list matching: one three-step Series fans the shape into three scales, three spins and three colours through a single Gradient node.',
+    teaches: 'Layer variation is list matching: one three-step Series fans the shape into three scales, three spins and three colors through a single Gradient node.',
     tags: ['custom js', 'superformula', 'layers', 'gradient', 'ember'],
     needs: [], frames: 60
   },

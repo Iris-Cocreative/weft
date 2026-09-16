@@ -97,7 +97,7 @@ const App = {
   SETTINGS: [
     { key: 'angle-sliders', label: 'angle sliders', hint: 'typing 90 / 180 / 360 makes a degree slider wired into a Radians node', def: true },
     { key: 'smallint-sliders', label: '0–12 sliders', hint: 'typing a small integer makes a 0–12 integer slider', def: true },
-    { key: 'live-colour-wires', label: 'live colour wires', hint: 'colour wires take the colour flowing through them', def: true }
+    { key: 'live-colour-wires', label: 'live color wires', hint: 'color wires take the color flowing through them', def: true }
   ],
 
   bindSettings() {
@@ -482,7 +482,7 @@ const App = {
         App._dirty = false;
         App.flash('saved ' + App._fileName);
       } catch (e) {
-        if (e && e.name === 'AbortError') return; // picker cancelled — not an error
+        if (e && e.name === 'AbortError') return; // picker canceled — not an error
         // permission lost / file moved: fall back to a fresh pick next time
         App._fileHandle = null;
         App.flash('could not save: ' + (e.message || e));
@@ -496,7 +496,7 @@ const App = {
 
   async saveGraphAs() {
     if (typeof showSaveFilePicker === 'function') {
-      try { await App._pickSaveHandle(); } catch (e) { return; } // cancelled
+      try { await App._pickSaveHandle(); } catch (e) { return; } // canceled
       return App.saveGraph();
     }
     let name = await App.ask({
@@ -520,7 +520,7 @@ const App = {
       [h] = await showOpenFilePicker({
         types: [{ description: 'Weft graph', accept: { 'application/json': ['.json', '.weft'] } }]
       });
-    } catch (e) { return; } // cancelled
+    } catch (e) { return; } // canceled
     try {
       const f = await h.getFile();
       App.setGraph(JSON.parse(await f.text()));
@@ -678,7 +678,7 @@ const App = {
     const order = ['number', 'point', 'vector', 'point3', 'camera', 'geometry', 'color', 'bool', 'string', 'audio', 'any'];
     body.innerHTML = order.map(t =>
       `<div class="tk-row"><span class="tk-line" style="background:${TYPE_COLORS[t]}"></span>${t}</div>`).join('') +
-      `<div class="tk-note">wires take the colour of their source output</div>`;
+      `<div class="tk-note">wires take the color of their source output</div>`;
     document.querySelector('#typeKey .tk-head').addEventListener('click', () => {
       document.getElementById('typeKey').classList.toggle('closed');
     });
@@ -687,7 +687,7 @@ const App = {
   /* ------------------------------ examples ------------------------------ */
 
   /* Load an example by name: dirty-check → back up the current graph → set →
-   * fit → flash. Resolves false if the user cancelled, so a caller (the
+   * fit → flash. Resolves false if the user canceled, so a caller (the
    * gallery) can decide whether to stay open. */
   async loadExample(name) {
     if (!EXAMPLES[name]) { App.flash('no example named “' + name + '”'); return false; }
@@ -909,7 +909,7 @@ const App = {
     g2.fillStyle = (ctx && ctx.bg) ? LM.colorCss(ctx.bg) : '#0b0e14';
     g2.fillRect(0, 0, cv.width, cv.height);
     if (ctx) {
-      g2.translate(cv.width / 2, cv.height / 2); // coordinates are centred (invariant 3)
+      g2.translate(cv.width / 2, cv.height / 2); // coordinates are centered (invariant 3)
       const sc = Math.min(cv.width / S.w, cv.height / S.h);
       g2.scale(sc, sc);
       for (const it of ctx.drawList) {
@@ -1019,7 +1019,7 @@ const App = {
     };
     const onKey = e => {
       if (e.key !== 'Escape') return;
-      // the ask dialog owns Esc while it is up, so a cancelled load keeps the gallery
+      // the ask dialog owns Esc while it is up, so a canceled load keeps the gallery
       if (!document.getElementById('askModal').classList.contains('hidden')) return;
       e.stopPropagation();
       close();

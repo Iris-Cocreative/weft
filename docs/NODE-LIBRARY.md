@@ -57,14 +57,14 @@ Still open from that harvest:
   attribute-string literals because there is no string composition; this is now
   the sharpest missing altitude node.
 
-### Colour — harvested from the GH demo corpus, James 2026-07-13 *(planned — high)*
+### Color — harvested from the GH demo corpus, James 2026-07-13 *(planned — high)*
 
-- **Colour** `params/colour` — pass-through colour param, completing the v0.3.1
-  param family (Number/Point/Vector/Curve exist; Colour doesn't). GH demos use
+- **Color** `params/color` — pass-through color param, completing the v0.3.1
+  param family (Number/Point/Vector/Curve exist; Color doesn't). GH demos use
   it constantly to bundle swatches: N swatches → one Col param via multi-wire.
-- **Split Colour** `disp/splitcol` — colour → components, with a **mode toggle**
+- **Split Color** `disp/splitcol` — color → components, with a **mode toggle**
   (AHSL / AHSV / ARGB) instead of GH's three separate nodes. James's design;
-  see library principle 5. Demo 3 turns hue/luminance into coordinates — colour
+  see library principle 5. Demo 3 turns hue/luminance into coordinates — color
   *as data* is very Weft.
 - **Gradient (multi-stop)** — extend `disp/gradient` beyond A→B: stops list +
   positions, GH-style draggable-stop body later. Demos 2 and 4 both need ≥3 stops.
@@ -74,7 +74,7 @@ Still open from that harvest:
 - **Sort List** `sets/sort` — sort keys K (numbers), optionally dragging a values list L along with them.
 - **Weave** `sets/weave` — interleave lists by a pattern (GH name; too on-brand to skip).
 - **Interpolate Data** `sets/interpdata` — resample a list at parameter t
-  (0..1), interpolating between items — numbers, points, *and colours*
+  (0..1), interpolating between items — numbers, points, *and colors*
   (polymorphic via coerce). GH Demo 2's whole trick; kin to Evaluate Curve but
   for any data.
 
@@ -162,8 +162,8 @@ Still open:
 - **Value List** `params/valuelist` — named-options dropdown (GH Demo 1).
   Core UI for presets and modes; simple custom body.
 - Later input objects from GH Demo 1's gallery: Digit Scroller, Calendar/Clock
-  (a **Date/Time** input node — real-world data on the loom), Colour Wheel
-  (see also the 3D colour picker note in the vault — design study for a richer
+  (a **Date/Time** input node — real-world data on the loom), Color Wheel
+  (see also the 3D color picker note in the vault — design study for a richer
   swatch/picker body).
 
 ### Input — later inputs *(phase 4+)*
@@ -199,8 +199,8 @@ Still open:
 ### Future packs *(pack — not core)*
 
 - **Charts pack** — Line Chart, Bar Chart, Scatter, Indicator/Dial, Time Slider: render nodes for the data-canvas path (see 2nd Brain `Weft — Possible Paths`). Precedent from *inside* GH: Bar Graph and Quick Graph render live charts on the canvas (Demo 5) — the dashboard path exists in embryo in Grasshopper itself.
-- **Mesh/Field pack** — Mesh Spray-style colour fields: points + colours →
-  smooth 2D gradient field (Demo 3's output). In web terms: colour-field
+- **Mesh/Field pack** — Mesh Spray-style color fields: points + colors →
+  smooth 2D gradient field (Demo 3's output). In web terms: color-field
   interpolation on canvas; gorgeous, later.
 - **System-dynamics pack** — Stock, Flow, Converter, Delay (Machinations/Loopy precedent) — phase 8.
 
@@ -222,11 +222,11 @@ list, the renderer and the export contract never learned about 3D at all.
   wheel to pull back — built on the existing `ctx.mouse`/`ctx.scroll`, no new
   channel), and both come back out as a plain-JSON `camera` value
 - **Project** — the hinge. Three parallel lists out: screen faces, shade 0..1,
-  view depth. Wire the shade through Colour HSL and **one** Draw paints the whole
+  view depth. Wire the shade through Color HSL and **one** Draw paints the whole
   shaded solid, because list matching does the per-face work
 - **Primitives** — Box, Sphere, Cylinder, Cone, Torus, Plane
 - **Bridges from 2D** — Extrude and Revolve. The most valuable nodes in the pack:
-  they turn every curve node in the library into a 3D modelling tool
+  they turn every curve node in the library into a 3D modeling tool
 - **Transforms** — Move3, Rotate3, Scale3 (a bare number coerces to a uniform
   factor, so there is no mode toggle to learn)
 - **Analysis** — Faces (mesh → face polys + normals + centroids), Dot/Cross/Unit/
@@ -273,7 +273,7 @@ splits rather than drops.
    it should.** Those outputs are what keep the graph flat. A node that emits only
    geometry forces its user into topology. This is why Grid emits P *and* C, R, K.
    K especially earns its place because it cannot be derived downstream by eye:
-   the iso 3-colouring is `(C - floor(R/2) + 2R) mod 3` (an axial-coordinate
+   the iso 3-coloring is `(C - floor(R/2) + 2R) mod 3` (an axial-coordinate
    transform — the naive `C % 3` puts same-phase circles next to each other), and
    it is *canonical*, not arbitrary — 2 and 3 are the chromatic numbers of the
    square and triangular lattices. Emit the canonical thing; leave the rest to

@@ -113,7 +113,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/slider` | Number Slider | | N:number | values: min max value label, mode:"int" |
 | `params/toggle` | Boolean Toggle | | B:bool | values: value |
 | `params/button` | Button (momentary) | | B:bool | |
-| `params/swatch` | Colour Swatch | | C:color | values: c:{r,g,b,a} |
+| `params/swatch` | Color Swatch | | C:color | values: c:{r,g,b,a} |
 | `params/textlist` | Text List | | L:string | values: text (one item per line) |
 | `params/number` | Number | N:number=0 | N:number | |
 | `params/point` | Point | P:point | P:point | |
@@ -123,7 +123,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/graph` | Graph Data | X Y A:point B:point (list-in X,Y) | X Y | on-node plot |
 | `params/timegraph` | Time Graph | V:number (list-in) | V:number | rolling trace |
 | `params/relay` | Relay | V:any (list-in) | V:any | wire organiser |
-| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; polylines centred on (0,0), long side scaled to S px; compound paths keep their holes; F/K are fill/stroke per path) |
+| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; polylines centered on (0,0), long side scaled to S px; compound paths keep their holes; F/K are fill/stroke per path) |
 
 ### State (memory per list item; resets on load)
 | node | title | in | out | |
@@ -180,7 +180,7 @@ and/or/xor/not).
 | `vec/polar` | O:point A:angle R:radius | P:point | |
 | `vec/distance` | A B | D | |
 | `vec/angle` | A B | R | |
-| `vec/grid` | P S:spacing W H | P:point C:col R:row K:colour-class | values.iso for iso lattice |
+| `vec/grid` | P S:spacing W H | P:point C:col R:row K:color-class | values.iso for iso lattice |
 | `vec/vecxy` | X Y | V:vector | |
 | `vec/vec2pt` | A B U:unit | V:vector L | |
 | `vec/line2vec` | C:geometry U:unit | V:vector L | start → end of any curve; a Line becomes the vector it draws |
@@ -217,7 +217,7 @@ means the same place on the curve in every other.
 | `crv/length` | C | L | · `crv/area` C → A:number C:centroid |
 | `crv/endpoints` | C | S:point E:point | closed curves: both are the seam |
 | `crv/extend` | C L0=20 L1=20 | C | px at start/end, negative trims; lines and arcs stay exact |
-| `crv/bbox` | G (list-in) | B:rect C:centre W H | `values.mode` `'each'`\|`'all'` |
+| `crv/bbox` | G (list-in) | B:rect C:center W H | `values.mode` `'each'`\|`'all'` |
 | `crv/offset` | C D=10 | C | +D grows closed curves outward; circles/arcs/lines stay exact, others → poly |
 | `crv/join` | C (list-in) T=1 | C | chains curves whose ends meet within T px |
 | `crv/trim` | C X:cutter | C | `values.mode` `'outside'`\|`'inside'`\|`'split'` |
@@ -230,10 +230,10 @@ means the same place on the curve in every other.
 circle into an ellipse) · `xf/mirror` (A, B — the two ends of the mirror line) ·
 `xf/tile` (V1 N1 V2 N2 → G plus I, J cell indices; identical copies only —
 varying cells are `vec/grid` + list matching) ·
-`xf/kaleido` (G **list-in** N=6 M:mirror=true C:centre → G plus K wedge index;
+`xf/kaleido` (G **list-in** N=6 M:mirror=true C:center → G plus K wedge index;
 the whole input — every wired item — replicated into N wedges around C, with
-alternate wedges reflected so neighbours share mirrored edges; keep the motif
-*off* the centre and off the wedge axes or mirrored copies coincide).
+alternate wedges reflected so neighbors share mirrored edges; keep the motif
+*off* the center and off the wedge axes or mirrored copies coincide).
 
 ### 3D (`js/nodes-3d.js` — the pack; world axes are x right, y **down**, z away)
 | node | in | out | |
@@ -241,18 +241,18 @@ alternate wedges reflected so neighbours share mirrored edges; keep the motif
 | `d3/project` | G:geometry(**list-in**) C:camera L:point3 | F:geometry S:number D:number | `values.mode` `'shaded'`\|`'wire'`\|`'both'`; F is 2D screen geometry **already sorted back to front**, S the shade 0..1, D the depth — three index-aligned lists |
 | `d3/camera` | P:pos T:target F:fov° Z:zoom U:up | C:camera | `values.mode` `'persp'`\|`'ortho'` |
 | `d3/orbit` | T:target D D:dist A:yaw E:pitch F:fov° | C:camera A E | drag the cloth to orbit, wheel to pull back; A/E are resting angles the drag adds to |
-| `d3/extrude` | G:2D-geometry H C:cap | G:mesh | centred on its own plane; open curves become ribbons |
+| `d3/extrude` | G:2D-geometry H C:cap | G:mesh | centered on its own plane; open curves become ribbons |
 | `d3/revolve` | G:2D-profile N A:sweep-rad | G:mesh | about the world y axis; the profile's x is the radius |
-| `d3/box` `d3/sphere` `d3/cylinder` `d3/cone` `d3/torus` `d3/plane` | P:centre + sizes | G:mesh | height runs along y; Plane lies in xz |
+| `d3/box` `d3/sphere` `d3/cylinder` `d3/cone` `d3/torus` `d3/plane` | P:center + sizes | G:mesh | height runs along y; Plane lies in xz |
 | `d3/move3` `d3/rotate3` `d3/scale3` | G + T / R:rad A:axis C / F:point3 C | G | a 2D shape lifts to `poly3`; Scale3's F takes a bare number as uniform |
 | `d3/point3` `d3/decon3` `d3/polyline3` `d3/grid3` | X Y Z / P / V(list-in) C / P S NX NY NZ | P:point3 / X Y Z / G / P I J K | Grid3's I/J/K are per-item keys |
 | `d3/faces` | G:mesh | F:geometry N:point3 C:point3 | face polys + normals + centroids |
 | `d3/dot3` `d3/cross3` `d3/unit3` `d3/len3` `d3/amp3` | A B / V / V A | D / C / V / L / V | the 3D vector family |
 
 **The 3D idiom, whole:** `something 2D → d3/extrude → d3/project → S through
-math/remap → disp/hsl → ONE disp/draw(G:F, F:colour)`. Never one Draw per face.
+math/remap → disp/hsl → ONE disp/draw(G:F, F:color)`. Never one Draw per face.
 Wire every mesh into the *same* Project so its depth sort is global. Remap the
-shade before colouring, or unlit faces come out black.
+shade before coloring, or unlit faces come out black.
 
 ### Display
 | node | in | out | |
@@ -391,9 +391,9 @@ tested for clicks *and* drawn, and every node in the chain runs per item.)
 9. Coordinates invented for no reason — omit them.
 10. In Custom JS: naming a port `code`/`mode`/`ins`/`outs`/`title`/`graph`,
     or using `Math.random()` (breaks determinism and export replay).
-11. In 3D: a Draw per face instead of Project's shade list through one colour
+11. In 3D: a Draw per face instead of Project's shade list through one color
     node; a Project per mesh instead of every mesh into one (the depth sort is
-    per-Project); colouring straight from `S` with no Remap, so unlit faces go
+    per-Project); coloring straight from `S` with no Remap, so unlit faces go
     black; expecting a ghost preview from a `point3` output (there isn't one —
     project it first).
 

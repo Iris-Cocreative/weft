@@ -1092,7 +1092,7 @@ const LM = {
     };
   },
 
-  /* world point → {x, y} in screen px (centred origin, y down) plus z = the
+  /* world point → {x, y} in screen px (centered origin, y down) plus z = the
      view depth, bigger being farther. Hand in mats from LM.camMats to project a
      whole list against one camera — same optional-table trick as curvePoint.
      No near-plane culling here: a point behind the camera comes back with a
@@ -1223,7 +1223,7 @@ const LM = {
       const n = S.length, d = dsum / n;
       if (n === 1) { main.push({ g: S[0], d: d, s: 1 }); continue; }
       /* an open curve or a point has no facing and no shade — it comes through
-         lit (S = 1), so a colour wired from S doesn't silently blacken it */
+         lit (S = 1), so a color wired from S doesn't silently blacken it */
       if (!pr.face) { main.push({ g: { kind: 'poly', pts: S, closed: !!pr.closed }, d: d, s: 1 }); continue; }
       /* face against the eye, measured from its centroid — a vertex would
          misjudge which way a big quad faces */

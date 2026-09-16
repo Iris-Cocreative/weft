@@ -101,7 +101,7 @@ const WeftAudio = {
         const g = actx.createGain(); g.gain.value = 1;
         e.main = g; e.out = g; e.key = null;
       } else if (d.kind === 'scope') {
-        /* a tap, not a route: whatever wires in gets analysed, never forwarded.
+        /* a tap, not a route: whatever wires in gets analyzed, never forwarded.
          * The zero-gain leg to master keeps the branch alive even when the
          * tapped source reaches no speaker (an XY pair, say) — silent, but
          * the graph keeps pulling samples through it */
@@ -126,7 +126,7 @@ const WeftAudio = {
           }).catch(() => { });
         }
       } else if (d.kind === 'pitch') {
-        /* pitch tracker: analyses whatever wires in, or falls back to the mic
+        /* pitch tracker: analyzes whatever wires in, or falls back to the mic
          * when nothing does (the mic is only requested in update(), and only
          * if the input stays unwired — see there). Zero-gain leg keeps a
          * wired-but-unrouted branch pulled, same trick as the scope tap */
@@ -277,7 +277,7 @@ const WeftAudio = {
         }
         levels[d.id] = { bins: e.bf, sr: actx.sampleRate, ready: !!(e.srcs && e.srcs.length) };
       } else if (d.kind === 'pitch') {
-        /* source policy: analyse whatever the graph wires in; fall back to
+        /* source policy: analyze whatever the graph wires in; fall back to
          * the microphone only while the input stays unwired (so a patch that
          * feeds it audio never triggers a mic permission prompt) */
         const wired = !!(e.srcs && e.srcs.length);

@@ -530,7 +530,7 @@ for (const name of Object.keys(EXAMPLES)) {
   const pts = hg.G.pts;
   if (!pts || pts.length < 256) failures.push('harmonograph: too few pen points');
   else {
-    if (Math.hypot(pts[0].x, pts[0].y) > 1e-6) failures.push('harmonograph: pen should start at centre (sin 0)');
+    if (Math.hypot(pts[0].x, pts[0].y) > 1e-6) failures.push('harmonograph: pen should start at center (sin 0)');
     const rad = ps => Math.max(...ps.map(p => Math.hypot(p.x, p.y)));
     const early = rad(pts.slice(0, pts.length >> 3)), late = rad(pts.slice(-(pts.length >> 3)));
     if (!(late < early * 0.4)) failures.push('harmonograph: damping should shrink the figure (' + early.toFixed(1) + ' → ' + late.toFixed(1) + ')');
@@ -1015,7 +1015,7 @@ for (const name of Object.keys(EXAMPLES)) {
 
   /* --- hotspots land on projected faces (so 3D faces are clickable) --- */
   if (!LM.pointInGeom(r1.F[0], { x: 0, y: 0 }, 0))
-    failures.push('3D input/hotspot on projected output: pointInGeom should hit the centre of a projected face');
+    failures.push('3D input/hotspot on projected output: pointInGeom should hit the center of a projected face');
 
   /* --- sets/* surgery works on meshes (they are only JSON) --- */
   const uni = run('sets/union', { A: [boxA, boxB], B: [boxB] });
@@ -1105,9 +1105,9 @@ for (const name of Object.keys(EXAMPLES)) {
     if (F.length < 3) failures.push('3D chain: an extruded circle should project as many faces, got ' + F.length);
     if (F.length !== S.length) failures.push('3D chain: F and S must stay index-aligned, got ' + F.length + ' vs ' + S.length);
     if (c.drawList.length !== F.length) failures.push('3D chain: one Draw should paint every face, got ' + c.drawList.length + ' of ' + F.length);
-    /* the shade list becomes a colour list, so no two faces share a fill by accident */
+    /* the shade list becomes a color list, so no two faces share a fill by accident */
     if (new Set(c.drawList.map(it => LM.colorCss(it.fill))).size < 3)
-      failures.push('3D chain: wiring S through Colour HSL should give the faces different fills');
+      failures.push('3D chain: wiring S through Color HSL should give the faces different fills');
     try { new Function(WeftExport.buildJS(g)); } catch (e) { failures.push('3D chain export does not compile → ' + e.message); }
   }
 }

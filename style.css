@@ -12,8 +12,8 @@
   --white-40: rgba(255, 255, 255, 0.4);
   --primary: #2dd4bf;
   --eye-on: #14c50e;
-  /* wire-type colours surfaced as tokens (must match TYPE_COLORS in nodes.js) —
-   * value widgets wear the colour of the type they output */
+  /* wire-type colors surfaced as tokens (must match TYPE_COLORS in nodes.js) —
+   * value widgets wear the color of the type they output */
   --type-number: #3e9aff;
   --type-bool: #ff3b41;
   --font-ui: "Neue Kabel", Inter, "Segoe UI", system-ui, sans-serif;
@@ -180,7 +180,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
  * Deliberately NOT the .disabled look: bypass and dead-end are different facts. */
 .wire.dead { filter: saturate(0.25); opacity: 0.4; }
 
-/* colour picker popover — hand-rolled, one for every colour in the app */
+/* color picker popover — hand-rolled, one for every color in the app */
 .cp {
   position: fixed; z-index: 80; width: 196px;
   display: flex; flex-direction: column; gap: 8px;
@@ -226,7 +226,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .cp-chip:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5); }
 
-/* colour port literal: a chip that opens the picker */
+/* color port literal: a chip that opens the picker */
 .lit-swatch {
   display: inline-block; width: 15px; height: 15px; border-radius: 50%;
   cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
@@ -423,7 +423,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   border-radius: 3px; background: none; cursor: pointer;
 }
 /* checkboxes are drawn, not native: a quiet rounded square that fills with its
- * context colour when checked — bool literals wear the bool wire colour,
+ * context color when checked — bool literals wear the bool wire color,
  * settings wear the accent */
 .lit input[type="checkbox"], .set-row input[type="checkbox"] {
   appearance: none; -webkit-appearance: none; margin: 0; flex: none;
@@ -450,7 +450,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 
 /* --- Number Slider "Hairline" (design doc 1a, 2026-08-09) ---
  * the number is the widget: big mono value, 2px rule + ticks, faint end marks.
- * The widget wears the wire colour of its output type (number). */
+ * The widget wears the wire color of its output type (number). */
 /* border-radius here rounds the selection outline too (outlines follow it) */
 .sl { width: 100%; padding: 3px 11px 4px; position: relative; border-radius: 8px; }
 .sl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 2px; }
@@ -498,19 +498,21 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .sl-ends input:hover, .sl-ends input:focus { border-color: var(--dark-400); background: var(--dark-150); color: var(--white-80); }
 
 /* selected sliders resize from either edge (1a spec: 140–300px) — one pill per
- * side, riding ON the selection outline so it doesn't read as a second line */
+ * side, riding ON the selection outline so it doesn't read as a second line.
+ * The pills sit in opposite corners — top-left and bottom-right, just past
+ * the corner radius — so neither one crowds the output dot on the hairline */
 .sl-grip-l, .sl-grip-r { position: absolute; top: 0; bottom: 0; width: 11px; display: none; cursor: ew-resize; z-index: 3; }
-.sl-grip-l { left: -9px; }
-.sl-grip-r { right: -9px; }
+.sl-grip-l { left: -12px; }
+.sl-grip-r { right: -12px; }
 .node.selected .sl-grip-l, .node.selected .sl-grip-r { display: block; }
 .node.selected .sl-grip-l::after, .node.selected .sl-grip-r::after {
-  content: ''; position: absolute; top: calc(50% - 15px); width: 3px; height: 14px;
+  content: ''; position: absolute; width: 3px; height: 14px;
   border-radius: 2px; background: var(--accent);
 }
-.sl-grip-l::after { left: 4px; }
-.sl-grip-r::after { right: 4px; }
+.sl-grip-l::after { left: 4px; top: 10px; }
+.sl-grip-r::after { right: 4px; bottom: 10px; }
 
-/* the slider's output dot leaves the card's vertical centre and sits level
+/* the slider's output dot leaves the card's vertical center and sits level
  * with the hairline itself, clear of the track's end */
 .node.bare:has(.sl) .col-outs { justify-content: flex-start; }
 .node.bare:has(.sl) .col-outs .row.out { margin-top: 36px; }
@@ -527,7 +529,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .sl-opt-row input { flex: 1; min-width: 0; }
 .sl-val:hover, .sl-val:focus { border-color: var(--dark-400); background: var(--dark-150); }
 
-/* --- Knob / Angle: rotary dials in the number wire colour --- */
+/* --- Knob / Angle: rotary dials in the number wire color --- */
 .kn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px 8px; border-radius: 8px; }
 .kn-label { text-align: center; align-self: stretch; }
 .dial { width: 64px; height: 64px; flex: none; touch-action: none; cursor: crosshair; overflow: visible; }
@@ -544,7 +546,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .an-seg { margin-top: 3px; }
 .an-seg .seg-b { padding: 2px 9px; font-size: 10px; }
 
-/* --- Boolean Toggle: vertical pill in the bool wire colour (Figma 2026-07-15) —
+/* --- Boolean Toggle: vertical pill in the bool wire color (Figma 2026-07-15) —
  * off: outlined pill, light knob resting at the bottom
  * on:  solid pill, dark knob risen to the top --- */
 .tg {
@@ -578,7 +580,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .pbtn.down { background: var(--type-bool); box-shadow: 0 0 8px rgba(255, 59, 65, 0.45); }
 .pbtn.down .pbtn-core { background: var(--dark-100); opacity: 1; }
 
-/* --- Colour Swatch: the chosen colour as a circle (Figma) --- */
+/* --- Color Swatch: the chosen color as a circle (Figma) --- */
 .sw { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px; }
 .sw-circle {
   width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
@@ -627,7 +629,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .np.sized .panel-out { max-height: none; flex: 1; }
 
-/* palette glyph for the swatch (its icon is a colour wheel, CSS-drawn) */
+/* palette glyph for the swatch (its icon is a color wheel, CSS-drawn) */
 .icon-swatch {
   width: 15px; height: 15px; border-radius: 50%; flex: none;
   background: conic-gradient(from 90deg, #f00, #f5710c, #fdd41f, #15e134, #38dfe1, #390dea, #ff00fa, #f00);
@@ -839,7 +841,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .prev-toggle svg { width: 100%; height: 100%; display: block; }
 .prev-toggle:hover { opacity: 1; filter: drop-shadow(0 0 4px rgba(20, 197, 14, 0.6)); }
-/* the anchor's eye toggles its cloth handle, and wears the Params colour */
+/* the anchor's eye toggles its cloth handle, and wears the Params color */
 .node.is-anchor .prev-toggle { color: var(--cat); }
 .node.is-anchor .prev-toggle:hover { filter: drop-shadow(0 0 4px rgba(45, 212, 191, 0.6)); }
 .node.no-prev .prev-toggle { color: var(--white-40); opacity: 0.7; }
@@ -884,7 +886,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   min-width: 0; background: none; border: none; border-radius: 0; box-shadow: none;
 }
 .node.bare.selected, .node.bare.error { box-shadow: none; }
-.node.bare.selected .node-body > * { outline: 1px solid var(--primary); outline-offset: 3px; }
+.node.bare.selected .node-body > * { outline: 1px solid var(--primary); outline-offset: 6px; }  /* stands off the widget so it clears the port dots */
 /* …but never the resize grips — outlining those full-height strips paints
  * stray vertical lines beside the real selection box */
 .node.bare.selected .node-body > .sl-grip-l, .node.bare.selected .node-body > .sl-grip-r { outline: none; }
@@ -933,7 +935,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .node.collapsed .col-outs .port { margin-right: -7px; }
 
 /* relay — a pass-through pill dropped onto a wire (double-click the wire);
- * standard card colours, no head, ports at its ends take the wire's colour */
+ * standard card colors, no head, ports at its ends take the wire's color */
 .node.relay { min-width: 40px; width: 40px; height: 24px; border-radius: 999px; }
 .node.relay .node-rows {
   position: absolute; inset: 0; padding: 0; background: none;
