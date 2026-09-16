@@ -268,6 +268,17 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 
+- [shipped v0.17.7, 2026-09-16] **Wire geometry from the connector study.**
+  The editor's own wires keep horizontal tangents (a port is a dot on a
+  vertical edge — the outline normal *is* horizontal, and with horizontal
+  handles `y(t)` is monotone so a wire can never loop), but the handle
+  length now follows the bench's lesson: forward wires keep `Δx/2` yet never
+  drop below 0.3·chord, so two stacked nodes get a smooth bow instead of a
+  40px stub and a vertical drop; backward wires cap the handle at 200 so the
+  loop they must make stays one size instead of swelling with distance; the
+  floor drops 40 → 24 so adjacent nodes don't over-bulge. Considered and
+  rejected: tilting the tangent toward the target (hsnap) — a wire leaving
+  the port dot at an angle reads as unplugged.
 - [shipped v0.17.6, 2026-09-16] **Connector study + three editor asks.** New
   example ***Card connectors*** (17th, Geometry): James's Collab OS connector
   research tidied into one bench — straight, outline-normal, snap-S (one-sided

@@ -403,8 +403,20 @@ const Editor = (() => {
   }
 
   function wirePath(p1, p2) {
-    const dx = Math.max(40, Math.abs(p2.x - p1.x) * 0.5);
-    return `M ${p1.x} ${p1.y} C ${p1.x + dx} ${p1.y}, ${p2.x - dx} ${p2.y}, ${p2.x} ${p2.y}`;
+    // Tangents stay horizontal: a port is a dot on a vertical edge, so the
+    // boundary normal is horizontal and a wire leaving at an angle reads as
+    // unplugged. With horizontal handles y(t) is monotone, so a wire can
+    // never loop — the handle length is purely about shape:
+    //  - forward wires keep the classic Δx/2, but never less than 0.3 of the
+    //    chord, so two stacked nodes get a smooth bow instead of a 40px stub
+    //    and a vertical drop;
+    //  - backward wires (input left of output) cap the handles, so the loop
+    //    they have to make stays one size instead of swelling with distance.
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const chord = Math.hypot(dx, dy);
+    let L = Math.max(24, Math.abs(dx) * 0.5, chord * 0.3);
+    if (dx < 0) L = Math.min(L, 200);
+    return `M ${p1.x} ${p1.y} C ${p1.x + L} ${p1.y}, ${p2.x - L} ${p2.y}, ${p2.x} ${p2.y}`;
   }
 
   function outputTypeColor(from, depth) {

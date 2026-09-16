@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.6 — *Card connectors* example (17th), green selected anchors and Draw outlines on the cloth, slider grips in the corners, American spelling throughout the app.** v0.1 (2026-07-12): editor,
+**Status: v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,18 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.17.7 (2026-09-16): **the study feeds back into the editor's wires.** Asked
+what the connector work could do for Weft's own wires: with ports pinned to
+the left/right edges, the departure-angle logics (normal, arc, snap) have
+nothing to choose — the outline normal at a port is horizontal, which is what
+`wirePath` always drew — and since horizontal handles make `y(t)` monotone a
+wire can't self-intersect, so the bench's loop guards aren't needed either.
+What did carry over is handle length as a function of the *chord*: the old
+`max(40, Δx/2)` left two stacked nodes joined by a 40px stub and a vertical
+drop; now `L = max(24, Δx/2, 0.3·chord)`, capped at 200 when the wire runs
+backward so the loop stays one size. Horizontal and diagonal wires are
+unchanged. Compared in Chrome against the old curve overlaid in red.
 
 v0.17.6 (2026-09-16): **the connector study lands as an example.** James spent
 a session in Weft working out how Collab OS should draw the line between two
