@@ -274,6 +274,20 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 
+- [shipped v0.18.5, 2026-09-17] **Welcome + tour.** A first visit opens a
+  welcome modal (`js/tour.js`): what weft is in the about page's voice, the
+  loom/cloth idea, the three cards (lists, state, export), and a place to
+  paste the weave assistant's shared key if the visitor has one (optional,
+  saved straight into the assistant's browser config). "take the tour"
+  walks eight cards round the interface — loom, node library, cloth, wire
+  colors, loom tools, assistant, save/share/export, examples — each a
+  spotlight cut out of a dim sheet with the card pinned beside it; ← → Esc
+  work, steps whose target isn't on screen are skipped. Shows once
+  (`weft:welcomed`), back any time from the ⚙ settings popover. Also: the
+  ops applier re-tiles a batch that groups nodes without tidying when a
+  frame would swallow cards that aren't its members (test gen 3: five frames
+  drawn over one column layout), and a whole-loom `layout` runs last
+  whatever its place in the list.
 - [shipped v0.17.7, 2026-09-16] **Wire geometry from the connector study.**
   The editor's own wires keep horizontal tangents (a port is a dot on a
   vertical edge — the outline normal *is* horizontal, and with horizontal

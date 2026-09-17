@@ -1292,6 +1292,16 @@ for (const name of Object.keys(EXAMPLES)) {
     if (!WeftOps.apply(grp.graph, [{ op: 'ungroup', ids: ['nope'] }], NODE_DEFS).errors.length) failures.push('ops: ungroup of an unknown id must reject');
     if (WeftOps.apply(grp.graph, [{ op: 'ungroup', ids: [f1.id] }], NODE_DEFS).graph.groups.length !== 1) failures.push('ops: ungroup must remove exactly that frame');
   }
+  // groups drawn round nodes that sit on top of each other (test gen 3: the
+  // model grouped a column-laid loom and skipped the layout op) must not
+  // leave frames overlapping — the batch is tiled anyway; and a whole-loom
+  // layout runs last even when the model lists it first
+  const piled = WeftOps.apply(messy, [{ op: 'group', title: 'in', nodes: ['a', 'c'] }, { op: 'group', title: 'out', nodes: ['b', 'd'] }], NODE_DEFS);
+  if (piled.errors.length || WeftOps.framesCollide(piled.graph, NODE_DEFS) || !/re-tiled/.test(piled.summary)) failures.push('ops: grouping overlapping nodes must re-tile the blocks');
+  const early = WeftOps.apply(messy, [{ op: 'layout' }, { op: 'group', title: 'in', nodes: ['a', 'c'] }, { op: 'group', title: 'out', nodes: ['b', 'd'] }], NODE_DEFS);
+  if (early.errors.length || WeftOps.framesCollide(early.graph, NODE_DEFS)) failures.push('ops: a layout listed before the group ops must still tile the groups');
+  const snug = WeftOps.apply(tidy.graph, [{ op: 'group', title: 'pair', nodes: ['a', 'b'] }], NODE_DEFS);
+  if (snug.errors.length || /re-tiled/.test(snug.summary) || snug.graph.nodes[3].x !== tidy.graph.nodes[3].x) failures.push('ops: a frame that overlaps nothing must not move the rest of the loom');
 }
 
 /* 27 — the prompt-ready spec names every node: a def missing from

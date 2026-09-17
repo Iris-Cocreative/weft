@@ -40,6 +40,7 @@ const WeftOps = {
     };
     const needLayout = [];
     let added = 0, changed = 0, removed = 0, wired = 0;
+    let tidyAll = 0, tiled = false;
 
     for (const op of ops) {
       if (!op || typeof op !== 'object') { errors.push('op is not an object'); continue; }
@@ -174,13 +175,15 @@ const WeftOps = {
         if (ids) for (const id of ids) if (!byId(id)) errors.push('layout: no node "' + id + '"');
         const spacing = Math.min(3, Math.max(0.5, +op.spacing || 1));
         if (!errors.length) {
-          if (!ids && g.groups.length) WeftOps.layoutBlocks(g, defs, spacing);
+          // a whole-loom tidy runs LAST whatever its place in the list, so
+          // [layout, group, group] still tiles the groups it names
+          if (!ids) tidyAll = spacing;
           else {
-            const set = ids ? new Set(ids) : null;
-            WeftOps.layout(g, set ? g.nodes.filter(n => set.has(n.id)) : g.nodes.slice(), spacing);
+            const set = new Set(ids);
+            WeftOps.layout(g, g.nodes.filter(n => set.has(n.id)), spacing);
             for (const f of g.groups) WeftOps.fitGroup(g, f, defs);
+            changed += ids.length;
           }
-          changed += ids ? ids.length : g.nodes.length;
         }
 
       } else {
@@ -192,7 +195,16 @@ const WeftOps = {
 
     // nodes that arrived without coordinates settle in topological columns
     // to the right of (or below) what's already on the loom
-    if (needLayout.length) { WeftOps.layout(g, needLayout); for (const f of g.groups) WeftOps.fitGroup(g, f, defs); }
+    if (needLayout.length && !tidyAll) { WeftOps.layout(g, needLayout); for (const f of g.groups) WeftOps.fitGroup(g, f, defs); }
+    // groups drawn round nodes that were never moved cover cards that aren't
+    // theirs (frames on top of frames); that is unreadable, so a batch that
+    // groups without tidying gets tiled anyway
+    if (!tidyAll && grouped && WeftOps.framesCollide(g, defs)) { tidyAll = 1; tiled = true; }
+    if (tidyAll) {
+      if (g.groups.length) WeftOps.layoutBlocks(g, defs, tidyAll);
+      else WeftOps.layout(g, g.nodes.slice(), tidyAll);
+      changed += g.nodes.length;
+    }
 
     const bits = [];
     if (added) bits.push('+' + added + ' node' + (added > 1 ? 's' : ''));
@@ -200,6 +212,7 @@ const WeftOps = {
     if (removed) bits.push('−' + removed);
     if (wired) bits.push(wired + ' wire' + (wired > 1 ? 's' : ''));
     if (grouped) bits.push(grouped + ' group' + (grouped > 1 ? 's' : ''));
+    if (tiled) bits.push('re-tiled so frames do not overlap');
     return { graph: g, errors: [], summary: bits.join(' · ') || 'no changes', counts: { added, changed, removed, wired, grouped } };
   },
 
@@ -227,6 +240,23 @@ const WeftOps = {
     if (x0 === Infinity) return;
     f.x = Math.round(x0 - 16); f.y = Math.round(y0 - 44);
     f.w = Math.round(x1 - x0 + 32); f.h = Math.round(y1 - y0 + 60);
+  },
+
+  /* does any group frame cover a card that isn't one of its members? */
+  framesCollide(g, defs) {
+    const groups = g.groups || [];
+    const hidden = new Set();
+    for (const f of groups) if (f.collapsed) for (const id of f.nodes) hidden.add(id);
+    for (const f of groups) {
+      const mine = new Set(f.nodes);
+      const fh = f.collapsed ? 44 : f.h; // a folded frame is just its bar
+      for (const n of g.nodes) {
+        if (mine.has(n.id) || hidden.has(n.id)) continue;
+        const s = WeftOps.nodeSize(n, defs);
+        if (n.x < f.x + f.w && n.x + s.w > f.x && n.y < f.y + fh && n.y + s.h > f.y) return true;
+      }
+    }
+    return false;
   },
 
   /* the grouped loom: each group is laid out as its own block of columns,

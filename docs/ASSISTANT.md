@@ -149,6 +149,8 @@ message). Applied ops are a single history step — **Ctrl+Z reverts**.
 | `group` | `{op, title, nodes:[…], collapsed?, id?}` | a titled frame round the nodes (format-2 annotation, nothing rewired); `id` edits an existing group; `collapsed` folds it to a bar |
 | `ungroup` | `{op, ids:[…]}` | remove frames; nodes stay |
 
+A whole-loom `layout` runs last whatever its position in the list, and a batch that groups nodes without one is tiled anyway if a frame would cover cards that aren't its members (the summary says "re-tiled so frames do not overlap"); a frame round nodes that already sit together moves nothing.
+
 ## Security notes
 
 - The shared key is a cost gate, not real auth — the webhook URL + key pair

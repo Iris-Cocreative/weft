@@ -56,8 +56,9 @@ Definition of done for any change:
 | `js/app.js` | shell: palette, toolbar, persistence, modals, example gallery + offscreen thumbnails | yes |
 | `js/ops.js` | `WeftOps` — the graph-ops validator/applier (add/set/delete/wire/unwire/replace/layout/group/ungroup) and reply parser, pure; shared by the assistant panel and `test/bench-model.js` | **NO** |
 | `js/assistant.js` | weave assistant — chat panel → webhook → `WeftOps` (docs/ASSISTANT.md, docs/HF-INTEGRATION-PLAN.md); dormant without a saved webhook config | yes |
+| `js/tour.js` | `Tour` — first-visit welcome modal (with the assistant's shared-key field) and the spotlight tour of the interface; shows once (`weft:welcomed`), again from the ⚙ popover | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → editor → viewport → export → examples → app → assistant, with ops slotted after audio (the editor's paste layout uses it).
+Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → editor → viewport → export → examples → app → assistant → tour, with ops slotted after audio (the editor's paste layout uses it).
 
 A new node pack has to be registered in eight places, all one line each:
 `index.html`, the source lists in `test/smoke.js`, `test/gen-catalog.js`,

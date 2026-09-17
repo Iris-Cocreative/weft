@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,24 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.18.5 (2026-09-17): **the front door, and one more thing the loom
+learned.** Testers were arriving at a canvas with no explanation, so the
+first visit now opens a welcome (`js/tour.js`): what weft is, in the about
+page's words, the loom/cloth idea, the three cards — lists, state, export —
+and a dashed box for the weave assistant's shared key, optional, saved
+straight into the assistant's browser config so the ✦ button just works.
+"take the tour" runs eight cards round the interface, each a spotlight cut
+out of a dim sheet (one box-shadow, no canvas) with the card pinned on the
+side that fits; arrows and Esc drive it, a step whose target isn't on
+screen is skipped, and the ⚙ popover brings it back. The same day's third
+trace (test gen 3): the model named five good groups and skipped the
+layout op, so five frames were drawn over one column layout, stacked on
+top of each other. `WeftOps.apply` now notices when a frame swallows a
+card that isn't its member and tiles the blocks anyway ("re-tiled so
+frames do not overlap" in the summary), leaves a snug frame alone, and runs
+a whole-loom `layout` last whatever its place in the list — so
+`[layout, group, group]` and `[group, group, layout]` land the same.
 
 v0.18.4 (2026-09-17): **the second stall, and the division of labor it
 named.** Same session, next ask: "group them intelligently by what they're
