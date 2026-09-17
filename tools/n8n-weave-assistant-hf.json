@@ -88,7 +88,7 @@
             {
               "id": "m-max",
               "name": "max_tokens",
-              "value": 8000,
+              "value": 32000,
               "type": "number"
             },
             {
@@ -116,7 +116,7 @@
         440,
         -80
       ],
-      "notes": "The one place to switch models. model = any id from https://router.huggingface.co/v1/models (append :provider to pin one, e.g. Qwen/Qwen3.8-27B:novita). vision = true only for models whose input_modalities include image — the cloth snapshot is dropped otherwise. reasoning_effort (low/medium/high) only for models that take it, e.g. openai/gpt-oss-120b.",
+      "notes": "The one place to switch models. model = any id from https://router.huggingface.co/v1/models (append :provider to pin one). vision = true only for models whose input_modalities include image — the cloth snapshot is dropped otherwise. max_tokens is the OUTPUT budget and, for thinking models like Qwen3.8, includes the hidden reasoning (3–17x the visible reply) — keep it generous or long chats end with 'ran out of output tokens'. reasoning_effort: 'none' turns Qwen's thinking off (~4x cheaper and faster, but more repair turns on hard prompts); low/medium/high for gpt-oss; empty = the model's default.",
       "notesInFlow": true
     },
     {

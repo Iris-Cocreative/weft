@@ -49,6 +49,15 @@ whose `input_modalities` include `image` — otherwise the cloth snapshot is
 dropped before the call. `reasoning_effort` is for models that take it
 (`openai/gpt-oss-120b`: low/medium/high); leave it empty for the rest.
 
+**Output budget and thinking.** `max_tokens` (default 32000) is the *output*
+budget, and for a thinking model like Qwen3.8 it includes the hidden
+reasoning — 3–17× the visible reply on the bench. Too small and a long chat
+ends with "ran out of output tokens mid-answer". `reasoning_effort: none`
+switches Qwen's thinking off: ~4× fewer output tokens and sub-second
+replies, at the cost of more repair turns on L3+ prompts (12/12 either way
+on the bench, but 4 repairs instead of 1). Context is not the constraint:
+262k+ tokens on every provider serving it, against a ~7k-token prompt.
+
 The system prompt is fetched live from the site on every call:
 `docs/ASSISTANT-CORE.md` (role + ops protocol) and `docs/LLM-AUTHORING.md`
 (the spec). Edit those files, push, and every workflow — and
