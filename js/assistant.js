@@ -10,17 +10,24 @@
  * (js/ops.js) validates against NODE_DEFS and applies atomically — one undo
  * step, Ctrl+Z reverts.
  *
- * Nothing here runs unless configured: the webhook URL + shared key live only
- * in this browser's localStorage ('weft:assistant'), never in the repo, so the
- * public deploy ships the panel dormant.
+ * The public webhook URL is baked in (DEFAULT_URL); the shared key is the
+ * gate and lives only in this browser's localStorage ('weft:assistant'),
+ * never in the repo. Without a key the panel just shows the setup form.
  */
 const Assistant = {
   turns: [], // {role:'user'|'assistant', text} — session memory, sent as history
   busy: false,
 
+  // the public workflow (tools/n8n-weave-assistant-hf.json on IRIS's n8n).
+  // Baked in so testers only need the shared key; the ⚙ form still lets
+  // anyone point at their own webhook.
+  DEFAULT_URL: 'https://cocreative.app.n8n.cloud/webhook/weft-assistant-hf',
+
   cfg() {
-    try { return JSON.parse(localStorage.getItem('weft:assistant')) || {}; }
-    catch (e) { return {}; }
+    let c = {};
+    try { c = JSON.parse(localStorage.getItem('weft:assistant')) || {}; } catch (e) {}
+    if (!c.url) c.url = Assistant.DEFAULT_URL;
+    return c;
   },
 
   saveCfg(c) {
@@ -59,7 +66,7 @@ const Assistant = {
 
   async send(message) {
     const cfg = Assistant.cfg();
-    if (!cfg.url) { Assistant.showSetup(true); return; }
+    if (!cfg.key) { Assistant.showSetup(true); return; }
     Assistant.busy = true;
     Assistant.paintBusy();
     Assistant.bubble('user', message);
@@ -72,6 +79,7 @@ const Assistant = {
       graph: App.serialize(),
       selection: Array.from(Editor.selectedIds()),
       errors,
+      tester: cfg.name || '',
       history: Assistant.turns.slice(-13, -1), // the turns before this one
       snapshot: Assistant.el.querySelector('.as-snap input').checked ? Assistant.snapshot() : null
     };
@@ -99,7 +107,7 @@ const Assistant = {
           Assistant.bubble('note error', 'the suggested changes did not apply:\n' + r.errors.join('\n'));
           Assistant.turns.push({ role: 'user', text: '[system] your ops were rejected: ' + r.errors.join('; ') + ' — nothing was applied, please correct and resend.' });
         } else {
-          Assistant.bubble('note', '✦ woven: ' + r.summary + ' — Ctrl+Z undoes');
+          Assistant.bubble('note', '✦ woven: ' + r.summary + (data.model ? ' · ' + data.model : '') + ' — Ctrl+Z undoes');
           App.flash('assistant wove ' + r.summary + ' — Ctrl+Z undoes');
         }
       }
@@ -125,6 +133,15 @@ const Assistant = {
     msgs.scrollTop = msgs.scrollHeight;
   },
 
+  /* shed the conversation: the model forgets the chat, not the loom */
+  molt() {
+    if (Assistant.busy) return;
+    Assistant.turns = [];
+    Assistant.el.querySelector('.as-msgs').innerHTML = '';
+    Assistant.bubble('note', 'molted — fresh chat, same loom');
+    Assistant.el.querySelector('.as-in').focus();
+  },
+
   paintBusy() {
     Assistant.el.classList.toggle('busy', Assistant.busy);
     Assistant.el.querySelector('.as-send').disabled = Assistant.busy;
@@ -135,8 +152,9 @@ const Assistant = {
     s.classList.toggle('hidden', !show);
     if (show) {
       const cfg = Assistant.cfg();
-      s.querySelector('.as-url').value = cfg.url || '';
       s.querySelector('.as-key').value = cfg.key || '';
+      s.querySelector('.as-name').value = cfg.name || '';
+      s.querySelector('.as-url').value = cfg.url || '';
     }
   },
 
@@ -144,7 +162,7 @@ const Assistant = {
     const want = show === undefined ? Assistant.el.classList.contains('hidden') : show;
     Assistant.el.classList.toggle('hidden', !want);
     if (want) {
-      if (!Assistant.cfg().url) Assistant.showSetup(true);
+      if (!Assistant.cfg().key) Assistant.showSetup(true);
       else Assistant.el.querySelector('.as-in').focus();
     }
   },
@@ -156,16 +174,20 @@ const Assistant = {
     panel.innerHTML = `
       <div class="as-head">
         <span class="as-title">✦ weave assistant</span>
+        <button class="as-molt" title="molt — clear the chat so the next message starts fresh (the graph still travels with it)">molt</button>
         <button class="as-gear" title="connection settings">⚙</button>
         <button class="as-x" title="close">✕</button>
       </div>
       <div class="as-setup hidden">
-        <p>point me at your n8n webhook — the url and key live only in this browser (see docs/ASSISTANT.md to set the workflow up).</p>
-        <input class="as-url" placeholder="webhook url (https://…)" spellcheck="false">
+        <p>enter the shared key to start weaving — it stays in this browser only. add your name if you're testing, so your turns can be told apart in the log.</p>
         <input class="as-key" type="password" placeholder="shared key" spellcheck="false">
+        <input class="as-name" placeholder="your name (optional)" spellcheck="false" maxlength="40">
+        <details class="as-adv"><summary>own webhook</summary>
+          <input class="as-url" placeholder="webhook url (https://…)" spellcheck="false">
+        </details>
         <div class="as-setrow">
           <button class="as-save accent">save</button>
-          <button class="as-forget" title="remove the saved url + key from this browser">forget</button>
+          <button class="as-forget" title="remove the saved key (and any custom webhook) from this browser">forget</button>
         </div>
       </div>
       <div class="as-msgs"></div>
@@ -196,14 +218,17 @@ const Assistant = {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); fire(); }
     });
     panel.querySelector('.as-x').addEventListener('click', () => Assistant.toggle(false));
+    panel.querySelector('.as-molt').addEventListener('click', () => Assistant.molt());
     panel.querySelector('.as-gear').addEventListener('click', () => {
       Assistant.showSetup(panel.querySelector('.as-setup').classList.contains('hidden'));
     });
     panel.querySelector('.as-save').addEventListener('click', () => {
-      const url = panel.querySelector('.as-url').value.trim();
+      const url = panel.querySelector('.as-url').value.trim() || Assistant.DEFAULT_URL;
       const key = panel.querySelector('.as-key').value.trim();
+      const name = panel.querySelector('.as-name').value.trim();
+      if (!key) { App.flash('the shared key is needed to weave'); return; }
       if (!/^https:\/\//.test(url)) { App.flash('the webhook url needs to start with https://'); return; }
-      Assistant.saveCfg({ url, key });
+      Assistant.saveCfg({ url, key, name });
       Assistant.showSetup(false);
       Assistant.bubble('note', 'connected — this stays in your browser only');
       input.focus();

@@ -5,10 +5,18 @@ plus the graph, your selection, live errors, and a snapshot of the cloth — to
 a model through an **n8n webhook**, and applies the model's edits back onto
 the canvas as validated, undoable graph ops.
 
-The panel ships **dormant**: it does nothing until a webhook URL and shared
-key are saved into the browser (localStorage `weft:assistant`). Neither ever
-touches the repo or the public deploy, so API costs stay private to whoever
-holds the webhook + key.
+The public webhook URL is baked into the panel (`Assistant.DEFAULT_URL`), so
+a tester only needs the **shared key** — it lives in that browser's
+localStorage (`weft:assistant`) and never in the repo. The key is the cost
+gate: without it the ✦ opens on the setup form and nothing is sent. An
+optional *name* travels with each turn as `tester` so test logs can be told
+apart, and "own webhook" under the form lets anyone point at their own
+workflow instead.
+
+**molt** (in the panel header) clears the chat — the model forgets the
+conversation, the loom stays. It trims only the history (~12 turns of text;
+ops fences are never stored), so the per-call cost stays dominated by the
+spec + graph; use it for a clean start rather than to save tokens.
 
 ```
 Weft panel ──POST {message, graph, selection, errors, history, snapshot}──▶ n8n webhook
@@ -39,8 +47,9 @@ tell them apart, so switching is a matter of which URL you paste in:
 4. **Attach the token.** Open **Hugging Face router** → credential → create a
    *Header Auth* credential: name `Authorization`, value `Bearer hf_…`.
 5. **Activate**, copy the **production** webhook URL from the Webhook node.
-6. In Weft, click **✦** → paste the URL and your passphrase → save. Both live
-   only in that browser; the ⚙ gear re-opens the form, *forget* wipes them.
+6. In Weft, click **✦** → enter the passphrase (and, under *own webhook*,
+   the URL if it isn't the baked-in one) → save. The ⚙ gear re-opens the
+   form, *forget* wipes it.
 
 **Switching models** is the **Model** node — one field. Any id from
 `https://router.huggingface.co/v1/models` works; append `:provider` to pin a
@@ -89,6 +98,7 @@ fix rejected ops or eval errors, as the panel does through the user.
 | Field | Contents |
 |---|---|
 | `message` | what you typed |
+| `tester` | the optional name from the setup form |
 | `graph` | the full serialized graph (format 1) |
 | `selection` | ids of selected nodes — "make *this* spin" works |
 | `errors` | current per-node eval errors from the cloth |

@@ -791,6 +791,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   background: none; border: 1px solid transparent; border-radius: 6px; color: var(--faint);
 }
 .as-head button:hover { color: var(--text); border-color: var(--line2); }
+.as-head .as-molt { width: auto; padding: 0 8px; font-size: 10px; letter-spacing: 0.06em; }
 .as-setup { padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .as-setup p { font-size: 11px; color: var(--dim); margin: 0 0 8px; line-height: 1.45; }
 .as-setup input {
@@ -799,6 +800,9 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   color: var(--text); font-size: 11px; outline: none;
 }
 .as-setup input:focus { border-color: var(--accent-dim); }
+.as-adv { margin: 0 0 8px; }
+.as-adv summary { font-size: 10px; color: var(--dim); cursor: pointer; margin-bottom: 6px; }
+.as-adv summary:hover { color: var(--text); }
 .as-setrow { display: flex; gap: 6px; }
 .as-setrow button {
   padding: 5px 12px; cursor: pointer; font-size: 11px;
