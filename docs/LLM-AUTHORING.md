@@ -119,6 +119,10 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/point` | Point | P:point | P:point | |
 | `params/vector` | Vector | V:vector | V:vector | |
 | `params/anchor` | Anchor Point | | P:point | values: x y — draggable on the canvas |
+| `params/knob` | Knob | | N:number | values: min max value — a rotary slider |
+| `params/angle` | Angle | | A:number | values: deg, out:"rad"\|"deg" — a direction dial, emits radians by default |
+| `params/point3` | Point3 | P:point3 | P:point3 | pass-through container, like Point |
+| `params/curve` | Curve | C:geometry | C:geometry | pass-through container for geometry |
 | `params/panel` | Note Pad | V:any (list-in) | V:any | inspector |
 | `params/graph` | Graph Data | X Y A:point B:point (list-in X,Y) | X Y | on-node plot |
 | `params/timegraph` | Time Graph | V:number (list-in) | V:number | rolling trace |
@@ -137,6 +141,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `state/prev` | Previous Value | V:any | P:any | |
 | `state/edge` | Edge | B:bool | R:bool F:bool | rise / fall triggers |
 | `state/delay` | Delay | V:any I:any=0 (list-in V,I) | V:any | **the legal feedback edge** |
+| `state/echo` | Echo | V:any T=0.35 N=12 | R:any L:any | V as it was T seconds ago; L = the last N samples, newest first (motion-blur trails) |
 
 ### Maths
 Unary (`V:number → R:number`): `math/abs` `math/neg` `math/round` `math/floor`
@@ -272,6 +277,8 @@ shade before coloring, or unlit faces come out black.
 
 ### Audio (wires carry handles; sound starts after a user gesture)
 `audio/note` N O → F:Hz M · `audio/scale` V → F M (snap to key) ·
+`audio/key` → R:root S:scale (values root 0–11, scale major/minor/pentatonic/chromatic — wire into Scale) ·
+`audio/delay` In T=0.35 F=0.4 M=0.5 C:clear → A (echo; F=1 loops forever) ·
 `audio/osc` F D → A · `audio/noise` → A · `audio/gain` In G → A ·
 `audio/filter` In F Q → A · `audio/mix` In(list) G → A ·
 `audio/out` In V (sink) · `audio/mic` → A V:loudness R ·
@@ -282,10 +289,16 @@ shade before coloring, or unlit faces come out black.
 `audio/path` G F → X Y (geometry outline → looped waveform).
 
 ### Meta
-`meta/cluster` — a subgraph folded into one node (ports in `values.ins/outs`,
-graph in `values.graph`, boundary marked by `meta/portin`/`meta/portout` nodes
-whose `values.port` names the port). Prefer emitting flat patches; author a
-cluster only when reuse is the request.
+`meta/cluster` — a subgraph folded into one node. The exact contract:
+`values.ins` / `values.outs` are arrays of `{name, type}` (port names are the
+cluster's outside ports); `values.graph` is `{nodes, wires}`; inside it a
+`meta/portin` node with `values.port: "X"` **emits the outside input X on its
+single output `V`**, and a `meta/portout` node with `values.port: "Y"` **takes
+the outside output Y on its single input `V`** — the port letters inside are
+always `V`, whatever the port is called. Prefer emitting flat patches; author
+a cluster only when *reuse* is the request. To hide clutter, use groups and
+collapsed nodes instead (format-2 annotations, no rewiring): the assistant's
+`group` op and `set collapsed:true`.
 `meta/js` — **Custom JS**, see §7.
 
 ## 6. Feedback

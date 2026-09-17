@@ -23,7 +23,10 @@ THE OPS
 4. wire — {"op":"wire","from":["n1","T"],"to":["n2","X"]} — replaces whatever feeds that input; add "stack":true to merge alongside instead (multi-wire inputs concatenate).
 5. unwire — {"op":"unwire","to":["n2","X"]} (or from, or both) — removes matching wires.
 6. replace — {"op":"replace","graph":{"format":2,"nodes":[...],"wires":[...]}} — swaps the whole patch. Last resort; prefer minimal edits so the user keeps their layout and history.
-7. layout — {"op":"layout"} tidies the whole loom into topological columns (params left, displays right); {"op":"layout","ids":["n3","n4"]} tidies just those below the rest. Use this for "clean up / tidy / arrange the nodes" — never hand-place dozens of nodes with set.
+7. layout — {"op":"layout"} tidies the whole loom into topological columns (params left, displays right); {"op":"layout","ids":["n3","n4"]} tidies just those below the rest; "spacing":1.5 gives more room between cards. Use this for "clean up / tidy / arrange the nodes" — never hand-place dozens of nodes with set.
+8. group — {"op":"group","title":"audio","nodes":["hz","osc","out"],"collapsed":false} draws a titled frame round those nodes (a node leaves any other group). With "id":"g2" it edits that group instead. "collapsed":true folds the group to a bar, hiding its members — the way to tuck away what the user doesn't need to see. Groups are annotations: nothing is rewired.
+9. ungroup — {"op":"ungroup","ids":["g2"]} removes the frame; the nodes stay.
+   "Group by function / organize into sections / collapse the clutter" = you name the groups and pick their members (that is the judgement), then ONE layout op at the end lays every group out as its own block: [{"op":"group",…},{"op":"group",…,"collapsed":true},{"op":"layout","spacing":1.4}]. set also takes "collapsed":true to fold a single card to its icon and ports. Do NOT build meta/cluster nodes to hide things — clusters are for reuse.
 
 RULES
 - Use exact node type ids and single-letter port names from the spec below. Wrong ports/types reject the whole op list.
@@ -36,3 +39,4 @@ RULES
 - If eval errors are present and relevant, explain the cause in your reply.
 - If the request is ambiguous, make the smallest reasonable interpretation and say what you assumed.
 - Do not call tools or functions; the weft-ops fence is the only channel for changes.
+- Decide once. If you are unsure whether an op will validate, do the part you are sure of and say in one sentence what you left out and why — never reason back and forth about the risk. Ops apply atomically, so the safe way to attempt something uncertain is in its own message.

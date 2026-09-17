@@ -26,6 +26,8 @@ const src = 'const window = { addEventListener: () => {} };\n'
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
+// the prompt-ready spec, handed into the harness scope so check 27 can diff it against NODE_DEFS
+const AUTHORING_SPEC_SRC = 'const AUTHORING_SPEC = ' + JSON.stringify(fs.readFileSync(path.join(root, 'docs/LLM-AUTHORING.md'), 'utf8')) + ';\n';
 const HARNESS = `
 const failures = [];
 const mkCtx = () => ({
@@ -1265,6 +1267,39 @@ for (const name of Object.keys(EXAMPLES)) {
   const part = WeftOps.apply(messy, [{ op: 'layout', ids: ['c', 'd'] }], NODE_DEFS);
   if (part.errors.length || part.graph.nodes[0].x !== 900 || part.graph.nodes[3].y <= 900) failures.push('ops: a subset layout must leave the others and settle below them');
   if (!WeftOps.apply(messy, [{ op: 'layout', ids: ['zz'] }], NODE_DEFS).errors.length) failures.push('ops: layout of an unknown id must reject');
+  // groups: frames round members, folded ones hide nothing from the evaluator,
+  // a group-aware layout keeps blocks apart, delete prunes membership
+  const grp = WeftOps.apply(messy, [
+    { op: 'group', title: 'source', nodes: ['a', 'b'] },
+    { op: 'group', title: 'draw', nodes: ['c', 'd'], collapsed: true },
+    { op: 'set', id: 'b', collapsed: true },
+    { op: 'layout', spacing: 1.5 }
+  ], NODE_DEFS);
+  if (grp.errors.length || !grp.graph || grp.graph.groups.length !== 2) failures.push('ops: group ops rejected → ' + grp.errors.join('; '));
+  else {
+    const [f1, f2] = grp.graph.groups;
+    if (f1.title !== 'source' || f1.nodes.join() !== 'a,b' || !f2.collapsed || f2.id === f1.id) failures.push('ops: group titles/members/fold not recorded');
+    const inside = (f, id) => { const n = grp.graph.nodes.find(x => x.id === id); return n.x >= f.x && n.y >= f.y && n.x <= f.x + f.w && n.y <= f.y + f.h; };
+    if (!inside(f1, 'a') || !inside(f1, 'b')) failures.push('ops: group frame does not contain its members');
+    if (!grp.graph.nodes.find(n => n.id === 'b').collapsed) failures.push('ops: set collapsed must fold the node');
+    const c = mkCtx();
+    LM.evaluateGraph(grp.graph, NODE_DEFS, c);
+    if (Object.keys(c.errors).length || !c.drawList.length) failures.push('ops: annotations must not change evaluation');
+    const moved = WeftOps.apply(grp.graph, [{ op: 'group', id: f2.id, nodes: ['b', 'c', 'd'], title: 'all' }], NODE_DEFS);
+    if (moved.errors.length || moved.graph.groups[0].nodes.includes('b') || moved.graph.groups[1].title !== 'all') failures.push('ops: editing a group by id must move members and retitle');
+    const pruned = WeftOps.apply(grp.graph, [{ op: 'delete', ids: ['c', 'd'] }], NODE_DEFS);
+    if (pruned.errors.length || pruned.graph.groups.length !== 1) failures.push('ops: deleting every member must drop the group');
+    if (!WeftOps.apply(grp.graph, [{ op: 'ungroup', ids: ['nope'] }], NODE_DEFS).errors.length) failures.push('ops: ungroup of an unknown id must reject');
+    if (WeftOps.apply(grp.graph, [{ op: 'ungroup', ids: [f1.id] }], NODE_DEFS).graph.groups.length !== 1) failures.push('ops: ungroup must remove exactly that frame');
+  }
+}
+
+/* 27 — the prompt-ready spec names every node: a def missing from
+ * docs/LLM-AUTHORING.md is a node the assistant can't reach (the orbit-harp
+ * session found params/angle absent and spent 32k tokens agonizing over it) */
+{
+  const missing = Object.keys(NODE_DEFS).filter(id => !AUTHORING_SPEC.includes(id));
+  if (missing.length) failures.push('LLM-AUTHORING.md does not mention: ' + missing.join(', '));
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
@@ -1272,7 +1307,7 @@ return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Objec
 
 let result;
 try {
-  result = new Function(src + '\n' + HARNESS)();
+  result = new Function(src + '\n' + AUTHORING_SPEC_SRC + HARNESS)();
 } catch (e) {
   console.error('SMOKE FAIL — sources did not load: ' + e.message);
   process.exitCode = 1;

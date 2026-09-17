@@ -140,12 +140,14 @@ message). Applied ops are a single history step — **Ctrl+Z reverts**.
 | Op | Shape | Notes |
 |---|---|---|
 | `add` | `{op, nodes:[{id,type,x?,y?,values?}], wires:[{from:[id,port],to:[id,port]}]}` | new ids that collide are auto-renamed (wires in the same op follow); missing x/y auto-layouts below the patch |
-| `set` | `{op, id, values?, x?, y?, enabled?, preview?}` | `values` merges shallowly |
+| `set` | `{op, id, values?, x?, y?, enabled?, preview?, collapsed?}` | `values` merges shallowly; `collapsed` folds the card to its icon and ports |
 | `delete` | `{op, ids:[…]}` and/or `{op, wires:[{from,to}]}` | wires touching deleted nodes go with them |
 | `wire` | `{op, from, to, stack?}` | replaces that input's wire unless `stack:true` |
 | `unwire` | `{op, from?, to?}` | either side filters |
 | `replace` | `{op, graph:{format,nodes,wires}}` | whole-patch swap; last resort |
-| `layout` | `{op, ids?:[…]}` | tidy the loom (or just `ids`) into topological columns — params left, displays right, each column ordered by where its inputs sit |
+| `layout` | `{op, ids?:[…], spacing?:1}` | tidy the loom (or just `ids`) into topological columns — params left, displays right, each column ordered by where its inputs sit. With groups present, every group is laid out as its own block and the blocks tile with gaps; folded groups reserve only their bar |
+| `group` | `{op, title, nodes:[…], collapsed?, id?}` | a titled frame round the nodes (format-2 annotation, nothing rewired); `id` edits an existing group; `collapsed` folds it to a bar |
+| `ungroup` | `{op, ids:[…]}` | remove frames; nodes stay |
 
 ## Security notes
 

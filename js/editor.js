@@ -740,6 +740,26 @@ const Editor = (() => {
     return f;
   }
 
+  /* size every frame round its members' real cards — the assistant's ops
+   * estimate frames headlessly, so they get trued up once the graph lands */
+  function refitGroups() {
+    for (const f of S.graph.groups || []) {
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const id of f.nodes) {
+        const n = nodeById(id), el = S.els.get(id);
+        if (!n || !el) continue;
+        const w = el.offsetWidth || 172, h = el.offsetHeight || 60;
+        x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
+        x1 = Math.max(x1, n.x + w); y1 = Math.max(y1, n.y + h);
+      }
+      if (x0 === Infinity) continue;
+      f.x = Math.round(x0 - 16); f.y = Math.round(y0 - 44);
+      f.w = Math.round(x1 - x0 + 32); f.h = Math.round(y1 - y0 + 60);
+      const el = S.frameEls.get(f.id);
+      if (el) positionFrame(el, f);
+    }
+  }
+
   /* where a wire meets a folded frame: its edge, at bar height */
   function frameEdge(f, dir) {
     return { x: dir === 'out' ? f.x + f.w : f.x, y: f.y + 14 };
@@ -1746,6 +1766,7 @@ const Editor = (() => {
   /* ------------------------------ public ------------------------------ */
 
   return {
+    refitGroups,
     init(onChange) {
       S.onChange = onChange;
       editorEl = document.getElementById('editor');

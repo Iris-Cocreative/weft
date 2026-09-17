@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,30 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.18.4 (2026-09-17): **the second stall, and the division of labor it
+named.** Same session, next ask: "group them intelligently by what they're
+doing, more space between cards, collapse what we don't need to see." The
+model's reasoning was *good* — right functional groups, every wire checked —
+and never ended: it wanted `meta/cluster` nodes, the spec didn't say what
+port a `meta/portin` exposes (it's `V`; the model's best guess was wrong),
+and since ops apply atomically it circled on "if the cluster fails I lose
+the grouping too" for 32,000 tokens. Three faults, all ours. The spec now
+states the cluster contract exactly and lists the seven nodes it had
+drifted away from (`params/angle` among them — the model noticed); smoke
+27 diffs `LLM-AUTHORING.md` against `NODE_DEFS` so it can't drift again.
+The core prompt gains "decide once: do the certain part, say what you left
+out, never reason back and forth about risk." And the ask itself turned out
+to be Weft's format-2 annotations, which the ops protocol simply couldn't
+reach: `group` (titled frame, `collapsed` folds it to a bar), `ungroup`,
+`set collapsed` for a single card, and `layout` grown group-aware — every
+group laid out as its own block of columns, blocks tiled in flow order with
+gaps, folded ones reserving only their bar, `spacing` for breathing room,
+columns capped at seven rows so a block of sliders is a grid, not a tower.
+The editor refits frames to real card sizes once ops land, and its own
+paste-layout shares the code. Replaying the exact turn: three for three in
+two to three seconds, ~3k tokens, with the model drawing the line itself —
+"expanded: the stuff you'll tweak; collapsed: the plumbing."
 
 v0.18.3 (2026-09-17): **the first real session, and what it taught.** James
 played the assistant for an evening on the public workflow: "an interesting

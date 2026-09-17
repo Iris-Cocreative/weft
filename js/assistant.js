@@ -45,6 +45,7 @@ const Assistant = {
     r.graph.format = GRAPH_FORMAT;
     App.graph = App.migrate(r.graph);
     Editor.setGraph(App.graph);
+    Editor.refitGroups(); // frames were sized without the DOM
     App.onGraphChanged();
     return { applied: ops.length, errors: [], summary: r.summary };
   },
