@@ -192,7 +192,7 @@ const Assistant = {
       </div>
       <div class="as-msgs"></div>
       <div class="as-foot">
-        <label class="as-snap"><input type="checkbox" checked> let it see the cloth (small snapshot)</label>
+        <label class="as-snap" title="a 640px JPEG of the cloth, taken as you press send, goes with the message — so the model can judge what you're seeing (color, overlap, 'why does it look like this'), not just the wiring. The graph, selection and errors always go; this is extra. Models that can't see images ignore it."><input type="checkbox" checked> send a snapshot of the render <span class="as-hint">640px still · lets it judge what you see, not just the wiring</span></label>
         <div class="as-inrow">
           <textarea class="as-in" rows="2" placeholder="describe what to weave — selected nodes travel with your message" spellcheck="false"></textarea>
           <button class="as-send" title="send — Enter (Shift+Enter = newline)">➤</button>

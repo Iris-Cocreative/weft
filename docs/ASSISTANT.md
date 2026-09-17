@@ -103,7 +103,7 @@ fix rejected ops or eval errors, as the panel does through the user.
 | `selection` | ids of selected nodes — "make *this* spin" works |
 | `errors` | current per-node eval errors from the cloth |
 | `history` | the last ~12 chat turns (text only) |
-| `snapshot` | small JPEG of the cloth (toggleable in the panel) |
+| `snapshot` | a 640px JPEG of the cloth taken as you press send, so a vision model can judge what you're seeing — color, overlap, "why does it look like this" — not just the wiring (~400 tokens on Qwen; toggle in the panel; models without image input ignore it) |
 
 ## The ops protocol
 
