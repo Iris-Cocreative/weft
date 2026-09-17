@@ -819,12 +819,13 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .as-msg.assistant { align-self: flex-start; background: rgba(16, 21, 31, 0.9); border: 1px solid var(--line2); }
 .as-msg.note { align-self: center; font-size: 11px; color: #5eead4; background: none; padding: 2px 6px; }
 .as-msg.note.error { color: #f87171; white-space: pre-wrap; }
+.as-msg.shuttle { align-self: flex-start; background: none; padding: 2px 4px; line-height: 0; }
 .as-foot { padding: 8px 10px 10px; border-top: 1px solid var(--line); }
 .as-snap { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--faint); margin-bottom: 6px; cursor: pointer; flex-wrap: wrap; }
 .as-snap .as-hint { flex-basis: 100%; padding-left: 19px; font-size: 10px; color: var(--faint); opacity: 0.75; }
 .as-inrow { display: flex; gap: 6px; align-items: flex-end; }
 .as-in {
-  flex: 1; resize: none; padding: 7px 9px; min-height: 40px;
+  flex: 1; resize: none; padding: 7px 9px; min-height: 40px; max-height: 200px; overflow-y: auto;
   background: var(--bg); border: 1px solid var(--line2); border-radius: 8px;
   color: var(--text); font: inherit; font-size: 12px; outline: none;
 }

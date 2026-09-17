@@ -67,10 +67,10 @@ const Assistant = {
   async send(message) {
     const cfg = Assistant.cfg();
     if (!cfg.key) { Assistant.showSetup(true); return; }
-    Assistant.busy = true;
-    Assistant.paintBusy();
     Assistant.bubble('user', message);
     Assistant.turns.push({ role: 'user', text: message });
+    Assistant.busy = true;
+    Assistant.paintBusy();
 
     const errors = {};
     for (const id in (Viewport.lastErrors || {})) if (Viewport.lastErrors[id]) errors[id] = Viewport.lastErrors[id];
@@ -145,6 +145,71 @@ const Assistant = {
   paintBusy() {
     Assistant.el.classList.toggle('busy', Assistant.busy);
     Assistant.el.querySelector('.as-send').disabled = Assistant.busy;
+    if (Assistant.busy) Assistant.shuttleStart(); else Assistant.shuttleStop();
+  },
+
+  /* the shuttle — while the model works, a weft thread is passed over and
+   * under a short run of warp, one pick at a time, in a small canvas bubble
+   * at the foot of the chat. Quiet colors, gone the moment the reply lands.
+   * Reduced-motion users get one finished pick, still. */
+  _shuttle: null,
+  shuttleStart() {
+    Assistant.shuttleStop();
+    const msgs = Assistant.el.querySelector('.as-msgs');
+    const b = document.createElement('div');
+    b.className = 'as-msg shuttle';
+    const W = 132, H = 22, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const c = document.createElement('canvas');
+    c.width = W * dpr; c.height = H * dpr;
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+    b.appendChild(c);
+    msgs.appendChild(b);
+    msgs.scrollTop = msgs.scrollHeight;
+    const ctx = c.getContext('2d');
+    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const warp = 14, gap = W / (warp + 1), amp = 5, mid = H / 2;
+    const pick = 1.5; // seconds for one pass of the shuttle
+    const t0 = performance.now();
+    const state = { raf: 0, el: b };
+    const draw = now => {
+      const t = (now - t0) / 1000;
+      const n = Math.floor(t / pick), ph = reduced ? 1 : (t / pick) - n;
+      const flip = n % 2 ? -1 : 1;                 // alternate passes go under first
+      const head = (flip > 0 ? ph : 1 - ph) * W;   // right on even picks, back on odd
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(130, 141, 163, 0.32)';
+      for (let i = 1; i <= warp; i++) { const x = i * gap; ctx.beginPath(); ctx.moveTo(x, 3); ctx.lineTo(x, H - 3); ctx.stroke(); }
+      // the previous pick lies finished behind the one being woven
+      const thread = (sign, alpha, x0, x1) => {
+        if (x1 <= x0) return;
+        ctx.strokeStyle = 'rgba(94, 234, 212, ' + alpha + ')';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (let x = x0; x <= x1; x += 1) {
+          const y = mid + sign * amp * Math.sin(Math.PI * x / gap);
+          x === x0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      };
+      if (n > 0 || reduced) thread(-flip, 0.28, 0, W);
+      if (flip > 0) thread(flip, 0.85, 0, head); else thread(flip, 0.85, head, W);
+      if (!reduced) {
+        ctx.fillStyle = 'rgba(94, 234, 212, 0.95)';
+        ctx.beginPath(); ctx.arc(head, mid + flip * amp * Math.sin(Math.PI * head / gap), 2, 0, Math.PI * 2); ctx.fill();
+        state.raf = requestAnimationFrame(draw);
+      }
+    };
+    state.raf = requestAnimationFrame(draw);
+    Assistant._shuttle = state;
+  },
+  shuttleStop() {
+    const s = Assistant._shuttle;
+    if (!s) return;
+    cancelAnimationFrame(s.raf);
+    s.el.remove();
+    Assistant._shuttle = null;
   },
 
   showSetup(show) {
@@ -207,10 +272,14 @@ const Assistant = {
       panel.addEventListener(ev, e => e.stopPropagation());
 
     const input = panel.querySelector('.as-in');
+    // the box grows with the prompt (to ~9 lines), then scrolls
+    const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 200) + 'px'; };
+    input.addEventListener('input', grow);
     const fire = () => {
       const msg = input.value.trim();
       if (!msg || Assistant.busy) return;
       input.value = '';
+      grow();
       Assistant.send(msg);
     };
     panel.querySelector('.as-send').addEventListener('click', fire);

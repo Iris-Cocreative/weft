@@ -80,6 +80,21 @@ Model and budget live in its **Compose request** node
 (`model: 'claude-sonnet-5'`, `max_tokens: 8000`). It marks the spec with
 `cache_control`, so repeat calls inside the cache window don't re-pay for it.
 
+## When it can't figure something out
+
+Replay the exact loom headlessly and look at the ops it produces:
+
+```
+node test/bench-model.js --model Qwen/Qwen3.8-27B --graph my-loom.json --select n7,n8 "make the ring ripple from the click"
+```
+
+`--graph` takes a saved `.json` or a copied patch (select all → Ctrl+C →
+paste into a file); `--history` a JSON `[{role,text}]` of prior turns. Then:
+same prompt on `deepseek-ai/DeepSeek-V4-Flash-0731` — if that one gets it,
+the gap is the model; if neither does, look at what they reached for: a
+missing recipe or an unclear port in `LLM-AUTHORING.md` is usually the
+cause, and one line there fixes it for every model at once.
+
 ## Scoring a model before you switch
 
 `test/bench-model.js` runs the panel's exact pipeline headlessly — prompt →

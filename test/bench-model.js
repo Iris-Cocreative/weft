@@ -8,6 +8,9 @@
  *
  * Options:
  *   --model <id>[:provider]  Hugging Face router model id (required)
+ *   --graph <file>           replay a real loom: start from this graph (a saved .json or a copied patch)
+ *   --select <id,id>         …with these nodes selected (single prompt only)
+ *   --history <file>         …after these prior turns (JSON [{role,text}], as the panel sends)
  *   --prompts <file>         JSON array of {id, level, prompt, example?, select?}
  *   --only <id,id>           run just these prompt ids
  *   --repair                 on rejected ops, send the validator's errors back once
@@ -33,7 +36,7 @@ const opt = (name, dflt) => { const i = args.indexOf('--' + name); return i >= 0
 const flag = name => args.includes('--' + name);
 const model = opt('model');
 if (!model) { console.error('usage: node test/bench-model.js --model <id> ("prompt" | --prompts file.json)'); process.exit(1); }
-const VALUED = ['--model', '--prompts', '--only', '--effort', '--temp', '--out'];
+const VALUED = ['--model', '--prompts', '--only', '--effort', '--temp', '--out', '--graph', '--select', '--history'];
 const positional = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
 
 let token = process.env.HF_TOKEN;
@@ -54,7 +57,7 @@ const SYSTEM = CORE + '\n\nAUTHORITATIVE WEFT AUTHORING SPEC (node types, ports,
 /* ---- the prompts ---- */
 let prompts;
 if (opt('prompts')) prompts = JSON.parse(fs.readFileSync(opt('prompts'), 'utf8'));
-else if (positional.length) prompts = [{ id: 'adhoc', level: 0, prompt: positional.join(' ') }];
+else if (positional.length) prompts = [{ id: 'adhoc', level: 0, prompt: positional.join(' '), graph: opt('graph'), select: opt('select') ? opt('select').split(',') : undefined, history: opt('history') }];
 else { console.error('give a prompt or --prompts file'); process.exit(1); }
 if (opt('only')) { const keep = new Set(opt('only').split(',')); prompts = prompts.filter(p => keep.has(p.id)); }
 
@@ -92,7 +95,7 @@ const chat = async messages => {
   const body = {
     model,
     messages,
-    max_tokens: 8000,
+    max_tokens: 32000, // output budget incl. hidden reasoning — matches the workflow
     temperature: +opt('temp', 0.2),
     reasoning_effort: opt('effort', 'low')
   };
@@ -118,9 +121,12 @@ const userTurn = (graph, select, message) =>
   + '\n\nUSER MESSAGE:\n' + message;
 
 const run = async p => {
-  const base = p.example ? JSON.parse(JSON.stringify(EXAMPLES[p.example])) : { nodes: [], wires: [] };
   if (p.example && !EXAMPLES[p.example]) throw new Error('no example "' + p.example + '"');
-  const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: userTurn(base, p.select, p.prompt) }];
+  const base = p.graph ? (g => ({ nodes: g.nodes || [], wires: g.wires || [] }))(JSON.parse(fs.readFileSync(p.graph, 'utf8')))
+    : p.example ? JSON.parse(JSON.stringify(EXAMPLES[p.example])) : { nodes: [], wires: [] };
+  const messages = [{ role: 'system', content: SYSTEM }];
+  if (p.history) for (const t of JSON.parse(fs.readFileSync(p.history, 'utf8'))) if (t && t.text) messages.push({ role: t.role === 'assistant' ? 'assistant' : 'user', content: String(t.text) });
+  messages.push({ role: 'user', content: userTurn(base, p.select, p.prompt) });
   const rec = { id: p.id, level: p.level, prompt: p.prompt, example: p.example || null, model, turns: 0, ms: 0, tokens: {} };
   let result = null, reply = null;
 
