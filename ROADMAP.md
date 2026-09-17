@@ -157,8 +157,14 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   doesn't just answer how-to — it receives the graph + selection + errors +
   a cloth snapshot and *edits the loom* via validated, atomic, undoable graph
   ops (docs/ASSISTANT.md). Dormant until a webhook URL + key are saved in the
-  browser. Still open on this thread: model-authored node *types* (packs),
-  and streaming replies.
+  browser. [v0.18.0] The assistant's ops applier is its own pure module
+  (`js/ops.js`) and `test/bench-model.js` scores open models on the Hugging
+  Face router with the panel's exact pipeline — Qwen3.8-27B 12/12 on the
+  12-prompt L1–L5 set (docs/HF-INTEGRATION-PLAN.md has the status table).
+  Next on this thread: an n8n workflow variant that calls the router (the
+  panel then runs on an open model), the bench grown to 50 prompts with a
+  by-eye pass on semantic quality, then dataset capture. Still open:
+  model-authored node *types* (packs), and streaming replies.
 
 ## 3. Digital Pattern Language
 

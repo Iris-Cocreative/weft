@@ -22,7 +22,7 @@ const root = path.join(__dirname, '..');
  * touches the DOM inside functions; at load it just registers its init —
  * the window stub leads the scope so typeof-guards elsewhere stay happy. */
 const src = 'const window = { addEventListener: () => {} };\n'
-  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js', 'js/app.js']
+  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js', 'js/app.js', 'js/ops.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -1214,6 +1214,43 @@ for (const name of Object.keys(EXAMPLES)) {
   let refused = false;
   try { App.migrate({ format: 99, nodes: [], wires: [] }); } catch (e) { refused = true; }
   if (!refused) failures.push('format-2: a newer-format graph must be refused, never guessed');
+}
+
+/* 26 — the ops applier (js/ops.js) is the one validator the assistant panel
+ * and the model bench share: a fenced reply parses, valid ops land with
+ * auto-layout and evaluate, and one bad op rejects the whole list without
+ * touching the input graph */
+{
+  const tick = String.fromCharCode(96).repeat(3);
+  const fence = 'A breathing circle.\\n\\n' + tick + 'weft-ops\\n'
+    + JSON.stringify([{ op: 'add',
+      nodes: [{ id: 't', type: 'input/time' }, { id: 's', type: 'math/sin' }, { id: 'c', type: 'crv/circle' }, { id: 'd', type: 'disp/draw' }],
+      wires: [{ from: ['t', 'T'], to: ['s', 'V'] }, { from: ['s', 'R'], to: ['c', 'R'] }, { from: ['c', 'C'], to: ['d', 'G'] }] }])
+    + '\\n' + tick + '\\nEnjoy.';
+  const p = WeftOps.parseReply(fence);
+  if (!p.ops || p.ops.length !== 1 || /weft-ops/.test(p.reply)) failures.push('ops: fenced reply did not parse into ops + prose');
+  const base = { nodes: [{ id: 'n1', type: 'params/slider', x: 0, y: 0, values: { value: 3 } }], wires: [] };
+  const r = WeftOps.apply(base, p.ops, NODE_DEFS);
+  if (r.errors.length || !r.graph || r.graph.nodes.length !== 5) failures.push('ops: valid add op did not land → ' + r.errors.join('; '));
+  else {
+    const laid = r.graph.nodes.filter(n => n.id !== 'n1');
+    if (laid.some(n => typeof n.x !== 'number' || n.y <= 0)) failures.push('ops: coordinate-less nodes were not auto-laid below the patch');
+    const c = mkCtx();
+    LM.evaluateGraph(r.graph, NODE_DEFS, c);
+    if (Object.keys(c.errors).length || !c.drawList.length) failures.push('ops: applied graph does not evaluate/draw');
+  }
+  const bad = WeftOps.apply(base, [{ op: 'set', id: 'n1', values: { value: 9 } }, { op: 'wire', from: ['n1', 'N'], to: ['n1', 'nope'] }], NODE_DEFS);
+  if (bad.graph || bad.errors.length !== 1) failures.push('ops: a bad op must reject the whole list');
+  if (base.nodes[0].values.value !== 3 || base.nodes.length !== 1) failures.push('ops: a rejected list mutated the input graph');
+  if (!WeftOps.parseReply('[{"op":"delete","ids":["n1"]}]').ops) failures.push('ops: a bare JSON array reply must parse');
+  // models slip into JS: // comments, trailing commas, 4-tuple wires — tolerated, never fatal
+  const sloppy = WeftOps.parseReply('[{"op":"add", // note\\n"nodes":[{"id":"a","type":"input/time"},{"id":"b","type":"math/sin"},],"wires":[["a","T","b","V"]]}]');
+  if (!sloppy.ops) failures.push('ops: JSON with a // comment and a trailing comma must still parse');
+  else {
+    const s = WeftOps.apply({ nodes: [], wires: [] }, sloppy.ops, NODE_DEFS);
+    if (s.errors.length || !s.graph || s.graph.wires.length !== 1 || s.graph.wires[0].to[1] !== 'V') failures.push('ops: a 4-tuple wire must normalize to {from,to} → ' + s.errors.join('; '));
+  }
+  if (WeftOps.tidyJSON('{"u":"http://x//y"}') !== '{"u":"http://x//y"}') failures.push('ops: tidyJSON must not touch // inside strings');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

@@ -1,0 +1,14 @@
+[
+  { "id": "breathe",     "level": 1, "prompt": "a circle that breathes — its radius rises and falls slowly over time" },
+  { "id": "mouse-x",     "level": 1, "prompt": "a square whose opacity follows the horizontal pointer position: transparent at the left edge, solid at the right" },
+  { "id": "follow",      "level": 1, "prompt": "a small dot that follows the mouse, eased so it lags behind a little" },
+  { "id": "approach",    "level": 2, "prompt": "a circle in the middle that grows as the pointer approaches it and shrinks back when the pointer moves away" },
+  { "id": "ring",        "level": 2, "prompt": "twelve small circles arranged evenly on a ring, with a slider for the ring radius" },
+  { "id": "click-count", "level": 2, "prompt": "show a number that counts up each time the mouse is clicked, as text in the center" },
+  { "id": "breathe-many","level": 3, "prompt": "a row of seven circles that each breathe in and out at slightly different rates" },
+  { "id": "pulse-click", "level": 3, "prompt": "a circle that pulses bigger when clicked and springs back" },
+  { "id": "orbit",       "level": 4, "prompt": "five dots orbiting the pointer; the closer the pointer is to the center of the canvas, the faster they orbit" },
+  { "id": "grid-ripple", "level": 4, "prompt": "a 10 by 10 grid of dots where each dot's size depends on its distance from the mouse, close ones bigger" },
+  { "id": "edit-color",  "level": 2, "example": "Noise blob", "prompt": "make the whole thing warmer — shift the colors toward orange and red" },
+  { "id": "flock",       "level": 5, "prompt": "a loose flock of twenty particles that drift around, curious about the cursor but keeping a little distance from it" }
+]

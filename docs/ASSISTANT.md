@@ -13,32 +13,67 @@ holds the webhook + key.
 ```
 Weft panel ──POST {message, graph, selection, errors, history, snapshot}──▶ n8n webhook
                                                                               │ key check (x-weft-key)
-                                                                              │ fetch docs/LLM-AUTHORING.md (live spec)
-                                                                              │ Claude (Messages API, spec cached)
+                                                                              │ fetch docs/ASSISTANT-CORE.md + docs/LLM-AUTHORING.md (live prompt + spec)
+                                                                              │ the model (Hugging Face router, or Claude)
 Weft panel ◀────────────── {reply, ops[]} ◀───────────────────────────────── parse weft-ops fence
 ```
 
-## Setup (one time, ~10 minutes)
+Two workflow files do the same job with different models; the panel can't
+tell them apart, so switching is a matter of which URL you paste in:
 
-1. **Import the workflow.** In n8n: *Workflows → Import from file* →
-   `tools/n8n-weave-assistant.json`.
-2. **Set the shared key.** Open the **Key ok?** node and replace
-   `CHANGE-ME-SHARED-KEY` with a passphrase of your choosing (this is the
-   cost gate — anyone without it gets a 401).
-3. **Attach the Anthropic credential.** Open the **Claude** node → credential
-   → create a *Header Auth* credential: name `x-api-key`, value = your
-   Anthropic API key.
-4. **Activate** the workflow and copy the **production** webhook URL from the
-   Webhook node.
-5. In Weft, click **✦** → paste the webhook URL and your passphrase → save.
-   Both live only in that browser; the ⚙ gear re-opens the form, *forget*
-   wipes them.
+| File | Model | Notes |
+|---|---|---|
+| `tools/n8n-weave-assistant-hf.json` | any open model on the **Hugging Face router** (default `Qwen/Qwen3.8-27B`) | the one to start with — see the bench scores in `HF-INTEGRATION-PLAN.md` |
+| `tools/n8n-weave-assistant.json` | **Claude** (`claude-sonnet-5`) | the original; prompt-cached spec |
 
-Model and token budget live in the **Compose request** node
-(`model: 'claude-sonnet-5'`, `max_tokens: 8000`) — edit there. The system
-prompt fetches `docs/LLM-AUTHORING.md` from the live site on every call and
-marks it with `cache_control`, so repeat calls inside the cache window don't
-re-pay for the spec.
+## Setup — Hugging Face (one time, ~10 minutes)
+
+1. **A token.** huggingface.co → *Settings → Access Tokens → Create new
+   token* → **Fine-grained**, tick only *Make calls to Inference Providers*.
+   Add some pre-paid credits under *Settings → Billing* (the free monthly
+   allowance is a few cents; $10 is thousands of prompts).
+2. **Import the workflow.** In n8n: *Workflows → Import from file* →
+   `tools/n8n-weave-assistant-hf.json`.
+3. **Set the shared key.** Open **Key ok?** and replace `CHANGE-ME-SHARED-KEY`
+   with a passphrase (the cost gate — anyone without it gets a 401).
+4. **Attach the token.** Open **Hugging Face router** → credential → create a
+   *Header Auth* credential: name `Authorization`, value `Bearer hf_…`.
+5. **Activate**, copy the **production** webhook URL from the Webhook node.
+6. In Weft, click **✦** → paste the URL and your passphrase → save. Both live
+   only in that browser; the ⚙ gear re-opens the form, *forget* wipes them.
+
+**Switching models** is the **Model** node — one field. Any id from
+`https://router.huggingface.co/v1/models` works; append `:provider` to pin a
+provider (`Qwen/Qwen3.8-27B:novita`). Set `vision` to true only for models
+whose `input_modalities` include `image` — otherwise the cloth snapshot is
+dropped before the call. `reasoning_effort` is for models that take it
+(`openai/gpt-oss-120b`: low/medium/high); leave it empty for the rest.
+
+The system prompt is fetched live from the site on every call:
+`docs/ASSISTANT-CORE.md` (role + ops protocol) and `docs/LLM-AUTHORING.md`
+(the spec). Edit those files, push, and every workflow — and
+`test/bench-model.js` — sees the change. Roughly 6k tokens a call.
+
+## Setup — Claude
+
+Same steps with `tools/n8n-weave-assistant.json`; the credential on the
+**Claude** node is a *Header Auth* named `x-api-key` with your Anthropic key.
+Model and budget live in its **Compose request** node
+(`model: 'claude-sonnet-5'`, `max_tokens: 8000`). It marks the spec with
+`cache_control`, so repeat calls inside the cache window don't re-pay for it.
+
+## Scoring a model before you switch
+
+`test/bench-model.js` runs the panel's exact pipeline headlessly — prompt →
+router → `WeftOps` → evaluate → export — over `test/bench/prompts.json`:
+
+```
+node test/bench-model.js --model Qwen/Qwen3.8-27B --prompts test/bench/prompts.json --repair
+```
+
+Results land in `test/bench/out/<model>/` as `results.jsonl` plus one graph
+per prompt (paste into Weft to look). `--repair` gives the model one turn to
+fix rejected ops or eval errors, as the panel does through the user.
 
 ## What the model receives
 
@@ -54,8 +89,10 @@ re-pay for the spec.
 ## The ops protocol
 
 The model replies with text plus at most one fenced ```` ```weft-ops ````
-block holding a JSON array. Ops are validated against `NODE_DEFS` (types,
-port names, wire endpoints) and applied **atomically**: one bad op rejects
+block holding a JSON array. `WeftOps` (`js/ops.js`) validates ops against
+`NODE_DEFS` (types, port names, wire endpoints) — tolerating `//` comments,
+trailing commas and `[id,port,id,port]` wires, never guessing at meaning —
+and applies them **atomically**: one bad op rejects
 the whole list and the errors are shown (and sent back with your next
 message). Applied ops are a single history step — **Ctrl+Z reverts**.
 

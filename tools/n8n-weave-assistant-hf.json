@@ -1,0 +1,333 @@
+{
+  "name": "Weft — weave assistant (Hugging Face)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weft-assistant-hf",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "weft-hf-wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "weft-assistant-hf"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "key-check",
+              "leftValue": "={{ $json.headers['x-weft-key'] }}",
+              "rightValue": "CHANGE-ME-SHARED-KEY",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "weft-hf-if",
+      "name": "Key ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"reply\": \"\", \"ops\": [], \"error\": \"bad key\" }",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "weft-hf-401",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m-model",
+              "name": "model",
+              "value": "Qwen/Qwen3.8-27B",
+              "type": "string"
+            },
+            {
+              "id": "m-vision",
+              "name": "vision",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "m-max",
+              "name": "max_tokens",
+              "value": 8000,
+              "type": "number"
+            },
+            {
+              "id": "m-temp",
+              "name": "temperature",
+              "value": 0.2,
+              "type": "number"
+            },
+            {
+              "id": "m-effort",
+              "name": "reasoning_effort",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "weft-hf-model",
+      "name": "Model",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        -80
+      ],
+      "notes": "The one place to switch models. model = any id from https://router.huggingface.co/v1/models (append :provider to pin one, e.g. Qwen/Qwen3.8-27B:novita). vision = true only for models whose input_modalities include image — the cloth snapshot is dropped otherwise. reasoning_effort (low/medium/high) only for models that take it, e.g. openai/gpt-oss-120b.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "url": "https://iris-cocreative.github.io/weft/docs/ASSISTANT-CORE.md",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "weft-hf-core",
+      "name": "Fetch core prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://iris-cocreative.github.io/weft/docs/LLM-AUTHORING.md",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "weft-hf-spec",
+      "name": "Fetch authoring spec",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compose an OpenAI-style chat request for the Hugging Face router.\n// System = docs/ASSISTANT-CORE.md (role + ops protocol) + docs/LLM-AUTHORING.md\n// (the live spec), both fetched fresh from GitHub Pages. Model settings come\n// from the Model node — the only place to touch when switching models.\nconst core = String($('Fetch core prompt').first().json.data || '');\nconst spec = String($('Fetch authoring spec').first().json.data || '');\nconst cfg = $('Model').first().json;\nconst req = $('Webhook').first().json.body || {};\n\nconst messages = [{\n  role: 'system',\n  content: core + '\\n\\nAUTHORITATIVE WEFT AUTHORING SPEC (node types, ports, list semantics):\\n\\n' + spec\n}];\nfor (const t of req.history || []) {\n  if (t && t.text) messages.push({ role: t.role === 'assistant' ? 'assistant' : 'user', content: String(t.text) });\n}\nconst text = 'CURRENT GRAPH (weft format 2):\\n' + JSON.stringify(req.graph || { nodes: [], wires: [] })\n  + '\\n\\nSELECTED NODE IDS: ' + JSON.stringify(req.selection || [])\n  + '\\n\\nLIVE EVAL ERRORS: ' + JSON.stringify(req.errors || {})\n  + '\\n\\nUSER MESSAGE:\\n' + String(req.message || '');\n// the cloth snapshot only goes to models that can see (Model.vision = true)\nconst wantsImage = cfg.vision === true && typeof req.snapshot === 'string' && req.snapshot.indexOf('data:image/jpeg;base64,') === 0;\nmessages.push(wantsImage\n  ? { role: 'user', content: [{ type: 'image_url', image_url: { url: req.snapshot } }, { type: 'text', text }] }\n  : { role: 'user', content: text });\n\nconst body = {\n  model: cfg.model,\n  messages,\n  max_tokens: Number(cfg.max_tokens) || 8000,\n  temperature: Number(cfg.temperature) || 0.2\n};\nif (cfg.reasoning_effort) body.reasoning_effort = cfg.reasoning_effort;\nreturn [{ json: { body } }];\n"
+      },
+      "id": "weft-hf-compose",
+      "name": "Compose request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://router.huggingface.co/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 170000
+        }
+      },
+      "id": "weft-hf-router",
+      "name": "Hugging Face router",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -80
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE-AFTER-IMPORT",
+          "name": "Hugging Face token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the model's answer into reply text + the weft-ops block (if any).\n// Tolerates the JS-isms open models slip into (// comments, trailing\n// commas) — mirrors WeftOps.tidyJSON in js/ops.js. If the block still won't\n// parse, ops is null and the fence stays in the reply so the panel gets a go.\nconst choice = ($json.choices || [])[0] || {};\nconst text = String((choice.message || {}).content || '');\nconst tidy = s => {\n  let out = '', inStr = false, i = 0;\n  while (i < s.length) {\n    const c = s[i];\n    if (inStr) { out += c; if (c === '\\\\') { out += s[i + 1] || ''; i += 2; continue; } if (c === '\"') inStr = false; i++; }\n    else if (c === '\"') { inStr = true; out += c; i++; }\n    else if (c === '/' && s[i + 1] === '/') { while (i < s.length && s[i] !== '\\n') i++; }\n    else if (c === '/' && s[i + 1] === '*') { const j = s.indexOf('*/', i + 2); i = j < 0 ? s.length : j + 2; }\n    else { out += c; i++; }\n  }\n  return out.replace(/,(\\s*[\\]}])/g, '$1');\n};\nconst pick = p => Array.isArray(p) ? p : (p && Array.isArray(p.ops) ? p.ops : null);\nlet reply = text.trim();\nlet ops = null;\nconst m = text.match(/```(?:weft-ops|json)?[ \\t]*\\n([\\s\\S]*?)```/);\nif (m) {\n  try { ops = pick(JSON.parse(m[1])); } catch (e) { try { ops = pick(JSON.parse(tidy(m[1]))); } catch (e2) { ops = null; } }\n  if (ops) reply = text.replace(m[0], '').trim();\n}\nif (choice.finish_reason === 'length' && !ops) reply += '\\n\\n(the model ran out of output tokens mid-answer — try again or ask for a smaller change)';\nreturn [{ json: { reply, ops, model: $json.model || '', finish: choice.finish_reason || '' } }];\n"
+      },
+      "id": "weft-hf-parse",
+      "name": "Parse reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops, model: $json.model }) }}",
+        "options": {}
+      },
+      "id": "weft-hf-ok",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        -80
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Key ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Key ok?": {
+      "main": [
+        [
+          {
+            "node": "Model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model": {
+      "main": [
+        [
+          {
+            "node": "Fetch core prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch core prompt": {
+      "main": [
+        [
+          {
+            "node": "Fetch authoring spec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch authoring spec": {
+      "main": [
+        [
+          {
+            "node": "Compose request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose request": {
+      "main": [
+        [
+          {
+            "node": "Hugging Face router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hugging Face router": {
+      "main": [
+        [
+          {
+            "node": "Parse reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse reply": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

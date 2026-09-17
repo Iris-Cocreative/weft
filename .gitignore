@@ -5,3 +5,6 @@ Thumbs.db
 
 # Playwright MCP screenshots/snapshots
 .playwright-mcp/
+
+# model bench runs (raw replies + generated graphs; reproducible, see test/bench-model.js)
+test/bench/out/

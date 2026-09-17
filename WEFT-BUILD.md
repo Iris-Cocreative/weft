@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,27 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.18.0 (2026-09-16): **the assistant on open models — first the yardstick.**
+The Hugging Face plan (now docs/HF-INTEGRATION-PLAN.md) turned out to be
+mostly shipped already as v0.10's weave assistant; what it lacked was a way
+to *score* a model without a browser or an n8n round-trip. So the ops
+applier left `js/assistant.js` for `js/ops.js` — `WeftOps.apply(graph, ops,
+defs)` pure, plus `parseReply`, which now tolerates the JS-isms open models
+slip into (`//` comments, trailing commas, `[a,P,b,P]` wires) without ever
+guessing at semantics — and `test/bench-model.js` runs the panel's exact
+pipeline headlessly against `router.huggingface.co`: system prompt
+(`docs/ASSISTANT-CORE.md`, now the one source for n8n too, plus
+LLM-AUTHORING.md) → reply → ops → apply → eval at three t → export, with
+`--repair` feeding rejected ops *and* eval errors back once, as the panel
+does. Twelve prompts across the plan's five levels (`test/bench/prompts.json`).
+First scores, $10 of prepaid credits barely dented: Qwen3.8-27B 12/12 at
+~1.5 s (its L4 orbit uses Turntable for rate changes, its L5 flock is a
+Delay loop around a Custom JS step with personality sliders — the docs'
+own idiom); DeepSeek-V4-Flash 11/12 at ~6 s; gpt-oss-120b 8/12 at 0.9 s,
+three of the four misses being format or the `disp/text`-is-not-a-sink
+trap, both now addressed in the core prompt. Smoke check 26 pins the ops
+module. The panel's behavior is unchanged.
 
 v0.17.7 (2026-09-16): **the study feeds back into the editor's wires.** Asked
 what the connector work could do for Weft's own wires: with ports pinned to
