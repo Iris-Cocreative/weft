@@ -25,6 +25,10 @@ There is no system Node — use the workspace portable Node:
 # score an open model on the assistant task (token in ~/.hf-token; docs/HF-INTEGRATION-PLAN.md)
 & "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\bench-model.js --model openai/gpt-oss-120b --prompts test\bench\prompts.json --repair
 
+# describe a saved loom / apply a weft-ops list to it headlessly (the panel's validator; see the /weft-weave skill)
+& "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\apply-ops.js --graph loom.json --describe
+& "C:\Users\james\Desktop\Claude Code\.tools\node\node.exe" test\apply-ops.js --graph loom.json --ops ops.json --out loom.woven.json
+
 # serve for browser verification (Chrome extension can't open file://)
 python -m http.server 8137 --bind 127.0.0.1   # from weft/, then /index.html
 ```
@@ -33,7 +37,10 @@ The language contract (graph JSON, types, list semantics, node-def rules for
 *users and LLMs*) lives in `docs/NODE-SPEC.md`; the node inventory in
 `docs/NODE-CATALOG.md` (generated — never edit by hand); the prompt-ready
 authoring distillation in `docs/LLM-AUTHORING.md`; the how-do-I cookbook in
-`docs/RECIPES.md`.
+`docs/RECIPES.md`. The assistant's system prompt is `docs/ASSISTANT-CORE.md`
+(fetched live by the n8n workflow — edit it and every model gets it). Two
+user-level skills wrap this for Claude sessions: `/weft-patch` authors a patch
+from scratch, `/weft-weave` edits an existing loom through `test/apply-ops.js`.
 
 Definition of done for any change:
 1. `test/smoke.js` passes (all node defs evaluate, all examples run + draw, exports compile).

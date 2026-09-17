@@ -80,6 +80,19 @@ Model and budget live in its **Compose request** node
 (`model: 'claude-sonnet-5'`, `max_tokens: 8000`). It marks the spec with
 `cache_control`, so repeat calls inside the cache window don't re-pay for it.
 
+## Weaving from a terminal
+
+The same loop runs without a model host: `test/apply-ops.js` describes a
+saved loom (`--describe`: nodes, wires as `from.port → to.port`, groups,
+live errors, the exact port letters in use) and applies a weft-ops list
+with the panel's own `WeftOps.apply`, evaluates the result at three times,
+compiles its export and writes `<loom>.woven.json` — the input is never
+touched, so the original file is your undo. The `/weft-weave` skill wraps
+this for Claude Code sessions: point it at a loom, ask for the change, Open
+the result. Whatever a terminal session learns about an ask the small model
+fumbles belongs in `ASSISTANT-CORE.md` or `LLM-AUTHORING.md`, where every
+model gets it.
+
 ## When it can't figure something out
 
 Replay the exact loom headlessly and look at the ops it produces:

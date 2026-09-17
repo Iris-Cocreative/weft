@@ -161,10 +161,50 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   (`js/ops.js`) and `test/bench-model.js` scores open models on the Hugging
   Face router with the panel's exact pipeline — Qwen3.8-27B 12/12 on the
   12-prompt L1–L5 set (docs/HF-INTEGRATION-PLAN.md has the status table).
-  Next on this thread: an n8n workflow variant that calls the router (the
-  panel then runs on an open model), the bench grown to 50 prompts with a
-  by-eye pass on semantic quality, then dataset capture. Still open:
-  model-authored node *types* (packs), and streaming replies.
+  [v0.18.1–v0.18.6, 2026-09-17] The panel runs on an open model in
+  production: `tools/n8n-weave-assistant-hf.json` calls the router
+  (Qwen3.8-27B, 32k output budget for hidden thinking, temperature 0.6,
+  one retry, errors turned into panel messages), the webhook URL is baked
+  in so a tester needs only the shared key, and a day of real sessions
+  turned every stall into an op or a prompt line (`layout`, `group`,
+  `ungroup`, `collapsed`, "decide once", the re-tile guard). The same loop
+  runs from a terminal: `test/apply-ops.js` describes a loom and applies
+  ops with the panel's validator, and the **`/weft-weave` skill** makes
+  Claude the model for an existing loom (`/weft-patch` stays the
+  from-scratch skill).
+
+  **Next on this thread — from one prompt to a router.** The small model is
+  good at simple things and the spec it reads is already ~200 nodes and
+  growing; feeding all of it to one small model per turn is the ceiling.
+  The n8n workflow is already the ModelProvider seam, so grow it into
+  stages rather than swapping the model:
+  1. **Triage** (tiny, fast, no spec, `reasoning_effort: none`): classify
+     the turn — *question* · *tidy/organize* (layout/group ops only, no
+     node spec needed at all) · *small edit* of what's there · *build*
+     something new · *debug* live errors — and name the node categories it
+     touches (params, math, curves, state, audio, 3D…). Cheap enough to
+     run on every message; its output is a JSON tag, benchable on its own.
+  2. **Context slice**: `LLM-AUTHORING.md` split into per-category sections
+     served from Pages (`docs/spec/<cat>.md`), so stage 3 gets the core
+     protocol + only the categories triage named + the recipe that fits.
+     A "tidy" turn gets ops 7–9 and nothing else; a "build a synth" turn
+     gets audio + state + params in full.
+  3. **Weave** on a model matched to the class: Qwen for edits and tidies
+     (fast, cheap, 12/12 on L1–L5), a larger open model (DeepSeek-V4-Flash,
+     next Qwen size up) or the **Claude API** for builds and debugging —
+     the panel already speaks the OpenAI-shaped `messages` array, and
+     `WeftOps` doesn't care who wrote the ops. The Model node becomes a
+     table keyed by class.
+  4. **Check + repair** stays deterministic (`WeftOps.apply`, evaluate,
+     export) and a rejected list can go back once with the errors — the
+     bench's `--repair` already does this headlessly.
+  Prerequisites: a triage label on every bench prompt (so stage 1 is scored
+  as its own task), the spec split with smoke 27 checking every node still
+  lands in exactly one slice, and turn logging (Supabase, consent line on
+  the setup form) so classes and failures are counted on real asks, not
+  guesses. Still open: streaming replies (the cure for gateway 504s on
+  long thinks), model-authored node *types* (packs), and dataset capture
+  for fine-tuning once the log has volume.
 
 ## 3. Digital Pattern Language
 

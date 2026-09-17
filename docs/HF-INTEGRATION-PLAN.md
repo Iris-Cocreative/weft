@@ -13,6 +13,17 @@
 > | 4 — manifest, examples, benchmark, model comparison | half: `test/bench/prompts.json` (12 of 50), first scores below |
 > | 5 / 6 — dataset, fine-tune, geometry model | not started |
 >
+> **Update 2026-09-17.** The HF workflow is the production one (baked-in
+> URL, key-gated, Qwen3.8-27B, one day of real sessions turned into
+> `layout` / `group` / `ungroup` / `collapsed` ops, the "decide once" rule
+> and a re-tile guard). `test/apply-ops.js` + the `/weft-weave` skill run the
+> loop with Claude as the model. The plan's "one model, one prompt" shape is
+> now the ceiling: ROADMAP §2 lays out the next architecture — a tiny triage
+> stage that classes the turn and names the node categories, the spec sliced
+> per category so the weaving model reads only what the ask needs, a model
+> matched to the class (Qwen for edits, a larger open model or the Claude
+> API for builds), and the deterministic check that already exists.
+>
 > - There are no "Cloth targets" or "bindings": context is the *selected node
 >   ids* on the loom, and that's what the panel already sends.
 > - The AI contract is the **ops protocol** (`docs/ASSISTANT.md`), not a whole

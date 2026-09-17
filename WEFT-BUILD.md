@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.18.6 — the assistant loop runs from a terminal too: `test/apply-ops.js` describes a loom and applies ops with the panel's validator, the `/weft-weave` skill makes Claude the model for an existing loom, and the workflow retries the router once and turns a 504 into words; ROADMAP now carries the multi-stage plan (triage → context slice → model matched to the ask, Claude API included); v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,28 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.18.6 (2026-09-17): **the loop, from the terminal.** A day of testing
+on the public workflow ended with James asking for the assistant's brain
+as a skill — so `test/apply-ops.js` is the headless twin of the panel:
+`--describe` prints a loom the way a model should read it (id · type ·
+label · values · group, wires as `from.port → to.port`, live errors, and
+the exact port letters of every type in use), `--ops` applies a list with
+`WeftOps.apply`, evaluates at three times, compiles the export and writes
+`<loom>.woven.json`, never touching the input. The `/weft-weave` skill
+(user-level, beside `/weft-patch`) walks Claude through it: read the same
+two prompt files the n8n model gets, describe, decide once, apply, hand
+back a file to Open; and when the *model* is the question, replay the
+turn with the bench before touching anything. A 504 on the router the
+same afternoon (a bare nginx page — the provider's gateway, not n8n's
+170 s) got the router node a retry and an error path that reaches the
+panel in words. And the direction James named went into ROADMAP §2 as a
+plan, not a wish: the small model is fine for simple asks, the spec is the
+ceiling, so the workflow grows stages — a tiny triage that classes the
+turn and names the node categories, a spec sliced per category so the
+weaving model reads only what the ask needs, a model matched to the class
+(Qwen for edits, a larger open model or the Claude API for builds), and
+the deterministic check that already exists.
 
 v0.18.5 (2026-09-17): **the front door, and one more thing the loom
 learned.** Testers were arriving at a canvas with no explanation, so the
