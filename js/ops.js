@@ -1,7 +1,7 @@
 'use strict';
 /*
  * WeftOps — the graph-ops applier, pure. Takes a serialized graph and a list
- * of ops (add / set / delete / wire / unwire / replace — docs/ASSISTANT.md),
+ * of ops (add / set / delete / wire / unwire / replace / layout — docs/ASSISTANT.md),
  * validates every op against the node defs, and returns a NEW graph plus any
  * errors. One bad op rejects the whole list: the returned graph is null and
  * the input is never touched.
@@ -123,6 +123,19 @@ const WeftOps = {
         else for (const w of g.wires) { checkEnd(w.from, 'out', 'replace wire'); checkEnd(w.to, 'in', 'replace wire'); }
         added = g.nodes.length; wired = g.wires.length;
 
+      } else if (op.op === 'layout') {
+        // tidy the loom: every node (or just op.ids) into topological columns.
+        // A whole-graph layout starts at the origin; a subset settles below
+        // what stays put, like coordinate-less adds do.
+        const ids = Array.isArray(op.ids) && op.ids.length ? op.ids : null;
+        if (ids) for (const id of ids) if (!byId(id)) errors.push('layout: no node "' + id + '"');
+        if (!errors.length) {
+          const set = ids ? new Set(ids) : null;
+          const nodes = set ? g.nodes.filter(n => set.has(n.id)) : g.nodes.slice();
+          WeftOps.layout(g, nodes);
+          changed += nodes.length;
+        }
+
       } else {
         errors.push('unknown op "' + op.op + '"');
       }
@@ -142,30 +155,49 @@ const WeftOps = {
     return { graph: g, errors: [], summary: bits.join(' · ') || 'no changes', counts: { added, changed, removed, wired } };
   },
 
-  /* place the given (coordinate-less) nodes of g in ~250px columns by wire
-   * depth, starting below whatever already has a position */
+  /* place the given nodes of g in ~250px columns by wire depth (a node sits
+   * one column right of its furthest upstream input), starting below whatever
+   * keeps its position. Within a column, nodes are ordered by where their
+   * inputs sit in the column before (barycenter), so wires mostly run
+   * straight; the first column keeps its previous top-to-bottom order. */
   layout(g, nodes) {
     let baseX = 60, baseY = 60;
-    const placed = g.nodes.filter(n => !nodes.includes(n));
+    const moving = new Set(nodes.map(n => n.id));
+    const placed = g.nodes.filter(n => !moving.has(n.id));
     if (placed.length) {
       baseX = Math.min.apply(null, placed.map(n => n.x));
       baseY = Math.max.apply(null, placed.map(n => n.y)) + 220;
     }
+    const here = new Set(g.nodes.map(n => n.id));
+    const incoming = {};
+    for (const w of g.wires) if (here.has(w.from[0]) && here.has(w.to[0])) (incoming[w.to[0]] = incoming[w.to[0]] || []).push(w.from[0]);
     const depth = {};
     const calc = (id, seen) => {
       if (depth[id] !== undefined) return depth[id];
       if (seen.has(id)) return 0;
       seen.add(id);
       let d = 0;
-      for (const w of g.wires) if (w.to[0] === id && g.nodes.some(n => n.id === w.from[0])) d = Math.max(d, calc(w.from[0], seen) + 1);
+      for (const p of incoming[id] || []) d = Math.max(d, calc(p, seen) + 1);
       return depth[id] = d;
     };
-    const colY = {};
-    for (const n of nodes) {
-      const d = calc(n.id, new Set());
-      n.x = baseX + d * 250;
-      n.y = baseY + (colY[d] || 0);
-      colY[d] = (colY[d] || 0) + 140;
+    for (const n of g.nodes) calc(n.id, new Set());
+    const cols = {};
+    for (const n of nodes) (cols[depth[n.id]] = cols[depth[n.id]] || []).push(n);
+    const row = {};
+    for (const n of placed) row[n.id] = n.y / 140;
+    for (const d of Object.keys(cols).map(Number).sort((a, b) => a - b)) {
+      const col = cols[d];
+      const key = n => {
+        const ups = (incoming[n.id] || []).filter(p => row[p] !== undefined);
+        return ups.length ? ups.reduce((s, p) => s + row[p], 0) / ups.length : (typeof n.y === 'number' ? n.y / 140 : 0);
+      };
+      const keyed = col.map((n, i) => ({ n, k: key(n), i }));
+      keyed.sort((a, b) => a.k - b.k || a.i - b.i);
+      keyed.forEach((e, i) => {
+        e.n.x = baseX + d * 250;
+        e.n.y = baseY + i * 140;
+        row[e.n.id] = i;
+      });
     }
   },
 

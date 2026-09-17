@@ -95,6 +95,13 @@ the gap is the model; if neither does, look at what they reached for: a
 missing recipe or an unclear port in `LLM-AUTHORING.md` is usually the
 cause, and one line there fixes it for every model at once.
 
+**"(the model came back with no answer after N tokens of thinking)"** — a
+reasoning model looped on itself (the same plan repeated until the provider
+cut it). Two causes seen so far, both fixed in the workflow file: temperature
+below Qwen's recommended 0.6, and an ask that needs dozens of near-identical
+ops (the 78-node "tidy the loom" that produced the `layout` op). If it recurs,
+ask for a smaller step, or molt and retry.
+
 ## Scoring a model before you switch
 
 `test/bench-model.js` runs the panel's exact pipeline headlessly — prompt →
@@ -138,6 +145,7 @@ message). Applied ops are a single history step — **Ctrl+Z reverts**.
 | `wire` | `{op, from, to, stack?}` | replaces that input's wire unless `stack:true` |
 | `unwire` | `{op, from?, to?}` | either side filters |
 | `replace` | `{op, graph:{format,nodes,wires}}` | whole-patch swap; last resort |
+| `layout` | `{op, ids?:[…]}` | tidy the loom (or just `ids`) into topological columns — params left, displays right, each column ordered by where its inputs sit |
 
 ## Security notes
 

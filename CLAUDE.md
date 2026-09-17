@@ -54,10 +54,10 @@ Definition of done for any change:
 | `js/export.js` | graph → standalone JS compiler | no |
 | `js/examples.js` | `EXAMPLES` — doubles as test fixtures — plus the parallel `EXAMPLE_META` the gallery reads | no |
 | `js/app.js` | shell: palette, toolbar, persistence, modals, example gallery + offscreen thumbnails | yes |
-| `js/ops.js` | `WeftOps` — the graph-ops validator/applier (add/set/delete/wire/unwire/replace) and reply parser, pure; shared by the assistant panel and `test/bench-model.js` | **NO** |
+| `js/ops.js` | `WeftOps` — the graph-ops validator/applier (add/set/delete/wire/unwire/replace/layout) and reply parser, pure; shared by the assistant panel and `test/bench-model.js` | **NO** |
 | `js/assistant.js` | weave assistant — chat panel → webhook → `WeftOps` (docs/ASSISTANT.md, docs/HF-INTEGRATION-PLAN.md); dormant without a saved webhook config | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → editor → viewport → export → examples → app → ops → assistant.
+Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → editor → viewport → export → examples → app → assistant, with ops slotted after audio (the editor's paste layout uses it).
 
 A new node pack has to be registered in eight places, all one line each:
 `index.html`, the source lists in `test/smoke.js`, `test/gen-catalog.js`,

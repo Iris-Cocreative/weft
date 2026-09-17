@@ -1251,6 +1251,20 @@ for (const name of Object.keys(EXAMPLES)) {
     if (s.errors.length || !s.graph || s.graph.wires.length !== 1 || s.graph.wires[0].to[1] !== 'V') failures.push('ops: a 4-tuple wire must normalize to {from,to} → ' + s.errors.join('; '));
   }
   if (WeftOps.tidyJSON('{"u":"http://x//y"}') !== '{"u":"http://x//y"}') failures.push('ops: tidyJSON must not touch // inside strings');
+  // layout: a whole-graph tidy puts every node in a depth column with no two overlapping;
+  // a subset tidy leaves the rest where it was
+  const messy = { nodes: [{ id: 'a', type: 'input/time', x: 900, y: 900, values: {} }, { id: 'b', type: 'math/sin', x: 5, y: 5, values: {} }, { id: 'c', type: 'crv/circle', x: 5, y: 5, values: {} }, { id: 'd', type: 'disp/draw', x: 0, y: 0, values: {} }],
+    wires: [{ from: ['a', 'T'], to: ['b', 'V'] }, { from: ['b', 'R'], to: ['c', 'R'] }, { from: ['c', 'C'], to: ['d', 'G'] }] };
+  const tidy = WeftOps.apply(messy, [{ op: 'layout' }], NODE_DEFS);
+  if (tidy.errors.length || !tidy.graph) failures.push('ops: layout op rejected → ' + tidy.errors.join('; '));
+  else {
+    const xs = tidy.graph.nodes.map(n => n.x);
+    if (!(xs[0] < xs[1] && xs[1] < xs[2] && xs[2] < xs[3])) failures.push('ops: layout must place a chain left → right, got ' + xs.join(','));
+    if (new Set(tidy.graph.nodes.map(n => n.x + ',' + n.y)).size !== 4) failures.push('ops: layout left two nodes on the same spot');
+  }
+  const part = WeftOps.apply(messy, [{ op: 'layout', ids: ['c', 'd'] }], NODE_DEFS);
+  if (part.errors.length || part.graph.nodes[0].x !== 900 || part.graph.nodes[3].y <= 900) failures.push('ops: a subset layout must leave the others and settle below them');
+  if (!WeftOps.apply(messy, [{ op: 'layout', ids: ['zz'] }], NODE_DEFS).errors.length) failures.push('ops: layout of an unknown id must reject');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };

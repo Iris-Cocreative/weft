@@ -23,6 +23,7 @@ THE OPS
 4. wire — {"op":"wire","from":["n1","T"],"to":["n2","X"]} — replaces whatever feeds that input; add "stack":true to merge alongside instead (multi-wire inputs concatenate).
 5. unwire — {"op":"unwire","to":["n2","X"]} (or from, or both) — removes matching wires.
 6. replace — {"op":"replace","graph":{"format":2,"nodes":[...],"wires":[...]}} — swaps the whole patch. Last resort; prefer minimal edits so the user keeps their layout and history.
+7. layout — {"op":"layout"} tidies the whole loom into topological columns (params left, displays right); {"op":"layout","ids":["n3","n4"]} tidies just those below the rest. Use this for "clean up / tidy / arrange the nodes" — never hand-place dozens of nodes with set.
 
 RULES
 - Use exact node type ids and single-letter port names from the spec below. Wrong ports/types reject the whole op list.

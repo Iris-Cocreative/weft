@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,30 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.18.3 (2026-09-17): **the first real session, and what it taught.** James
+played the assistant for an evening on the public workflow: "an interesting
+and unique musical instrument" became an orbit harp — seven planets on a
+pentatonic scale, click to pluck, space for a ripple that rings each planet as
+it reaches it, two draggable gate bars for a polyrhythm, a 432 Hz toggle —
+across seven revisions of a 78-node graph, every one landing as validated
+ops. Then "clean up the cards on the loom" returned nothing. The trace showed
+why: Qwen planned the re-layout in its hidden reasoning, hit "no wait…", and
+repeated the same paragraph for 18,000 tokens until the provider stopped it.
+Two causes, two fixes. Temperature 0.2 was mine and wrong — Qwen's own
+guidance for thinking mode is 0.6 with an explicit warning that greedy
+decoding loops; the workflow, bench and docs now say 0.6. And hand-placing 78
+nodes with `set` ops is a job for a graph, not a language model: `WeftOps`
+gained a `layout` op (whole loom or `ids`), the editor's paste-layout now
+calls the same code, and columns are ordered by where their inputs sit so
+wires run straighter. Replaying the exact failing turn: three for three,
+`[{"op":"layout"}]` in ~90 tokens. Along the way v0.18.1–2: the webhook URL
+is baked in so testers need only the key, an optional tester name, **molt**
+to shed the chat, the **shuttle** (a weft thread passed over and under warp
+while the model works), a growing prompt box, the bench replaying a real
+loom (`--graph/--select/--history`), and the snapshot checkbox saying what
+it sends. The Parse node now says "came back with no answer after N tokens
+of thinking" instead of "(no text in the reply)".
 
 v0.18.0 (2026-09-16): **the assistant on open models — first the yardstick.**
 The Hugging Face plan (now docs/HF-INTEGRATION-PLAN.md) turned out to be

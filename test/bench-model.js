@@ -15,7 +15,7 @@
  *   --only <id,id>           run just these prompt ids
  *   --repair                 on rejected ops, send the validator's errors back once
  *   --effort low|medium|high reasoning_effort for models that take it (default low)
- *   --temp <n>               temperature (default 0.2)
+ *   --temp <n>               temperature (default 0.6)
  *   --out <dir>              where results land (default test/bench/out/<model>)
  *
  * Token: HF_TOKEN env var, else ~/.hf-token. Never in the repo.
@@ -96,7 +96,7 @@ const chat = async messages => {
     model,
     messages,
     max_tokens: 32000, // output budget incl. hidden reasoning — matches the workflow
-    temperature: +opt('temp', 0.2),
+    temperature: +opt('temp', 0.6), // Qwen's thinking-mode recommendation; 0.2 loops
     reasoning_effort: opt('effort', 'low')
   };
   const t0 = Date.now();

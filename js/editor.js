@@ -1408,33 +1408,11 @@ const Editor = (() => {
     return { weft: 'patch', format: 1, nodes, wires, ext };
   }
 
-  /* nodes without x/y (e.g. LLM-authored patches) get laid out in topological columns */
+  /* nodes without x/y (e.g. LLM-authored patches) get laid out in topological
+   * columns — WeftOps.layout, the same code the assistant's layout op runs */
   function autoLayout(nodes, wires) {
     if (nodes.every(n => typeof n.x === 'number' && typeof n.y === 'number')) return false;
-    const incoming = {};
-    for (const n of nodes) incoming[n.id] = [];
-    for (const w of wires) {
-      if (w && Array.isArray(w.from) && Array.isArray(w.to) && incoming[w.to[0]] && incoming[w.from[0]] !== undefined)
-        incoming[w.to[0]].push(w.from[0]);
-    }
-    const depth = {};
-    const calc = (id, seen) => {
-      if (depth[id] !== undefined) return depth[id];
-      if (seen.has(id)) return 0;
-      seen.add(id);
-      let d = 0;
-      for (const p of incoming[id]) d = Math.max(d, calc(p, seen) + 1);
-      depth[id] = d;
-      return d;
-    };
-    for (const n of nodes) calc(n.id, new Set());
-    const colY = {};
-    for (const n of nodes) {
-      const d = depth[n.id] || 0;
-      n.x = 60 + d * 250;
-      n.y = 60 + (colY[d] || 0);
-      colY[d] = (colY[d] || 0) + 140;
-    }
+    WeftOps.layout({ nodes, wires }, nodes);
     return true;
   }
 
