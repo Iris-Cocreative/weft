@@ -102,6 +102,20 @@ below Qwen's recommended 0.6, and an ask that needs dozens of near-identical
 ops (the 78-node "tidy the loom" that produced the `layout` op). If it recurs,
 ask for a smaller step, or molt and retry.
 
+**"(the model's host timed out (504)…)"** — the bare `504 Gateway Time-out`
+HTML comes from the router's side, not n8n (n8n's own timeout reads "timeout
+of 170000ms exceeded"). It happens when the provider hiccups (a tiny `say ok`
+probe answered in 0.5s minutes later — transient) or when a long think
+outruns the provider's gateway; the reply is generated whole, so a 20k-token
+think at ~100 tok/s is several minutes of silence for that gateway. The
+workflow retries once after 3s and, if it fails again, hands the panel this
+message instead of a failed execution (the router node runs with "on error →
+continue", and Parse reply turns `json.error` into words: 504/502/503, 429,
+402, 401 each get their own line). If it keeps happening on one ask, that ask
+is making the model think too long: split it, or molt so there is less to
+read. Streaming would let the reply trickle past any gateway timeout —
+still open on the roadmap.
+
 ## Scoring a model before you switch
 
 `test/bench-model.js` runs the panel's exact pipeline headlessly — prompt →
