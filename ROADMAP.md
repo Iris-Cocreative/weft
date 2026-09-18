@@ -340,8 +340,16 @@ is now in, so any of these can be picked up in a workshop pass):
   visible · combine domains creatively*) with living glyphs
   (`weftWelcomeSVG`), mirrored on the about page; *Rainbow eye* updated
   from `patches/Eye.json` as the first-visit graph.
-  - [next] the params sheet on desktop too (a control panel beside the
-    cloth — Grasshopper's remote panel), and the sheet honoring group order
+  - [shipped v0.19.1, 2026-09-18] the params panel on desktop too, docked
+    at the loom's left (the assistant has the right) and refreshed when a
+    change comes from outside it; on a phone the node library is a drawer
+    from the left (+ opens it, a tap adds at the loom's center and closes
+    it), the cloth takes 38% so the loom breathes, focused fields no longer
+    zoom the page (`maximum-scale=1` plus 16px inputs), and the assistant and
+    quick-add size themselves from the visual viewport so the keyboard never
+    covers their input.
+  - [next] the params panel honoring group order, and a collapsed state that
+    keeps it docked as a strip
   - [next] drag from a port on touch is still a small target for wires
     across a long loom — a "wire mode" (tap out, tap in) would help
 

@@ -74,6 +74,9 @@ const App = {
       App.writeStorage();
       App.pushHistory();
       App.updateCounts();
+      // a change that did not come from the params panel (a card turned on the
+      // loom, an undo, the assistant) refreshes the panel's rows
+      if (App._params && performance.now() - (App._paramsSelfAt || 0) > 450) App.toggleParams(true);
     }, 400);
   },
 
@@ -641,12 +644,20 @@ const App = {
         pd.ghost.style.top = (e.clientY + 8) + 'px';
       }
     });
+    window.addEventListener('pointercancel', () => {
+      // a finger that turned into a list scroll is not a drag
+      if (pd && pd.ghost) pd.ghost.remove();
+      pd = null;
+    });
     window.addEventListener('pointerup', e => {
       if (!pd) return;
       const p = pd;
       pd = null;
       if (!p.ghost) {
-        if (e.target.closest && e.target.closest('.pal-item')) Editor.addAtCenter(p.type);
+        if (e.target.closest && e.target.closest('.pal-item')) {
+          Editor.addAtCenter(p.type);
+          if (App.isMobile()) { App.togglePalette(false); App.flash('added ' + p.title + ' at the center of the loom'); }
+        }
         return;
       }
       p.ghost.remove();
@@ -1074,7 +1085,7 @@ const App = {
 
   mobileMQ: (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(max-width: 760px)') : { matches: false }, // smoke loads this file headless
   isMobile() { return App.mobileMQ.matches; },
-  MOBILE_HINT: 'drag the loom to pan · pinch to zoom · + adds a node · hold a card for its menu · the faders gather every control',
+  MOBILE_HINT: 'drag the loom to pan · pinch to zoom · + opens the node library · hold empty loom for quick-add, a card for its menu · the faders gather every control',
 
   bindMobile() {
     const hint = document.getElementById('statusHint');
@@ -1088,16 +1099,30 @@ const App = {
     window.addEventListener('pointerdown', e => {
       if (!(e.target.closest && e.target.closest('#toolbar .tools, #btnMenu'))) closeMenu();
     }, true);
+    // the node library: a drawer from the left on a phone (+ opens it, the backdrop closes it)
+    const backdrop = document.createElement('div');
+    backdrop.id = 'paletteBackdrop';
+    document.querySelector('main').appendChild(backdrop);
+    backdrop.addEventListener('pointerdown', () => App.togglePalette(false));
     const addBtn = document.getElementById('btnAddNode');
     addBtn.innerHTML = weftUISVG('plus');
-    addBtn.addEventListener('click', () => { App.toggleParams(false); Editor.quickAdd(); });
+    addBtn.addEventListener('click', () => { App.toggleParams(false); App.togglePalette(); });
     const pBtn = document.getElementById('btnParams');
     pBtn.innerHTML = weftUISVG('params');
     pBtn.addEventListener('click', () => App.toggleParams());
+    // the keyboard shrinks the visual viewport; fixed panels (assistant, quick-add)
+    // size themselves from these two variables so their input stays above it
+    const vv = window.visualViewport;
+    const paintVV = () => {
+      document.documentElement.style.setProperty('--vvh', Math.round(vv.height) + 'px');
+      document.documentElement.style.setProperty('--vvt', Math.round(vv.offsetTop) + 'px');
+    };
+    if (vv) { vv.addEventListener('resize', paintVV); vv.addEventListener('scroll', paintVV); paintVV(); }
 
     const apply = () => {
       const m = App.isMobile();
       closeMenu();
+      App.togglePalette(false);
       // the grip's inline size belongs to one orientation — a phone remembers its own
       let clothH = '';
       try { clothH = m ? (localStorage.getItem('weft:clothH') || '') : ''; } catch (e) {}
@@ -1117,10 +1142,16 @@ const App = {
     apply();
   },
 
+  togglePalette(on) {
+    const want = on === undefined ? !document.body.classList.contains('palette-open') : !!on;
+    document.body.classList.toggle('palette-open', want);
+  },
+
   /* ------------------------------ params sheet ------------------------------
    * Every control on the loom — slider, knob, angle, toggle, swatch, button,
-   * anchor, text list — as one list over the loom, so a phone can play a
-   * patch without hunting cards. Each row runs the def's own buildBody
+   * anchor, text list — as one list: a panel docked at the loom's left on
+   * desktop (Grasshopper's remote panel), the whole loom on a phone, so a
+   * patch can be played without hunting cards. Each row runs the def's own buildBody
    * against the same node: the widget IS the card's widget, bound to the same
    * values, so nothing is reimplemented and the cloth follows live. The cards
    * underneath are rebuilt when the sheet closes, to catch up on what was
@@ -1144,7 +1175,8 @@ const App = {
       App._paramsDirty = null;
       return;
     }
-    if (App._params) App._params.remove();
+    let scrollTop = 0;
+    if (App._params) { const l = App._params.querySelector('.pm-list'); scrollTop = l ? l.scrollTop : 0; App._params.remove(); }
     const nodes = App.graph.nodes.filter(App.isControl);
     const sheet = document.createElement('div');
     sheet.id = 'params';
@@ -1164,7 +1196,7 @@ const App = {
       const body = document.createElement('div');
       body.className = 'node-body pm-body';
       row.appendChild(body);
-      def.buildBody(n, body, () => { App._paramsDirty.add(n.id); App.onGraphChanged(); });
+      def.buildBody(n, body, () => { App._paramsDirty.add(n.id); App._paramsSelfAt = performance.now(); App.onGraphChanged(); });
       list.appendChild(row);
     }
     if (!nodes.length) list.innerHTML = '<p class="pm-empty">no controls on the loom yet — add a slider, knob, toggle, swatch or button and it shows up here.</p>';
@@ -1173,6 +1205,7 @@ const App = {
     ed.appendChild(sheet);
     ed.classList.add('params-open');
     App._params = sheet;
+    if (scrollTop) list.scrollTop = scrollTop;
   },
 
   /* the viewport calls this each frame after Editor.postEval — rows whose
