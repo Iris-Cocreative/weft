@@ -290,8 +290,65 @@ function weftLogoSVG(idSuffix) {
     + '</svg>';
 }
 
+/* the welcome's three ideas, as living glyphs (js/tour.js and about.html).
+ * Same grid and stroke as the node icons, the brand gradient where the logo
+ * uses it. Each one moves a little on its own (a dash flowing along a wire,
+ * a slow turn) and answers a hover or a tap with one gesture — the CSS
+ * classes wl-flow / wl-spin / wl-bloom / wl-lit / wl-tri / wl-dom in
+ * style.css do the moving; nothing here is exported. */
+function weftWelcomeSVG(kind, idSuffix) {
+  const g = 'wlw' + (idSuffix || '') + kind;
+  const grad = '<defs><linearGradient id="' + g + '" x1="2" y1="13.5" x2="25" y2="13.5" gradientUnits="userSpaceOnUse">'
+    + '<stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>';
+  const S = 'stroke="url(#' + g + ')" stroke-linecap="round" stroke-linejoin="round"';
+  const warp = 'stroke="#46536e" stroke-linecap="round" stroke-linejoin="round"';
+  let body = '';
+  if (kind === 'form') {
+    // a function on the left, a port between, a form on the right — the wave
+    // flows into the port and the rosette it makes turns, slowly, forever
+    body = '<path class="wl-flow" d="M2 13.5C3.5 9.3 5 9.3 6.5 13.5S9.5 17.7 11 13.5" ' + S + ' stroke-width="1.3"/>'
+      + '<circle cx="12.6" cy="13.5" r="1.4" fill="#5eead4"/>'
+      + '<g class="wl-bloom"><g class="wl-spin">'
+      + '<ellipse cx="20" cy="13.5" rx="5.4" ry="2.1" ' + S + '/>'
+      + '<ellipse cx="20" cy="13.5" rx="5.4" ry="2.1" transform="rotate(60 20 13.5)" ' + S + '/>'
+      + '<ellipse cx="20" cy="13.5" rx="5.4" ry="2.1" transform="rotate(120 20 13.5)" ' + S + '/>'
+      + '</g></g>';
+  } else if (kind === 'visible') {
+    // three lines of code, gray, that are really the wires into a card —
+    // hover (or a tap) lights the card and the lines run into its ports
+    const lines = 'M2.5 9.5H6C8 9.5 8.5 10.5 12.5 10.5 M2.5 13.5H7.5 M2.5 17.5H6C8 17.5 8.5 16.5 12.5 16.5';
+    body = '<path d="' + lines + '" ' + warp + '/>'
+      + '<rect x="12.5" y="7.5" width="12" height="12" rx="2.5" ' + warp + '/>'
+      + '<circle cx="12.5" cy="10.5" r="1.3" fill="#46536e"/><circle cx="12.5" cy="16.5" r="1.3" fill="#46536e"/>'
+      + '<circle cx="24.5" cy="13.5" r="1.3" fill="#46536e"/>'
+      + '<g class="wl-lit">'
+      + '<path class="wl-flow" d="' + lines + '" ' + S + ' stroke-width="1.2"/>'
+      + '<rect x="12.5" y="7.5" width="12" height="12" rx="2.5" ' + S + '/>'
+      + '<path d="M15 10.5H18.5" ' + S + ' stroke-width="1.6"/>'
+      + '<circle cx="12.5" cy="10.5" r="1.4" fill="#5eead4"/><circle cx="12.5" cy="16.5" r="1.4" fill="#5eead4"/>'
+      + '<circle cx="24.5" cy="13.5" r="1.4" fill="#818cf8"/>'
+      + '</g>';
+  } else if (kind === 'domains') {
+    // a chart, a sound and a solid wired in a ring; the ring turns on hover
+    // and the three keep upright as they trade places
+    body = '<g class="wl-tri">'
+      + '<path class="wl-flow" d="M16 7.5C19.5 9 20.5 11.5 20.5 15" ' + warp + '/>'
+      + '<path class="wl-flow" d="M17 22.5C14.5 24.5 12 24.5 9.5 22.5" ' + warp + '/>'
+      + '<path class="wl-flow" d="M3.5 17.5C4 12.5 7 9.5 11 8" ' + warp + '/>'
+      + '<g class="wl-dom"><path d="M11 8.5V6.5M13.5 8.5V3.5M16 8.5V5.5" ' + S + ' stroke-width="1.4"/></g>'
+      + '<g class="wl-dom"><path d="M2.5 20C3.7 16.5 4.8 16.5 6 20S8.3 23.5 9.5 20" ' + S + ' stroke-width="1.2"/></g>'
+      + '<g class="wl-dom"><path d="M20.5 15.5L24 17.5V21.5L20.5 23.5L17 21.5V17.5Z" ' + S + '/><path d="M17 17.5L20.5 19.5L24 17.5M20.5 19.5V23.5" ' + S + '/></g>'
+      + '</g>';
+  }
+  return '<svg viewBox="0 0 27 27" fill="none" xmlns="http://www.w3.org/2000/svg">' + grad + body + '</svg>';
+}
+
 /* editor chrome glyphs (loom overlay buttons etc.) */
 const WEFT_UI = {
+  // plus: the + on the loom tools (mobile) — opens quick-add at the center of the loom
+  plus: '<path d="M13.5 6.5V20.5M6.5 13.5H20.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+  // params: three faders — the params sheet gathers every control on the loom
+  params: '<path d="M4.5 8.5H22.5M4.5 13.5H22.5M4.5 18.5H22.5" stroke="currentColor" stroke-linecap="round"/><circle cx="16.5" cy="8.5" r="2.4" fill="var(--panel)" stroke="currentColor"/><circle cx="9.5" cy="13.5" r="2.4" fill="var(--panel)" stroke="currentColor"/><circle cx="18.5" cy="18.5" r="2.4" fill="var(--panel)" stroke="currentColor"/>',
   fit: '<path d="M9.5 4.5H6.5A2 2 0 0 0 4.5 6.5V9.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M17.5 4.5H20.5A2 2 0 0 1 22.5 6.5V9.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M22.5 17.5V20.5A2 2 0 0 1 20.5 22.5H17.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M9.5 22.5H6.5A2 2 0 0 1 4.5 20.5V17.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><circle cx="13.5" cy="13.5" r="1.8" fill="currentColor"/>',
   // merge: the loom pane ghosted over the cloth pane — click to lay one on the other
   merge: '<rect x="8.5" y="5.5" width="14" height="12" rx="1.5" stroke="currentColor" opacity=".35"/><rect x="4.5" y="9.5" width="14" height="12" rx="1.5" stroke="currentColor"/>',

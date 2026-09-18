@@ -52,6 +52,7 @@ const App = {
     App.writeStorage();
     App._dirty = false;
     App.paintTune();
+    if (App._params) App.toggleParams(true); // the sheet lists this graph's controls
   },
 
   /* concert pitch: A4 reference in Hz, saved with the graph (432 unless set) */
@@ -555,9 +556,11 @@ const App = {
     App.bindGallery();
     App.bindSettings();
 
-    const g = App.restore() || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Hexa graph'])));
-    App.setGraph(g);
+    const saved = App.restore();
+    App.setGraph(saved || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Rainbow eye']))));
+    if (!saved) Editor.zoomToFit(false); // a first visit should see the whole loom, not the corner the camera starts in
     App.loadFromHash(); // a #w= share link replaces the graph (previous one is backed up)
+    App.bindMobile(); // after the graph: a stacked shell fits the loom to its half
   },
 
   bindKeys() {
@@ -735,6 +738,7 @@ const App = {
         : 'split view — the loom weaves left, the cloth wears it right');
     });
     paintMerge();
+    App.paintMerge = paintMerge;
 
     const btnDraw = document.getElementById('btnDraw');
     const paintDraw = () => {
@@ -1060,23 +1064,158 @@ const App = {
     });
   },
 
-  /* ------------------------------ splitter ------------------------------ */
+  /* ------------------------------ mobile shell ------------------------------
+   * Under 760px style.css stacks the shell: cloth above, loom below, a grip
+   * between them; the palette folds into the + button (quick-add) and the
+   * file tools into ☰. This binds those buttons, keeps the grip's size to
+   * its own orientation, swaps the status hint for a finger one, and never
+   * lets the floated (merged) view load on a phone — the stack IS the merge
+   * there. The params sheet below is the third piece. */
+
+  mobileMQ: (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(max-width: 760px)') : { matches: false }, // smoke loads this file headless
+  isMobile() { return App.mobileMQ.matches; },
+  MOBILE_HINT: 'drag the loom to pan · pinch to zoom · + adds a node · hold a card for its menu · the faders gather every control',
+
+  bindMobile() {
+    const hint = document.getElementById('statusHint');
+    const deskHint = hint.textContent;
+    const menuBtn = document.getElementById('btnMenu');
+    const tools = document.querySelector('#toolbar .tools');
+    const preview = document.getElementById('preview');
+    const closeMenu = () => document.body.classList.remove('menu-open');
+    menuBtn.addEventListener('click', e => { e.stopPropagation(); document.body.classList.toggle('menu-open'); });
+    tools.addEventListener('click', e => { if (e.target.closest('button, a')) closeMenu(); });
+    window.addEventListener('pointerdown', e => {
+      if (!(e.target.closest && e.target.closest('#toolbar .tools, #btnMenu'))) closeMenu();
+    }, true);
+    const addBtn = document.getElementById('btnAddNode');
+    addBtn.innerHTML = weftUISVG('plus');
+    addBtn.addEventListener('click', () => { App.toggleParams(false); Editor.quickAdd(); });
+    const pBtn = document.getElementById('btnParams');
+    pBtn.innerHTML = weftUISVG('params');
+    pBtn.addEventListener('click', () => App.toggleParams());
+
+    const apply = () => {
+      const m = App.isMobile();
+      closeMenu();
+      // the grip's inline size belongs to one orientation — a phone remembers its own
+      let clothH = '';
+      try { clothH = m ? (localStorage.getItem('weft:clothH') || '') : ''; } catch (e) {}
+      preview.style.flexBasis = clothH ? clothH + 'px' : '';
+      hint.textContent = m ? App.MOBILE_HINT : deskHint;
+      hint.dataset.original = hint.textContent;
+      if (m && Viewport.merged) { Viewport.merged = false; App.paintMerge(); }
+      if (m && App.graph && App.graph.nodes.length) Editor.zoomToFit(false, 0.45); // a phone starts centered on the loom, at a legible zoom
+      if (!m) {
+        try { Viewport.merged = localStorage.getItem('weft:merged') === '1'; } catch (e) {}
+        App.paintMerge();
+        App.toggleParams(false);
+      }
+    };
+    if (App.mobileMQ.addEventListener) App.mobileMQ.addEventListener('change', apply);
+    else App.mobileMQ.addListener(apply);
+    apply();
+  },
+
+  /* ------------------------------ params sheet ------------------------------
+   * Every control on the loom — slider, knob, angle, toggle, swatch, button,
+   * anchor, text list — as one list over the loom, so a phone can play a
+   * patch without hunting cards. Each row runs the def's own buildBody
+   * against the same node: the widget IS the card's widget, bound to the same
+   * values, so nothing is reimplemented and the cloth follows live. The cards
+   * underneath are rebuilt when the sheet closes, to catch up on what was
+   * turned; the sheet itself is rebuilt when a new graph loads. */
+
+  _params: null, _paramsDirty: null,
+
+  isControl(n) {
+    const d = NODE_DEFS[n.type];
+    return !!(d && d.cat === 'Params' && d.buildBody && !d.inspect && !d.relay);
+  },
+
+  toggleParams(on) {
+    const ed = document.getElementById('editor');
+    const want = on === undefined ? !App._params : !!on;
+    if (!want) {
+      if (!App._params) return;
+      App._params.remove(); App._params = null;
+      ed.classList.remove('params-open');
+      for (const id of App._paramsDirty || []) Editor.rebuildNode(id);
+      App._paramsDirty = null;
+      return;
+    }
+    if (App._params) App._params.remove();
+    const nodes = App.graph.nodes.filter(App.isControl);
+    const sheet = document.createElement('div');
+    sheet.id = 'params';
+    sheet.innerHTML = `<div class="pm-head"><span class="pm-title">params</span><span class="pm-count">${nodes.length ? nodes.length + (nodes.length === 1 ? ' control' : ' controls') : ''}</span><button class="pm-x" title="back to the loom">✕</button></div><div class="pm-list"></div>`;
+    const list = sheet.querySelector('.pm-list');
+    App._paramsDirty = App._paramsDirty || new Set();
+    for (const n of nodes) {
+      const def = NODE_DEFS[n.type];
+      const row = document.createElement('div');
+      row.className = 'pm-row';
+      row.dataset.id = n.id;
+      row.style.setProperty('--cat', CATS[def.cat] || '#6b7891');
+      const lab = document.createElement('div');
+      lab.className = 'pm-label';
+      lab.textContent = n.label || def.title; // the widget shows its own values.label (sliders, knobs) underneath
+      row.appendChild(lab);
+      const body = document.createElement('div');
+      body.className = 'node-body pm-body';
+      row.appendChild(body);
+      def.buildBody(n, body, () => { App._paramsDirty.add(n.id); App.onGraphChanged(); });
+      list.appendChild(row);
+    }
+    if (!nodes.length) list.innerHTML = '<p class="pm-empty">no controls on the loom yet — add a slider, knob, toggle, swatch or button and it shows up here.</p>';
+    sheet.querySelector('.pm-x').addEventListener('click', () => App.toggleParams(false));
+    sheet.addEventListener('pointerdown', e => e.stopPropagation()); // the loom's gestures stop at the sheet
+    ed.appendChild(sheet);
+    ed.classList.add('params-open');
+    App._params = sheet;
+  },
+
+  /* the viewport calls this each frame after Editor.postEval — rows whose
+   * def has a postEval (the anchor's x/y fields) mirror the node like the card */
+  paramsPostEval(ctx) {
+    if (!App._params) return;
+    for (const row of App._params.querySelectorAll('.pm-row')) {
+      const n = App.graph.nodes.find(x => x.id === row.dataset.id);
+      const def = n && NODE_DEFS[n.type];
+      if (def && def.postEval) { try { def.postEval(n, row, ctx); } catch (e) { /* a sheet row never breaks the frame */ } }
+    }
+  },
+
+  /* ------------------------------ splitter ------------------------------
+   * side by side it sizes the cloth's width; stacked (mobile) its height */
 
   bindSplitter() {
     const splitter = document.getElementById('splitter');
     const preview = document.getElementById('preview');
     let drag = null;
     splitter.addEventListener('pointerdown', e => {
-      drag = { sx: e.clientX, w: preview.getBoundingClientRect().width };
+      const r = preview.getBoundingClientRect();
+      drag = { sx: e.clientX, sy: e.clientY, w: r.width, h: r.height, stacked: App.isMobile() };
       splitter.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
     splitter.addEventListener('pointermove', e => {
       if (!drag) return;
-      const w = LM.clamp(drag.w + (drag.sx - e.clientX), 240, window.innerWidth * 0.7);
-      preview.style.flexBasis = w + 'px';
+      if (drag.stacked) {
+        // the loom keeps at least room for its tools; the cloth at least a glimpse
+        const h = LM.clamp(drag.h + (e.clientY - drag.sy), 120, window.innerHeight - 48 - 24 - 14 - 70);
+        preview.style.flexBasis = h + 'px';
+      } else {
+        const w = LM.clamp(drag.w + (drag.sx - e.clientX), 240, window.innerWidth * 0.7);
+        preview.style.flexBasis = w + 'px';
+      }
     });
-    splitter.addEventListener('pointerup', () => { drag = null; });
+    splitter.addEventListener('pointerup', () => {
+      if (drag && drag.stacked) {
+        try { localStorage.setItem('weft:clothH', String(Math.round(preview.getBoundingClientRect().height))); } catch (e) {}
+      }
+      drag = null;
+    });
   }
 };
 

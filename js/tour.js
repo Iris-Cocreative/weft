@@ -43,6 +43,8 @@ const Tour = {
     const old = document.getElementById('welcomeModal');
     if (old) old.remove();
     const hasKey = typeof Assistant !== 'undefined' && !!Assistant.cfg().key;
+    const side = (typeof App !== 'undefined' && App.isMobile && App.isMobile()) ? ['below', 'above'] : ['left', 'right'];
+    const ico = kind => typeof weftWelcomeSVG === 'function' ? weftWelcomeSVG(kind, 'wl') : '';
     const modal = document.createElement('div');
     modal.id = 'welcomeModal';
     modal.className = 'modal';
@@ -56,11 +58,11 @@ const Tour = {
           </div>
           <button class="ghost wl-x" title="close">✕</button>
         </div>
-        <p class="wl-p">weft is a node-based parametric designer that runs entirely in your browser. you build logic by wiring cards together on the <b>loom</b> (left) and the <b>cloth</b> (right) wears the result, live — change anything and the design re-weaves itself.</p>
+        <p class="wl-p">weft is a node-based parametric designer that runs entirely in your browser. you build logic by wiring cards together on the <b>loom</b> (${side[0]}) and the <b>cloth</b> (${side[1]}) wears the result, live — change anything and the design re-weaves itself.</p>
         <div class="wl-cards">
-          <div class="wl-card"><b>everything is a list</b>wire 200 numbers into a Circle and you get 200 circles. lists pair up item by item — that matching is the soul of the tool.</div>
-          <div class="wl-card"><b>the web is stateful</b>springs, latches, delays and feedback let a design react to input and settle over time, not just pose.</div>
-          <div class="wl-card"><b>leaves without a runtime</b>Export compiles your graph to one standalone JavaScript file — no library, no weft, drop it into any page.</div>
+          <div class="wl-card"><span class="wl-ico">${ico('form')}</span><b>weave math into form</b>wire a few simple functions together and a handful of numbers becomes a shape, a motion, a whole scene. each card is one small idea; the wires do the composing.</div>
+          <div class="wl-card"><span class="wl-ico">${ico('visible')}</span><b>make code visible</b>nothing is buried in a script. the logic sits on the loom in the open — every value live, every connection drawn — so you can follow it, change it, and make it yours.</div>
+          <div class="wl-card"><span class="wl-ico">${ico('domains')}</span><b>combine domains creatively</b>a chart can drive a shape, a shape can play a sound, a sound can bend a 3D form. everything on the loom speaks the same language, so anything can feed anything.</div>
         </div>
         <div class="wl-key ${hasKey ? 'hidden' : ''}">
           <p class="wl-p">have a shared key for the <b>weave assistant</b>? paste it here and a model can edit the loom for you when you describe what you want. optional — it stays in this browser only.</p>
@@ -76,6 +78,8 @@ const Tour = {
         </div>
       </div>`;
     document.body.appendChild(modal);
+    // a tap holds a card's gesture where there is no hover to trigger it
+    for (const c of modal.querySelectorAll('.wl-card')) c.addEventListener('click', () => c.classList.toggle('on'));
 
     const keyIn = modal.querySelector('.wl-keyin');
     const nameIn = modal.querySelector('.wl-namein');

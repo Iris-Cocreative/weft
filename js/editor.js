@@ -16,7 +16,11 @@ const Editor = (() => {
     lastErr: new Map(),
     onChange: () => {},
     drag: null, hotPort: null,
-    wireRaf: false
+    wireRaf: false,
+    /* touch: live fingers on the loom, the pinch they make, the long-press
+     * timer, the last tap (double-tap detection) and a count of the browser's
+     * own dblclicks so a synthesized one never doubles a native one */
+    touches: new Map(), pinch: null, lp: null, lastTap: null, nativeDbl: 0
   };
 
   let editorEl, worldEl, nodesEl, svgEl, framesEl, notesLayerEl, qaEl, qaInput, qaList, ctxEl, marqueeEl = null;
@@ -1002,9 +1006,99 @@ const Editor = (() => {
     S.drag = { kind: 'node', sx: e.clientX, sy: e.clientY, moving, moved: false };
   }
 
+  /* ------------------------------ touch ------------------------------
+   * The mouse grammar (right-drag pans, left-drag box-selects, wheel zooms,
+   * dblclick and right-click open things) has no finger equivalent, so a
+   * touch pointer gets its own: one finger on empty loom pans, two fingers
+   * pinch-zoom (about the fingers, like a map), a still finger held half a
+   * second opens the card's menu or quick-add, and a double-tap stands in for
+   * dblclick (folding a head, a slider's options). Cards, ports, notes and
+   * frames keep the mouse path — a finger drags them exactly as a button
+   * would. All of it keys off e.pointerType, so a stylus or a mouse on a
+   * touch laptop still gets the desktop grammar. */
+  function clearLP() { if (S.lp) { clearTimeout(S.lp); S.lp = null; } }
+
+  function touchDown(e) {
+    S.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (S.touches.size === 2) {
+      // a second finger turns whatever the first was doing into a pinch
+      cancelDrag();
+      const [a, b] = [...S.touches.values()];
+      S.pinch = {
+        d0: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        mx0: (a.x + b.x) / 2, my0: (a.y + b.y) / 2,
+        z0: S.zoom, px0: S.pan.x, py0: S.pan.y
+      };
+      return true;
+    }
+    if (S.touches.size > 2 || S.pinch) return true; // a third finger, or a pinch winding down: ignored
+    const nodeEl = e.target.closest && e.target.closest('.node');
+    const onCtl = e.target.closest && e.target.closest('input, textarea, select, button, [contenteditable], .port, .sl-track, .sl-grip-l, .sl-grip-r, .dial, .cp, .tg, .pbtn, .sw');
+    if (!onCtl) {
+      // long-press: the finger's right-click
+      const cx = e.clientX, cy = e.clientY, id = nodeEl && nodeEl.dataset.id;
+      S.lpX = cx; S.lpY = cy;
+      S.lp = setTimeout(() => {
+        S.lp = null;
+        cancelDrag();
+        if (id) { if (!S.sel.has(id)) selectOnly(id); openCtx({ clientX: cx, clientY: cy }, id); }
+        else openQA({ clientX: cx, clientY: cy });
+      }, 520);
+    }
+    if (nodeEl || (e.target.closest && e.target.closest('.port, .cnote, .gframe-bar'))) return false; // the mouse path drags these
+    // one finger on empty loom pans (box-select stays a mouse gesture)
+    closeQA();
+    S.drag = { kind: 'pan', touch: true, sx: e.clientX, sy: e.clientY, ox: S.pan.x, oy: S.pan.y, moved: false };
+    editorEl.classList.add('panning');
+    return true;
+  }
+
+  function touchEnd(e) {
+    S.touches.delete(e.pointerId);
+    clearLP();
+    if (S.pinch) { if (!S.touches.size) S.pinch = null; return true; } // a pinch ends when the last finger lifts
+    return false;
+  }
+
+  function touchMove(e) {
+    if (S.pinch && S.touches.has(e.pointerId)) {
+      S.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (S.touches.size < 2) return true;
+      const [a, b] = [...S.touches.values()];
+      const p = S.pinch, r = editorEl.getBoundingClientRect();
+      const z2 = LM.clamp(p.z0 * (Math.hypot(a.x - b.x, a.y - b.y) || 1) / p.d0, 0.08, 2.5);
+      // the loom point that sat under the fingers' first midpoint rides along under their current one
+      const mx = (a.x + b.x) / 2 - r.left, my = (a.y + b.y) / 2 - r.top;
+      S.pan.x = mx - (p.mx0 - r.left - p.px0) * (z2 / p.z0);
+      S.pan.y = my - (p.my0 - r.top - p.py0) * (z2 / p.z0);
+      S.zoom = z2;
+      applyTransform();
+      return true;
+    }
+    if (S.lp && Math.hypot(e.clientX - S.lpX, e.clientY - S.lpY) > 8) clearLP(); // a moving finger is a drag, not a press
+    return false;
+  }
+
+  /* a second tap within 350ms and 24px is a double-tap. Browsers disagree on
+   * whether a double-tap also fires dblclick, so wait a beat and only
+   * synthesize one when no native dblclick arrived in the meantime. */
+  function tapped(e) {
+    const now = performance.now(), last = S.lastTap;
+    S.lastTap = { t: now, x: e.clientX, y: e.clientY };
+    if (!last || now - last.t > 350 || Math.hypot(e.clientX - last.x, e.clientY - last.y) > 24) return;
+    S.lastTap = null;
+    const x = e.clientX, y = e.clientY, seen = S.nativeDbl;
+    const target = e.target instanceof Element ? e.target : document.elementFromPoint(x, y);
+    setTimeout(() => {
+      if (S.nativeDbl !== seen || !target || !target.isConnected) return;
+      target.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window }));
+    }, 80);
+  }
+
   function onPointerDown(e) {
     closeCtx();
-    if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
+    if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu, #typeKey, #loomTools, #params')) return;
+    if (e.pointerType === 'touch' && touchDown(e)) return;
     const portEl = e.target.closest && e.target.closest('.port');
     const nodeEl = e.target.closest && e.target.closest('.node');
 
@@ -1089,6 +1183,7 @@ const Editor = (() => {
    * cursor has wandered since; a detached wire counts as dropped on empty
    * space, exactly as completeWire treats a release over nothing. */
   function cancelDrag() {
+    clearLP();
     if (!S.drag) return;
     const d = S.drag;
     S.drag = null;
@@ -1101,6 +1196,7 @@ const Editor = (() => {
   }
 
   function onPointerMove(e) {
+    if (e.pointerType === 'touch' && touchMove(e)) return;
     if (!S.drag) return;
     // no button still held: the release happened where we could not see it
     if (e.buttons === 0) { cancelDrag(); return; }
@@ -1198,6 +1294,12 @@ const Editor = (() => {
   }
 
   function onPointerUp(e) {
+    if (e.pointerType === 'touch') {
+      const pinching = !!S.pinch;
+      touchEnd(e);
+      if (pinching) { S.drag = null; return; }
+      if (S.drag && !S.drag.moved && S.drag.kind !== 'wire' && S.drag.kind !== 'marquee') tapped(e);
+    }
     if (!S.drag) return;
     const d = S.drag;
     if (d.kind === 'wire') { completeWire(e); return; }
@@ -1235,6 +1337,11 @@ const Editor = (() => {
     editorEl.classList.remove('panning');
     if (d.kind === 'node' && d.moved) changed();
     if (d.kind === 'pan' && d.rmb && !d.moved) openQA(e);
+    if (d.kind === 'pan' && d.touch && !d.moved) {
+      // a still finger on empty loom deselects, as a still click does
+      S.sel.clear(); S.selWire = null; S.selNote = null;
+      updateSelection(); drawWires();
+    }
   }
 
   function onWheel(e) {
@@ -1692,7 +1799,9 @@ const Editor = (() => {
 
   /* ------------------------------ zoom to fit ------------------------------ */
 
-  function zoomToFit(onlySelection) {
+  /* minZoom: a phone fitting a big loom would land at an unreadable 8% —
+   * with a floor it still centers on the graph, just at a legible size */
+  function zoomToFit(onlySelection, minZoom) {
     const nodes = S.graph.nodes.filter(n => !onlySelection || S.sel.has(n.id));
     if (!nodes.length) return;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -1704,7 +1813,7 @@ const Editor = (() => {
     }
     const r = editorEl.getBoundingClientRect();
     const m = 70;
-    S.zoom = LM.clamp(Math.min((r.width - m * 2) / Math.max(1, x1 - x0), (r.height - m * 2) / Math.max(1, y1 - y0), 1.1), 0.08, 2.5);
+    S.zoom = LM.clamp(Math.min((r.width - m * 2) / Math.max(1, x1 - x0), (r.height - m * 2) / Math.max(1, y1 - y0), 1.1), minZoom || 0.08, 2.5);
     S.pan.x = r.width / 2 - (x0 + x1) / 2 * S.zoom;
     S.pan.y = r.height / 2 - (y0 + y1) / 2 * S.zoom;
     applyTransform();
@@ -1783,11 +1892,21 @@ const Editor = (() => {
       editorEl.addEventListener('pointerdown', onPointerDown);
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', cancelDrag);
+      window.addEventListener('pointercancel', e => { touchEnd(e); cancelDrag(); });
       // focus lost mid-drag (native picker, alt-tab) ends the gesture too, so
       // the box never gets a chance to strand itself
-      window.addEventListener('blur', cancelDrag);
+      window.addEventListener('blur', () => { S.touches.clear(); S.pinch = null; cancelDrag(); });
       editorEl.addEventListener('wheel', onWheel, { passive: false });
+      // focusing a field near the edge makes the browser scroll the loom's
+      // overflow:hidden container to reveal it (phones do this for every
+      // number field); fold that scroll into the pan so the world transform
+      // stays the only way the loom moves and nothing ends up off-screen
+      editorEl.addEventListener('scroll', () => {
+        if (!editorEl.scrollLeft && !editorEl.scrollTop) return;
+        S.pan.x -= editorEl.scrollLeft; S.pan.y -= editorEl.scrollTop;
+        editorEl.scrollLeft = 0; editorEl.scrollTop = 0;
+        applyTransform();
+      });
       window.addEventListener('keydown', onKeyDown);
 
       // number fields in node cards: arrows step ±1, shift ±10, alt ±0.1
@@ -1819,8 +1938,9 @@ const Editor = (() => {
         t.dispatchEvent(new Event('change', { bubbles: true }));
       });
 
+      editorEl.addEventListener('dblclick', e => { if (e.isTrusted) S.nativeDbl++; }, true); // see tapped()
       editorEl.addEventListener('dblclick', e => {
-        if (e.target.closest('.node, .cnote, .gframe-bar, #quickAdd, #ctxMenu, #typeKey, #loomTools')) return;
+        if (e.target.closest('.node, .cnote, .gframe-bar, #quickAdd, #ctxMenu, #typeKey, #loomTools, #params')) return;
         openQA(e);
       });
       // right-click behavior lives in pointerdown/up (clean click = menu, drag = pan)
@@ -1944,6 +2064,12 @@ const Editor = (() => {
     collapseSelection,
     zoomToFit,
     zoom: () => S.zoom,
+    /* quick-add without a pointer position — the node lands near the top
+     * middle of the visible loom (the mobile + button; no palette there) */
+    quickAdd() {
+      const r = editorEl.getBoundingClientRect();
+      openQA({ clientX: r.left + r.width / 2 - 60, clientY: r.top + Math.min(r.height / 2, 110) });
+    },
     redrawWires: drawWires,
     pickColor,
 

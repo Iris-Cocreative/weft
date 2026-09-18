@@ -93,6 +93,11 @@ const Viewport = {
     Viewport.camPan = (dx, dy) => { cam.x += dx; cam.y += dy; paintCam(); };
     if (camBtn) camBtn.addEventListener('click', () => Viewport.camReset());
     let camDrag = null;
+    /* touch: the fingers on the cloth; one is the patch's mouse, two make a
+     * camera pinch (view-only, like ctrl+wheel — the design never notices) */
+    const tch = new Map();
+    let camPinch = null;
+    const pinchEnd = e => { tch.delete(e.pointerId); if (!tch.size) camPinch = null; };
 
     /* text measurement — supplied to computes as ctx.measureText (invariant #8:
      * identical contract in the export mount; h is a deterministic line box) */
@@ -221,6 +226,25 @@ const Viewport = {
       }
     });
     canvas.addEventListener('pointerdown', e => {
+      mx = e.clientX; my = e.clientY; // a tap with no prior move still lands the mouse under the finger
+      if (e.pointerType === 'touch') {
+        tch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (tch.size === 2) {
+          // a second finger turns the press into a pinch — let go of the patch's mouse first
+          if (anchorDrag) { anchorDrag = null; App.onGraphChanged(); }
+          if (mouse.down) releasedBuf = true;
+          mouse.down = false;
+          const [a, b] = [...tch.values()];
+          camPinch = {
+            d0: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+            mx0: (a.x + b.x) / 2, my0: (a.y + b.y) / 2,
+            z0: cam.z, x0: cam.x, y0: cam.y
+          };
+          try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events carry no capturable pointer */ }
+          return;
+        }
+        if (tch.size > 2 || camPinch) return;
+      }
       // ctrl+drag, alt+drag or middle-drag: pan the cloth camera, not the design
       if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.altKey))) {
         camDrag = { lx: e.clientX, ly: e.clientY };
@@ -241,6 +265,19 @@ const Viewport = {
       pressedBuf = true;
     });
     canvas.addEventListener('pointermove', e => {
+      if (camPinch && tch.has(e.pointerId)) {
+        tch.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (tch.size < 2) return;
+        const [a, b] = [...tch.values()], p = camPinch, r = canvas.getBoundingClientRect();
+        const z2 = LM.clamp(p.z0 * (Math.hypot(a.x - b.x, a.y - b.y) || 1) / p.d0, 0.1, 12);
+        // the cloth point under the fingers' first midpoint rides along under their current one
+        const sx = (a.x + b.x) / 2 - r.left - r.width / 2, sy = (a.y + b.y) / 2 - r.top - r.height / 2;
+        cam.x = sx - (p.mx0 - r.left - r.width / 2 - p.x0) * (z2 / p.z0);
+        cam.y = sy - (p.my0 - r.top - r.height / 2 - p.y0) * (z2 / p.z0);
+        cam.z = z2;
+        paintCam();
+        return;
+      }
       if (camDrag) {
         Viewport.camPan(e.clientX - camDrag.lx, e.clientY - camDrag.ly);
         camDrag.lx = e.clientX; camDrag.ly = e.clientY;
@@ -258,7 +295,9 @@ const Viewport = {
         if (Math.hypot((n.values.x || 0) - p.x, (n.values.y || 0) - p.y) < hitR()) { anchorHot = n; break; }
       }
     });
-    window.addEventListener('pointerup', () => {
+    window.addEventListener('pointercancel', e => { if (e.pointerType === 'touch') pinchEnd(e); camDrag = null; });
+    window.addEventListener('pointerup', e => {
+      if (e.pointerType === 'touch') { pinchEnd(e); if (camPinch) return; } // the pinch outlives its first lifted finger
       camDrag = null;
       if (anchorDrag) { anchorDrag = null; App.onGraphChanged(); }
       if (mouse.down) releasedBuf = true;
@@ -491,6 +530,7 @@ const Viewport = {
       }
 
       Editor.postEval(ctx);
+      if (App.paramsPostEval) App.paramsPostEval(ctx); // the mobile params sheet mirrors the cards
 
       fpsA = fpsA * 0.95 + (1 / Math.max(dt, 1e-3)) * 0.05;
       if (now - lastFps > 500) { fpsEl.textContent = Math.round(fpsA) + ' fps'; lastFps = now; }

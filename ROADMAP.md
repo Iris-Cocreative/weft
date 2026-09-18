@@ -314,6 +314,37 @@ is now in, so any of these can be picked up in a workshop pass):
 
 (overlaps track 0) — undo/redo, marquee, copy/paste, then:
 
+- [shipped v0.19.0, 2026-09-18] **The mobile pass.** Under 760px the shell
+  stacks — cloth above, loom below, a drag grip between them (its height is
+  remembered per phone) — the palette folds into a + button that opens
+  quick-add at the top of the screen (clear of the keyboard), the file tools
+  and the About/Nodes links fold into ☰, the wire key, fps and counts hide,
+  and the merged view is never loaded on a phone (the stack is the merge).
+  The **params sheet** (faders button in the loom tools) lists every control
+  on the loom — slider, knob, angle, toggle, swatch, button, anchor, text
+  list — full width, each row running the def's own `buildBody` against the
+  same node, so the cloth follows live and nothing is reimplemented; the
+  cards underneath are rebuilt when the sheet closes. Touch got its own
+  grammar in `js/editor.js` (keyed off `pointerType`, so a mouse on a touch
+  laptop keeps the desktop one): one finger on empty loom pans, two pinch-
+  zoom about the fingers, a half-second hold opens the card menu or
+  quick-add, a double-tap stands in for dblclick (fold a head, slider
+  options — synthesized only when the browser didn't fire its own); on the
+  cloth one finger is the patch's mouse and two pinch the camera. Coarse
+  pointers get 31px port targets. A phone starts centered on the loom at a
+  legible zoom (`zoomToFit` gained a floor), and a focus-scroll of the loom's
+  container now folds into the pan instead of stranding the graph
+  off-screen. Still desktop-only: box-select, the palette's drag-to-place,
+  the About and Nodes pages' layouts. Same release: the welcome's three
+  cards rewritten in James's framing (*weave math into form · make code
+  visible · combine domains creatively*) with living glyphs
+  (`weftWelcomeSVG`), mirrored on the about page; *Rainbow eye* updated
+  from `patches/Eye.json` as the first-visit graph.
+  - [next] the params sheet on desktop too (a control panel beside the
+    cloth — Grasshopper's remote panel), and the sheet honoring group order
+  - [next] drag from a port on touch is still a small target for wires
+    across a long loom — a "wire mode" (tap out, tap in) would help
+
 - [shipped v0.18.5, 2026-09-17] **Welcome + tour.** A first visit opens a
   welcome modal (`js/tour.js`): what weft is in the about page's voice, the
   loom/cloth idea, the three cards (lists, state, export), and a place to
@@ -464,6 +495,13 @@ is now in, so any of these can be picked up in a workshop pass):
   x/y scaled, swatch-coloured, Time Graph on the loom + Trace on the cloth
   from an anchored pen, white dot marking the pointer. Line cap raised 8 → 16
   same day (colour palette cycles).
+- [shipped 2026-09-17] **Rainbow eye** — James's poster eye (one lens →
+  Fillet → Series-driven Scale + Rotate, the look point wired into three
+  transforms for parallax, a five-key OKLCH palette in Custom JS) added as an
+  example and made the **default graph** for first-time visitors, replacing
+  Hexa graph. The first-visit fallback now zooms to fit, so a big loom opens
+  whole instead of at the corner the camera starts in. Raw JSON in
+  examples.js like Hexa graph (collapsed flags), layout James's own.
 - [shipped 2026-07-15] **Hexa graph** — James's evolved seismograph piece
   (breathing hexagon lattice, hover-woken springs, six rotated Trace pens
   drawing a mandala of trails) added as an example and made the **default
@@ -570,7 +608,7 @@ Then:
 - [idea] drag from an empty port → quick-add pre-wired (GH's best gesture)
 - [idea] node alignment/distribution, comment/group frames
 - [idea] keyboard palette (Tab, like GH), arrow-key nudge
-- [idea] touch support pass
+- ~~[idea] touch support pass~~ → **shipped v0.19.0** (2026-09-18, the mobile pass in §5)
 
 ## 6. Images, video & vector — where the web beats Grasshopper
 

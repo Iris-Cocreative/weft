@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.18.6 — the assistant loop runs from a terminal too: `test/apply-ops.js` describes a loom and applies ops with the panel's validator, the `/weft-weave` skill makes Claude the model for an existing loom, and the workflow retries the router once and turns a 504 into words; ROADMAP now carries the multi-stage plan (triage → context slice → model matched to the ask, Claude API included); v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.19.0 — the welcome (and the about page) now opens on three ideas in James's words — *weave math into form*, *make code visible*, *combine domains creatively* — each with a living glyph (`weftWelcomeSVG`) that idles and answers a hover or tap, and *Rainbow eye* ships in its updated form (`patches/Eye.json`, 135 nodes, a Panel) as the graph a first visit opens on; the mobile pass: under 760px the shell stacks (cloth above, loom below, a grip between), the palette folds into a + button and the file tools into ☰, a params sheet lists every control on the loom full width, and touch gets its own grammar (one finger pans, two pinch, hold for the menu, double-tap folds) on the loom and the cloth; v0.18.7 — *Rainbow eye* is the new default graph (James's poster eye: one filleted lens scaled and turned per band, a look point feeding three transforms for parallax, an OKLCH palette walk in Custom JS), and a first visit zooms to fit the loom; v0.18.6 — the assistant loop runs from a terminal too: `test/apply-ops.js` describes a loom and applies ops with the panel's validator, the `/weft-weave` skill makes Claude the model for an existing loom, and the workflow retries the router once and turns a 504 into words; ROADMAP now carries the multi-stage plan (triage → context slice → model matched to the ask, Claude API included); v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -451,6 +451,41 @@ curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
 
+v0.19.0 (2026-09-18): **the mobile pass.** Weft had never been opened on a
+phone on purpose: a 208px palette, a 240px-minimum cloth and a loom that
+needed a right button. James asked for the loom below the cloth and the
+params in a collapsible sheet, and that is the shape: `style.css` stacks
+the shell under 760px (the splitter turns into a grip that sizes the cloth's
+height, remembered in `weft:clothH`), `App.bindMobile` binds the + button
+(quick-add, fixed at the top of the screen so the keyboard can't cover it),
+the ☰ menu (the file tools plus About/Nodes), swaps the status hint for a
+finger one, and refuses to load the merged view on a phone. The params
+sheet (`App.toggleParams`) is the part that makes a phone a place to *play*
+a patch rather than just look at one: every Params-category def with a
+`buildBody` runs it again into a full-width row bound to the same node, so
+the slider you drag there is the card's slider — the cloth follows live,
+`postEval` rows (anchors) mirror the cloth, and the cards are rebuilt when
+the sheet closes. Touch is a second grammar in `js/editor.js`, not a
+translation of the mouse one: `touchDown/Move/End` key off `pointerType`
+and give one finger on empty loom a pan, two a pinch about their midpoint,
+a 520ms hold the card menu or quick-add, and a double-tap a synthesized
+`dblclick` — after an 80ms wait, and only when the browser didn't fire its
+own, so a fold never toggles twice. The cloth does the same for its camera.
+Two small things the pass exposed: `zoomToFit` gained a zoom floor (a phone
+fitting *Rainbow eye* landed at 8%), and a focused field near the loom's
+edge could make the browser scroll the `overflow:hidden` editor — that
+scroll now folds into the pan. The same day the welcome's three cards
+were rewritten: *everything is a list / the web is stateful / leaves
+without a runtime* were true but spoke engine, not invitation — James's
+framing is *weave math into form*, *make code visible*, *combine domains
+creatively*, and each card carries a glyph drawn on the node-icon grid in
+the brand gradient (`weftWelcomeSVG` in `js/icons.js`, editor-only): a wave
+flowing into a port that turns a slow rosette, three gray lines of code that
+light up as the wires of a card, and a chart, a sound and a solid in a ring
+that turns on hover while the three stay upright. The about page's cards use
+the same source. And the loom a first visit opens on is the updated
+*Rainbow eye* from `patches/Eye.json` (format 2, 135 nodes, a Panel node).
+
 v0.18.6 (2026-09-17): **the loop, from the terminal.** A day of testing
 on the public workflow ended with James asking for the assistant's brain
 as a skill — so `test/apply-ops.js` is the headless twin of the panel:
@@ -822,6 +857,7 @@ Ctrl+C/Ctrl+V on the loom); authoring contract for humans and LLMs:
 - Double-click a node head to collapse it to icon + ports (and back)
 - Right-click node → Duplicate/Delete; Ctrl+D duplicates; Shift-click multi-select
 - Scroll to zoom, drag background to pan; splitter resizes the preview
+- On a phone (≤760px): cloth above, loom below, a grip between; + opens quick-add, ☰ the file tools, the faders button the params sheet (every control on the loom, full width); one finger pans, two pinch, a hold opens menus, a double-tap folds
 - Panels show live data; error nodes get a red ring with the message on hover
 - **Examples** open a gallery modal (search, category chips, cards with
   thumbnail + blurb + a "teaches" line + `needs` badges). The corpus itself is

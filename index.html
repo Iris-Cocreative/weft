@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Weft — parametric designer for the web</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -23,7 +23,10 @@
     <button id="btnLoad" title="Open a saved graph">Open</button>
     <button id="btnShare" title="Copy a link that carries the whole patch — no account, no server">Share</button>
     <button id="btnExport" class="accent" title="Compile this graph to standalone JavaScript">Export JS</button>
+    <a href="about.html" class="m-only">About</a>
+    <a href="nodes.html" class="m-only">Nodes</a>
   </div>
+  <button id="btnMenu" class="m-only" title="menu">☰</button>
 </header>
 
 <main>
@@ -49,6 +52,8 @@
       <div class="tk-body"></div>
     </div>
     <div id="loomTools">
+      <button id="btnParams" class="m-only" title="params — every control on the loom, in one sheet"></button>
+      <button id="btnAddNode" class="m-only" title="add a node"></button>
       <button id="btnAssist" title="weave assistant — describe what you want, a model edits the loom (needs your n8n webhook)">✦</button>
       <button id="btnMerge" title="merge — float the loom on the cloth"></button>
       <button id="btnFitIcon" title="zoom to fit — Home fits all, F fits the selection"></button>

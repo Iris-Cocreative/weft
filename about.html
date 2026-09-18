@@ -56,6 +56,23 @@
   .card { background:var(--panel); border:1px solid var(--line); border-radius:11px; padding:16px 17px; }
   .card h3 { margin:0 0 7px; font-size:14px; font-weight:600; color:var(--accent); }
   .card p { font-size:13px; margin:0; }
+  /* the three living glyphs — same classes as the welcome modal (style.css) */
+  .wl-ico { display:block; width:44px; height:44px; margin:0 0 10px; }
+  .wl-ico svg { width:100%; height:100%; display:block; overflow:visible; }
+  .wl-flow { stroke-dasharray:2.6 2; animation:wl-flow 1.4s linear infinite; }
+  @keyframes wl-flow { to { stroke-dashoffset:-9.2; } }
+  .wl-spin, .wl-bloom, .wl-tri, .wl-dom { transform-box:fill-box; transform-origin:center; }
+  .wl-spin { animation:wl-spin 18s linear infinite; }
+  @keyframes wl-spin { to { transform:rotate(360deg); } }
+  .wl-bloom { transition:transform .6s cubic-bezier(.2,.8,.2,1); }
+  .card:hover .wl-bloom, .card.on .wl-bloom { transform:scale(1.18); }
+  .wl-lit { opacity:.3; transition:opacity .45s; animation:wl-breathe 3.2s ease-in-out infinite alternate; }
+  @keyframes wl-breathe { from { opacity:.15; } to { opacity:.55; } }
+  .card:hover .wl-lit, .card.on .wl-lit { opacity:1; animation:none; }
+  .wl-tri, .wl-dom { transition:transform .9s cubic-bezier(.2,.8,.2,1); }
+  .card:hover .wl-tri, .card.on .wl-tri { transform:rotate(120deg); }
+  .card:hover .wl-dom, .card.on .wl-dom { transform:rotate(-120deg); }
+  @media (prefers-reduced-motion: reduce) { .wl-flow, .wl-spin, .wl-lit { animation:none; } }
 
   .cta { display:flex; gap:12px; flex-wrap:wrap; margin:40px 0 0; }
   .cta a {
@@ -97,20 +114,20 @@
   than a second renderer.</p>
 
   <div class="cards">
-    <div class="card">
-      <h3>everything is a list</h3>
-      <p>wires don't carry one value — they carry lists. wire 200 numbers into a Circle and
-      you get 200 circles. lists pair up item by item; that matching is the soul of the tool.</p>
+    <div class="card" data-ico="form">
+      <h3>weave math into form</h3>
+      <p>wire a few simple functions together and a handful of numbers becomes a shape, a motion,
+      a whole scene. each card is one small idea; the wires do the composing.</p>
     </div>
-    <div class="card">
-      <h3>the web is stateful</h3>
-      <p>unlike its desktop ancestors, weft has memory. springs, latches, delays and feedback
-      loops let a design react to input and settle over time instead of just posing.</p>
+    <div class="card" data-ico="visible">
+      <h3>make code visible</h3>
+      <p>nothing is buried in a script. the logic sits on the loom in the open — every value live,
+      every connection drawn — so you can follow it, change it, and make it yours.</p>
     </div>
-    <div class="card">
-      <h3>leaves without a runtime</h3>
-      <p>export compiles your graph to a single standalone vanilla JavaScript file. no library,
-      no dependencies, no weft — drop it into any page and it simply runs.</p>
+    <div class="card" data-ico="domains">
+      <h3>combine domains creatively</h3>
+      <p>a chart can drive a shape, a shape can play a sound, a sound can bend a 3D form.
+      everything on the loom speaks the same language, so anything can feed anything.</p>
     </div>
   </div>
 
@@ -131,4 +148,12 @@
   source under <a href="https://github.com/Iris-Cocreative/weft/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a> —
   free for personal &amp; noncommercial use</footer>
 </div>
+<script src="js/icons.js"></script>
+<script>
+  // the cards' glyphs come from the same source as the welcome modal's
+  for (const c of document.querySelectorAll('.card[data-ico]')) {
+    c.insertAdjacentHTML('afterbegin', '<span class="wl-ico">' + weftWelcomeSVG(c.dataset.ico, 'ab') + '</span>');
+    c.addEventListener('click', () => c.classList.toggle('on'));
+  }
+</script>
 </html>

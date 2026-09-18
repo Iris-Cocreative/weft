@@ -113,7 +113,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/slider` | Number Slider | | N:number | values: min max value label, mode:"int" |
 | `params/toggle` | Boolean Toggle | | B:bool | values: value |
 | `params/button` | Button (momentary) | | B:bool | |
-| `params/swatch` | Color Swatch | | C:color | values: c:{r,g,b,a} |
+| `params/swatch` | Color Swatch | | C:color | values: hex:"#rrggbb", a:0–1 |
 | `params/textlist` | Text List | | L:string | values: text (one item per line) |
 | `params/number` | Number | N:number=0 | N:number | |
 | `params/point` | Point | P:point | P:point | |
