@@ -480,8 +480,9 @@ const Viewport = {
       }
 
       g2.setTransform(dpr, 0, 0, dpr, 0, 0);
-      g2.fillStyle = ctx.bg ? LM.colorCss(ctx.bg) : '#0b0e14';
+      g2.fillStyle = '#0b0e14';
       g2.fillRect(0, 0, rect.width, rect.height);
+      LM.fillBg(g2, ctx.bg, rect.width, rect.height); // a color or a paint
       g2.save();
       g2.translate(rect.width / 2, rect.height / 2);
       g2.translate(cam.x, cam.y);

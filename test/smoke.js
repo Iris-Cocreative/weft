@@ -806,6 +806,49 @@ for (const name of Object.keys(EXAMPLES)) {
       failures.push('params/svg: both stored shapes must load, scaled by S — got ' + JSON.stringify(vi.G.map(g => g.kind)));
   }
 
+  /* paints & clip (v0.21): a paint rides the color port, Draw turns it into a
+     canvas gradient at draw time, and a clip wraps the item in save/clip/restore */
+  {
+    const teal = { r: 45, g: 212, b: 191, a: 1 }, clear = { r: 0, g: 0, b: 0, a: 0 };
+    const lin = NODE_DEFS['disp/linear'].compute({ A: { x: -10, y: 0 }, B: { x: 10, y: 0 }, C1: teal, C2: clear, S: [], T: [] }).P;
+    if (lin.paint !== 'linear' || lin.stops.length !== 2 || lin.stops[1].t !== 1 || lin.stops[0].c !== teal) failures.push('disp/linear: ' + JSON.stringify(lin));
+    const rad = NODE_DEFS['disp/radial'].compute({ P: { x: 3, y: 4 }, R0: -5, R1: 50, C1: teal, C2: clear, S: [teal, clear, teal], T: [0, 0.25] }).P;
+    if (rad.paint !== 'radial' || rad.r0 !== 0 || rad.stops.length !== 3 || rad.stops[2].t !== 0.25) failures.push('disp/radial: ' + JSON.stringify(rad));
+    if (LM.coerce(lin, 'color') !== lin) failures.push('coerce: a paint must pass through the color port untouched');
+    if (LM.paintVisible({ paint: 'linear', stops: [{ t: 0, c: clear }] })) failures.push('paintVisible: all-clear stops are invisible');
+    if (!LM.paintVisible(lin) || LM.paintVisible(clear) || !LM.paintVisible(teal)) failures.push('paintVisible: colors and paints');
+    if (LM.fmt(rad) !== '‹radial paint›') failures.push('fmt: paint readout, got ' + LM.fmt(rad));
+    const ev = LM.paintStops(teal, clear, [teal, clear, teal], null);
+    if (ev.map(s => s.t).join() !== '0,0.5,1') failures.push('paintStops: three colors spread evenly, got ' + ev.map(s => s.t).join());
+    /* a recording canvas: gradients are objects that collect their stops */
+    const calls = [], stops = [];
+    const grad = { addColorStop: (t, c) => stops.push(t) };
+    const g2 = new Proxy({}, { get: (_, k) => (...a) => { calls.push(k); return (k === 'createRadialGradient' || k === 'createLinearGradient') ? grad : undefined; }, set: () => true });
+    LM.drawItem(g2, { geom: { kind: 'circle', cx: 0, cy: 0, r: 10 }, fill: rad, stroke: clear, width: 1, clip: { kind: 'rect', cx: 0, cy: 0, w: 5, h: 5, rot: 0 } });
+    const seq = calls.join(',');
+    if (!/^save,beginPath,.*clip,.*createRadialGradient,.*fill,restore$/.test(seq) || seq.indexOf('stroke') >= 0) failures.push('drawItem clip+paint: ' + seq);
+    if (stops.length !== 3) failures.push('drawItem: three stops added, got ' + stops.length);
+    calls.length = 0;
+    LM.drawItem(g2, { geom: { kind: 'circle', cx: 0, cy: 0, r: 10 }, fill: teal, stroke: lin, width: 2 });
+    if (calls.indexOf('save') >= 0 || calls.indexOf('createLinearGradient') < 0 || calls.indexOf('stroke') < 0) failures.push('drawItem paint stroke, no clip: ' + calls.join(','));
+    calls.length = 0;
+    LM.fillBg(g2, lin, 200, 100);
+    if (calls.join(',') !== 'save,translate,createLinearGradient,fillRect,restore') failures.push('fillBg paint: ' + calls.join(','));
+    calls.length = 0;
+    LM.fillBg(g2, teal, 200, 100);
+    if (calls.join(',') !== 'fillRect') failures.push('fillBg color: ' + calls.join(','));
+    /* Draw carries the clip only when K is wired */
+    const c1 = mkCtx(); NODE_DEFS['disp/draw'].compute({ G: { kind: 'circle', cx: 0, cy: 0, r: 1 }, S: teal, F: clear, W: 1 }, c1);
+    if ('clip' in c1.drawList[0]) failures.push('disp/draw: no clip field without K');
+    const c2 = mkCtx(); NODE_DEFS['disp/draw'].compute({ G: { kind: 'circle', cx: 0, cy: 0, r: 1 }, S: teal, F: clear, W: 1, K: { kind: 'rect', cx: 0, cy: 0, w: 2, h: 2, rot: 0 } }, c2);
+    if (!c2.drawList[0].clip) failures.push('disp/draw: K becomes the item clip');
+    /* the shaken export keeps the paint machinery when a paint node survives */
+    const js = WeftExport.buildJS({ nodes: [
+      { id: 'g', type: 'disp/radial', values: {} }, { id: 'c', type: 'crv/circle', values: {} }, { id: 'd', type: 'disp/draw', values: {} } ],
+      wires: [ { from: ['g', 'P'], to: ['d', 'F'] }, { from: ['c', 'C'], to: ['d', 'G'] } ] });
+    if (js.indexOf('createRadialGradient') < 0 || js.indexOf('fillBg') < 0) failures.push('exporter: paint helpers must survive the shake');
+  }
+
   /* polygon booleans */
   const A2 = sq(0, 0, 50), B2 = sq(50, 50, 50);
   const boo = (op, want) => {

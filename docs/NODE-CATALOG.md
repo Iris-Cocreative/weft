@@ -2097,11 +2097,25 @@ Normalize V to length 1 (a zero vector stays zero)
 
 ### `disp/bg` — Background
 
-Set the canvas background color
+Set the canvas background — a color, or a paint from Linear / Radial Gradient (laid in centered px like geometry)
 
 | in | type | default | note |
 |---|---|---|---|
 | C | color | `{"r":11,"g":14,"b":20,"a":1}` |  |
+
+### `disp/gradient` — Blend Colors
+
+Blend color A → B by T (0..1) — one color out; for a gradient paint see Linear / Radial Gradient
+
+| in | type | default | note |
+|---|---|---|---|
+| T | number | `0.5` |  |
+| A | color | `{"r":94,"g":234,"b":212,"a":1}` |  |
+| B | color | `{"r":244,"g":114,"b":182,"a":1}` |  |
+
+| out | type | note |
+|---|---|---|
+| C | color |  |
 
 ### `disp/hsl` — Color HSL
 
@@ -2183,7 +2197,7 @@ Split a color into red, green, blue (0..255) and alpha (0..1)
 
 ### `disp/draw` — Draw
 
-Render geometry with stroke S, fill F, line width W
+Render geometry with stroke S, fill F (a color or a paint from Linear / Radial Gradient), line width W — masked to K when a clip geometry is wired
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2191,6 +2205,7 @@ Render geometry with stroke S, fill F, line width W
 | S | color | `{"r":230,"g":237,"b":250,"a":1}` | stroke |
 | F | color | `{"r":255,"g":255,"b":255,"a":0}` | fill |
 | W | number | `1.5` | width |
+| K | geometry |  | clip (optional) |
 
 | out | type | note |
 |---|---|---|
@@ -2214,20 +2229,6 @@ A real DOM element (link, heading, button…) laid over the canvas filling G’s
 | D | bool | held down |
 | K | bool | clicked (trigger) |
 
-### `disp/gradient` — Gradient
-
-Blend color A → B by T (0..1)
-
-| in | type | default | note |
-|---|---|---|---|
-| T | number | `0.5` |  |
-| A | color | `{"r":94,"g":234,"b":212,"a":1}` |  |
-| B | color | `{"r":244,"g":114,"b":182,"a":1}` |  |
-
-| out | type | note |
-|---|---|---|
-| C | color |  |
-
 ### `disp/harmonograph` — Harmonograph
 
 The Victorian drawing machine, and the Vector Scope’s math twin — two damped pendulums (frequencies X and Y) swing a pen for T seconds: integer ratios give Lissajous figures, damping D nests them inward, phase H rotates the figure (wire Time for a slow spin). Pure numbers, no sound.
@@ -2248,6 +2249,23 @@ The Victorian drawing machine, and the Vector Scope’s math twin — two damped
 | G | geometry | figure |
 | P | point | pen points |
 
+### `disp/linear` — Linear Gradient
+
+A paint running from color C1 at point A to C2 at point B — wire it into Draw’s fill or stroke, or into Background. A color list in S (with 0..1 positions in T) makes more stops
+
+| in | type | default | note |
+|---|---|---|---|
+| A | point | `{"x":-100,"y":0}` | start |
+| B | point | `{"x":100,"y":0}` | end |
+| C1 | color | `{"r":45,"g":212,"b":191,"a":1}` | start color |
+| C2 | color | `{"r":124,"g":58,"b":237,"a":1}` | end color |
+| S | color |  | stops (list — overrides C1/C2) · receives whole list |
+| T | number |  | stop positions 0..1 (list) · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| P | color | paint |
+
 ### `disp/measure` — Measure Text
 
 Width and height of text T at size S px, plus its bounding rect centered at P — measured by the host with the same font Draw uses
@@ -2263,6 +2281,24 @@ Width and height of text T at size S px, plus its bounding rect centered at P �
 | W | number | width |
 | H | number | height |
 | G | geometry | bounding rect |
+
+### `disp/radial` — Radial Gradient
+
+A paint running from C1 at center P (solid inside radius R0) out to C2 at radius R1 — a glow, a vignette, a shaded ball. Into Draw’s fill or stroke, or Background. A color list in S (positions in T) makes more stops
+
+| in | type | default | note |
+|---|---|---|---|
+| P | point | `{"x":0,"y":0}` | center |
+| R0 | number | `0` | inner radius |
+| R1 | number | `120` | outer radius |
+| C1 | color | `{"r":255,"g":255,"b":255,"a":1}` | center color |
+| C2 | color | `{"r":255,"g":255,"b":255,"a":0}` | edge color |
+| S | color |  | stops (list — overrides C1/C2) · receives whole list |
+| T | number |  | stop positions 0..1 (list) · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| P | color | paint |
 
 ### `disp/text` — Text
 
@@ -2580,4 +2616,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-187 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+189 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

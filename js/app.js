@@ -921,8 +921,9 @@ const App = {
       ctx = Viewport.makeCtx(S.w, S.h, f * dt, dt, f, { tuneA4: tune });
       try { LM.evaluateGraph(graph, NODE_DEFS, ctx); } catch (e) { /* paint whatever drew */ }
     }
-    g2.fillStyle = (ctx && ctx.bg) ? LM.colorCss(ctx.bg) : '#0b0e14';
+    g2.fillStyle = '#0b0e14';
     g2.fillRect(0, 0, cv.width, cv.height);
+    if (ctx) LM.fillBg(g2, ctx.bg, cv.width, cv.height);
     if (ctx) {
       g2.translate(cv.width / 2, cv.height / 2); // coordinates are centered (invariant 3)
       const sc = Math.min(cv.width / S.w, cv.height / S.h);

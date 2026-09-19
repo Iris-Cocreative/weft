@@ -65,8 +65,13 @@ Still open from that harvest:
   (AHSL / AHSV / ARGB) instead of GH's three separate nodes. James's design;
   see library principle 5. Demo 3 turns hue/luminance into coordinates — color
   *as data* is very Weft.
-- **Gradient (multi-stop)** — extend `disp/gradient` beyond A→B: stops list +
-  positions, GH-style draggable-stop body later. Demos 2 and 4 both need ≥3 stops.
+- ~~**Gradient (multi-stop)**~~ → **shipped v0.21 (2026-09-18) as paints:**
+  **Linear Gradient** `disp/linear` and **Radial Gradient** `disp/radial`
+  emit a *paint* on the color port (C1 → C2, or a stops list S + positions
+  T), which Draw's fill/stroke and Background accept as they are; Draw's new
+  K input clips an item to any geometry. `disp/gradient` is retitled *Blend
+  Colors* (one color out). Still open: a draggable-stop body, blend modes,
+  pattern/image paints (after the Image node).
 
 ### Sets — list surgery *(planned)*
 

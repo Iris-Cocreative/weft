@@ -184,6 +184,18 @@ downstream knows 3D happened.
 - **Hand-picked color** — `params/swatch(→ C)` into `disp/draw(S stroke /
   F fill)`. A fill with a:0 is skipped; the strip under the circle sets alpha.
 - **Color from channel numbers** — `disp/rgb(R, G, B 0–255, A → C)`.
+- **A gradient fill or stroke** — `disp/linear(A, B, C1, C2 → P)` or
+  `disp/radial(P, R0, R1, C1, C2 → P)` make a *paint*, and a paint goes
+  wherever a color goes on Draw (F or S) or Background (C). Coordinates are
+  canvas px like geometry, so wire the shape's center into the gradient's
+  center to keep them together. More stops: a color list into S with
+  positions 0..1 in T.
+- **A glow inside a shape** — a big circle at the glow point → `disp/draw(G,
+  F: disp/radial paint, K: the shape)`. K clips anything to any geometry:
+  stripes, text, a photo of a pattern — masked to the outline. Example:
+  *Lantern*.
+- **Sky / vignette** — `disp/linear` top → bottom, or `disp/radial` with a
+  clear center and a dark edge, straight into `disp/bg`.
 - **Nudge a color that came from somewhere else** — `disp/deconhsl(C → H, S,
   L, A)`, do math on the channels, rebuild with `disp/hsl`. The classic move:
   Vector In's fill F → Deconstruct HSL → add a per-item offset to H → Color

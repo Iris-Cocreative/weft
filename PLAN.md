@@ -247,7 +247,7 @@ Lands *after* Phase 3 so the patches a model emits are small enough to read.
 Exit met: describe → JSON → paste → *play*. Also fixed en route: NODE-CATALOG
 and nodes.html had silently omitted the Audio and Meta categories since v0.8.2.
 
-## Phase 5 — Media, type & vector (the web's unfair advantages) — in progress (5.3 shipped v0.20.0)
+## Phase 5 — Media, type & vector (the web's unfair advantages) — in progress (5.3 v0.20.0, 5.4 v0.21.0)
 
 1. Image node + **Image Sample** (brightness/color at points → drives geometry:
    halftones, image-driven fields) — the killer node of the phase.
@@ -262,11 +262,11 @@ and nodes.html had silently omitted the Audio and Meta categories since v0.8.2.
    curves**, and the **SVG Path** node (`crv/path`) — type a `d`, get
    geometry. The SVG render target (7.2) is now the nearly-free step it was
    promised to be.
-4. **Paint & clip** — `drawList` fill widens from a colour to a paint
-   (solid | linear | radial), and items gain an optional `clip` geom. The
-   organic-nav glow (a radial gradient clipped inside the shape) is currently
-   *inexpressible*, and the patch's bg-coloured carve circles only work over an
-   opaque background — a real clip retires that trick.
+4. ✅ **Paint & clip** (v0.21.0, 2026-09-18) — a paint (linear | radial, stops)
+   rides the color port and Draw, Background and the exporter turn it into a
+   canvas gradient at draw time; Draw's new K input clips an item to any
+   geometry. Linear Gradient + Radial Gradient nodes; *Lantern* example is
+   the organic-nav glow, finally expressible.
 5. Video + **Webcam** sources; feedback buffer (previous frame → trails).
 6. **Deconstruct Text** (string → char list; kinetic type via list matching),
    Text on Curve, Font/variable-font nodes (number → weight!). *Measure Text

@@ -2162,7 +2162,8 @@ const Editor = (() => {
           if (!path) continue;
           if (outputTypeColor(w.from) !== TYPE_COLORS.color) continue;
           const L = (ctx.out[w.from[0]] || {})[w.from[1]];
-          const c = L && L[0];
+          let c = L && L[0];
+          if (c && c.paint) c = c.stops && c.stops[0] && c.stops[0].c; // a paint shows its first stop
           if (c && typeof c === 'object' && 'r' in c) {
             const hex = LM.colorToHex(c);
             S.wireTint.set(w.id, hex); // drawWiresNow reapplies this on rebuild

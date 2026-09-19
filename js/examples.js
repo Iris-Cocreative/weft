@@ -17,6 +17,35 @@ const EXAMPLES = {
    * four cubics; a Series of offsets rings it (offset samples the true curve),
    * Scale + Rotate keep the cubics exact so the frame you see is the same
    * shape at every zoom, and a dot runs the outline by arc length. */
+  /* paint & clip (v0.21): a capsule lit by a radial glow that follows the
+   * mouse, drawn as a big disc and CLIPPED to the capsule — the organic-nav
+   * glow that used to be inexpressible. Stripes tiled across the loom are
+   * clipped by the same shape; the sky is one Linear Gradient wired straight
+   * into Background. */
+  'Lantern': _EX([
+    ['sk', 'disp/linear', 30, 40, { A: { x: 0, y: -320 }, B: { x: 0, y: 320 }, C1: { r: 10, g: 14, b: 36, a: 1 }, C2: { r: 74, g: 22, b: 62, a: 1 } }],
+    ['bg', 'disp/bg', 280, 40],
+    ['mo', 'input/mouse', 30, 230],
+    ['cp', 'vec/construct', 280, 230],
+    ['rc', 'crv/rect', 30, 430, { W: 300, H: 140 }],
+    ['fi', 'crv/fillet', 280, 430, { R: 70, N: 12 }],
+    ['gl', 'disp/radial', 520, 200, { R0: 0, R1: 150, C1: { r: 45, g: 212, b: 191, a: 0.95 }, C2: { r: 45, g: 212, b: 191, a: 0 } }],
+    ['ci', 'crv/circle', 520, 400, { R: 170 }],
+    ['st', 'crv/rect', 520, 560, { P: { x: -170, y: 0 }, W: 6, H: 220, A: 0.5 }],
+    ['tl', 'xf/tile', 760, 560, { V1: { x: 26, y: 0 }, N1: 14, V2: { x: 0, y: 0 }, N2: 1 }],
+    ['d1', 'disp/draw', 1000, 300, { S: { r: 0, g: 0, b: 0, a: 0 } }],
+    ['d2', 'disp/draw', 1000, 500, { S: { r: 255, g: 255, b: 255, a: 0 }, F: { r: 255, g: 255, b: 255, a: 0.1 } }],
+    ['d3', 'disp/draw', 1000, 680, { S: { r: 230, g: 237, b: 250, a: 0.9 }, W: 2 }]
+  ], [
+    ['sk', 'P', 'bg', 'C'],
+    ['mo', 'X', 'cp', 'X'], ['mo', 'Y', 'cp', 'Y'],
+    ['cp', 'P', 'gl', 'P'], ['cp', 'P', 'ci', 'P'],
+    ['rc', 'C', 'fi', 'C'],
+    ['gl', 'P', 'd1', 'F'], ['ci', 'C', 'd1', 'G'], ['fi', 'C', 'd1', 'K'],
+    ['st', 'C', 'tl', 'G'], ['tl', 'G', 'd2', 'G'], ['fi', 'C', 'd2', 'K'],
+    ['fi', 'C', 'd3', 'G']
+  ]),
+
   'Heart path': _EX([
     ['hp', 'crv/path', 30, 40],
     ['tm', 'input/time', 30, 300],
@@ -18162,6 +18191,13 @@ const EXAMPLE_CAT_HUE = {
 };
 
 const EXAMPLE_META = {
+  'Lantern': {
+    cat: 'Fundamentals',
+    blurb: 'A capsule lit from wherever the pointer is — a radial glow drawn as a big disc and clipped to the shape, stripes clipped by the same shape, a gradient sky in one node.',
+    teaches: 'Paint and clip: Linear and Radial Gradient are colors that Draw and Background accept as they are, and Draw’s K input masks anything to any geometry — the glow-inside-a-shape that used to be impossible.',
+    tags: ['gradient', 'radial', 'linear', 'clip', 'glow', 'mouse', 'fillet', 'tile'],
+    needs: [], frames: 40
+  },
   'Heart path': {
     cat: 'Geometry',
     blurb: 'A heart written as four cubic curves in one SVG Path node, ringed inward by a Series of offsets, with a dot running its outline by arc length.',

@@ -2321,16 +2321,19 @@ defNode('xf/kaleido', {
 /* ============================== DISPLAY ============================== */
 
 defNode('disp/draw', {
-  title: 'Draw', cat: 'Display', desc: 'Render geometry with stroke S, fill F, line width W',
+  title: 'Draw', cat: 'Display', desc: 'Render geometry with stroke S, fill F (a color or a paint from Linear / Radial Gradient), line width W — masked to K when a clip geometry is wired',
   inputs: [
     { name: 'G', type: 'geometry' },
     { name: 'S', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 }, label: 'stroke' },
     { name: 'F', type: 'color', default: { r: 255, g: 255, b: 255, a: 0 }, label: 'fill' },
-    { name: 'W', type: 'number', default: 1.5, label: 'width' }],
+    { name: 'W', type: 'number', default: 1.5, label: 'width' },
+    { name: 'K', type: 'geometry', label: 'clip (optional)' }],
   outputs: [{ name: 'G', type: 'geometry' }],
   compute: (a, ctx) => {
     if (a.G === undefined || a.G === null) return {};
-    ctx.drawList.push({ geom: a.G, stroke: a.S, fill: a.F, width: a.W });
+    const it = { geom: a.G, stroke: a.S, fill: a.F, width: a.W };
+    if (a.K !== undefined && a.K !== null) it.clip = a.K;
+    ctx.drawList.push(it);
     return { G: a.G };
   }
 });
@@ -2349,8 +2352,39 @@ defNode('disp/hsl', {
   compute: a => ({ C: LM.hslToColor(a.H, a.S, a.L, LM.clamp(a.A, 0, 1)) })
 });
 
+defNode('disp/linear', {
+  title: 'Linear Gradient', cat: 'Display', width: 184,
+  desc: 'A paint running from color C1 at point A to C2 at point B — wire it into Draw’s fill or stroke, or into Background. A color list in S (with 0..1 positions in T) makes more stops',
+  inputs: [
+    { name: 'A', type: 'point', default: { x: -100, y: 0 }, label: 'start' },
+    { name: 'B', type: 'point', default: { x: 100, y: 0 }, label: 'end' },
+    { name: 'C1', type: 'color', default: { r: 45, g: 212, b: 191, a: 1 }, label: 'start color' },
+    { name: 'C2', type: 'color', default: { r: 124, g: 58, b: 237, a: 1 }, label: 'end color' },
+    { name: 'S', type: 'color', label: 'stops (list — overrides C1/C2)' },
+    { name: 'T', type: 'number', label: 'stop positions 0..1 (list)' }],
+  outputs: [{ name: 'P', type: 'color', label: 'paint' }],
+  listInputs: ['S', 'T'],
+  compute: a => ({ P: { paint: 'linear', x0: a.A.x, y0: a.A.y, x1: a.B.x, y1: a.B.y, stops: LM.paintStops(a.C1, a.C2, a.S, a.T) } })
+});
+
+defNode('disp/radial', {
+  title: 'Radial Gradient', cat: 'Display', width: 184,
+  desc: 'A paint running from C1 at center P (solid inside radius R0) out to C2 at radius R1 — a glow, a vignette, a shaded ball. Into Draw’s fill or stroke, or Background. A color list in S (positions in T) makes more stops',
+  inputs: [
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
+    { name: 'R0', type: 'number', default: 0, label: 'inner radius' },
+    { name: 'R1', type: 'number', default: 120, label: 'outer radius' },
+    { name: 'C1', type: 'color', default: { r: 255, g: 255, b: 255, a: 1 }, label: 'center color' },
+    { name: 'C2', type: 'color', default: { r: 255, g: 255, b: 255, a: 0 }, label: 'edge color' },
+    { name: 'S', type: 'color', label: 'stops (list — overrides C1/C2)' },
+    { name: 'T', type: 'number', label: 'stop positions 0..1 (list)' }],
+  outputs: [{ name: 'P', type: 'color', label: 'paint' }],
+  listInputs: ['S', 'T'],
+  compute: a => ({ P: { paint: 'radial', cx: a.P.x, cy: a.P.y, r0: Math.max(0, a.R0), r1: Math.max(0, a.R1), stops: LM.paintStops(a.C1, a.C2, a.S, a.T) } })
+});
+
 defNode('disp/gradient', {
-  title: 'Gradient', cat: 'Display', desc: 'Blend color A → B by T (0..1)',
+  title: 'Blend Colors', cat: 'Display', desc: 'Blend color A → B by T (0..1) — one color out; for a gradient paint see Linear / Radial Gradient',
   inputs: [
     { name: 'T', type: 'number', default: 0.5 },
     { name: 'A', type: 'color', default: { r: 94, g: 234, b: 212, a: 1 } },
@@ -2401,7 +2435,7 @@ defNode('disp/deconrgb', {
 });
 
 defNode('disp/bg', {
-  title: 'Background', cat: 'Display', desc: 'Set the canvas background color',
+  title: 'Background', cat: 'Display', desc: 'Set the canvas background — a color, or a paint from Linear / Radial Gradient (laid in centered px like geometry)',
   inputs: [{ name: 'C', type: 'color', default: { r: 11, g: 14, b: 20, a: 1 } }],
   outputs: [],
   compute: (a, ctx) => { ctx.bg = a.C; return {}; }

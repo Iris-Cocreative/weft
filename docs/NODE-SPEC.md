@@ -103,7 +103,7 @@ should omit `ext`.
 | `vector` | `{x, y}` — structurally a point; semantically a direction/translation | two number fields |
 | `point3` | `{x, y, z}` — position *and* direction; 3D has no point/vector split | three number fields |
 | `camera` | `{pos, target, up, fov (degrees), mode:'persp'\|'ortho', zoom, near}` — every field optional | none |
-| `color` | `{r, g, b, a}` — rgb 0–255, a 0–1 | color picker + alpha |
+| `color` | `{r, g, b, a}` — rgb 0–255, a 0–1; **or a paint** `{paint:'linear', x0,y0,x1,y1, stops:[{t, c}…]}` / `{paint:'radial', cx,cy,r0,r1, stops}` (canvas px, centered), which `coerce` passes through untouched. Draw's fill and stroke and Background accept either; color-math nodes expect a color. A draw item may also carry `clip`, any geometry it is masked to (Draw's K) | color picker + alpha |
 | `geometry` | see §5 | none |
 | `audio` | handle string — a descriptor id naming a live Web Audio node; samples never flow through wires | none |
 | `any` | passthrough | none |

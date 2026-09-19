@@ -124,7 +124,7 @@ const WeftExport = (() => {
     const hasAudio = [...types].some(t => t.indexOf('audio/') === 0);
     const audioJS = hasAudio ? WeftAudio.makeHost.toString() : '';
     const lmJS = serializeLM(hasJs ? null :
-      lmClosure(defsJS + ' LM.evaluateGraph LM.colorCss LM.drawItem ' + audioJS));
+      lmClosure(defsJS + ' LM.evaluateGraph LM.colorCss LM.drawItem LM.fillBg ' + audioJS));
     return {
       graph, graphJS: serializeGraph(graph), defsJS, lmJS, audioJS, hasAudio,
       gates: {   /* Custom JS receives ctx wholesale, so it may read any channel */
@@ -311,7 +311,7 @@ ${keysFrame}${scrollFrame}
 ${F.dom ? '    syncDom(ctx.domList, rect);\n' : ''}${hasAudio ? '    audio.sync(ctx.audioList);\n' : ''}${hotspotFrame}
     g2.setTransform(dpr, 0, 0, dpr, 0, 0);
     g2.clearRect(0, 0, rect.width, rect.height);
-    if (ctx.bg && ctx.bg.a > 0) { g2.fillStyle = LM.colorCss(ctx.bg); g2.fillRect(0, 0, rect.width, rect.height); }
+    LM.fillBg(g2, ctx.bg, rect.width, rect.height);
     g2.translate(rect.width / 2, rect.height / 2);
     for (const it of ctx.drawList) LM.drawItem(g2, it);
   }

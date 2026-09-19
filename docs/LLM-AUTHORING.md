@@ -50,7 +50,7 @@ That patch is a breathing circle. Rules:
 ## 2. Types & coercion
 
 `number · bool · string · point {x,y} · vector {x,y} · point3 {x,y,z} ·
-camera (plain JSON from `d3/camera`) · color {r,g,b,a} (rgb 0–255, a 0–1) ·
+camera (plain JSON from `d3/camera`) · color {r,g,b,a} (rgb 0–255, a 0–1), or a *paint* from `disp/linear` / `disp/radial` on the same port — only Draw and Background read paints; color-math nodes want colors ·
 geometry · audio · any`
 
 Any output can wire into any input — coercion does its best (number↔bool,
@@ -263,13 +263,15 @@ shade before coloring, or unlit faces come out black.
 ### Display
 | node | in | out | |
 |---|---|---|---|
-| `disp/draw` | G S:stroke-color F:fill-color W:width | G | fill alpha 0 = no fill |
-| `disp/bg` | C:color | | |
+| `disp/draw` | G S:stroke-color F:fill-color W:width K:clip-geometry(optional) | G | fill alpha 0 = no fill; S and F take a color **or a paint**; anything wired into K masks the item to that geometry |
+| `disp/bg` | C:color | | a color or a paint (laid in centered px) |
+| `disp/linear` | A:point B:point C1:color C2:color S:color(list) T:number(list) | P:color | a **paint**: C1 at A → C2 at B; S+T for more stops (positions 0..1). Wire P into Draw's F/S or Background's C |
+| `disp/radial` | P:point R0 R1 C1 C2 S(list) T(list) | P:color | a **paint**: C1 at the center (solid inside R0) → C2 at R1 — glow, vignette, shaded ball |
 | `disp/hsl` | H S L A (0–1) | C:color | |
 | `disp/rgb` | R G B (0–255) A (0–1) | C:color | |
 | `disp/deconhsl` | C:color | H S L A (0–1) | inverse of `disp/hsl` |
 | `disp/deconrgb` | C:color | R G B (0–255) A (0–1) | |
-| `disp/gradient` | T=0.5 A:color B:color | C:color | |
+| `disp/gradient` | T=0.5 A:color B:color | C:color | Blend Colors — one color out, not a paint |
 | `disp/text` | T:string P S:size | G:geometry | |
 | `disp/measure` | T S P | W H G | real text metrics |
 | `disp/element` | G T:tag C:content A:attrs | H F D K | real DOM element over the canvas |

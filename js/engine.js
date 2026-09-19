@@ -93,6 +93,48 @@ const LM = {
     a: LM.lerp(a.a === undefined ? 1 : a.a, b.a === undefined ? 1 : b.a, t)
   }),
 
+  /* ---------- paints ----------
+   * A color port carries a color {r,g,b,a} or a PAINT:
+   *   {paint:'linear', x0,y0,x1,y1, stops:[{t, c:{r,g,b,a}}…]}
+   *   {paint:'radial', cx,cy, r0,r1, stops:[…]}
+   * in canvas px, centered like geometry. coerce passes a paint through
+   * untouched; Draw and the background turn it into a CanvasGradient at draw
+   * time (paintStyle). Color-math nodes (HSL, Blend…) expect a color — a paint
+   * is for Draw's fill and stroke and for Background. */
+  isPaint: v => !!v && typeof v === 'object' && !!v.paint,
+  paintVisible: c => !!c && (c.paint ? (c.stops || []).some(s => s && s.c && s.c.a > 0) : c.a > 0),
+  paintStyle: (g2, c) => {
+    if (!c) return 'rgba(0,0,0,0)';
+    if (!c.paint) return LM.colorCss(c);
+    const gr = c.paint === 'radial'
+      ? g2.createRadialGradient(c.cx || 0, c.cy || 0, Math.max(0, c.r0 || 0), c.cx || 0, c.cy || 0, Math.max(0, c.r1 || 0))
+      : g2.createLinearGradient(c.x0 || 0, c.y0 || 0, c.x1 || 0, c.y1 || 0);
+    for (const s of c.stops || []) if (s && s.c) gr.addColorStop(LM.clamp(+s.t || 0, 0, 1), LM.colorCss(s.c));
+    return gr;
+  },
+  /* stops from two colors, or from a whole list S with optional positions T
+     (missing positions spread evenly; the last given position repeats) */
+  paintStops: (c1, c2, S, T) => {
+    const cols = (S && S.length) ? S : [c1, c2];
+    const n = cols.length, out = [];
+    for (let i = 0; i < n; i++) {
+      const t = (T && T.length) ? T[Math.min(i, T.length - 1)] : (n < 2 ? 0 : i / (n - 1));
+      out.push({ t: LM.clamp(+t || 0, 0, 1), c: cols[i] });
+    }
+    return out.sort((a, b) => a.t - b.t);
+  },
+  /* the background in every host: a color fills the canvas; a paint is laid in
+     centered coordinates so its px mean what they mean for geometry */
+  fillBg: (g2, bg, w, h) => {
+    if (!LM.paintVisible(bg)) return;
+    if (!bg.paint) { g2.fillStyle = LM.colorCss(bg); g2.fillRect(0, 0, w, h); return; }
+    g2.save();
+    g2.translate(w / 2, h / 2);
+    g2.fillStyle = LM.paintStyle(g2, bg);
+    g2.fillRect(-w / 2, -h / 2, w, h);
+    g2.restore();
+  },
+
   /* ---------- type coercion (loose, Grasshopper-friendly) ---------- */
   coerce: (v, t) => {
     if (v === null || v === undefined || t === 'any' || t === 'geometry' || t === 'audio') return v;
@@ -121,7 +163,7 @@ const LM = {
       /* camera is plain JSON {pos, target, up, fov, mode, zoom} and needs no
          conversion — it falls through to the passthrough default, like geometry */
       case 'color':
-        if (typeof v === 'object' && v.r !== undefined) return v;
+        if (typeof v === 'object' && (v.r !== undefined || v.paint)) return v;
         if (typeof v === 'string') return LM.hexToColor(v);
         if (typeof v === 'number') { const g = LM.clamp(v, 0, 1) * 255; return { r: g, g: g, b: g, a: 1 }; }
         return { r: 255, g: 255, b: 255, a: 1 };
@@ -149,6 +191,7 @@ const LM = {
     if (typeof v === 'number') return String(Math.round(v * 1000) / 1000);
     if (typeof v === 'boolean') return v ? 'true' : 'false';
     if (typeof v === 'string') return v;
+    if (v.paint) return '‹' + v.paint + ' paint›';
     if (v.kind === 'text') return '"' + v.text + '"';
     if (v.kind) return '‹' + v.kind + '›';
     if (v.pos !== undefined && v.target !== undefined) return '‹camera›';
@@ -1522,30 +1565,45 @@ const LM = {
     }
   },
 
+  /* which fill rule a kind needs: evenodd when it carries holes */
+  fillRule: g => (g && ((g.kind === 'poly' && g.holes && g.holes.length) || (g.kind === 'path' && g.subs && g.subs.length > 1))) ? 'evenodd' : 'nonzero',
+
+  /* a draw item: {geom, stroke, fill, width, clip?} — stroke and fill are
+     colors or paints; clip is any geometry the item is masked to */
   drawItem: (g2, it) => {
+    if (!it || !it.geom) return;
+    if (!it.clip) { LM.drawItemRaw(g2, it); return; }
+    g2.save();
+    g2.beginPath();
+    LM.pathGeom(g2, it.clip);
+    g2.clip(LM.fillRule(it.clip));
+    try { LM.drawItemRaw(g2, it); } finally { g2.restore(); }
+  },
+
+  drawItemRaw: (g2, it) => {
     const g = it.geom;
     if (!g) return;
     const stroke = it.stroke, fill = it.fill, w = it.width === undefined ? 1.5 : it.width;
     if (g.kind === 'text') {
       g2.font = (g.size || 24) + 'px Inter, system-ui, sans-serif';
       g2.textAlign = 'center'; g2.textBaseline = 'middle';
-      const c = (fill && fill.a > 0) ? fill : stroke;
-      if (c && c.a > 0) { g2.fillStyle = LM.colorCss(c); g2.fillText(g.text === null || g.text === undefined ? '' : String(g.text), g.x || 0, g.y || 0); }
+      const c = LM.paintVisible(fill) ? fill : stroke;
+      if (LM.paintVisible(c)) { g2.fillStyle = LM.paintStyle(g2, c); g2.fillText(g.text === null || g.text === undefined ? '' : String(g.text), g.x || 0, g.y || 0); }
       return;
     }
     if (g.kind === undefined && g.x !== undefined) {
-      const c = (fill && fill.a > 0) ? fill : stroke;
-      if (c && c.a > 0) { g2.beginPath(); g2.arc(g.x, g.y, Math.max(w * 1.4, 2), 0, LM.TAU); g2.fillStyle = LM.colorCss(c); g2.fill(); }
+      const c = LM.paintVisible(fill) ? fill : stroke;
+      if (LM.paintVisible(c)) { g2.beginPath(); g2.arc(g.x, g.y, Math.max(w * 1.4, 2), 0, LM.TAU); g2.fillStyle = LM.paintStyle(g2, c); g2.fill(); }
       return;
     }
     g2.beginPath();
     LM.pathGeom(g2, g);
-    if (fill && fill.a > 0) {
-      g2.fillStyle = LM.colorCss(fill);
-      g2.fill((g.kind === 'poly' && g.holes && g.holes.length) || (g.kind === 'path' && g.subs && g.subs.length > 1) ? 'evenodd' : 'nonzero');
+    if (LM.paintVisible(fill)) {
+      g2.fillStyle = LM.paintStyle(g2, fill);
+      g2.fill(LM.fillRule(g));
     }
-    if (stroke && stroke.a > 0 && w > 0) {
-      g2.strokeStyle = LM.colorCss(stroke); g2.lineWidth = w;
+    if (LM.paintVisible(stroke) && w > 0) {
+      g2.strokeStyle = LM.paintStyle(g2, stroke); g2.lineWidth = w;
       g2.lineJoin = 'round'; g2.lineCap = 'round'; g2.stroke();
     }
   },

@@ -718,11 +718,26 @@ Then:
   parser, the arc conversion, the ring-with-hole hit test and the node
   contracts. Still on polylines by choice: Join, Fillet, Offset (round joins
   on a path are the next step) and the SVG render target (track 7.2 in PLAN).
-- **Paint & clip** — `drawList` fill widens from a colour to a paint
-  (solid | linear | radial); items gain an optional `clip` geom. organic-nav's
-  teal glow (radial gradient clipped inside the shape) is **inexpressible today**,
-  and its bg-coloured carve circles only work over an opaque background. A real
-  clip retires that trick.
+- ✅ **Paint & clip** (shipped v0.21.0, 2026-09-18 — PLAN Phase 5.4). A paint
+  rides the color port: `{paint:'linear'|'radial', …, stops:[{t, c}]}` in
+  centered px, passed through `coerce` untouched and turned into a
+  `CanvasGradient` only at draw time (`LM.paintStyle`); `LM.paintVisible`
+  replaces the old `a > 0` test so a stroke can be a gradient too. Two new
+  Display nodes make them — **Linear Gradient** `disp/linear` (A → B, C1 →
+  C2, or a list of stops S with positions T) and **Radial Gradient**
+  `disp/radial` (center P, R0 → R1); the old `disp/gradient` blend is
+  retitled *Blend Colors* so the palette reads right. **Draw gained K**, an
+  optional clip geometry: the item is drawn inside `save / clip / restore`
+  (`LM.drawItem` wraps `LM.drawItemRaw`; evenodd when the clip has holes).
+  **Background accepts a paint** through `LM.fillBg`, which all three hosts
+  (cloth, thumbnails, export) now share — the paint is laid in centered
+  coordinates so its px mean what they mean for geometry. The organic-nav
+  glow is the *Lantern* example: a disc with a radial paint, clipped to a
+  filleted capsule, following the mouse. Smoke pins the two nodes, coerce,
+  visibility, the draw-call sequence with a clip, both background paths and
+  the shaken export. Not done: gradient *transforms* (a paint is not
+  geometry, so Move/Rotate leave it alone — wire the same point into both),
+  pattern/image paints (wait for the Image node), blend modes.
 - Image node (URL or file → drawable geometry kind `image`), opacity/blend.
 - **Image Sample** — sample brightness/color at points → drive radius/rotation:
   instant halftones, image-driven fields. This is the killer node of the track.
