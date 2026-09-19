@@ -966,17 +966,81 @@ const Editor = (() => {
       }
     }
     const wp = worldPos(e);
-    S.drag = { kind: 'wire', fixed, mx: wp.x, my: wp.y, detached };
+    S.drag = {
+      kind: 'wire', fixed, mx: wp.x, my: wp.y, detached,
+      startEl: portEl,                                     // the port the finger pressed (a tap asks about it)
+      origIn: detached ? { node: nodeId, port } : null,   // where a detached wire came off (a tap puts it back)
+      sx: e.clientX, sy: e.clientY, moved: false,
+      rects: e.pointerType === 'touch' ? portRects(fixed) : null // a finger snaps to the nearest port
+    };
     drawWires();
   }
 
-  function completeWire(e) {
+  /* ---- touch wiring ----
+   * A fingertip covers the port it is aiming at, so on touch a wire snaps to
+   * the nearest compatible port within SNAP px of the finger, not only to
+   * the one under it. Candidates are measured once when the drag starts (the
+   * loom cannot pan mid-wire), so the per-move search is a cheap scan. */
+  const SNAP = 44;
+  function portRects(fixed) {
+    const out = [];
+    for (const el of nodesEl.querySelectorAll('.port')) {
+      if (el.dataset.dir === fixed.dir || el.dataset.node === fixed.node) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width) continue; // folded away
+      out.push({ el, x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    }
+    return out;
+  }
+  function nearestPort(rects, x, y) {
+    let best = null, bd = SNAP;
+    for (const p of rects) {
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < bd) { bd = d; best = p.el; }
+    }
+    return best;
+  }
+  function portUnder(e, d) {
     const target = document.elementFromPoint(e.clientX, e.clientY);
-    const portEl = target && target.closest && target.closest('.port');
-    const wasDetached = S.drag.detached;
-    const fixed = S.drag.fixed;
+    let portEl = target && target.closest && target.closest('.port');
+    if (!portEl && d && d.rects) portEl = nearestPort(d.rects, e.clientX, e.clientY);
+    return portEl;
+  }
+
+  /* a tapped port (touch has no hover) shows what the title would: label · type */
+  let portTipEl = null, portTipTimer = null;
+  function hidePortTip() {
+    clearTimeout(portTipTimer);
+    if (portTipEl) { portTipEl.remove(); portTipEl = null; }
+  }
+  function showPortTip(portEl) {
+    hidePortTip();
+    const r = portEl.getBoundingClientRect(), er = editorEl.getBoundingClientRect();
+    portTipEl = document.createElement('div');
+    portTipEl.id = 'portTip';
+    portTipEl.textContent = portEl.title || portEl.dataset.port;
+    editorEl.appendChild(portTipEl);
+    const w = portTipEl.offsetWidth;
+    portTipEl.style.left = LM.clamp(r.left + r.width / 2 - er.left - w / 2, 6, er.width - w - 6) + 'px';
+    portTipEl.style.top = (r.top - er.top - 34) + 'px';
+    portTipTimer = setTimeout(hidePortTip, 2400);
+  }
+
+  function completeWire(e) {
+    const d = S.drag;
+    const portEl = portUnder(e, d);
+    const wasDetached = d.detached;
+    const fixed = d.fixed;
     S.drag = null;
     if (S.hotPort) { S.hotPort.classList.remove('hot'); S.hotPort = null; }
+    if (e.pointerType === 'touch' && !d.moved) {
+      // a still finger on a port asked what it is, not for a wire — put back
+      // anything the press lifted off and say what the port carries
+      if (wasDetached && d.origIn) connect(fixed.node, fixed.port, d.origIn.node, d.origIn.port, false);
+      drawWires();
+      if (d.startEl && d.startEl.isConnected) showPortTip(d.startEl);
+      return;
+    }
     if (!portEl) {
       drawWires();
       if (wasDetached) changed();
@@ -1097,6 +1161,7 @@ const Editor = (() => {
 
   function onPointerDown(e) {
     closeCtx();
+    hidePortTip();
     if (e.target.closest && e.target.closest('#quickAdd, #ctxMenu, #typeKey, #loomTools, #params')) return;
     if (e.pointerType === 'touch' && touchDown(e)) return;
     const portEl = e.target.closest && e.target.closest('.port');
@@ -1282,12 +1347,16 @@ const Editor = (() => {
     } else if (d.kind === 'wire') {
       const wp = worldPos(e);
       d.mx = wp.x; d.my = wp.y;
-      const target = document.elementFromPoint(e.clientX, e.clientY);
-      const portEl = target && target.closest && target.closest('.port');
+      if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 6) d.moved = true;
+      const portEl = portUnder(e, d);
       if (S.hotPort && S.hotPort !== portEl) { S.hotPort.classList.remove('hot'); S.hotPort = null; }
       if (portEl && portEl.dataset.dir !== d.fixed.dir && portEl.dataset.node !== d.fixed.node) {
         portEl.classList.add('hot');
         S.hotPort = portEl;
+        if (d.rects) { // snapped from a distance: show the wire landing where it will
+          const pp = portPos(portEl.dataset.node, portEl.dataset.dir, portEl.dataset.port);
+          d.mx = pp.x; d.my = pp.y;
+        }
       }
       drawWires();
     }
@@ -1429,13 +1498,20 @@ const Editor = (() => {
 
   function closeQA() { qaEl.classList.add('hidden'); }
 
+  /* with nothing typed, the list opens on the nodes a patch reaches for
+   * most — a control, a shape, a list, an operator, a transform, a draw —
+   * so a phone (or a first visit) sees them without scrolling */
+  const QA_COMMON = ['params/slider', 'params/anchor', 'params/angle', 'params/knob', 'params/toggle', 'params/swatch',
+    'crv/circle', 'crv/polygon', 'crv/rect', 'crv/line', 'sets/series', 'sets/range',
+    'math/add', 'math/sub', 'math/mul', 'math/div', 'xf/move', 'xf/rotate', 'xf/scale', 'disp/draw'];
   function renderQA(q) {
     qaNum = sliderSpec(q.trim());
     q = q.toLowerCase();
+    const rank = d => { const i = QA_COMMON.indexOf(d.id); return i < 0 ? 999 : i; };
     qaItems = Object.values(NODE_DEFS)
       .filter(d => !d.hidden)
       .filter(d => !q || d.title.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q) || d.id.includes(q))
-      .sort((a, b) => a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
+      .sort((a, b) => (q ? 0 : rank(a) - rank(b)) || a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
       .slice(0, 60);
     if (qaNum) qaItems = [{ id: '__slider' }].concat(qaItems);
     // canvas annotation, not a node — pinned at the end unless searched for

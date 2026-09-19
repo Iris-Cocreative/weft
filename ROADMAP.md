@@ -348,6 +348,15 @@ is now in, so any of these can be picked up in a workshop pass):
     zoom the page (`maximum-scale=1` plus 16px inputs), and the assistant and
     quick-add size themselves from the visual viewport so the keyboard never
     covers their input.
+  - [shipped v0.19.2, 2026-09-18] page zoom closed off for good (`touch-action:
+    none` on the body, vertical pan kept on every list, Safari's gesture
+    events canceled); on touch a wire snaps to the nearest compatible port
+    within 44px of the finger and the loose end shows where it will land; a
+    tapped port says its label · type and never lifts a wire off; quick-add
+    opens on the everyday nodes (controls, shapes, lists, operators,
+    transforms, draw) when nothing is typed; the params panel is a grid —
+    sliders full width, dials / toggles / swatches / buttons three to a row —
+    with the control's own name loud and the eyebrow quiet.
   - [next] the params panel honoring group order, and a collapsed state that
     keeps it docked as a strip
   - [next] drag from a port on touch is still a small target for wires

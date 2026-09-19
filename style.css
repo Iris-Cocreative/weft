@@ -1278,7 +1278,19 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
  * binds the buttons and the grip. */
 
 #editor, #view { touch-action: none; }
+/* no page pinch or double-tap zoom anywhere — the loom and the cloth have their
+ * own pinch; lists that scroll keep a vertical pan (the chain stops at them) */
+body { touch-action: none; }
+#paletteList, .pm-list, .as-msgs, .as-in, .qa-list, .gal-scroll, .modal-box, #exportCode, #settingsPop { touch-action: pan-y; }
 .m-only { display: none !important; }
+
+/* a tapped port's label · type (touch has no hover) */
+#portTip {
+  position: absolute; z-index: 32; pointer-events: none;
+  padding: 5px 9px; border-radius: 7px; white-space: nowrap;
+  background: rgba(16, 21, 31, 0.95); border: 1px solid var(--line2); color: var(--text);
+  font-size: 11px; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+}
 
 @media (pointer: coarse) {
   /* a 13px port is a mouse target — give a finger a 31px one */
@@ -1387,7 +1399,16 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   background: none; border: 1px solid transparent; border-radius: 7px; color: var(--dim); font-size: 14px;
 }
 .pm-x:hover { color: var(--text); border-color: var(--line2); }
-.pm-list { flex: 1; overflow-y: auto; padding: 10px 12px 24px; display: flex; flex-direction: column; gap: 8px; }
+.pm-list {
+  flex: 1; overflow-y: auto; padding: 10px 12px 24px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-content: start;
+}
+.pm-row.wide { grid-column: 1 / -1; }
+.pm-row.compact { display: flex; flex-direction: column; align-items: center; padding: 8px 4px 6px; }
+.pm-row.compact .pm-label, .pm-row.compact .pm-name { text-align: center; padding-left: 4px; padding-right: 4px; }
+.pm-row.compact .pm-body { display: flex; justify-content: center; padding: 2px 0 0; width: 100%; }
+.pm-row.compact .pm-body > * { max-width: 100%; }
+.pm-empty { grid-column: 1 / -1; }
 .pm-row {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--cat, #6b7891) 30%, transparent) 0%, rgba(20, 26, 40, 0) 50%),
@@ -1395,7 +1416,10 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   border: 1px solid var(--dark-300); border-radius: 13px;
   padding: 8px 6px 6px;
 }
-.pm-label { padding: 0 8px 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+/* eyebrow small and thin; the control's own name is the loud line */
+.pm-label { padding: 0 8px 2px; font-size: 8.5px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.pm-name { padding: 0 8px 4px; font-size: 13px; font-weight: 600; color: var(--white-100); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-body .sl-label { font: 600 13px var(--font-ui); letter-spacing: 0.06em; color: var(--white-100); min-height: 16px; }
 .pm-body { padding: 0 6px 2px; }
 .pm-body .sl { padding: 3px 4px 4px; }
 .pm-empty { margin: 24px 8px; text-align: center; font-size: 12px; color: var(--faint); line-height: 1.5; }

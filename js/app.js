@@ -1112,6 +1112,11 @@ const App = {
     pBtn.addEventListener('click', () => App.toggleParams());
     // the keyboard shrinks the visual viewport; fixed panels (assistant, quick-add)
     // size themselves from these two variables so their input stays above it
+    // Safari ignores the viewport meta for a pinch; its gesture events do not
+    // ignore preventDefault. Pointer events keep flowing, so the loom's own pinch still works.
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    document.addEventListener('gesturechange', e => e.preventDefault());
+    document.addEventListener('touchmove', e => { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, { passive: false });
     const vv = window.visualViewport;
     const paintVV = () => {
       document.documentElement.style.setProperty('--vvh', Math.round(vv.height) + 'px');
@@ -1178,6 +1183,10 @@ const App = {
     let scrollTop = 0;
     if (App._params) { const l = App._params.querySelector('.pm-list'); scrollTop = l ? l.scrollTop : 0; App._params.remove(); }
     const nodes = App.graph.nodes.filter(App.isControl);
+    // a slider wants the full width; a dial, a toggle, a swatch, a button sit three to a row
+    const COMPACT = new Set(['params/angle', 'params/knob', 'params/toggle', 'params/swatch', 'params/button']);
+    // sliders, knobs and angles carry their own label widget — the rest get a name line
+    const OWN_LABEL = new Set(['params/slider', 'params/knob', 'params/angle']);
     const sheet = document.createElement('div');
     sheet.id = 'params';
     sheet.innerHTML = `<div class="pm-head"><span class="pm-title">params</span><span class="pm-count">${nodes.length ? nodes.length + (nodes.length === 1 ? ' control' : ' controls') : ''}</span><button class="pm-x" title="back to the loom">✕</button></div><div class="pm-list"></div>`;
@@ -1186,13 +1195,20 @@ const App = {
     for (const n of nodes) {
       const def = NODE_DEFS[n.type];
       const row = document.createElement('div');
-      row.className = 'pm-row';
+      row.className = 'pm-row ' + (COMPACT.has(n.type) ? 'compact' : 'wide');
       row.dataset.id = n.id;
       row.style.setProperty('--cat', CATS[def.cat] || '#6b7891');
       const lab = document.createElement('div');
       lab.className = 'pm-label';
-      lab.textContent = n.label || def.title; // the widget shows its own values.label (sliders, knobs) underneath
+      lab.textContent = def.title; // the eyebrow: what kind of control
       row.appendChild(lab);
+      const name = n.label || (n.values && n.values.label);
+      if (name && !OWN_LABEL.has(n.type)) {
+        const nm = document.createElement('div');
+        nm.className = 'pm-name';
+        nm.textContent = name;
+        row.appendChild(nm);
+      }
       const body = document.createElement('div');
       body.className = 'node-body pm-body';
       row.appendChild(body);
