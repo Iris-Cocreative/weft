@@ -33,6 +33,11 @@ geometry that reaches no Draw node is invisible.
   (spline) or `crv/polyline(V)` (straight). `crv/nurbs(V, D, P)` steers
   *toward* the points instead (control polygon, GH's NURBS Curve);
   `crv/bezier(A, TA, B, TB)` is a single cubic span with tangent handles.
+- **Any free shape, exactly** — `crv/path(D)` takes SVG path data (`M 0 70
+  C -100 0 -80 -90 0 -40 …`, px, centered) and emits `path` geometry: real
+  cubics that stay exact through Move/Rotate/Scale and draw crisp at any
+  zoom. Several subpaths in one `d` fill evenodd (a hole is a sub inside a
+  sub). Write the `d` yourself, or paste one from any vector tool.
 - **Line → vector / endpoints** — `vec/line2vec(C)` gives the start → end
   vector (and length) of any curve; `crv/endpoints(C)` gives S and E as points.
   `crv/extend(C, L0, L1)` lengthens (or, negative, trims) either end.
@@ -58,9 +63,10 @@ geometry that reaches no Draw node is invisible.
   Time *before* the node and mirrored wedges counter-rotate into each other.
   M off = plain rotational symmetry. Example: *Rosette*.
 - **Bring in a logo / drawing** — `params/svg` (Vector In): the human clicks
-  "load svg…" on the node; outlines come out as polylines centered on (0,0)
-  scaled to S px, with per-path fill F and stroke K colors for Draw. From
-  there it is ordinary geometry — offset it, divide it, extrude it, kaleido it.
+  "load svg…" on the node; shapes come out as exact `path` geometry (true
+  curves) centered on (0,0) scaled to S px, with per-shape fill F and stroke
+  K colors for Draw. From there it is ordinary geometry — offset it, divide
+  it, extrude it, kaleido it.
 - **A row or field of identical copies** — `xf/tile(G, V1, N1, V2, N2 → G, I, J)`.
   Only for *identical* copies: if the cells differ, use `vec/grid` + list
   matching instead (that is the whole point of principle 6).

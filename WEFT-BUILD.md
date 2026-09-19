@@ -4,7 +4,7 @@ A node-based graphics/animation/interaction creator inspired by Grasshopper (Rhi
 built to **output web-compatible vanilla JavaScript**. Weave input parameters
 (mouse, time, page state) through a dataflow graph into live 2D graphics.
 
-**Status: v0.19.3 — the params panel reads the loom (a section per group frame in reading order, folding headers, a strip form docked at the loom's left) and touch gets wire mode (tap a port, pan anywhere, tap its partner); v0.19.2 — page zoom is closed off for good, a finger's wire snaps to the nearest port within 44px and a tapped port says what it is, quick-add opens on the everyday nodes, and the params panel is a grid with the control's name loud; v0.19.1 — the params panel is on desktop too (docked at the loom's left, refreshed when the loom changes under it), the node library is a drawer on a phone, fields no longer zoom the page, and the assistant and quick-add stay above the keyboard; v0.19.0 — the welcome (and the about page) now opens on three ideas in James's words — *weave math into form*, *make code visible*, *combine domains creatively* — each with a living glyph (`weftWelcomeSVG`) that idles and answers a hover or tap, and *Rainbow eye* ships in its updated form (`patches/Eye.json`, 135 nodes, a Panel) as the graph a first visit opens on; the mobile pass: under 760px the shell stacks (cloth above, loom below, a grip between), the palette folds into a + button and the file tools into ☰, a params sheet lists every control on the loom full width, and touch gets its own grammar (one finger pans, two pinch, hold for the menu, double-tap folds) on the loom and the cloth; v0.18.7 — *Rainbow eye* is the new default graph (James's poster eye: one filleted lens scaled and turned per band, a look point feeding three transforms for parallax, an OKLCH palette walk in Custom JS), and a first visit zooms to fit the loom; v0.18.6 — the assistant loop runs from a terminal too: `test/apply-ops.js` describes a loom and applies ops with the panel's validator, the `/weft-weave` skill makes Claude the model for an existing loom, and the workflow retries the router once and turns a 504 into words; ROADMAP now carries the multi-stage plan (triage → context slice → model matched to the ask, Claude API included); v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
+**Status: v0.20.0 — the `path` geometry kind: lines and cubic Béziers, an SVG `d` normalized (`LM.parsePath` reads the whole grammar, arcs and quadratics become cubics), exact under every 2D transform, drawn with real curves; Bezier Span is exact, Vector In imports true curves, and the new SVG Path node turns typed path data into geometry (*Heart path* example); v0.19.3 — the params panel reads the loom (a section per group frame in reading order, folding headers, a strip form docked at the loom's left) and touch gets wire mode (tap a port, pan anywhere, tap its partner); v0.19.2 — page zoom is closed off for good, a finger's wire snaps to the nearest port within 44px and a tapped port says what it is, quick-add opens on the everyday nodes, and the params panel is a grid with the control's name loud; v0.19.1 — the params panel is on desktop too (docked at the loom's left, refreshed when the loom changes under it), the node library is a drawer on a phone, fields no longer zoom the page, and the assistant and quick-add stay above the keyboard; v0.19.0 — the welcome (and the about page) now opens on three ideas in James's words — *weave math into form*, *make code visible*, *combine domains creatively* — each with a living glyph (`weftWelcomeSVG`) that idles and answers a hover or tap, and *Rainbow eye* ships in its updated form (`patches/Eye.json`, 135 nodes, a Panel) as the graph a first visit opens on; the mobile pass: under 760px the shell stacks (cloth above, loom below, a grip between), the palette folds into a + button and the file tools into ☰, a params sheet lists every control on the loom full width, and touch gets its own grammar (one finger pans, two pinch, hold for the menu, double-tap folds) on the loom and the cloth; v0.18.7 — *Rainbow eye* is the new default graph (James's poster eye: one filleted lens scaled and turned per band, a look point feeding three transforms for parallax, an OKLCH palette walk in Custom JS), and a first visit zooms to fit the loom; v0.18.6 — the assistant loop runs from a terminal too: `test/apply-ops.js` describes a loom and applies ops with the panel's validator, the `/weft-weave` skill makes Claude the model for an existing loom, and the workflow retries the router once and turns a 504 into words; ROADMAP now carries the multi-stage plan (triage → context slice → model matched to the ask, Claude API included); v0.18.5 — a welcome modal and an eight-card tour for first visits (`js/tour.js`; the shared key can be pasted right there), and grouping without tidying can no longer leave frames stacked on top of each other; v0.18.4 — group / ungroup / collapsed ops and a group-aware layout: "organize by function and fold the plumbing" is now judgment from the model + geometry from Weft, after a 32k-token deliberation stall exposed the gap (and seven nodes missing from the spec, now pinned by smoke 27); v0.18.3 — the assistant's first real session (an orbit harp, seven revisions on Qwen3.8-27B) surfaced a reasoning loop and the `layout` op that answers "tidy the loom" in one line; v0.18.0 — the weave assistant runs on open models: `WeftOps` is the one validator the panel and the new headless bench share, and on a 12-prompt L1–L5 bench Qwen3.8-27B went 12/12 through the Hugging Face router (docs/HF-INTEGRATION-PLAN.md). v0.17.7 — wire handles follow the chord (stacked nodes bow, backward loops stop growing), on top of v0.17.6's *Card connectors* example, green selected anchors and Draw outlines, corner slider grips, American spelling.** v0.1 (2026-07-12): editor,
 evaluator, 63 nodes, 4 examples, JS export, all verified in Chrome. v0.2
 (same day, Phase 1 of PLAN.md): git repo, graph format versioning +
 migration, undo/redo, marquee select, copy/paste of graph-JSON fragments with
@@ -450,6 +450,42 @@ border-radius; `.sl`/`.kn` got 8px to match the cards). Gallery order is
 curated, Stonehenge first: Stonehenge, Intersections, Mandala, Seeing
 Sound, Solar system, Phyllotaxis, Hexa graph, Click toy, Iso-field, Loop
 pedal, then the rest.
+
+v0.20.0 (2026-09-18): **the path kind — Phase 5 opens.** Weft could draw
+a circle, an arc and a Catmull-Rom spline, but it could not say "cubic":
+organic-nav's necks were circular fillets for that reason, Bezier Span
+sampled itself into 49 points, and Vector In flattened every logo through
+`getPointAtLength`. The new kind is deliberately small:
+`{kind:'path', subs:[{start, segs:[{x,y} | {x1,y1,x2,y2,x,y}], closed}]}`
+— lines and cubics, nothing else, because every SVG command reduces to those
+two (`LM.parsePath` elevates quadratics and splits arcs into ≤90° cubics by
+the spec's endpoint-to-center recipe, `LM.arcToCubics`; `LM.pathD` writes
+the data back). Two cases downstream is what keeps invariant #4 cheap:
+`toPoly` flattens the first sub with a sample every ~4px of control
+polygon, `pathGeom` hands the canvas real `bezierCurveTo`s so the shape is
+crisp at any zoom, `xformGeom` maps the control points — a cubic's image
+under an affine map is the cubic through the mapped control points, so a
+path *stays a path* through Move/Rotate/Scale/Mirror — `curveEnds` is
+exact, and the further subs play the role poly's `holes` play: drawn
+evenodd, honored by `pointInGeom` and Area, invisible to the analysis layer.
+Three things fell out at once. Bezier Span emits the exact cubic. Vector In
+lost its DOM sampler: every shape element is rewritten as path data
+(`_svgShapeD` — rounded rects and circles as arcs), parsed, and the
+flattened `getScreenCTM` applied to the control points, then the whole
+drawing is normalized to a unit long side and stored to 1e-4 in
+`node.values` — graphs saved with the old sampled polylines still load,
+the compute reads both. And the **SVG Path** node (`crv/path`) takes a
+typed `d` and emits geometry, parsing once per distinct string through the
+same stale-source guard as Expression: for a model writing a patch, any
+free shape is now one string. *Heart path* is the example (four cubics,
+a Series of inward offsets, a dot running the outline by arc length);
+smoke pins the parser (relative forms, H/V, S reflection, packed arc
+flags), the arc conversion (a semicircle stays on its circle to 0.15px
+and measures πr), the elevated quadratic's midpoint, the ring-with-hole
+hit test and area, the draw-call sequence, and the three node contracts.
+Left on polylines on purpose: Join, Fillet and Offset — round joins on a
+path are the next step — and the SVG render target now costs what PLAN
+said it would.
 
 v0.19.3 (2026-09-18): **the panel reads the loom, and the finger stops
 dragging.** Two loose ends from the mobile pass. The params panel listed

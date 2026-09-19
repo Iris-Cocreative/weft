@@ -698,12 +698,26 @@ Then:
   share mirrored edges, K = wedge index (principle 6). The Phase-4 mandala
   verdict called kaleidoscope replication "genuinely code"; it is now one
   node. Example: *Rosette*.
-- **`path` geometry kind** (line/cubic/arc segments = an SVG `d`). One addition,
-  three unlocks: real Béziers, ~~SVG import~~ (shipped above as polylines —
-  the kind upgrades its fidelity), and a nearly-free SVG render target (track 8.2). Handle
-  in `toPoly`/`pathGeom`/`curvePoint`/`xformGeom`/`drawItem` per invariant #4.
-  organic-nav's necks are circular fillets *only* because there is no way to say
-  "cubic".
+- ✅ **`path` geometry kind** (shipped v0.20.0, 2026-09-18 — PLAN Phase 5.3).
+  `{kind:'path', subs:[{start, segs:[{x,y} | {x1,y1,x2,y2,x,y}], closed}]}`:
+  lines and cubics only — an SVG `d` with every command absolute and every
+  curve cubic. `LM.parsePath` reads the whole SVG grammar (M L H V C S Q T A
+  Z, relative forms, packed arc flags), elevating quadratics and splitting
+  arcs into ≤90° cubics (`LM.arcToCubics`, spec F.6.5); `LM.pathD` writes it
+  back. Handled per invariant #4: `toPoly` flattens the first sub (a sample
+  every ~4px of control polygon, 4–64 per cubic), `pathGeom` issues real
+  `bezierCurveTo`s, `xformGeom` maps the control points so a path **stays a
+  path** under any affine, `curveEnds` is exact, `pointInGeom` and Area
+  honor the further subs as holes (`LM.pathHoles`), Draw fills a multi-sub
+  path evenodd. The three unlocks, as promised: **Bezier Span** now emits
+  an exact cubic; **Vector In** imports true curves (the DOM sampler is gone
+  — shapes are rewritten as path data, parsed, and the flattened CTM applied
+  to control points; old sampled graphs still load); and the new **SVG
+  Path** node `crv/path` turns a typed `d` into geometry — the LLM's way to
+  author any free shape in one string. *Heart path* example; smoke pins the
+  parser, the arc conversion, the ring-with-hole hit test and the node
+  contracts. Still on polylines by choice: Join, Fillet, Offset (round joins
+  on a path are the next step) and the SVG render target (track 7.2 in PLAN).
 - **Paint & clip** — `drawList` fill widens from a colour to a paint
   (solid | linear | radial); items gain an optional `clip` geom. organic-nav's
   teal glow (radial gradient clipped inside the shape) is **inexpressible today**,

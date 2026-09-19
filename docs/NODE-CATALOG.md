@@ -303,7 +303,7 @@ Pass-through container — wire a source through it, or set it directly; swap th
 
 ### `params/svg` — Vector In
 
-Load an SVG file — every outline becomes a polyline centered on (0,0) and scaled so its long side is S px, with each path’s fill and stroke color beside it. Curves are sampled; compound paths keep their holes
+Load an SVG file — every shape becomes an exact path (lines and cubic curves, arcs included) centered on (0,0) and scaled so its long side is S px, with each shape’s fill and stroke color beside it. Compound paths keep their holes
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1614,6 +1614,20 @@ Union, intersection or difference (A minus B) of two closed regions. A cutter si
 
 Node values (`values` keys, not ports): `{"mode":"union"}`
 
+### `crv/path` — SVG Path
+
+Path data — an SVG d attribute (M L H V C S Q T A Z, absolute or relative) — as exact geometry: lines and cubic curves, arcs split into cubics, several subpaths in one shape that fill evenodd. Units are px, centered on (0,0)
+
+| in | type | default | note |
+|---|---|---|---|
+| D | string | `"M 0 70 C -100 0 -80 -90 0 -40 C 80 -90 100 0 0 70 Z"` | path data |
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+| L | number | length |
+| N | number | subpaths |
+
 ### `crv/trim` — Trim
 
 Cut curve C wherever cutter X crosses it and keep the pieces on one side — outside X, inside X, or every piece (split). Inside/outside need a closed cutter
@@ -2566,4 +2580,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-186 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+187 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

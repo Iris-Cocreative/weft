@@ -127,7 +127,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/graph` | Graph Data | X Y A:point B:point (list-in X,Y) | X Y | on-node plot |
 | `params/timegraph` | Time Graph | V:number (list-in) | V:number | rolling trace |
 | `params/relay` | Relay | V:any (list-in) | V:any | wire organiser |
-| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; polylines centered on (0,0), long side scaled to S px; compound paths keep their holes; F/K are fill/stroke per path) |
+| `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; exact `path` geometry centered on (0,0), long side scaled to S px; compound paths keep their holes; F/K are fill/stroke per shape) |
 
 ### State (memory per list item; resets on load)
 | node | title | in | out | |
@@ -205,7 +205,8 @@ and/or/xor/not).
 | `crv/polyline` | V:point (list-in) C:closed | straight segments through the list |
 | `crv/interp` | V:point (list-in) C:closed | spline through the list |
 | `crv/nurbs` | V:point (list-in) D=3:degree P:periodic | B-spline *toward* the points (also emits L) |
-| `crv/bezier` | A TA:vector B TB:vector | one cubic span, handles at A+TA and B−TB (also emits L) |
+| `crv/bezier` | A TA:vector B TB:vector | one cubic span as `path` geometry, handles at A+TA and B−TB (also emits L) |
+| `crv/path` | D:string | SVG path data (`M L H V C S Q T A Z`, absolute or relative, px centered on (0,0)) as exact `path` geometry — lines and cubics; several subpaths in one shape fill evenodd (also emits L length, N subpaths). **The way to author any free shape: write the `d`** |
 | `crv/hull` | P:point (list-in) | the convex outline round the points |
 
 ### Curve — sampling, analysis, reshaping

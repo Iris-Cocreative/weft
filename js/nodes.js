@@ -1093,6 +1093,48 @@ function _svgColor(s) {
  * drawing is centered on (0,0) with its long side = 1 — compute just scales.
  * Multi-subpath `d`s are sampled per subpath (cumulative-prefix lengths keep
  * relative `m` commands honest), so no phantom connecting segments appear. */
+/* an SVG shape element as path data — rect / circle / ellipse / line /
+ * polyline / polygon are rewritten as M L A Z commands so one parser reads
+ * everything (arcs become cubics inside LM.parsePath) */
+function _svgShapeD(el) {
+  const at = (n, d) => { const v = parseFloat(el.getAttribute(n)); return isNaN(v) ? (d === undefined ? 0 : d) : v; };
+  switch (el.tagName.toLowerCase()) {
+    case 'path': return el.getAttribute('d') || '';
+    case 'rect': {
+      const x = at('x'), y = at('y'), w = at('width'), h = at('height');
+      let rx = at('rx', NaN), ry = at('ry', NaN);
+      if (isNaN(rx) && isNaN(ry)) rx = ry = 0;
+      if (isNaN(rx)) rx = ry; if (isNaN(ry)) ry = rx;
+      rx = Math.min(rx, w / 2); ry = Math.min(ry, h / 2);
+      if (!(rx > 0 && ry > 0)) return `M ${x} ${y} H ${x + w} V ${y + h} H ${x} Z`;
+      return `M ${x + rx} ${y} H ${x + w - rx} A ${rx} ${ry} 0 0 1 ${x + w} ${y + ry} V ${y + h - ry} A ${rx} ${ry} 0 0 1 ${x + w - rx} ${y + h} H ${x + rx} A ${rx} ${ry} 0 0 1 ${x} ${y + h - ry} V ${y + ry} A ${rx} ${ry} 0 0 1 ${x + rx} ${y} Z`;
+    }
+    case 'circle': case 'ellipse': {
+      const cx = at('cx'), cy = at('cy');
+      const rx = el.tagName.toLowerCase() === 'circle' ? at('r') : at('rx'), ry = el.tagName.toLowerCase() === 'circle' ? at('r') : at('ry');
+      if (!(rx > 0 && ry > 0)) return '';
+      return `M ${cx + rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy} Z`;
+    }
+    case 'line': return `M ${at('x1')} ${at('y1')} L ${at('x2')} ${at('y2')}`;
+    case 'polyline': case 'polygon': {
+      const nums = (el.getAttribute('points') || '').match(/[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/gi) || [];
+      if (nums.length < 4) return '';
+      let d = 'M ' + nums[0] + ' ' + nums[1];
+      for (let i = 2; i + 1 < nums.length; i += 2) d += ' L ' + nums[i] + ' ' + nums[i + 1];
+      return d + (el.tagName.toLowerCase() === 'polygon' ? ' Z' : '');
+    }
+  }
+  return '';
+}
+
+/* SVG text → {paths:[{subs, fill, stroke}]} — one entry per drawable element,
+ * every command parsed exactly (LM.parsePath), nested transforms flattened
+ * through getScreenCTM and applied to the control points (exact for cubics),
+ * then the whole drawing centered on (0,0) and scaled to a unit long side.
+ * Coordinates are rounded to 1e-4 so the values stay small in graph JSON.
+ * The subpaths of one <path> stay together and fill evenodd, so a compound
+ * path keeps its holes. Before v0.20 this sampled every outline to a polyline;
+ * graphs saved then still load — Vector In's compute reads both shapes. */
 function _svgImport(text) {
   const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
   const root = doc.querySelector('svg');
@@ -1104,101 +1146,39 @@ function _svgImport(text) {
   try {
     const rootM = root.getScreenCTM();
     const inv = rootM && rootM.inverse();
-    const meas = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    root.appendChild(meas);
-    const subs = [];
-    let ei = 0;
+    const entries = [];
     for (const el of root.querySelectorAll('path,rect,circle,ellipse,line,polyline,polygon')) {
-      if (el === meas) continue;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-      const myEi = ei++;
+      let g = LM.parsePath(_svgShapeD(el));
+      if (!g.subs.length) continue;
       const elM = el.getScreenCTM();
       const m = inv && elM ? inv.multiply(elM) : null;
-      const fill = _svgColor(cs.fill), stroke = _svgColor(cs.stroke);
-      if (el.tagName.toLowerCase() === 'path') {
-        const chunks = (el.getAttribute('d') || '').split(/(?=[Mm])/).filter(s => s.trim());
-        let prev = 0;
-        for (let i = 0; i < chunks.length; i++) {
-          const d = chunks.slice(0, i + 1).join(' ');
-          meas.setAttribute('d', d);
-          const L = meas.getTotalLength();
-          /* the seam nudge: at exactly `prev`, getPointAtLength returns the END
-           * of the previous subpath, which would spike the first sample */
-          if (L - prev > 1e-6)
-            subs.push({ d, a: prev && prev + Math.min(1e-3, (L - prev) / 1e4), b: L, closed: /[zZ][\s]*$/.test(chunks[i]), ei: myEi, m, fill, stroke });
-          prev = L;
-        }
-      } else if (el.getTotalLength) {
-        const L = el.getTotalLength();
-        if (L > 1e-6)
-          subs.push({ el, a: 0, b: L, closed: /^(rect|circle|ellipse|polygon)$/i.test(el.tagName), ei: myEi, m, fill, stroke });
-      }
+      if (m) g = LM.xformGeom(g, [m.a, m.b, m.c, m.d, m.e, m.f]);
+      entries.push({ g, fill: _svgColor(cs.fill), stroke: _svgColor(cs.stroke) });
     }
-    if (!subs.length) return { error: 'no drawable shapes found' };
-    const sample = (s, n) => {
-      let tgt = s.el;
-      if (!tgt) { meas.setAttribute('d', s.d); tgt = meas; }
-      const pts = [];
-      for (let i = 0; i <= n; i++) {
-        const p = tgt.getPointAtLength(s.a + (s.b - s.a) * i / n);
-        pts.push(s.m
-          ? { x: s.m.a * p.x + s.m.c * p.y + s.m.e, y: s.m.b * p.x + s.m.d * p.y + s.m.f }
-          : { x: p.x, y: p.y });
-      }
-      return pts;
-    };
-    /* pass 1 — coarse bbox, so density and simplification tolerance can be
-     * relative to the drawing rather than to arbitrary SVG user units */
+    if (!entries.length) return { error: 'no drawable shapes found' };
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const s of subs)
-      for (const p of sample(s, 24)) {
-        if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
-        if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
-      }
+    for (const e of entries)
+      for (const sub of e.g.subs)
+        for (const p of LM.flattenSub(sub)) {
+          if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+          if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
+        }
     const maxDim = Math.max(x1 - x0, y1 - y0);
     if (!isFinite(maxDim) || maxDim <= 0) return { error: 'svg has no extent' };
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    /* pass 2 — real sampling, ~360 samples across the long side, capped */
-    let counts = subs.map(s => {
-      const sc = s.m ? (Math.hypot(s.m.a, s.m.b) + Math.hypot(s.m.c, s.m.d)) / 2 : 1;
-      return LM.clamp(Math.round((s.b - s.a) * sc / maxDim * 360), 8, 1200);
-    });
-    const total = counts.reduce((a, b) => a + b, 0), CAP = 24000;
-    if (total > CAP) counts = counts.map(n => Math.max(8, Math.floor(n * CAP / total)));
-    const eps = maxDim / 1600;
-    const norm = p => [Math.round((p.x - cx) / maxDim * 1e4) / 1e4, Math.round((p.y - cy) / maxDim * 1e4) / 1e4];
-    const entries = subs.map((s, i) => {
-      let pts = _rdp(sample(s, counts[i]), eps);
-      if (s.closed && pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) <= eps * 2)
-        pts = pts.slice(0, -1);
-      return { pts, ei: s.ei, closed: !!s.closed, fill: s.fill, stroke: s.stroke };
-    }).filter(e => e.pts.length > 1);
-    /* compound paths: the subpaths of ONE <path> nest evenodd — a closed
-       subpath sitting inside an odd number of its siblings is a hole of its
-       innermost container (outer circle + inner circle = annulus). Separate
-       elements never combine; that matches SVG's per-path fill rule. */
-    const byEl = new Map();
-    for (const e of entries) { if (!byEl.has(e.ei)) byEl.set(e.ei, []); byEl.get(e.ei).push(e); }
-    const paths = [];
-    for (const group of byEl.values()) {
-      const closed = group.filter(e => e.closed && e.pts.length > 2);
-      for (const e of closed) {
-        e._depth = 0;
-        for (const o of closed) if (o !== e && LM.ptInPoly(e.pts[0], o.pts)) e._depth++;
-      }
-      for (const e of closed) {
-        if (e._depth % 2 === 0) continue;
-        const owner = closed.find(o => o !== e && o._depth === e._depth - 1 && LM.ptInPoly(e.pts[0], o.pts));
-        if (owner) { (owner._holes = owner._holes || []).push(e.pts.map(norm)); e._hole = true; }
-      }
-      for (const e of group) {
-        if (e._hole) continue;
-        const out = { pts: e.pts.map(norm), closed: e.closed, fill: e.fill, stroke: e.stroke };
-        if (e._holes) out.holes = e._holes;
-        paths.push(out);
-      }
-    }
+    const norm = LM.matMul(LM.matMove(-(x0 + x1) / 2, -(y0 + y1) / 2), LM.matScale(1 / maxDim, 1 / maxDim, { x: 0, y: 0 }));
+    const r = v => Math.round(v * 1e4) / 1e4;
+    const paths = entries.map(e => ({
+      subs: LM.xformGeom(e.g, norm).subs.map(sub => ({
+        start: { x: r(sub.start.x), y: r(sub.start.y) },
+        segs: sub.segs.map(s => s.x1 === undefined
+          ? { x: r(s.x), y: r(s.y) }
+          : { x1: r(s.x1), y1: r(s.y1), x2: r(s.x2), y2: r(s.y2), x: r(s.x), y: r(s.y) }),
+        closed: !!sub.closed
+      })),
+      fill: e.fill, stroke: e.stroke
+    }));
     return { paths };
   } finally {
     host.remove();
@@ -1207,7 +1187,7 @@ function _svgImport(text) {
 
 defNode('params/svg', {
   title: 'Vector In', cat: 'Params', width: 176,
-  desc: 'Load an SVG file — every outline becomes a polyline centered on (0,0) and scaled so its long side is S px, with each path’s fill and stroke color beside it. Curves are sampled; compound paths keep their holes',
+  desc: 'Load an SVG file — every shape becomes an exact path (lines and cubic curves, arcs included) centered on (0,0) and scaled so its long side is S px, with each shape’s fill and stroke color beside it. Compound paths keep their holes',
   inputs: [{ name: 'S', type: 'number', default: 200, label: 'size (px, long side)' }],
   outputs: [
     { name: 'G', type: 'geometry' },
@@ -1221,9 +1201,13 @@ defNode('params/svg', {
     const s = a.S === undefined ? 200 : a.S;
     const G = [], F = [], K = [];
     for (const p of ps) {
-      const geo = { kind: 'poly', pts: p.pts.map(q => ({ x: q[0] * s, y: q[1] * s })), closed: !!p.closed };
-      if (p.holes && p.holes.length)
-        geo.holes = p.holes.map(h => h.map(q => ({ x: q[0] * s, y: q[1] * s })));
+      let geo;
+      if (p.subs) geo = LM.xformGeom({ kind: 'path', subs: p.subs }, LM.matScale(s, s, { x: 0, y: 0 }));
+      else {
+        /* the pre-v0.20 shape: sampled polylines with optional holes */
+        geo = { kind: 'poly', pts: (p.pts || []).map(q => ({ x: q[0] * s, y: q[1] * s })), closed: !!p.closed };
+        if (p.holes && p.holes.length) geo.holes = p.holes.map(h => h.map(q => ({ x: q[0] * s, y: q[1] * s })));
+      }
       G.push(geo);
       F.push(p.fill || { r: 255, g: 255, b: 255, a: 0 });
       K.push(p.stroke || { r: 255, g: 255, b: 255, a: 0 });
@@ -1883,8 +1867,27 @@ defNode('crv/bezier', {
     { name: 'TB', type: 'vector', default: { x: 80, y: 120 }, label: 'end tangent' }],
   outputs: [{ name: 'C', type: 'geometry' }, { name: 'L', type: 'number', label: 'length' }],
   compute: a => {
-    const pts = LM.bezierPts(a.A, LM.vadd(a.A, a.TA), LM.vsub(a.B, a.TB), a.B, 48);
-    return { C: { kind: 'poly', pts, closed: false }, L: LM.polyLength(pts, false) };
+    const c1 = LM.vadd(a.A, a.TA), c2 = LM.vsub(a.B, a.TB);
+    const C = { kind: 'path', subs: [{ start: { x: a.A.x, y: a.A.y }, segs: [{ x1: c1.x, y1: c1.y, x2: c2.x, y2: c2.y, x: a.B.x, y: a.B.y }], closed: false }] };
+    return { C, L: LM.curveLength(C) };
+  }
+});
+
+defNode('crv/path', {
+  title: 'SVG Path', cat: 'Curve', width: 216,
+  desc: 'Path data — an SVG d attribute (M L H V C S Q T A Z, absolute or relative) — as exact geometry: lines and cubic curves, arcs split into cubics, several subpaths in one shape that fill evenodd. Units are px, centered on (0,0)',
+  inputs: [{ name: 'D', type: 'string', default: 'M 0 70 C -100 0 -80 -90 0 -40 C 80 -90 100 0 0 70 Z', label: 'path data' }],
+  outputs: [
+    { name: 'C', type: 'geometry' },
+    { name: 'L', type: 'number', label: 'length' },
+    { name: 'N', type: 'number', label: 'subpaths' }],
+  compute: (a, ctx, node) => {
+    const d = a.D === undefined || a.D === null ? '' : String(a.D);
+    /* parse once per distinct string; the same guard as Expression's source */
+    if (node._pathSrc !== d) { node._pathSrc = d; node._path = LM.parsePath(d); }
+    const g = node._path;
+    if (!g.subs.length) return {};
+    return { C: g, L: LM.curveLength(g), N: g.subs.length };
   }
 });
 
@@ -2038,6 +2041,8 @@ defNode('crv/area', {
     let ar = Math.abs(LM.polyArea(P.pts));
     if (a.C.kind === 'poly' && a.C.holes)
       for (const h of a.C.holes) if (h.length > 2) ar = Math.max(0, ar - Math.abs(LM.polyArea(h)));
+    if (a.C.kind === 'path')
+      for (const h of LM.pathHoles(a.C)) ar = Math.max(0, ar - Math.abs(LM.polyArea(h)));
     return { A: ar, C: LM.polyCentroid(P.pts) };
   }
 });

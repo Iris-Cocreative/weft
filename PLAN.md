@@ -247,19 +247,21 @@ Lands *after* Phase 3 so the patches a model emits are small enough to read.
 Exit met: describe → JSON → paste → *play*. Also fixed en route: NODE-CATALOG
 and nodes.html had silently omitted the Audio and Meta categories since v0.8.2.
 
-## Phase 5 — Media, type & vector (the web's unfair advantages)
+## Phase 5 — Media, type & vector (the web's unfair advantages) — in progress (5.3 shipped v0.20.0)
 
 1. Image node + **Image Sample** (brightness/color at points → drives geometry:
    halftones, image-driven fields) — the killer node of the phase.
 2. Asset strategy = graph format v2 (asset manifest; data-URI embed vs URL).
    Governing principle (OUTPUT-MODES): **assets enter as typed values existing
    nodes already understand, never as opaque blobs Weft renders around.**
-3. **`path` geometry kind** — segments of line/cubic/arc, i.e. exactly what an
-   SVG `d` attribute already is. One addition, three unlocks: real Bézier curves
-   (organic-nav's necks are circular fillets because there are none), **SVG
-   import** (a pasted logo becomes geometry every existing node can bend), and a
-   nearly-free **SVG render target** (Phase 7.2). Handle in `toPoly`, `pathGeom`,
-   `curvePoint`, `xformGeom`, `drawItem` per invariant #4.
+3. ✅ **`path` geometry kind** (v0.20.0, 2026-09-18) — lines and cubics, an SVG
+   `d` normalized (quadratics elevated, arcs split into cubics on the way in).
+   Exact under affine transforms, drawn with real `bezierCurveTo`, first sub
+   is the outline for the analysis layer, further subs are holes (evenodd).
+   Unlocked in the same release: Bezier Span exact, **Vector In imports true
+   curves**, and the **SVG Path** node (`crv/path`) — type a `d`, get
+   geometry. The SVG render target (7.2) is now the nearly-free step it was
+   promised to be.
 4. **Paint & clip** — `drawList` fill widens from a colour to a paint
    (solid | linear | radial), and items gain an optional `clip` geom. The
    organic-nav glow (a radial gradient clipped inside the shape) is currently

@@ -737,6 +737,75 @@ for (const name of Object.keys(EXAMPLES)) {
   if (!(area(fil) < 10000 && area(fil) > 9000)) failures.push('geom filletPoly: rounding should shave the corners, area ' + area(fil).toFixed(0));
   if (LM.filletPoly(sq(0, 0, 50), true, 0, 6).length !== 4) failures.push('geom filletPoly: radius 0 must pass through');
 
+  /* the path kind (v0.20): parse → flatten → transform → draw, and the SVG
+     commands that get rewritten (arcs to cubics, quadratics elevated) */
+  {
+    const P = LM.parsePath('M 0 0 L 100 0 C 100 55 55 100 0 100 Z');
+    if (P.kind !== 'path' || P.subs.length !== 1 || P.subs[0].segs.length !== 2 || !P.subs[0].closed)
+      failures.push('path parse: expected one closed sub of two segs, got ' + JSON.stringify(P));
+    const fl = LM.toPoly(P, 64);
+    if (!fl.closed || fl.pts.length < 6) failures.push('path toPoly: a cubic must flatten to several points, got ' + fl.pts.length);
+    /* quarter-circle-ish cubic: area of the square minus the rounded corner ≈ 100·100 − (1 − π/4)·100² … the
+       handle 55 is the circle approximation, so the area sits within 1% of that */
+    const want = 10000 - (1 - Math.PI / 4) * 10000;
+    if (Math.abs(area(fl.pts) - want) / want > 0.01) failures.push('path flatten: area ' + area(fl.pts).toFixed(0) + ' vs ' + want.toFixed(0));
+    /* round trip through pathD */
+    const P2 = LM.parsePath(LM.pathD(P));
+    if (JSON.stringify(P2) !== JSON.stringify(P)) failures.push('path pathD: round trip must be identity');
+    /* relative commands, H/V, S reflection, implicit lineto after M */
+    const R = LM.parsePath('m 10 10 20 0 h 10 v 10 c 0 10 -10 10 -10 20 s -10 10 -20 10 z');
+    const rs = R.subs[0];
+    if (!rs || rs.segs.length !== 5 || rs.segs[1].x !== 40 || rs.segs[2].y !== 20 || rs.segs[4].x1 !== 30 || rs.segs[4].y1 !== 50)
+      failures.push('path parse relative: ' + JSON.stringify(rs));
+    /* an arc: a semicircle of radius 50 stays on the circle and has length πr */
+    const A = LM.parsePath('M 50 0 A 50 50 0 0 1 -50 0');
+    for (const p of LM.toPoly(A).pts) if (Math.abs(Math.hypot(p.x, p.y) - 50) > 0.15) { failures.push('path arc: point off the circle ' + JSON.stringify(p)); break; }
+    near('path arc length', LM.curveLength(A), Math.PI * 50, 0.5);
+    const Af = LM.parsePath('M 50 0 A 50 50 0 1 0 -50 0'); /* the large, counter-sweep way round: same length */
+    near('path arc large', LM.curveLength(Af), Math.PI * 50, 0.5);
+    const packed = LM.parsePath('M 50 0 a50 50 0 01-50 50'); /* packed flags "01" */
+    if (!packed.subs.length || Math.abs(packed.subs[0].segs[packed.subs[0].segs.length - 1].y - 50) > 1e-9) failures.push('path arc: packed flags must parse');
+    /* a quadratic is elevated: the curve through the elevated cubic passes the quadratic's midpoint */
+    const Q = LM.parsePath('M 0 0 Q 50 100 100 0');
+    nearPt('path quad midpoint', LM.curvePoint(Q, 0.5), 50, 50, 0.5);
+    /* transforms stay exact: a rotated path is still a path with the same segment count */
+    const X = LM.xformGeom(P, LM.matRot(0.7, { x: 20, y: 20 }));
+    if (X.kind !== 'path' || X.subs[0].segs.length !== 2 || X.subs[0].segs[1].x1 === undefined) failures.push('path xform: must stay a path of the same segs');
+    near('path xform length', LM.curveLength(X), LM.curveLength(P), 0.5);
+    /* ends: exact start and end, closed → seam */
+    const E = LM.curveEnds(LM.parsePath('M 5 6 C 10 10 20 20 30 40'));
+    nearPt('path ends s', E.s, 5, 6); nearPt('path ends e', E.e, 30, 40);
+    /* two subs: a ring — inside the outer, outside the inner hole; area subtracts the hole */
+    const ring = LM.parsePath('M 100 0 A 100 100 0 1 1 -100 0 A 100 100 0 1 1 100 0 Z M 40 0 A 40 40 0 1 0 -40 0 A 40 40 0 1 0 40 0 Z');
+    if (ring.subs.length !== 2) failures.push('path ring: two subs expected, got ' + ring.subs.length);
+    if (!LM.pointInGeom(ring, { x: 70, y: 0 }, 0)) failures.push('path ring: (70,0) is in the band');
+    if (LM.pointInGeom(ring, { x: 0, y: 0 }, 0)) failures.push('path ring: the center is in the hole');
+    if (LM.pathHoles(ring).length !== 1) failures.push('path ring: one hole');
+    near('path ring area', NODE_DEFS['crv/area'].compute({ C: ring }).A, Math.PI * (10000 - 1600), 150);
+    /* drawing: pathGeom issues bezierCurveTo, never a flattened lineTo run */
+    const calls = [];
+    const g2 = new Proxy({}, { get: (_, k) => (...a) => { calls.push(k); } });
+    LM.pathGeom(g2, P);
+    if (calls.join(',') !== 'moveTo,lineTo,bezierCurveTo,closePath') failures.push('path pathGeom: ' + calls.join(','));
+    /* the nodes: Bezier Span now emits a path; SVG Path parses once per string */
+    const bz = NODE_DEFS['crv/bezier'].compute({ A: { x: -100, y: 0 }, TA: { x: 80, y: -120 }, B: { x: 100, y: 0 }, TB: { x: 80, y: 120 } });
+    if (bz.C.kind !== 'path') failures.push('crv/bezier: must emit a path');
+    near('crv/bezier length', bz.L, LM.polyLength(LM.bezierPts({ x: -100, y: 0 }, { x: -20, y: -120 }, { x: 20, y: -120 }, { x: 100, y: 0 }, 256), false), 1);
+    const pn = { values: {} };
+    const r1 = NODE_DEFS['crv/path'].compute({ D: 'M 0 0 L 10 0 M 5 5 L 6 6' }, mkCtx(), pn);
+    if (r1.N !== 2 || r1.C !== pn._path) failures.push('crv/path: two subs, cached on the node');
+    const r2 = NODE_DEFS['crv/path'].compute({ D: 'M 0 0 L 10 0 M 5 5 L 6 6' }, mkCtx(), pn);
+    if (r2.C !== r1.C) failures.push('crv/path: the same string must not reparse');
+    if (Object.keys(NODE_DEFS['crv/path'].compute({ D: 'nonsense' }, mkCtx(), pn)).length) failures.push('crv/path: unreadable data yields nothing, never throws');
+    /* Vector In reads both stored shapes: the old sampled polylines and the new subs */
+    const vi = NODE_DEFS['params/svg'].compute({ S: 100 }, mkCtx(), { values: { paths: [
+      { pts: [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5]], closed: true },
+      { subs: [{ start: { x: -0.5, y: 0 }, segs: [{ x1: -0.5, y1: -0.5, x2: 0.5, y2: -0.5, x: 0.5, y: 0 }], closed: false }] }
+    ] } });
+    if (vi.G.length !== 2 || vi.G[0].kind !== 'poly' || vi.G[1].kind !== 'path' || Math.abs(vi.G[1].subs[0].segs[0].x - 50) > 1e-9)
+      failures.push('params/svg: both stored shapes must load, scaled by S — got ' + JSON.stringify(vi.G.map(g => g.kind)));
+  }
+
   /* polygon booleans */
   const A2 = sq(0, 0, 50), B2 = sq(50, 50, 50);
   const boo = (op, want) => {

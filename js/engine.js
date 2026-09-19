@@ -169,6 +169,9 @@ const LM = {
    *          evenodd by drawItem; everything else (toPoly, the analysis layer)
    *          sees only the outer outline, so holes degrade instead of breaking
    * spline   {kind:'spline', pts, closed}   (catmull-rom through pts)
+   * path     {kind:'path', subs:[{start, segs:[{x,y}|{x1,y1,x2,y2,x,y}], closed}]}
+   *          lines and cubic béziers, several subpaths filled evenodd — an SVG
+   *          `d` normalized; exact under affine transforms (see the path block)
    * text     {kind:'text', text, x, y, size}
    * poly3    {kind:'poly3', pts:[{x,y,z}], closed}      3D polyline
    * mesh     {kind:'mesh', vs:[{x,y,z}], fs:[[i,j,k,…]]}  faces index into vs
@@ -180,7 +183,8 @@ const LM = {
    * projection layer below; a projected mesh comes back as ordinary 2D polys.
    */
   isClosedGeom: g => !!g && (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rect' ||
-    ((g.kind === 'poly' || g.kind === 'spline' || g.kind === 'poly3') && g.closed)),
+    ((g.kind === 'poly' || g.kind === 'spline' || g.kind === 'poly3') && g.closed) ||
+    (g.kind === 'path' && !!(g.subs && g.subs[0] && g.subs[0].closed))),
 
   splinePts: (pts, closed, seg) => {
     seg = seg || 14;
@@ -210,6 +214,9 @@ const LM = {
       case 'line': return { pts: [g.a, g.b], closed: false };
       case 'poly': return { pts: g.pts || [], closed: !!g.closed };
       case 'spline': return { pts: LM.splinePts(g.pts || [], !!g.closed), closed: !!g.closed };
+      /* a path's first sub is its outline; the rest are holes or islands, and
+         degrade away here like poly's holes do */
+      case 'path': { const s = g.subs && g.subs[0]; return s ? { pts: LM.flattenSub(s), closed: !!s.closed } : { pts: [], closed: false }; }
       case 'circle': {
         const pts = [];
         for (let i = 0; i < res; i++) { const a = i / res * LM.TAU; pts.push({ x: g.cx + Math.cos(a) * g.r, y: g.cy + Math.sin(a) * g.r }); }
@@ -238,6 +245,183 @@ const LM = {
       case 'mesh': return { pts: (g.vs || []).map(p => ({ x: p.x, y: p.y })), closed: false };
       default: return { pts: [], closed: false };
     }
+  },
+
+  /* ---------- the path kind ----------
+   * path {kind:'path', subs:[{start:{x,y}, segs:[{x,y} | {x1,y1,x2,y2,x,y}], closed}]}
+   * Exactly what an SVG `d` is once every command is absolute and every curve
+   * is a cubic: a line segment is just its end point, a cubic carries its two
+   * control points and then its end. Quadratics are elevated and arcs split
+   * into cubics on the way in (LM.parsePath), so nothing downstream has more
+   * than two cases. The FIRST sub is the curve for every consumer that wants
+   * one outline (toPoly and the analysis layer on it); further subs are drawn
+   * too and the whole fills evenodd, so a sub inside another reads as a hole
+   * — the same degrade rule as poly's `holes`. An affine transform moves the
+   * control points and stays exact, which is the reason the kind exists. */
+
+  /* one sub → its sampled outline (no repeated seam point when closed).
+     Cubics take a sample every ~4px of control-polygon length, 4..64 each. */
+  flattenSub: sub => {
+    if (!sub || !sub.start) return [];
+    const pts = [{ x: sub.start.x, y: sub.start.y }];
+    let p = sub.start;
+    for (const s of sub.segs || []) {
+      if (s.x1 === undefined) pts.push({ x: s.x, y: s.y });
+      else {
+        const L = Math.hypot(s.x1 - p.x, s.y1 - p.y) + Math.hypot(s.x2 - s.x1, s.y2 - s.y1) + Math.hypot(s.x - s.x2, s.y - s.y2);
+        const b = LM.bezierPts(p, { x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }, { x: s.x, y: s.y }, LM.clamp(Math.ceil(L / 4), 4, 64));
+        for (let i = 1; i < b.length; i++) pts.push(b[i]);
+      }
+      p = s;
+    }
+    if (sub.closed && pts.length > 1) {
+      const a = pts[0], z = pts[pts.length - 1];
+      if (Math.hypot(a.x - z.x, a.y - z.y) < 1e-6) pts.pop();
+    }
+    return pts;
+  },
+
+  /* the closed subs after the first, flattened — what evenodd punches out */
+  pathHoles: g => {
+    const out = [];
+    for (const sub of (g && g.subs || []).slice(1)) {
+      if (!sub || !sub.closed) continue;
+      const pts = LM.flattenSub(sub);
+      if (pts.length > 2) out.push(pts);
+    }
+    return out;
+  },
+
+  /* a polyline as a path of line segments */
+  pathFromPoly: (pts, closed) => {
+    if (!pts || !pts.length) return { kind: 'path', subs: [] };
+    return { kind: 'path', subs: [{ start: { x: pts[0].x, y: pts[0].y }, segs: pts.slice(1).map(p => ({ x: p.x, y: p.y })), closed: !!closed }] };
+  },
+
+  /* an SVG elliptical arc from (x1,y1) to (x2,y2) as cubic segments — the
+     endpoint → center conversion of SVG spec F.6.5, then one cubic per ≤90°
+     piece with the classic 4/3·tan(Δ/4) handle. A degenerate arc is a line. */
+  arcToCubics: (x1, y1, rx, ry, rot, large, sweep, x2, y2) => {
+    rx = Math.abs(rx); ry = Math.abs(ry);
+    if (!rx || !ry || (x1 === x2 && y1 === y2)) return [{ x: x2, y: y2 }];
+    const co = Math.cos(rot), si = Math.sin(rot);
+    const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
+    const xp = co * dx + si * dy, yp = -si * dx + co * dy;
+    const lam = (xp * xp) / (rx * rx) + (yp * yp) / (ry * ry);
+    if (lam > 1) { const s = Math.sqrt(lam); rx *= s; ry *= s; }
+    const num = rx * rx * ry * ry - rx * rx * yp * yp - ry * ry * xp * xp;
+    const den = rx * rx * yp * yp + ry * ry * xp * xp;
+    let k = den ? Math.sqrt(Math.max(0, num / den)) : 0;
+    if (large === sweep) k = -k;
+    const cxp = k * rx * yp / ry, cyp = -k * ry * xp / rx;
+    const cx = co * cxp - si * cyp + (x1 + x2) / 2, cy = si * cxp + co * cyp + (y1 + y2) / 2;
+    const ang = (ux, uy, vx, vy) => {
+      const d = ux * vx + uy * vy, L = Math.hypot(ux, uy) * Math.hypot(vx, vy) || 1;
+      const a = Math.acos(LM.clamp(d / L, -1, 1));
+      return (ux * vy - uy * vx) < 0 ? -a : a;
+    };
+    const t0 = ang(1, 0, (xp - cxp) / rx, (yp - cyp) / ry);
+    let dt = ang((xp - cxp) / rx, (yp - cyp) / ry, (-xp - cxp) / rx, (-yp - cyp) / ry);
+    if (!sweep && dt > 0) dt -= LM.TAU;
+    if (sweep && dt < 0) dt += LM.TAU;
+    const n = Math.max(1, Math.ceil(Math.abs(dt) / (Math.PI / 2) - 1e-9));
+    const step = dt / n, h = 4 / 3 * Math.tan(step / 4);
+    const at = a => ({ x: cx + rx * Math.cos(a) * co - ry * Math.sin(a) * si, y: cy + rx * Math.cos(a) * si + ry * Math.sin(a) * co });
+    const der = a => ({ x: -rx * Math.sin(a) * co - ry * Math.cos(a) * si, y: -rx * Math.sin(a) * si + ry * Math.cos(a) * co });
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const a0 = t0 + i * step, a1 = a0 + step;
+      const p0 = at(a0), p1 = i === n - 1 ? { x: x2, y: y2 } : at(a1), d0 = der(a0), d1 = der(a1);
+      out.push({ x1: p0.x + h * d0.x, y1: p0.y + h * d0.y, x2: p1.x - h * d1.x, y2: p1.y - h * d1.y, x: p1.x, y: p1.y });
+    }
+    return out;
+  },
+
+  /* SVG path data → path geometry. Every command (M L H V C S Q T A Z, absolute
+     or relative) is accepted; the result holds only lines and cubics. Bad or
+     empty data gives a path with no subs — never a throw. */
+  parsePath: d => {
+    const subs = [];
+    const toks = String(d || '').match(/[MLHVCSQTAZ]|[-+]?(?:\d*\.\d+|\d+\.?)(?:e[-+]?\d+)?/gi) || [];
+    let i = 0, cmd = '', cx = 0, cy = 0, sx = 0, sy = 0, lcx = null, lcy = null, lqx = null, lqy = null, sub = null;
+    const num = () => { const t = toks[i++]; return t === undefined ? NaN : +t; };
+    const flag = () => { /* arc flags may be packed: "01" is two flags, "1.5" a flag and a number */
+      const t = toks[i];
+      if (t === undefined) return NaN;
+      if (t.length > 1 && (t[0] === '0' || t[0] === '1')) { toks[i] = t.slice(1); return +t[0]; }
+      i++; return +t;
+    };
+    const more = () => i < toks.length && !/^[a-z]$/i.test(toks[i]);
+    const open = (x, y) => { sub = { start: { x, y }, segs: [], closed: false }; subs.push(sub); sx = x; sy = y; cx = x; cy = y; };
+    const ensure = () => { if (!sub) open(cx, cy); };
+    const line = (x, y) => { ensure(); sub.segs.push({ x, y }); cx = x; cy = y; lcx = lcy = lqx = lqy = null; };
+    const cubic = (x1, y1, x2, y2, x, y) => { ensure(); sub.segs.push({ x1, y1, x2, y2, x, y }); cx = x; cy = y; lcx = x2; lcy = y2; lqx = lqy = null; };
+    const quad = (qx, qy, x, y) => {
+      cubic(cx + 2 / 3 * (qx - cx), cy + 2 / 3 * (qy - cy), x + 2 / 3 * (qx - x), y + 2 / 3 * (qy - y), x, y);
+      lqx = qx; lqy = qy;
+    };
+    while (i < toks.length) {
+      const t = toks[i];
+      if (/^[a-z]$/i.test(t)) { cmd = t; i++; if (cmd === 'Z' || cmd === 'z') { if (sub) { sub.closed = true; } cx = sx; cy = sy; sub = null; lcx = lcy = lqx = lqy = null; continue; } }
+      else if (!cmd) { i++; continue; }
+      const rel = cmd === cmd.toLowerCase();
+      const ox = rel ? cx : 0, oy = rel ? cy : 0;
+      let x, y;
+      switch (cmd.toUpperCase()) {
+        case 'M': x = ox + num(); y = oy + num(); if (isNaN(x) || isNaN(y)) { i = toks.length; break; }
+          open(x, y); lcx = lcy = lqx = lqy = null;
+          cmd = rel ? 'l' : 'L'; break;                          /* extra pairs after M are lines */
+        case 'L': x = ox + num(); y = oy + num(); if (isNaN(x) || isNaN(y)) { i = toks.length; break; } line(x, y); break;
+        case 'H': x = ox + num(); if (isNaN(x)) { i = toks.length; break; } line(x, cy); break;
+        case 'V': y = oy + num(); if (isNaN(y)) { i = toks.length; break; } line(cx, y); break;
+        case 'C': {
+          const x1 = ox + num(), y1 = oy + num(), x2 = ox + num(), y2 = oy + num(); x = ox + num(); y = oy + num();
+          if (isNaN(y)) { i = toks.length; break; }
+          cubic(x1, y1, x2, y2, x, y); break;
+        }
+        case 'S': {
+          const x2 = ox + num(), y2 = oy + num(); x = ox + num(); y = oy + num();
+          if (isNaN(y)) { i = toks.length; break; }
+          const x1 = lcx === null ? cx : 2 * cx - lcx, y1 = lcy === null ? cy : 2 * cy - lcy;
+          cubic(x1, y1, x2, y2, x, y); break;
+        }
+        case 'Q': {
+          const qx = ox + num(), qy = oy + num(); x = ox + num(); y = oy + num();
+          if (isNaN(y)) { i = toks.length; break; }
+          quad(qx, qy, x, y); break;
+        }
+        case 'T': {
+          x = ox + num(); y = oy + num();
+          if (isNaN(y)) { i = toks.length; break; }
+          const qx = lqx === null ? cx : 2 * cx - lqx, qy = lqy === null ? cy : 2 * cy - lqy;
+          quad(qx, qy, x, y); break;
+        }
+        case 'A': {
+          const rx = num(), ry = num(), rot = num() * Math.PI / 180, large = flag(), sweep = flag(); x = ox + num(); y = oy + num();
+          if (isNaN(y)) { i = toks.length; break; }
+          ensure();
+          for (const s of LM.arcToCubics(cx, cy, rx, ry, rot, !!large, !!sweep, x, y)) sub.segs.push(s);
+          cx = x; cy = y; lcx = lcy = lqx = lqy = null; break;
+        }
+        default: i = toks.length;
+      }
+    }
+    return { kind: 'path', subs: subs.filter(s => s.segs.length) };
+  },
+
+  /* path geometry → SVG path data (absolute, three decimals) */
+  pathD: g => {
+    const n = v => String(Math.round(v * 1000) / 1000);
+    const out = [];
+    for (const sub of (g && g.subs) || []) {
+      if (!sub || !sub.start) continue;
+      out.push('M ' + n(sub.start.x) + ' ' + n(sub.start.y));
+      for (const s of sub.segs || [])
+        out.push(s.x1 === undefined ? 'L ' + n(s.x) + ' ' + n(s.y)
+          : 'C ' + n(s.x1) + ' ' + n(s.y1) + ' ' + n(s.x2) + ' ' + n(s.y2) + ' ' + n(s.x) + ' ' + n(s.y));
+      if (sub.closed) out.push('Z');
+    }
+    return out.join(' ');
   },
 
   /* ---------- polyline analysis ----------
@@ -719,6 +903,8 @@ const LM = {
       let inHole = false;
       if (g.kind === 'poly' && g.holes)
         for (const h of g.holes) if (h.length > 2 && LM.ptInPoly(p, h)) { inHole = true; break; }
+      if (g.kind === 'path')
+        for (const h of LM.pathHoles(g)) if (LM.ptInPoly(p, h)) { inHole = true; break; }
       if (!inHole) return true;
     }
     const cl = LM.closestOnPoly(pts, P.closed, p);
@@ -800,6 +986,13 @@ const LM = {
       case 'line': return { s: { x: g.a.x, y: g.a.y }, e: { x: g.b.x, y: g.b.y } };
       case 'arc': return { s: LM.curvePoint(g, 0), e: LM.curvePoint(g, 1) };
       case 'circle': return { s: LM.curvePoint(g, 0), e: LM.curvePoint(g, 0) };
+      case 'path': {
+        const sub = g.subs && g.subs[0];
+        if (!sub || !sub.start) return null;
+        const last = sub.segs && sub.segs.length ? sub.segs[sub.segs.length - 1] : sub.start;
+        const e = sub.closed ? sub.start : last;
+        return { s: { x: sub.start.x, y: sub.start.y }, e: { x: e.x, y: e.y } };
+      }
       default: {
         const P = LM.toPoly(g, 96);
         if (!P.pts.length) return null;
@@ -972,6 +1165,20 @@ const LM = {
         return o;
       }
       case 'spline': return { kind: 'spline', pts: (g.pts || []).map(ap), closed: !!g.closed };
+      /* a cubic's image under an affine map is the cubic through the mapped
+         control points — so a path stays a path, exactly */
+      case 'path': return {
+        kind: 'path',
+        subs: (g.subs || []).map(sub => ({
+          start: ap(sub.start), closed: !!sub.closed,
+          segs: (sub.segs || []).map(s => {
+            const e = ap(s);
+            if (s.x1 === undefined) return e;
+            const c1 = ap({ x: s.x1, y: s.y1 }), c2 = ap({ x: s.x2, y: s.y2 });
+            return { x1: c1.x, y1: c1.y, x2: c2.x, y2: c2.y, x: e.x, y: e.y };
+          })
+        }))
+      };
       /* a 2D transform on 3D geometry acts on x/y and leaves z alone — Move and
          Rotate stay predictable on a mesh instead of flattening it. Real 3D
          transforms are LM.xform3 (the d3/move3 family). */
@@ -1277,6 +1484,20 @@ const LM = {
          the whole thing evenodd so they read as holes. Every other consumer
          (toPoly and the analysis layer on top of it) sees the outer outline
          only: holes degrade away rather than break anything. */
+      /* a path draws every sub with real bezierCurveTo calls — the canvas
+         flattens at device resolution, so it is crisp at any zoom */
+      case 'path': {
+        for (const sub of g.subs || []) {
+          if (!sub || !sub.start) continue;
+          g2.moveTo(sub.start.x, sub.start.y);
+          for (const s of sub.segs || []) {
+            if (s.x1 === undefined) g2.lineTo(s.x, s.y);
+            else g2.bezierCurveTo(s.x1, s.y1, s.x2, s.y2, s.x, s.y);
+          }
+          if (sub.closed) g2.closePath();
+        }
+        break;
+      }
       case 'poly': {
         const pts = g.pts || [];
         if (!pts.length) break;
@@ -1321,7 +1542,7 @@ const LM = {
     LM.pathGeom(g2, g);
     if (fill && fill.a > 0) {
       g2.fillStyle = LM.colorCss(fill);
-      g2.fill(g.kind === 'poly' && g.holes && g.holes.length ? 'evenodd' : 'nonzero');
+      g2.fill((g.kind === 'poly' && g.holes && g.holes.length) || (g.kind === 'path' && g.subs && g.subs.length > 1) ? 'evenodd' : 'nonzero');
     }
     if (stroke && stroke.a > 0 && w > 0) {
       g2.strokeStyle = LM.colorCss(stroke); g2.lineWidth = w;

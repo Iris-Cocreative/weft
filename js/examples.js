@@ -13,6 +13,36 @@ function _EX(nodes, wires) {
 
 const EXAMPLES = {
 
+  /* the path kind's own demo (v0.20): one SVG Path node holds a heart as
+   * four cubics; a Series of offsets rings it (offset samples the true curve),
+   * Scale + Rotate keep the cubics exact so the frame you see is the same
+   * shape at every zoom, and a dot runs the outline by arc length. */
+  'Heart path': _EX([
+    ['hp', 'crv/path', 30, 40],
+    ['tm', 'input/time', 30, 300],
+    ['sp', 'params/slider', 30, 460, { label: 'speed', min: 0.1, max: 2, value: 0.35 }],
+    ['rg', 'params/slider', 30, 580, { label: 'rings', min: 1, max: 12, value: 5, mode: 'int' }],
+    ['gp', 'params/slider', 30, 700, { label: 'gap', min: 2, max: 20, value: 7 }],
+    ['sc', 'xf/scale', 280, 40, { F: 1.6 }],
+    ['ml', 'math/mul', 280, 300],
+    ['fr', 'math/mod', 280, 420, { B: 1 }],
+    ['ng', 'math/neg', 280, 560],
+    ['se', 'sets/series', 500, 520, { S: 0 }],
+    ['of', 'crv/offset', 720, 380],
+    ['ev', 'crv/eval', 720, 140],
+    ['ci', 'crv/circle', 940, 140, { R: 7 }],
+    ['d1', 'disp/draw', 1160, 380, { S: { r: 244, g: 114, b: 182, a: 0.9 }, F: { r: 244, g: 114, b: 182, a: 0.06 }, W: 1.5 }],
+    ['d2', 'disp/draw', 1160, 140, { S: { r: 255, g: 255, b: 255, a: 0 }, F: { r: 253, g: 224, b: 71, a: 1 } }],
+    ['bg', 'disp/bg', 1160, 560, { C: { r: 22, g: 12, b: 24, a: 1 } }]
+  ], [
+    ['hp', 'C', 'sc', 'G'],
+    ['sc', 'G', 'of', 'C'], ['sc', 'G', 'ev', 'C'],
+    ['tm', 'T', 'ml', 'A'], ['sp', 'N', 'ml', 'B'], ['ml', 'R', 'fr', 'A'], ['fr', 'R', 'ev', 'T'],
+    ['ev', 'P', 'ci', 'P'], ['ci', 'C', 'd2', 'G'],
+    ['gp', 'N', 'ng', 'V'], ['ng', 'R', 'se', 'N'], ['rg', 'N', 'se', 'C'],
+    ['se', 'S', 'of', 'D'], ['of', 'C', 'd1', 'G']
+  ]),
+
   /* James's rainbow eye (2026-09-17) — the psychedelic poster eye, rebuilt as
    * one lens (two circles → Region intersection → Fillet) that a Series scales
    * and turns per band, so the rings spiral instead of merely nesting. The
@@ -18132,6 +18162,13 @@ const EXAMPLE_CAT_HUE = {
 };
 
 const EXAMPLE_META = {
+  'Heart path': {
+    cat: 'Geometry',
+    blurb: 'A heart written as four cubic curves in one SVG Path node, ringed inward by a Series of offsets, with a dot running its outline by arc length.',
+    teaches: 'The path kind: SVG path data is geometry every node already understands — Scale keeps the curves exact, Offset and Evaluate Curve sample the true curve, and the frame is crisp at any zoom.',
+    tags: ['path', 'svg', 'bezier', 'offset', 'series', 'evaluate curve'],
+    needs: [], frames: 40
+  },
   'Rainbow eye': {
     cat: 'State & interaction',
     blurb: 'A poster eye that watches the pointer — the rainbow rings spiral off behind its gaze, mouse x twists them, mouse y adds bands, and holding the button rolls a fresh OKLCH palette.',

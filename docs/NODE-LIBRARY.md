@@ -46,10 +46,9 @@ The proof is `patches/organic-nav-v2.md`: 92 flat nodes → one 28-node cluster.
 
 Still open from that harvest:
 
-- ~~**Bezier** `crv/bezier`~~ — shipped v0.17.5 as **Bezier Span** (sampled
-  to a `poly`, GH's control-point reading of the tangents). A `path` kind
-  (phase 5) would make it exact under transforms; the nav's necks can use it
-  now. (Join Curves shipped in v0.11.)
+- ~~**Bezier** `crv/bezier`~~ — shipped v0.17.5 as **Bezier Span** (GH's
+  control-point reading of the tangents); since v0.20 it emits the exact
+  `path` kind, so it stays a cubic under transforms. (Join Curves shipped in v0.11.)
 - **Active-index idiom** — "index of the item whose trigger last fired" costs 6
   nodes (clicks × indices → Mass Addition → Sample & Hold). Candidate node, but
   per principle 7 wait for a second patch to pay the same cost before adding it.
@@ -111,8 +110,13 @@ question was answered **written out**, per invariant #7.
 
 Still open here:
 
-- ~~**Bezier** `crv/bezier`~~ — shipped v0.17.5 (see the Curve harvest above).
-  An exact `path` kind is still the phase-5 upgrade.
+- ~~**Bezier** `crv/bezier`~~ — shipped v0.17.5 (see the Curve harvest above);
+  ~~an exact `path` kind is still the phase-5 upgrade~~ → **shipped v0.20
+  (2026-09-18)**: the `path` kind (lines + cubics, SVG `d` normalized), the
+  **SVG Path** node `crv/path` (type a `d`, get geometry), Bezier Span exact,
+  Vector In importing true curves. Follow-ups that now have a home: Join
+  Curves and Fillet emitting paths (round joins), Offset with round joins,
+  an SVG render target (ROADMAP §7.2).
 - **Extend Curve modes** — v0.17.5 extends straight along the end tangents
   (arcs keep curving). GH's *arc* and *smooth* modes are the follow-up if a
   patch asks for them.

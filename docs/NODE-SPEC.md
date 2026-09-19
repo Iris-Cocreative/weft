@@ -158,6 +158,7 @@ Plain JSON objects; `point` doubles as drawable geometry (renders as a dot).
 | `arc` | `{kind, cx, cy, r, a0, a1}` (radians) — sweeps from a0 to a1, backwards when a1 < a0 |
 | `poly` | `{kind, pts:[{x,y}…], closed}` |
 | `spline` | `{kind, pts, closed}` — Catmull-Rom through pts |
+| `path` | `{kind, subs:[{start:{x,y}, segs:[{x,y} \| {x1,y1,x2,y2,x,y}], closed}…]}` — lines and cubic Béziers, an SVG `d` normalized (see below) |
 | `text` | `{kind, text, x, y, size}` |
 | `poly3` | `{kind, pts:[{x,y,z}…], closed}` — a 3D polyline; closed, it also counts as a face |
 | `mesh` | `{kind, vs:[{x,y,z}…], fs:[[i,j,k…]…]}` — faces index into vs, any vertex count per face |
@@ -186,6 +187,21 @@ open ones clamp.
 A **non-uniform Scale turns a circle into an ellipse** rather than a
 wrong circle, and an ellipse under any further affine stays an ellipse. Kinds
 without an exact image under a transform (arc, rect, spline) become `poly`.
+
+**`path` is the exact-curve kind.** A segment is either a line to its end
+point `{x,y}` or a cubic `{x1,y1,x2,y2,x,y}` (two control points, then the
+end); a sub starts at `start` and may be `closed`. That is an SVG `d` with
+every command made absolute and every curve made cubic — `LM.parsePath(d)`
+does exactly that (quadratics elevated, arcs split into ≤90° cubics, `H`/`V`/
+`S`/`T` and relative forms all accepted) and `LM.pathD(g)` writes it back.
+An affine transform moves the control points, so a path **stays a path**
+under Move/Rotate/Scale/Mirror; Draw issues real `bezierCurveTo` calls, so
+it is crisp at any zoom. Everything that wants one outline (`toPoly`, the
+analysis layer, Divide, Offset, Intersection…) reads the **first sub**, sampled
+every ~4px along each cubic; further subs are drawn too and the shape fills
+`evenodd`, so a sub inside another is a hole — the same degrade rule as
+`poly.holes`, and `pointInGeom` and Area honor those holes. Sources: the
+SVG Path node (`crv/path`, type the `d`), Bezier Span, and Vector In.
 
 ## 6. Evaluation model
 
