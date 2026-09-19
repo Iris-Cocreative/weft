@@ -83,6 +83,7 @@ const WeftExport = (() => {
   function serializeLM(need) {
     const parts = Object.keys(LM).filter(k => !need || need.has(k)).map(k => {
       const v = LM[k];
+      if (k === 'IMG') return '  IMG: {}'; /* the editor's registry holds live elements; an export starts empty */
       return '  ' + k + ': ' + (typeof v === 'function' ? v.toString() : JSON.stringify(v));
     });
     return '{\n' + parts.join(',\n') + '\n}';
@@ -123,10 +124,13 @@ const WeftExport = (() => {
     const hasJs = types.has('meta/js');
     const hasAudio = [...types].some(t => t.indexOf('audio/') === 0);
     const audioJS = hasAudio ? WeftAudio.makeHost.toString() : '';
+    /* the image host ships when a surviving compute declares or reads pictures */
+    const hasImages = hasJs || /ctx\.image(List|State)/.test(defsJS);
+    const imagesJS = hasImages ? WeftImages.makeHost.toString() : '';
     const lmJS = serializeLM(hasJs ? null :
-      lmClosure(defsJS + ' LM.evaluateGraph LM.colorCss LM.drawItem LM.fillBg ' + audioJS));
+      lmClosure(defsJS + ' LM.evaluateGraph LM.colorCss LM.drawItem LM.fillBg ' + audioJS + ' ' + imagesJS));
     return {
-      graph, graphJS: serializeGraph(graph), defsJS, lmJS, audioJS, hasAudio,
+      graph, graphJS: serializeGraph(graph), defsJS, lmJS, audioJS, hasAudio, imagesJS, hasImages,
       gates: {   /* Custom JS receives ctx wholesale, so it may read any channel */
         keys: hasJs || /ctx\.keys/.test(defsJS),
         scroll: hasJs || /ctx\.scroll/.test(defsJS),
@@ -139,7 +143,7 @@ const WeftExport = (() => {
 
   function buildJS(sourceGraph) {
     const P = buildParts(sourceGraph);
-    const F = P.gates, hasAudio = P.hasAudio;
+    const F = P.gates, hasAudio = P.hasAudio, hasImages = P.hasImages;
 
     const keysSetup = F.keys ? `  const kDown = {};
   let kPressed = {}, kReleased = {};
@@ -267,9 +271,9 @@ const WeftExport = (() => {
 const GRAPH = ${P.graphJS};
 const DEFS = ${P.defsJS};
 const LM = ${P.lmJS};
-${hasAudio ? 'const WeftAudio = { makeHost: ' + P.audioJS + ' };\n' : ''}
+${hasAudio ? 'const WeftAudio = { makeHost: ' + P.audioJS + ' };\n' : ''}${hasImages ? 'const WeftImages = { makeHost: ' + P.imagesJS + ' };\n' : ''}
 function mount(canvas) {
-${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}  const g2 = canvas.getContext('2d');
+${hasAudio ? '  const audio = WeftAudio.makeHost();\n' : ''}${hasImages ? '  const images = WeftImages.makeHost();\n' : ''}  const g2 = canvas.getContext('2d');
   const mouse = { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false };
   let mx = null, my = null, frame = 0;
   let pressedBuf = false, releasedBuf = false;
@@ -305,10 +309,11 @@ ${keysFrame}${scrollFrame}
       W: rect.width, H: rect.height, ${F.measure ? 'measureText, ' : ''}defs: DEFS,
       drawList: [], domList: [], audioList: [], ${F.dom ? 'domState' : 'domState: {}'}, bg: null, errors: {}, out: {},
       audioState: ${hasAudio ? 'audio.state()' : '{}'},
+      imageList: [], imageState: ${hasImages ? 'images.state()' : '{}'},
       tuneA4: (GRAPH.meta && GRAPH.meta.tuneA4) || 432
     };
     LM.evaluateGraph(GRAPH, DEFS, ctx);
-${F.dom ? '    syncDom(ctx.domList, rect);\n' : ''}${hasAudio ? '    audio.sync(ctx.audioList);\n' : ''}${hotspotFrame}
+${F.dom ? '    syncDom(ctx.domList, rect);\n' : ''}${hasAudio ? '    audio.sync(ctx.audioList);\n' : ''}${hasImages ? '    images.sync(ctx.imageList);\n' : ''}${hotspotFrame}
     g2.setTransform(dpr, 0, 0, dpr, 0, 0);
     g2.clearRect(0, 0, rect.width, rect.height);
     LM.fillBg(g2, ctx.bg, rect.width, rect.height);

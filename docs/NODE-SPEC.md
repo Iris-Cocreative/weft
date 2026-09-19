@@ -159,6 +159,7 @@ Plain JSON objects; `point` doubles as drawable geometry (renders as a dot).
 | `poly` | `{kind, pts:[{x,y}…], closed}` |
 | `spline` | `{kind, pts, closed}` — Catmull-Rom through pts |
 | `path` | `{kind, subs:[{start:{x,y}, segs:[{x,y} \| {x1,y1,x2,y2,x,y}], closed}…]}` — lines and cubic Béziers, an SVG `d` normalized (see below) |
+| `image` | `{kind, src, cx, cy, w, h, rot, alpha}` — a picture centered on (cx,cy); `src` is a data URI or URL that a *host* loads (see §6 `imageList`). Draw paints it (stroke = its frame, fill ignored); every other node sees its frame as a rect; Image Sample reads its pixels |
 | `text` | `{kind, text, x, y, size}` |
 | `poly3` | `{kind, pts:[{x,y,z}…], closed}` — a 3D polyline; closed, it also counts as a face |
 | `mesh` | `{kind, vs:[{x,y,z}…], fs:[[i,j,k…]…]}` — faces index into vs, any vertex count per face |
@@ -225,6 +226,8 @@ The evaluation context `ctx` provides:
 | `domList` | real-DOM-element requests pushed by nodes: Button `{id, kind:'button', label, x, y}` · Element `{id, kind:'element', tag, text, attrs, rect}` — the host reconciles actual elements |
 | `domState` | host-owned persistent map: element id → `{hover, focus, down, clicks}` |
 | `audioList` | Web-Audio requests pushed by Audio nodes: `{id, kind:'osc'\|'noise'\|'gain'\|'filter'\|'out'\|'mic', …params, src:[handles]}` — the host (`js/audio.js`) reconciles a live audio graph each frame; sound starts after the first user gesture (browser autoplay rule) |
+| `imageList` | picture sources declared by Image In: `{src}` — the host (`js/images.js`) loads each once, decodes it into `LM.IMG[src]` for Draw, and reads its pixels back |
+| `imageState` | read-back per `src`: `{ready, w, h, sw, sh, data}` — natural size, the sampling copy's size (≤256 on the long side) and its RGBA bytes (`null` when a cross-origin URL refuses pixel access — it still draws). `LM.imageAt(geom, state, point)` is the sampler Image Sample uses |
 | `audioState` | host-owned read-back map: descriptor id → `{level, ready}` (Mic In loudness) or `{wave, sr, ready}` (Scope: last frame's time-domain samples + sample rate) — the audio counterpart of `domState` |
 | `tuneA4` | concert pitch: the A4 reference in Hz (432 unless the graph's `meta.tuneA4` says otherwise) — Note and Scale derive every frequency from it |
 | `measureText` | `(text, sizePx) → {w, h}` — host-measured with the same font Draw uses (`h` is a deterministic `size × 1.2` line box) |

@@ -7,6 +7,10 @@
  */
 const LM = {
   TAU: Math.PI * 2,
+  /* src → decoded HTMLImageElement, filled by the image host (js/images.js)
+     and read by drawItem. The engine never loads anything itself; a picture
+     nobody has loaded yet simply draws nothing. Exports start it empty. */
+  IMG: {},
 
   /* ---------- numbers ---------- */
   clamp: (v, a, b) => v < a ? a : v > b ? b : v,
@@ -92,6 +96,29 @@ const LM = {
     r: LM.lerp(a.r, b.r, t), g: LM.lerp(a.g, b.g, t), b: LM.lerp(a.b, b.b, t),
     a: LM.lerp(a.a === undefined ? 1 : a.a, b.a === undefined ? 1 : b.a, t)
   }),
+
+  /* ---------- image sampling ----------
+   * st is ctx.imageState[g.src] as the host fills it: {ready, w, h, sw, sh,
+   * data} with data an RGBA byte array of the sw×sh sampling copy. p is a
+   * canvas point; it is carried back through the image's frame (center,
+   * size, rotation) into 0..1 image space. Outside the frame, or with no
+   * pixels yet, the answer is transparent black — a downstream Draw then
+   * simply draws nothing until the picture arrives. */
+  imageAt: (g, st, p) => {
+    const clear = { r: 0, g: 0, b: 0, a: 0 };
+    if (!g || !st || !st.ready || !st.data || !p) return clear;
+    const w = g.w || 0, h = g.h || 0;
+    if (!(w > 0 && h > 0)) return clear;
+    const dx = p.x - (g.cx || 0), dy = p.y - (g.cy || 0);
+    const co = Math.cos(-(g.rot || 0)), si = Math.sin(-(g.rot || 0));
+    const u = (dx * co - dy * si) / w + 0.5, v = (dx * si + dy * co) / h + 0.5;
+    if (u < 0 || u >= 1 || v < 0 || v >= 1) return clear;
+    const x = Math.min(st.sw - 1, Math.floor(u * st.sw)), y = Math.min(st.sh - 1, Math.floor(v * st.sh));
+    const i = (y * st.sw + x) * 4, d = st.data;
+    return { r: d[i], g: d[i + 1], b: d[i + 2], a: d[i + 3] / 255 };
+  },
+  /* perceived brightness 0..1 of a color (Rec. 601 luma) */
+  luma: c => c ? (0.299 * (c.r || 0) + 0.587 * (c.g || 0) + 0.114 * (c.b || 0)) / 255 : 0,
 
   /* ---------- paints ----------
    * A color port carries a color {r,g,b,a} or a PAINT:
@@ -216,6 +243,8 @@ const LM = {
    *          lines and cubic béziers, several subpaths filled evenodd — an SVG
    *          `d` normalized; exact under affine transforms (see the path block)
    * text     {kind:'text', text, x, y, size}
+   * image    {kind:'image', src, cx, cy, w, h, rot, alpha}   a picture, centered;
+   *          drawn from LM.IMG[src], which only a host fills (js/images.js)
    * poly3    {kind:'poly3', pts:[{x,y,z}], closed}      3D polyline
    * mesh     {kind:'mesh', vs:[{x,y,z}], fs:[[i,j,k,…]]}  faces index into vs
    *
@@ -227,7 +256,7 @@ const LM = {
    */
   isClosedGeom: g => !!g && (g.kind === 'circle' || g.kind === 'ellipse' || g.kind === 'rect' ||
     ((g.kind === 'poly' || g.kind === 'spline' || g.kind === 'poly3') && g.closed) ||
-    (g.kind === 'path' && !!(g.subs && g.subs[0] && g.subs[0].closed))),
+    (g.kind === 'path' && !!(g.subs && g.subs[0] && g.subs[0].closed)) || g.kind === 'image'),
 
   splinePts: (pts, closed, seg) => {
     seg = seg || 14;
@@ -273,6 +302,7 @@ const LM = {
         }
         return { pts, closed: true };
       }
+      case 'image':
       case 'rect': {
         const w = g.w / 2, h = g.h / 2, c = Math.cos(g.rot || 0), s = Math.sin(g.rot || 0);
         const pts = [[-w, -h], [w, -h], [w, h], [-w, h]].map(p => ({ x: g.cx + p[0] * c - p[1] * s, y: g.cy + p[0] * s + p[1] * c }));
@@ -1202,6 +1232,18 @@ const LM = {
         return { kind: 'ellipse', cx: c.x, cy: c.y, rx: Math.abs(e.s1), ry: Math.abs(e.s2), rot: e.rot };
       }
       case 'text': { const p = ap({ x: g.x, y: g.y }); return { kind: 'text', text: g.text, x: p.x, y: p.y, size: (g.size || 24) * sf }; }
+      /* a picture keeps its src; its frame moves like an ellipse's axes would
+         (a skew has no exact image, so size + rotation come from the SVD) */
+      case 'image': {
+        const c = ap({ x: g.cx || 0, y: g.cy || 0 }), co = Math.cos(g.rot || 0), si = Math.sin(g.rot || 0), s = LM.matSvd(m);
+        if (Math.abs(Math.abs(s.s1) - Math.abs(s.s2)) < 1e-9) {
+          /* conformal: carry the picture's own x axis through, as the ellipse does */
+          const k = Math.abs(s.s1), ax = { x: m[0] * co + m[2] * si, y: m[1] * co + m[3] * si };
+          return { kind: 'image', src: g.src, cx: c.x, cy: c.y, w: (g.w || 0) * k, h: (g.h || 0) * k, rot: Math.atan2(ax.y, ax.x), alpha: g.alpha };
+        }
+        const e = LM.matSvd(LM.matMul([co, si, -si, co, 0, 0], m));
+        return { kind: 'image', src: g.src, cx: c.x, cy: c.y, w: (g.w || 0) * Math.abs(e.s1), h: (g.h || 0) * Math.abs(e.s2), rot: e.rot, alpha: g.alpha };
+      }
       case 'poly': {
         const o = { kind: 'poly', pts: (g.pts || []).map(ap), closed: !!g.closed };
         if (g.holes && g.holes.length) o.holes = g.holes.map(h => h.map(ap));
@@ -1594,6 +1636,24 @@ const LM = {
     if (g.kind === undefined && g.x !== undefined) {
       const c = LM.paintVisible(fill) ? fill : stroke;
       if (LM.paintVisible(c)) { g2.beginPath(); g2.arc(g.x, g.y, Math.max(w * 1.4, 2), 0, LM.TAU); g2.fillStyle = LM.paintStyle(g2, c); g2.fill(); }
+      return;
+    }
+    if (g.kind === 'image') {
+      /* the picture itself, if a host has loaded it, then the frame as a
+         stroke when one is visible — fill is ignored (the pixels are the fill) */
+      const im = LM.IMG && LM.IMG[g.src], iw = g.w || 0, ih = g.h || 0;
+      if (im && iw > 0 && ih > 0) {
+        g2.save();
+        g2.translate(g.cx || 0, g.cy || 0);
+        if (g.rot) g2.rotate(g.rot);
+        if (g.alpha !== undefined && g.alpha < 1) g2.globalAlpha = g2.globalAlpha * Math.max(0, g.alpha);
+        try { g2.drawImage(im, -iw / 2, -ih / 2, iw, ih); } catch (e) { /* not decodable yet */ }
+        g2.restore();
+      }
+      if (LM.paintVisible(stroke) && w > 0) {
+        g2.beginPath(); LM.pathGeom(g2, g);
+        g2.strokeStyle = LM.paintStyle(g2, stroke); g2.lineWidth = w; g2.lineJoin = 'round'; g2.stroke();
+      }
       return;
     }
     g2.beginPath();

@@ -170,6 +170,10 @@ const Viewport = {
     };
 
     const audioHost = (typeof WeftAudio !== 'undefined') ? WeftAudio.makeHost() : null;
+    /* the image host: loads what Image In declares, fills LM.IMG for Draw,
+       reads pixels back for Image Sample. Thumbnails share it (App.renderThumb). */
+    const imageHost = (typeof WeftImages !== 'undefined') ? WeftImages.makeHost() : null;
+    Viewport.images = imageHost;
     const btnMute = document.getElementById('btnMute');
     /* the user's mute choice, kept apart from pause-muting: pausing time also
      * silences the patch, but resuming must not unmute someone who muted */
@@ -343,6 +347,7 @@ const Viewport = {
         drawList: [], domList: [], audioList: [], bg: null, errors: {}, out: {},
         domState: o.domState || {},
         audioState: o.audioState || {},
+        imageList: [], imageState: o.imageState || {},
         tuneA4: o.tuneA4 || 432
       };
     };
@@ -457,12 +462,14 @@ const Viewport = {
       const ctx = Viewport.makeCtx(rect.width, rect.height, t, Viewport.playing ? dt : 0, frame++, {
         mouse, keys, scroll, domState,
         audioState: audioHost ? audioHost.state() : {},
+        imageState: imageHost ? imageHost.state() : {},
         tuneA4: App.graph.meta && App.graph.meta.tuneA4
       });
       try { LM.evaluateGraph(App.graph, NODE_DEFS, ctx); } catch (e) { /* keep rendering */ }
       Viewport.lastErrors = ctx.errors; // per-node eval errors, read by the assistant
       syncDom(ctx.domList);
       if (audioHost) audioHost.sync(ctx.audioList);
+      if (imageHost) imageHost.sync(ctx.imageList);
 
       let overHotspot = false;
       for (const n of App.graph.nodes) {

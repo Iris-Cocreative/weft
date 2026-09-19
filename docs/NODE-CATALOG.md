@@ -185,6 +185,25 @@ Plots the data flowing through it — X alone draws the values over an automatic
 | X | number |  |
 | Y | number |  |
 
+### `params/image` — Image In
+
+Load a picture (embedded, ≤1024px) or point U at an image URL — comes out as image geometry centered on P with its long side S px, ready for Draw, transforms, and Image Sample
+
+| in | type | default | note |
+|---|---|---|---|
+| S | number | `300` | size (px, long side) |
+| P | point | `{"x":0,"y":0}` | center |
+| A | number | `1` | opacity |
+| U | string | `""` | url (optional — overrides the file) |
+
+| out | type | note |
+|---|---|---|
+| G | geometry |  |
+| W | number | width (px) |
+| H | number | height (px) |
+
+Node values (`values` keys, not ports): `{"name":"","src":"","w":0,"h":0}`
+
 ### `params/knob` — Knob
 
 Rotary number — drag around the dial, shift snaps to integers; double-click for label, range and rounding
@@ -2249,6 +2268,21 @@ The Victorian drawing machine, and the Vector Scope’s math twin — two damped
 | G | geometry | figure |
 | P | point | pen points |
 
+### `disp/sample` — Image Sample
+
+The color of image G under point P — plus its brightness 0..1 and alpha. Outside the picture, or before it has loaded, transparent black. Wire a grid of points in: halftones, image-driven fields, pixel sorting
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | image |
+| P | point | `{"x":0,"y":0}` |  |
+
+| out | type | note |
+|---|---|---|
+| C | color |  |
+| B | number | brightness 0..1 |
+| A | number | alpha 0..1 |
+
 ### `disp/linear` — Linear Gradient
 
 A paint running from color C1 at point A to C2 at point B — wire it into Draw’s fill or stroke, or into Background. A color list in S (with 0..1 positions in T) makes more stops
@@ -2616,4 +2650,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-189 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+191 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

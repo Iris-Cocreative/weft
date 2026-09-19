@@ -45,7 +45,7 @@ if (!token) { console.error('no token: set HF_TOKEN or write it to ~/.hf-token')
 
 /* ---- Weft runtime, same load as validate-patch.js plus examples + ops ---- */
 const src = 'const window = { addEventListener: () => {} };\n'
-  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js', 'js/ops.js']
+  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/images.js', 'js/examples.js', 'js/export.js', 'js/ops.js']
     .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
     .join('\n;\n');
 const { LM, NODE_DEFS, WeftExport, WeftOps, EXAMPLES } = new Function(src + '\nreturn { LM, NODE_DEFS, WeftExport, WeftOps, EXAMPLES };')();

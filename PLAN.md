@@ -247,13 +247,19 @@ Lands *after* Phase 3 so the patches a model emits are small enough to read.
 Exit met: describe → JSON → paste → *play*. Also fixed en route: NODE-CATALOG
 and nodes.html had silently omitted the Audio and Meta categories since v0.8.2.
 
-## Phase 5 — Media, type & vector (the web's unfair advantages) — in progress (5.3 v0.20.0, 5.4 v0.21.0)
+## Phase 5 — Media, type & vector (the web's unfair advantages) — in progress (5.1–5.4 shipped: v0.20.0–v0.22.0)
 
-1. Image node + **Image Sample** (brightness/color at points → drives geometry:
-   halftones, image-driven fields) — the killer node of the phase.
-2. Asset strategy = graph format v2 (asset manifest; data-URI embed vs URL).
-   Governing principle (OUTPUT-MODES): **assets enter as typed values existing
-   nodes already understand, never as opaque blobs Weft renders around.**
+1. ✅ Image node + **Image Sample** (v0.22.0, 2026-09-18) — `params/image`
+   emits `image` geometry (Draw paints it, transforms move its frame),
+   `disp/sample` reads the pixel under a point through the new
+   `imageList`/`imageState` channel and the image host (`js/images.js`,
+   shipped into exports like the audio host). *Halftone* example.
+2. ✅ Asset strategy — settled **without a format bump**: a loaded picture is
+   downscaled and embedded as a data URI in `node.values` (Vector In's
+   precedent), or referenced by URL; share links strip embedded pictures.
+   Governing principle (OUTPUT-MODES) held: **assets enter as typed values
+   existing nodes already understand, never as opaque blobs Weft renders
+   around** — an image is geometry.
 3. ✅ **`path` geometry kind** (v0.20.0, 2026-09-18) — lines and cubics, an SVG
    `d` normalized (quadratics elevated, arcs split into cubics on the way in).
    Exact under affine transforms, drawn with real `bezierCurveTo`, first sub

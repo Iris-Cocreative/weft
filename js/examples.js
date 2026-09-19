@@ -22,6 +22,32 @@ const EXAMPLES = {
    * glow that used to be inexpressible. Stripes tiled across the loom are
    * clipped by the same shape; the sky is one Linear Gradient wired straight
    * into Background. */
+  /* the media step (v0.22): a picture is geometry. Image In carries a tiny
+   * SVG data URI (a gradient plate with a moon and a ramp — the corpus stays
+   * text); a Grid of points asks Image Sample for the brightness under each
+   * one, and the darker the pixel the bigger the dot. A slider fades the
+   * picture itself in underneath, since the same geometry draws AND samples. */
+  'Halftone': _EX([
+    ['im', 'params/image', 30, 40, { name: 'gradient plate', src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='160'><defs><radialGradient id='g' cx='38%25' cy='40%25' r='62%25'><stop offset='0' stop-color='%23ffffff'/><stop offset='0.55' stop-color='%23777777'/><stop offset='1' stop-color='%23000000'/></radialGradient><linearGradient id='l' x1='0' x2='1'><stop offset='0' stop-color='%23000000'/><stop offset='1' stop-color='%23ffffff'/></linearGradient></defs><rect width='240' height='160' fill='url(%23g)'/><circle cx='178' cy='46' r='28' fill='%23ffffff'/><circle cx='186' cy='40' r='22' fill='%23000000'/><rect x='24' y='118' width='192' height='22' fill='url(%23l)'/></svg>", w: 240, h: 160, S: 480 }],
+    ['op', 'params/slider', 30, 300, { label: 'photo opacity', min: 0, max: 1, value: 0 }],
+    ['sp', 'params/slider', 30, 420, { label: 'spacing', min: 8, max: 40, value: 16 }],
+    ['gr', 'vec/grid', 280, 300, { W: 456, H: 296 }],
+    ['sm', 'disp/sample', 520, 200],
+    ['rm', 'math/remap', 760, 200, { S0: 0, S1: 1, T0: 7.5, T1: 0.6 }],
+    ['ci', 'crv/circle', 1000, 200],
+    ['d1', 'disp/draw', 1240, 200, { S: { r: 0, g: 0, b: 0, a: 0 }, F: { r: 236, g: 240, b: 250, a: 1 } }],
+    ['d2', 'disp/draw', 1240, 40, { S: { r: 0, g: 0, b: 0, a: 0 } }],
+    ['bg', 'disp/bg', 1240, 380, { C: { r: 14, g: 16, b: 24, a: 1 } }]
+  ], [
+    ['op', 'N', 'im', 'A'],
+    ['sp', 'N', 'gr', 'S'],
+    ['im', 'G', 'sm', 'G'], ['gr', 'P', 'sm', 'P'],
+    ['sm', 'B', 'rm', 'V'],
+    ['gr', 'P', 'ci', 'P'], ['rm', 'R', 'ci', 'R'],
+    ['ci', 'C', 'd1', 'G'],
+    ['im', 'G', 'd2', 'G']
+  ]),
+
   'Lantern': _EX([
     ['sk', 'disp/linear', 30, 40, { A: { x: 0, y: -320 }, B: { x: 0, y: 320 }, C1: { r: 10, g: 14, b: 36, a: 1 }, C2: { r: 74, g: 22, b: 62, a: 1 } }],
     ['bg', 'disp/bg', 280, 40],
@@ -18191,6 +18217,13 @@ const EXAMPLE_CAT_HUE = {
 };
 
 const EXAMPLE_META = {
+  'Halftone': {
+    cat: 'Lists & grids',
+    blurb: 'A picture read as dots — a grid of points asks Image Sample how bright the pixel under each one is, and the darker it is the bigger the dot. Slide the photo in to compare.',
+    teaches: 'A picture is geometry: Image In emits it, Draw draws it, Image Sample reads it — the same value in three roles — and list matching turns one Sample node into a whole halftone.',
+    tags: ['image', 'halftone', 'sample', 'grid', 'brightness', 'remap'],
+    needs: [], frames: 30
+  },
   'Lantern': {
     cat: 'Fundamentals',
     blurb: 'A capsule lit from wherever the pointer is — a radial glow drawn as a big disc and clipped to the shape, stripes clipped by the same shape, a gradient sky in one node.',

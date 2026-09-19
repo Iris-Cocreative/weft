@@ -738,14 +738,36 @@ Then:
   the shaken export. Not done: gradient *transforms* (a paint is not
   geometry, so Move/Rotate leave it alone — wire the same point into both),
   pattern/image paints (wait for the Image node), blend modes.
-- Image node (URL or file → drawable geometry kind `image`), opacity/blend.
-- **Image Sample** — sample brightness/color at points → drive radius/rotation:
-  instant halftones, image-driven fields. This is the killer node of the track.
+- ✅ **Image In + the `image` kind** (shipped v0.22.0, 2026-09-18 — PLAN
+  Phase 5.1/5.2). `{kind:'image', src, cx, cy, w, h, rot, alpha}` is
+  geometry: Draw paints it (its frame strokes, fill is ignored), 2D
+  transforms move the frame (conformal maps exact, a skew by SVD), every
+  analysis node sees the frame as a rect. The engine never loads a pixel:
+  `params/image` *declares* `{src}` on the new `ctx.imageList` channel and
+  the image host (`js/images.js`, serialized into exports like the audio
+  host) decodes it into `LM.IMG[src]`, the one registry `drawItem` reads,
+  and reports `{ready, w, h, sw, sh, data}` on `ctx.imageState` from a
+  ≤256px sampling copy. **Asset strategy settled without a format bump:** a
+  loaded file is downscaled to ≤1024px in `buildBody` and stored as a data
+  URI in `node.values.src` (PNG for small/transparent, JPEG 0.85 otherwise),
+  so graph JSON and exports carry the picture the way Vector In carries its
+  paths; a URL in `U` references instead of embedding (draws always, samples
+  when CORS allows). Share links strip embedded pictures and say so —
+  base62 is O(n²) and chat apps choke on 60 KB links.
+- ✅ **Image Sample** `disp/sample` (same release) — the pixel under a point:
+  color, luma brightness, alpha; transparent outside the frame or before the
+  picture arrives, so a Draw downstream just waits. `LM.imageAt` carries the
+  point back through the frame (center, size, rotation). *Halftone* example:
+  one Grid, one Sample, one Remap — the killer node, and it is one node.
+  Open: blend modes, an image *paint* (pattern fill), video/webcam sources
+  (the channel is ready for them — a frame is just a src that changes).
 - Video and **Webcam** as animated image sources (getUserMedia — nothing like
   it exists in GH).
 - Feedback buffer (previous frame as an image) → trails, decay, flow.
-- Export consideration: assets must embed (data URI) or reference URLs; add an
-  asset manifest to the graph format (needs format v2 — see track 0).
+- ~~Export consideration: assets must embed (data URI) or reference URLs; add an
+  asset manifest to the graph format (needs format v2 — see track 0).~~ Settled
+  v0.22: embed in `values` (Vector In's precedent) or reference by URL — no
+  manifest, no format bump.
 
 ## 7. Text & typography
 

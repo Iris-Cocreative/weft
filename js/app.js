@@ -394,10 +394,25 @@ const App = {
     return g;
   },
 
+  /* an embedded picture is tens of KB of base64 — base62 is O(n²) and chat
+     apps choke on links that long, so a share link leaves them out and says
+     so. Save carries them; an image URL in Image In's U travels fine. */
+  _stripAssets(g) {
+    let n = 0;
+    for (const node of g.nodes) {
+      if (node.values && typeof node.values.src === 'string' && /^data:/i.test(node.values.src)) {
+        node.values = Object.assign({}, node.values, { src: '' });
+        n++;
+      }
+    }
+    if (n) setTimeout(() => App.flash('share links don’t carry embedded pictures (' + n + ' left out) — Save does, or give Image In a URL'), 1200);
+    return g;
+  },
+
   async shareLink() {
     if (!App.graph.nodes.length) { App.flash('nothing to share — the canvas is empty'); return; }
     App._flushPending();
-    const bytes = new TextEncoder().encode(JSON.stringify(App._pack(App.serialize())));
+    const bytes = new TextEncoder().encode(JSON.stringify(App._pack(App._stripAssets(App.serialize()))));
     const canDeflate = typeof CompressionStream !== 'undefined';
     const hash = canDeflate
       ? '#w2=' + App._b62(await App._pipe(bytes, new CompressionStream('deflate-raw')))
@@ -921,6 +936,9 @@ const App = {
       ctx = Viewport.makeCtx(S.w, S.h, f * dt, dt, f, { tuneA4: tune });
       try { LM.evaluateGraph(graph, NODE_DEFS, ctx); } catch (e) { /* paint whatever drew */ }
     }
+    /* pictures the graph declares start loading now, so the next thumbnail
+       of it (and the live cloth) has them; this one draws what is loaded */
+    if (ctx && Viewport.images) Viewport.images.sync(ctx.imageList);
     g2.fillStyle = '#0b0e14';
     g2.fillRect(0, 0, cv.width, cv.height);
     if (ctx) LM.fillBg(g2, ctx.bg, cv.width, cv.height);

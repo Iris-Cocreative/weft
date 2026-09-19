@@ -34,7 +34,7 @@ if (!graphPath || graphPath === true) { console.error('usage: apply-ops.js --gra
 
 /* ---- Weft runtime, same load as bench-model.js ---- */
 const src = 'const window = { addEventListener: () => {} };\n'
-  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/export.js', 'js/ops.js']
+  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/images.js', 'js/export.js', 'js/ops.js']
     .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
     .join('\n;\n');
 const { LM, NODE_DEFS, WeftExport, WeftOps } = new Function(src + '\nreturn { LM, NODE_DEFS, WeftExport, WeftOps };')();

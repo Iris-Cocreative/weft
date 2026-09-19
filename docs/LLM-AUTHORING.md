@@ -128,6 +128,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/timegraph` | Time Graph | V:number (list-in) | V:number | rolling trace |
 | `params/relay` | Relay | V:any (list-in) | V:any | wire organiser |
 | `params/svg` | Vector In | S:number=200 | G:geometry F:color K:color N:number | values: paths (from "load svg…" — a human loads the file; exact `path` geometry centered on (0,0), long side scaled to S px; compound paths keep their holes; F/K are fill/stroke per shape) |
+| `params/image` | Image In | S:number=300 P:point A:opacity U:string(url) | G:geometry W H | a picture as `image` geometry, long side S px at P. values.src is a data URI a human loaded ("load image…", ≤1024px); **set U to an image URL to author one yourself** (it draws always; sampling needs CORS). Draw it, transform it, or wire G into `disp/sample` |
 
 ### State (memory per list item; resets on load)
 | node | title | in | out | |
@@ -265,6 +266,7 @@ shade before coloring, or unlit faces come out black.
 |---|---|---|---|
 | `disp/draw` | G S:stroke-color F:fill-color W:width K:clip-geometry(optional) | G | fill alpha 0 = no fill; S and F take a color **or a paint**; anything wired into K masks the item to that geometry |
 | `disp/bg` | C:color | | a color or a paint (laid in centered px) |
+| `disp/sample` | G:image-geometry P:point | C:color B:brightness(0–1) A:alpha | the pixel under P — list-match a grid of points against one picture for halftones and image-driven fields; transparent/0 outside the picture or before it loads |
 | `disp/linear` | A:point B:point C1:color C2:color S:color(list) T:number(list) | P:color | a **paint**: C1 at A → C2 at B; S+T for more stops (positions 0..1). Wire P into Draw's F/S or Background's C |
 | `disp/radial` | P:point R0 R1 C1 C2 S(list) T(list) | P:color | a **paint**: C1 at the center (solid inside R0) → C2 at R1 — glow, vignette, shaded ball |
 | `disp/hsl` | H S L A (0–1) | C:color | |

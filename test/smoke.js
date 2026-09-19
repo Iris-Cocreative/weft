@@ -22,7 +22,7 @@ const root = path.join(__dirname, '..');
  * touches the DOM inside functions; at load it just registers its init —
  * the window stub leads the scope so typeof-guards elsewhere stay happy. */
 const src = 'const window = { addEventListener: () => {} };\n'
-  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/examples.js', 'js/export.js', 'js/app.js', 'js/ops.js']
+  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/images.js', 'js/examples.js', 'js/export.js', 'js/app.js', 'js/ops.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -38,6 +38,7 @@ const mkCtx = () => ({
   W: 800, H: 600, defs: NODE_DEFS,
   measureText: (t, s) => ({ w: String(t).length * s * 0.6, h: s * 1.2 }),
   drawList: [], domList: [], audioList: [], audioState: {}, domState: {}, bg: null, errors: {}, out: {},
+  imageList: [], imageState: {},
   tuneA4: 432
 });
 
@@ -847,6 +848,54 @@ for (const name of Object.keys(EXAMPLES)) {
       { id: 'g', type: 'disp/radial', values: {} }, { id: 'c', type: 'crv/circle', values: {} }, { id: 'd', type: 'disp/draw', values: {} } ],
       wires: [ { from: ['g', 'P'], to: ['d', 'F'] }, { from: ['c', 'C'], to: ['d', 'G'] } ] });
     if (js.indexOf('createRadialGradient') < 0 || js.indexOf('fillBg') < 0) failures.push('exporter: paint helpers must survive the shake');
+  }
+
+  /* images (v0.22): the image kind, the declare/read-back channel, sampling */
+  {
+    const IM = { kind: 'image', src: 'x', cx: 10, cy: 20, w: 100, h: 50, rot: 0, alpha: 1 };
+    const P = LM.toPoly(IM);
+    if (!P.closed || P.pts.length !== 4 || Math.abs(P.pts[0].x + 40) > 1e-9 || Math.abs(P.pts[2].y - 45) > 1e-9) failures.push('image toPoly: the frame corners, got ' + JSON.stringify(P));
+    if (!LM.isClosedGeom(IM)) failures.push('image: a picture is a closed region');
+    const X = LM.xformGeom(IM, LM.matMul(LM.matScale(2, 2, { x: 0, y: 0 }), LM.matRot(Math.PI / 2, { x: 0, y: 0 })));
+    if (X.kind !== 'image' || X.src !== 'x' || Math.abs(X.w - 200) > 1e-6 || Math.abs(X.h - 100) > 1e-6 || Math.abs(Math.abs(X.rot) - Math.PI / 2) > 1e-6) failures.push('image xform: ' + JSON.stringify(X));
+    /* drawing: nothing without the host's element, drawImage with it, the frame stroke either way */
+    const calls = [];
+    const g2 = new Proxy({}, { get: (_, k) => (...a) => { calls.push(k); }, set: () => true });
+    LM.drawItem(g2, { geom: IM, stroke: { r: 255, g: 255, b: 255, a: 1 }, width: 1 });
+    if (calls.indexOf('drawImage') >= 0 || calls.indexOf('stroke') < 0) failures.push('image draw, unloaded: ' + calls.join(','));
+    LM.IMG.x = {}; calls.length = 0;
+    LM.drawItem(g2, { geom: IM, stroke: { r: 0, g: 0, b: 0, a: 0 }, width: 1 });
+    if (calls.join(',') !== 'save,translate,drawImage,restore') failures.push('image draw, loaded: ' + calls.join(','));
+    delete LM.IMG.x;
+    /* sampling through a fake read-back: a 2×2 picture, black | white over red | clear */
+    const st = { ready: true, w: 2, h: 2, sw: 2, sh: 2, data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255, 255, 0, 0, 255, 0, 0, 0, 0]) };
+    const at = (x, y) => LM.imageAt(IM, st, { x, y });
+    if (at(-30, 5).r !== 0 || at(50, 5).r !== 255 || at(-30, 40).g !== 0 || at(-30, 40).r !== 255 || at(50, 40).a !== 0) failures.push('imageAt: quadrant colors');
+    if (at(200, 200).a !== 0 || LM.imageAt(IM, null, { x: 10, y: 20 }).a !== 0) failures.push('imageAt: outside / unloaded is clear');
+    near('luma white', LM.luma({ r: 255, g: 255, b: 255 }), 1, 1e-9);
+    /* the nodes: Image In declares and emits, Image Sample reads the channel */
+    const c1 = mkCtx();
+    const gi = NODE_DEFS['params/image'].compute({ S: 200, P: { x: 0, y: 0 }, A: 1, U: '' }, c1, { values: { src: 'data:x', w: 400, h: 200 } });
+    if (c1.imageList.length !== 1 || c1.imageList[0].src !== 'data:x') failures.push('params/image: must declare its source');
+    if (!gi.G || gi.G.kind !== 'image' || gi.G.w !== 200 || gi.G.h !== 100 || gi.W !== 200) failures.push('params/image: geometry sized by S along the long side, got ' + JSON.stringify(gi));
+    const gu = NODE_DEFS['params/image'].compute({ S: 100, P: { x: 0, y: 0 }, A: 1, U: 'https://x/y.png' }, mkCtx(), { values: { src: 'data:x', w: 400, h: 200 } });
+    if (gu.G.src !== 'https://x/y.png' || gu.G.w !== 100 || gu.G.h !== 100) failures.push('params/image: a URL wins and is square until the host reports a size');
+    if (Object.keys(NODE_DEFS['params/image'].compute({ S: 100, P: { x: 0, y: 0 }, A: 1, U: '' }, mkCtx(), { values: {} })).length) failures.push('params/image: nothing loaded, nothing out');
+    const c2 = mkCtx(); c2.imageState = { x: st };
+    const sm = NODE_DEFS['disp/sample'].compute({ G: IM, P: { x: 50, y: 5 } }, c2);
+    if (sm.C.r !== 255 || Math.abs(sm.B - 1) > 1e-9 || sm.A !== 1) failures.push('disp/sample: white pixel → B 1, got ' + JSON.stringify(sm));
+    const sm0 = NODE_DEFS['disp/sample'].compute({ G: IM, P: { x: 50, y: 5 } }, mkCtx());
+    if (sm0.C.a !== 0 || sm0.B !== 0) failures.push('disp/sample: no read-back → transparent, B 0');
+    /* a cluster forwards the channel */
+    const cl = { values: { ins: [], outs: [], graph: { nodes: [{ id: 'i', type: 'params/image', values: { src: 'data:in', w: 1, h: 1 } }], wires: [] } } };
+    const c3 = mkCtx(); NODE_DEFS['meta/cluster'].compute({}, c3, cl);
+    if (c3.imageList.length !== 1) failures.push('meta/cluster: imageList must reach the inner graph');
+    /* the exporter ships the image host only when a picture is in play */
+    const withImg = WeftExport.buildJS({ nodes: [ { id: 'i', type: 'params/image', values: { src: 'data:x', w: 2, h: 2 } }, { id: 'd', type: 'disp/draw', values: {} } ], wires: [ { from: ['i', 'G'], to: ['d', 'G'] } ] });
+    if (withImg.indexOf('WeftImages') < 0 || withImg.indexOf('images.sync') < 0 || withImg.indexOf('IMG: {}') < 0) failures.push('exporter: image host + empty registry must ship with a picture');
+    if (withImg.indexOf('data:x') < 0) failures.push('exporter: the embedded picture travels in GRAPH');
+    const noImg = WeftExport.buildJS({ nodes: [ { id: 'c', type: 'crv/circle', values: {} }, { id: 'd', type: 'disp/draw', values: {} } ], wires: [ { from: ['c', 'C'], to: ['d', 'G'] } ] });
+    if (noImg.indexOf('WeftImages') >= 0) failures.push('exporter: no picture, no image host');
   }
 
   /* polygon booleans */

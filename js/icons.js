@@ -218,6 +218,10 @@ const WEFT_ICONS = {
   'xf/kaleido': '<path d="M13.5 2.5V24.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" opacity=".45"/><path d="M4 8L23 19" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" opacity=".45"/><path d="M4 19L23 8" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" opacity=".45"/><circle cx="9.7" cy="6.7" r="1.7" fill="currentColor"/><circle cx="17.3" cy="6.7" r="1.7" fill="currentColor" opacity=".55"/><circle cx="13.5" cy="13.5" r="1.1" fill="currentColor"/>',
 
   /* ---- code drafts — params III ---- */
+  // Image In: a framed picture — a hill and a sun
+  'params/image': '<rect x="3.5" y="5.5" width="20" height="16" rx="2" stroke="currentColor" stroke-miterlimit="10"/><path d="M3.5 18L10 11.5L14.5 16L17.5 13L23.5 18.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.5" cy="9.5" r="1.8" fill="currentColor"/>',
+  // Image Sample: the frame with a probe point and its reading
+  'disp/sample': '<rect x="3.5" y="5.5" width="20" height="16" rx="2" stroke="currentColor" stroke-miterlimit="10" opacity=".45"/><path d="M3.5 18L10 11.5L14.5 16L17.5 13L23.5 18.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round" opacity=".45"/><circle cx="12" cy="14" r="2.2" stroke="currentColor" stroke-miterlimit="10"/><path d="M12 11.8V7" stroke="currentColor" stroke-linecap="round"/><circle cx="12" cy="5.5" r="1.4" fill="currentColor"/>',
   'params/svg': '<path d="M4.5 21.5C6.5 10.5 13 5.5 22.5 7.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M4.5 21.5L11 15" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round" opacity=".45"/><circle cx="11" cy="15" r="1.3" fill="currentColor"/><rect x="2.6" y="19.6" width="3.8" height="3.8" stroke="currentColor" stroke-miterlimit="10"/><rect x="20.6" y="5.6" width="3.8" height="3.8" stroke="currentColor" stroke-miterlimit="10"/>',
 
   /* the point3 param — params/point's ring and dot, but the frame marks sit on the

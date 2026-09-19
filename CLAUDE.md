@@ -56,6 +56,7 @@ Definition of done for any change:
 | `js/nodes.js` | `NODE_DEFS` — node library | only in `buildBody`/`postEval` |
 | `js/nodes-3d.js` | the 3D pack — `d3/*` defs into the same registry (`CATS['3D']` and the two extra port types stay in nodes.js) | only in `buildBody` |
 | `js/audio.js` | `WeftAudio` — Web Audio host, reconciles `ctx.audioList` (serialized into audio exports) | audio only, never at load |
+| `js/images.js` | `WeftImages` — image host: loads what `ctx.imageList` declares into `LM.IMG` for Draw, reads pixels back on `ctx.imageState` (serialized into exports that use pictures) | images only, never at load |
 | `js/editor.js` | node canvas UI (pan/zoom, wires, quick-add) | yes |
 | `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim); owns `Viewport.makeCtx`, the one ctx literal the loop and thumbnails share | yes |
 | `js/export.js` | graph → standalone JS compiler | no |
@@ -65,7 +66,7 @@ Definition of done for any change:
 | `js/assistant.js` | weave assistant — chat panel → webhook → `WeftOps` (docs/ASSISTANT.md, docs/HF-INTEGRATION-PLAN.md); dormant without a saved webhook config | yes |
 | `js/tour.js` | `Tour` — first-visit welcome modal (with the assistant's shared-key field) and the spotlight tour of the interface; shows once (`weft:welcomed`), again from the ⚙ popover | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → editor → viewport → export → examples → app → assistant → tour, with ops slotted after audio (the editor's paste layout uses it).
+Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → images → editor → viewport → export → examples → app → assistant → tour, with ops slotted after audio (the editor's paste layout uses it).
 
 A new node pack has to be registered in eight places, all one line each:
 `index.html`, the source lists in `test/smoke.js`, `test/gen-catalog.js`,
@@ -114,7 +115,8 @@ plus the category order arrays in the two generators (and `catDesc` in
    frame-latched bools in ordinary wires — never callbacks or event subscriptions.
    Cross-frame memory lives on `node._state` keyed by `ctx.i` (per list item) and
    resets on graph load. The ctx input contract (`dt`, `mouse.pressed/released`,
-   `keys`, `scroll`, `domList`/`domState`, `audioList`/`audioState`, `tuneA4`,
+   `keys`, `scroll`, `domList`/`domState`, `audioList`/`audioState`,
+   `imageList`/`imageState`, `tuneA4`,
    `measureText`, `defs`) is
    supplied **identically** by `viewport.js` and the export mount — change one,
    change both, and update the ctx table in NODE-SPEC §6 and smoke's `mkCtx`.
@@ -128,7 +130,10 @@ plus the category order arrays in the two generators (and `catDesc` in
    wires) and read back mic loudness via `ctx.audioState`; only the host
    (`js/audio.js` `WeftAudio.makeHost`) touches the `AudioContext`, and cluster
    computes must forward `audioList`, `audioState` and `tuneA4` into the child
-   ctx like the DOM channels. Pitch nodes derive Hz from `ctx.tuneA4` (432
+   ctx like the DOM channels. Pictures follow the same rule: Image In
+   *declares* `{src}` on `ctx.imageList`, the host (`js/images.js`) decodes it
+   into `LM.IMG` (the one registry `drawItem` reads — the engine never loads
+   anything) and reports pixels on `ctx.imageState`; clusters forward both. Pitch nodes derive Hz from `ctx.tuneA4` (432
    default, per-graph override in `graph.meta.tuneA4`) — never hard-code 440.
    **The one sanctioned exception to acyclicity** (amended for Phase 3): a def
    with `feedback: true` (Delay) contributes **no edges** to the topological

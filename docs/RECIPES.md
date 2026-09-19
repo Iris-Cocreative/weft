@@ -67,6 +67,14 @@ geometry that reaches no Draw node is invisible.
   curves) centered on (0,0) scaled to S px, with per-shape fill F and stroke
   K colors for Draw. From there it is ordinary geometry — offset it, divide
   it, extrude it, kaleido it.
+- **Bring in a photo** — `params/image` (Image In): "load image…" on the
+  node, or a URL in U. G is `image` geometry — `disp/draw` paints it,
+  Move/Rotate/Scale move its frame, Hotspot hit-tests its rectangle.
+- **Halftone / image-driven field** — `vec/grid(S spacing → P)` →
+  `disp/sample(G: the image, P → B brightness)` → `math/remap(B 0..1 →
+  radius, dark = big)` → `crv/circle(P, R)` → Draw. One Sample node, list
+  matching does the rest; C gives the color if you want it. Example:
+  *Halftone*.
 - **A row or field of identical copies** — `xf/tile(G, V1, N1, V2, N2 → G, I, J)`.
   Only for *identical* copies: if the cells differ, use `vec/grid` + list
   matching instead (that is the whole point of principle 6).

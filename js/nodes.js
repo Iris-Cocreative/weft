@@ -1245,6 +1245,85 @@ defNode('params/svg', {
   }
 });
 
+/* Image In — a picture as geometry. The file is read editor-only in buildBody,
+ * downscaled to at most 1024px on the long side and stored as a data URI in
+ * node.values.src (with its natural w/h), so graph JSON and exports carry it
+ * with no asset manifest — the same shape Vector In settled on. The compute
+ * only DECLARES the source on ctx.imageList and emits an `image` geometry;
+ * the host (js/images.js) loads it into LM.IMG for Draw and reads pixels back
+ * on ctx.imageState for Image Sample. A URL in U wins over the loaded file:
+ * exports then reference it instead of embedding (CORS decides whether it
+ * can be sampled; it always draws). */
+defNode('params/image', {
+  title: 'Image In', cat: 'Params', width: 176,
+  desc: 'Load a picture (embedded, ≤1024px) or point U at an image URL — comes out as image geometry centered on P with its long side S px, ready for Draw, transforms, and Image Sample',
+  inputs: [
+    { name: 'S', type: 'number', default: 300, label: 'size (px, long side)' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
+    { name: 'A', type: 'number', default: 1, label: 'opacity' },
+    { name: 'U', type: 'string', default: '', label: 'url (optional — overrides the file)' }],
+  outputs: [
+    { name: 'G', type: 'geometry' },
+    { name: 'W', type: 'number', label: 'width (px)' },
+    { name: 'H', type: 'number', label: 'height (px)' }],
+  defaults: { name: '', src: '', w: 0, h: 0 },
+  compute: (a, ctx, node) => {
+    const url = typeof a.U === 'string' ? a.U.trim() : '';
+    const src = url || node.values.src || '';
+    if (!src) return {};
+    if (ctx.imageList) ctx.imageList.push({ src });
+    /* the aspect: from the stored natural size for a loaded file, from the
+       host's read-back for a URL, square until either arrives */
+    let nw = url ? 0 : (node.values.w || 0), nh = url ? 0 : (node.values.h || 0);
+    const st = ctx.imageState && ctx.imageState[src];
+    if (!(nw > 0 && nh > 0) && st && st.ready) { nw = st.w; nh = st.h; }
+    const s = Math.max(0, a.S === undefined ? 300 : a.S);
+    const k = s / Math.max(nw || 1, nh || 1);
+    const w = (nw || 1) * k, h = (nh || 1) * k;
+    return { G: { kind: 'image', src, cx: a.P.x, cy: a.P.y, w, h, rot: 0, alpha: LM.clamp(a.A === undefined ? 1 : a.A, 0, 1) }, W: w, H: h };
+  },
+  buildBody: (node, body, changed) => {
+    const vb = _mk('div', 'vin', body);
+    const btn = _mk('div', 'vin-btn', vb);
+    btn.textContent = 'load image…';
+    const lbl = _mk('div', 'vin-lbl', vb);
+    const paint = () => {
+      lbl.textContent = node.values.src
+        ? (node.values.name || 'image') + ' — ' + node.values.w + '×' + node.values.h
+        : 'no image loaded';
+    };
+    paint();
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
+    vb.appendChild(inp);
+    _cleanClick(btn, () => inp.click());
+    inp.addEventListener('change', () => {
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      const im = new Image();
+      const url = URL.createObjectURL(f);
+      im.onload = () => {
+        URL.revokeObjectURL(url);
+        const CAP = 1024, w0 = im.naturalWidth, h0 = im.naturalHeight;
+        const k = Math.min(1, CAP / Math.max(w0, h0, 1));
+        const w = Math.max(1, Math.round(w0 * k)), h = Math.max(1, Math.round(h0 * k));
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(im, 0, 0, w, h);
+        /* PNG keeps transparency and line art crisp; JPEG for photos (and anything big) */
+        const png = /png|gif|svg|webp/i.test(f.type) && w * h <= 512 * 512;
+        node.values.src = png ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.85);
+        node.values.w = w; node.values.h = h;
+        node.values.name = f.name.replace(/\.[a-z0-9]+$/i, '');
+        paint(); changed();
+      };
+      im.onerror = () => { URL.revokeObjectURL(url); lbl.textContent = 'not readable as an image'; };
+      im.src = url;
+      inp.value = '';
+    });
+  }
+});
+
 /* ============================== MATHS ============================== */
 
 function defBinary(id, title, fn, desc) {
@@ -2434,6 +2513,22 @@ defNode('disp/deconrgb', {
     : {}
 });
 
+defNode('disp/sample', {
+  title: 'Image Sample', cat: 'Display',
+  desc: 'The color of image G under point P — plus its brightness 0..1 and alpha. Outside the picture, or before it has loaded, transparent black. Wire a grid of points in: halftones, image-driven fields, pixel sorting',
+  inputs: [{ name: 'G', type: 'geometry', label: 'image' }, { name: 'P', type: 'point', default: { x: 0, y: 0 } }],
+  outputs: [
+    { name: 'C', type: 'color' },
+    { name: 'B', type: 'number', label: 'brightness 0..1' },
+    { name: 'A', type: 'number', label: 'alpha 0..1' }],
+  compute: (a, ctx) => {
+    const g = a.G;
+    if (!g || g.kind !== 'image') return { C: { r: 0, g: 0, b: 0, a: 0 }, B: 0, A: 0 };
+    const c = LM.imageAt(g, ctx.imageState && ctx.imageState[g.src], a.P);
+    return { C: c, B: LM.luma(c), A: c.a };
+  }
+});
+
 defNode('disp/bg', {
   title: 'Background', cat: 'Display', desc: 'Set the canvas background — a color, or a paint from Linear / Radial Gradient (laid in centered px like geometry)',
   inputs: [{ name: 'C', type: 'color', default: { r: 11, g: 14, b: 20, a: 1 } }],
@@ -3388,6 +3483,7 @@ defNode('meta/cluster', {
       W: ctx.W, H: ctx.H, measureText: ctx.measureText, defs: ctx.defs,
       drawList: ctx.drawList, domList: ctx.domList, domState: ctx.domState,
       audioList: ctx.audioList, audioState: ctx.audioState, tuneA4: ctx.tuneA4,
+      imageList: ctx.imageList, imageState: ctx.imageState,
       bg: null, errors: {}, out: {}, clusterIns: a, clusterOuts: {}
     };
     LM.evaluateGraph(node._sub, ctx.defs, c2);
