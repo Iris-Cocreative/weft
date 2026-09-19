@@ -357,10 +357,26 @@ is now in, so any of these can be picked up in a workshop pass):
     transforms, draw) when nothing is typed; the params panel is a grid —
     sliders full width, dials / toggles / swatches / buttons three to a row —
     with the control's own name loud and the eyebrow quiet.
-  - [next] the params panel honoring group order, and a collapsed state that
-    keeps it docked as a strip
-  - [next] drag from a port on touch is still a small target for wires
-    across a long loom — a "wire mode" (tap out, tap in) would help
+  - [shipped v0.19.3, 2026-09-18] the params panel reads the loom: one
+    section per group frame (its title as the header, a click folds it,
+    remembered for the session) plus one unnamed section for loose
+    controls, sections and rows in top-to-bottom, left-to-right order
+    banded by 60px rows; a folded frame's controls still list, since
+    folding the plumbing and playing from the panel is the point. The ‹
+    in the head folds the panel to a 36px strip at the loom's left (label,
+    faders glyph, count) that a click reopens — remembered per browser in
+    `weft:paramsStrip`, desktop only (on a phone the panel is the loom).
+  - [shipped v0.19.3, 2026-09-18] **wire mode** on touch: a tap on a port
+    arms it (a slow pulse in its type color, a tip saying *now tap an
+    input*), the loom pans and pinches freely, and the next tap on a port
+    of the other side wires them (replacing what the input held, as a
+    dropped wire does). Tapping the armed port, empty loom, Escape or a
+    graph load disarms; a port of the same side re-arms on that one; a
+    card's own port refuses. Rebuilt cards get the class painted back
+    from `drawWires`. The drag-and-snap from v0.19.2 still works for
+    short wires.
+  - [next] wire mode could show a ghost wire from the armed port to the
+    finger while the loom pans, and a mouse could use tap-tap too
 
 - [shipped v0.18.5, 2026-09-17] **Welcome + tour.** A first visit opens a
   welcome modal (`js/tour.js`): what weft is in the about page's voice, the

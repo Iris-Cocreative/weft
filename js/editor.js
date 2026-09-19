@@ -495,6 +495,7 @@ const Editor = (() => {
     // drawWires(); the walk is O(nodes + wires), cheap even mid-drag.
     const alive = LM.sinkReachable(S.graph, NODE_DEFS, (n, d) => !!d.inspect);
     for (const [id, el] of S.els) el.classList.toggle('dead', !alive.has(id));
+    paintArmed();
     const liveTint = typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true);
     for (const w of S.graph.wires) {
       // folded groups: wires between two members vanish with them; wires
@@ -1013,17 +1014,59 @@ const Editor = (() => {
     clearTimeout(portTipTimer);
     if (portTipEl) { portTipEl.remove(); portTipEl = null; }
   }
-  function showPortTip(portEl) {
+  function showPortTip(portEl, text, ms) {
     hidePortTip();
     const r = portEl.getBoundingClientRect(), er = editorEl.getBoundingClientRect();
     portTipEl = document.createElement('div');
     portTipEl.id = 'portTip';
-    portTipEl.textContent = portEl.title || portEl.dataset.port;
+    portTipEl.textContent = text || portEl.title || portEl.dataset.port;
     editorEl.appendChild(portTipEl);
     const w = portTipEl.offsetWidth;
     portTipEl.style.left = LM.clamp(r.left + r.width / 2 - er.left - w / 2, 6, er.width - w - 6) + 'px';
     portTipEl.style.top = (r.top - er.top - 34) + 'px';
-    portTipTimer = setTimeout(hidePortTip, 2400);
+    portTipTimer = setTimeout(hidePortTip, ms || 2400);
+  }
+
+  /* ---- wire mode (touch) ----
+   * Dragging a wire across a long loom with one finger means the loom cannot
+   * pan under it, and the far port is off the screen. So a tap on a port arms
+   * it: the port pulses, the loom pans and pinches freely, and the next tap on
+   * a port of the other side makes the wire (replacing what the input held,
+   * as a dropped wire does). Tapping the armed port again, tapping empty
+   * loom, Escape, or loading a graph disarms; tapping a port of the same side
+   * re-arms on that one instead. Rebuilt cards lose the class, so drawWires
+   * paints it back — every render funnels through there. */
+  function armPort(el) {
+    disarm();
+    S.armed = { node: el.dataset.node, dir: el.dataset.dir, port: el.dataset.port };
+    el.classList.add('armed');
+    showPortTip(el, (el.title || el.dataset.port) + ' · now tap an ' + (el.dataset.dir === 'out' ? 'input' : 'output'), 4000);
+  }
+  function disarm() {
+    if (!S.armed) return;
+    S.armed = null;
+    for (const el of nodesEl.querySelectorAll('.port.armed')) el.classList.remove('armed');
+  }
+  function paintArmed() {
+    const a = S.armed;
+    if (!a) return;
+    if (!nodeById(a.node)) { disarm(); return; } // the card went away
+    const el = nodesEl.querySelector(`.port[data-node="${a.node}"][data-dir="${a.dir}"][data-port="${a.port}"]`);
+    if (el) el.classList.add('armed');
+  }
+  function tapPort(el) {
+    const tap = { node: el.dataset.node, dir: el.dataset.dir, port: el.dataset.port };
+    const a = S.armed;
+    if (!a || !nodeById(a.node)) { armPort(el); return; }
+    if (a.node === tap.node && a.dir === tap.dir && a.port === tap.port) { disarm(); hidePortTip(); return; }
+    if (a.dir === tap.dir || a.node === tap.node) {
+      if (a.node === tap.node) App.flash('a card can’t wire to itself');
+      armPort(el); // the finger changed its mind
+      return;
+    }
+    const out = a.dir === 'out' ? a : tap, inn = a.dir === 'in' ? a : tap;
+    disarm(); hidePortTip();
+    if (connect(out.node, out.port, inn.node, inn.port, true)) App.flash('wired ' + out.port + ' → ' + inn.port);
   }
 
   function completeWire(e) {
@@ -1038,7 +1081,7 @@ const Editor = (() => {
       // anything the press lifted off and say what the port carries
       if (wasDetached && d.origIn) connect(fixed.node, fixed.port, d.origIn.node, d.origIn.port, false);
       drawWires();
-      if (d.startEl && d.startEl.isConnected) showPortTip(d.startEl);
+      if (d.startEl && d.startEl.isConnected) tapPort(d.startEl);
       return;
     }
     if (!portEl) {
@@ -1407,7 +1450,9 @@ const Editor = (() => {
     if (d.kind === 'node' && d.moved) changed();
     if (d.kind === 'pan' && d.rmb && !d.moved) openQA(e);
     if (d.kind === 'pan' && d.touch && !d.moved) {
-      // a still finger on empty loom deselects, as a still click does
+      // a still finger on empty loom deselects, as a still click does — and
+      // puts down an armed port
+      disarm(); hidePortTip();
       S.sel.clear(); S.selWire = null; S.selNote = null;
       updateSelection(); drawWires();
     }
@@ -1439,7 +1484,7 @@ const Editor = (() => {
     const t = e.target;
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
     if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelection(); e.preventDefault(); }
-    else if (e.key === 'Escape') { closeQA(); closeCtx(); clearSel(); }
+    else if (e.key === 'Escape') { closeQA(); closeCtx(); clearSel(); disarm(); hidePortTip(); }
     else if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
       e.preventDefault();
       duplicateSelection();
@@ -2028,6 +2073,7 @@ const Editor = (() => {
 
     setGraph(g) {
       S.graph = g;
+      S.armed = null;
       S.sel.clear(); S.selWire = null; S.lastErr.clear(); S.wireTint.clear();
       S.idc = 1; S.widc = 1;
       for (const n of g.nodes) {

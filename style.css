@@ -402,6 +402,12 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .row.in .port { left: -7px; }
 .row.out .port { right: -7px; }
 .port:hover, .port.hot { box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.35), 0 0 10px var(--t); }
+/* wire mode (touch): a tapped port waits for its partner — a slow pulse in its own color */
+.port.armed { animation: portArmed 1.1s ease-in-out infinite alternate; z-index: 3; }
+@keyframes portArmed {
+  from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--t) 45%, transparent), 0 0 10px var(--t); }
+  to { box-shadow: 0 0 0 7px color-mix(in srgb, var(--t) 22%, transparent), 0 0 18px var(--t); }
+}
 
 /* literal editors — 42px value fields */
 .lit { display: flex; gap: 4px; align-items: center; margin-left: auto; }
@@ -1399,6 +1405,36 @@ body { touch-action: none; }
   background: none; border: 1px solid transparent; border-radius: 7px; color: var(--dim); font-size: 14px;
 }
 .pm-x:hover { color: var(--text); border-color: var(--line2); }
+.pm-min {
+  width: 30px; height: 34px; padding: 0 0 3px; cursor: pointer;
+  background: none; border: 1px solid transparent; border-radius: 7px; color: var(--dim); font-size: 18px; line-height: 1;
+}
+.pm-min:hover { color: var(--text); border-color: var(--line2); }
+/* section headers: one per group frame, in the loom's reading order; click folds */
+.pm-sec {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 6px;
+  margin: 8px 0 -2px; padding: 0 4px 5px; border-bottom: 1px solid var(--line);
+  cursor: pointer; user-select: none;
+}
+.pm-sec:first-child { margin-top: 2px; }
+.pm-sec.loose { cursor: default; }
+.pm-sec-chev { width: 14px; font-size: 10px; color: var(--faint); transition: transform 0.15s; }
+.pm-sec.folded .pm-sec-chev { transform: rotate(-90deg); }
+.pm-sec.loose .pm-sec-chev { visibility: hidden; }
+.pm-sec-title { flex: 1; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-sec:hover .pm-sec-title { color: var(--text); }
+.pm-sec-count { font-size: 10px; color: var(--faint); }
+/* the strip: the panel folded to a bar at the loom's left; a click opens it */
+#params.strip { width: 36px; bottom: auto; overflow: hidden; }
+#editor.params-strip #params { box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
+.pm-strip {
+  width: 100%; padding: 9px 0 10px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: none; border: 0; color: var(--dim); cursor: pointer; font: inherit;
+}
+.pm-strip:hover { color: var(--text); }
+.pm-strip svg { width: 18px; height: 18px; display: block; }
+.pm-strip-label { writing-mode: vertical-rl; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.pm-strip-count { font-size: 10px; color: var(--faint); min-height: 12px; }
 .pm-list {
   flex: 1; overflow-y: auto; padding: 10px 12px 24px;
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-content: start;
@@ -1426,4 +1462,5 @@ body { touch-action: none; }
 /* on a phone the params panel is the whole loom (after the base rule, so it wins) */
 @media (max-width: 760px) {
   #params { inset: 0; width: auto; max-width: none; border: 0; border-radius: 0; background: var(--panel); backdrop-filter: none; box-shadow: none; }
+  .pm-min { display: none; }
 }

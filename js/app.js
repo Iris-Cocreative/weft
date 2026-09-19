@@ -1085,7 +1085,7 @@ const App = {
 
   mobileMQ: (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(max-width: 760px)') : { matches: false }, // smoke loads this file headless
   isMobile() { return App.mobileMQ.matches; },
-  MOBILE_HINT: 'drag the loom to pan · pinch to zoom · + opens the node library · hold empty loom for quick-add, a card for its menu · the faders gather every control',
+  MOBILE_HINT: 'drag the loom to pan · pinch to zoom · tap a port, then another, to wire · + opens the node library · hold empty loom for quick-add, a card for its menu · the faders gather every control',
 
   bindMobile() {
     const hint = document.getElementById('statusHint');
@@ -1163,63 +1163,141 @@ const App = {
    * turned; the sheet itself is rebuilt when a new graph loads. */
 
   _params: null, _paramsDirty: null,
+  /* the panel's own memory: sections folded away (by group id) and the strip
+   * form — both survive rebuilds within a session; the strip is remembered
+   * per browser, since it is a way of working, not a state of one graph */
+  _pmFold: new Set(),
+  _pmStrip: (() => { try { return localStorage.getItem('weft:paramsStrip') === '1'; } catch (e) { return false; } })(),
 
   isControl(n) {
     const d = NODE_DEFS[n.type];
     return !!(d && d.cat === 'Params' && d.buildBody && !d.inspect && !d.relay);
   },
 
+  /* controls in the loom's reading order. A section is a group frame (its
+   * title is the header) or the one unnamed section of loose controls;
+   * sections and the controls inside them read top-to-bottom, left-to-right
+   * by where they sit — banded into 60px rows so a row of dials reads left
+   * to right instead of by the pixel. A folded frame still lists its
+   * controls: folding the plumbing away and playing it from here is the
+   * point. */
+  paramSections() {
+    const band = o => Math.round(o.y / 60);
+    const byPos = (a, b) => band(a) - band(b) || a.x - b.x;
+    const owner = new Map();
+    for (const f of App.graph.groups || []) for (const id of f.nodes) if (!owner.has(id)) owner.set(id, f);
+    const secs = new Map();
+    for (const n of App.graph.nodes) {
+      if (!App.isControl(n)) continue;
+      const f = owner.get(n.id);
+      const key = f ? f.id : '';
+      let s = secs.get(key);
+      if (!s) { s = { id: key, title: f ? (f.title || 'group') : '', x: f ? f.x : 0, y: f ? f.y : 0, nodes: [] }; secs.set(key, s); }
+      s.nodes.push(n);
+    }
+    const out = [...secs.values()];
+    for (const s of out) {
+      s.nodes.sort(byPos);
+      if (!s.id) { s.x = s.nodes[0].x; s.y = s.nodes[0].y; } // loose controls sit where their first one does
+    }
+    return out.sort(byPos);
+  },
+
+  /* the strip: the open panel folded to a 36px bar at the loom's left, so a
+   * long session keeps the params a tap away without the panel eating the loom */
+  stripParams(on) {
+    App._pmStrip = !!on;
+    try { localStorage.setItem('weft:paramsStrip', on ? '1' : '0'); } catch (e) {}
+    if (App._params) App.toggleParams(true);
+  },
+
   toggleParams(on) {
     const ed = document.getElementById('editor');
     const want = on === undefined ? !App._params : !!on;
+    const flushDirty = () => { for (const id of App._paramsDirty || []) Editor.rebuildNode(id); App._paramsDirty = null; };
     if (!want) {
       if (!App._params) return;
       App._params.remove(); App._params = null;
-      ed.classList.remove('params-open');
-      for (const id of App._paramsDirty || []) Editor.rebuildNode(id);
-      App._paramsDirty = null;
+      ed.classList.remove('params-open', 'params-strip');
+      flushDirty();
       return;
     }
     let scrollTop = 0;
     if (App._params) { const l = App._params.querySelector('.pm-list'); scrollTop = l ? l.scrollTop : 0; App._params.remove(); }
-    const nodes = App.graph.nodes.filter(App.isControl);
+    const sections = App.paramSections();
+    const count = sections.reduce((a, s) => a + s.nodes.length, 0);
+    const countText = count ? count + (count === 1 ? ' control' : ' controls') : '';
+    const sheet = document.createElement('div');
+    sheet.id = 'params';
+    if (App._pmStrip && !App.isMobile()) {
+      // the strip has no rows, so the cards catch up now rather than at close
+      flushDirty();
+      sheet.className = 'strip';
+      sheet.innerHTML = `<button class="pm-strip" title="params — open the panel">${weftUISVG('params')}<span class="pm-strip-label">params</span><span class="pm-strip-count">${count || ''}</span></button>`;
+      sheet.querySelector('.pm-strip').addEventListener('click', () => App.stripParams(false));
+      sheet.addEventListener('pointerdown', e => e.stopPropagation());
+      ed.appendChild(sheet);
+      ed.classList.add('params-open', 'params-strip');
+      App._params = sheet;
+      return;
+    }
     // a slider wants the full width; a dial, a toggle, a swatch, a button sit three to a row
     const COMPACT = new Set(['params/angle', 'params/knob', 'params/toggle', 'params/swatch', 'params/button']);
     // sliders, knobs and angles carry their own label widget — the rest get a name line
     const OWN_LABEL = new Set(['params/slider', 'params/knob', 'params/angle']);
-    const sheet = document.createElement('div');
-    sheet.id = 'params';
-    sheet.innerHTML = `<div class="pm-head"><span class="pm-title">params</span><span class="pm-count">${nodes.length ? nodes.length + (nodes.length === 1 ? ' control' : ' controls') : ''}</span><button class="pm-x" title="back to the loom">✕</button></div><div class="pm-list"></div>`;
+    sheet.innerHTML = `<div class="pm-head"><span class="pm-title">params</span><span class="pm-count">${countText}</span><button class="pm-min" title="fold to a strip">‹</button><button class="pm-x" title="back to the loom">✕</button></div><div class="pm-list"></div>`;
     const list = sheet.querySelector('.pm-list');
     App._paramsDirty = App._paramsDirty || new Set();
-    for (const n of nodes) {
-      const def = NODE_DEFS[n.type];
-      const row = document.createElement('div');
-      row.className = 'pm-row ' + (COMPACT.has(n.type) ? 'compact' : 'wide');
-      row.dataset.id = n.id;
-      row.style.setProperty('--cat', CATS[def.cat] || '#6b7891');
-      const lab = document.createElement('div');
-      lab.className = 'pm-label';
-      lab.textContent = def.title; // the eyebrow: what kind of control
-      row.appendChild(lab);
-      const name = n.label || (n.values && n.values.label);
-      if (name && !OWN_LABEL.has(n.type)) {
-        const nm = document.createElement('div');
-        nm.className = 'pm-name';
-        nm.textContent = name;
-        row.appendChild(nm);
+    // one unnamed section needs no header; the moment there is a group, every section gets one
+    const headed = sections.length > 1 || (sections.length === 1 && !!sections[0].id);
+    for (const sec of sections) {
+      const folded = !!sec.id && App._pmFold.has(sec.id);
+      if (headed) {
+        const h = document.createElement('div');
+        h.className = 'pm-sec' + (folded ? ' folded' : '') + (sec.id ? '' : ' loose');
+        h.innerHTML = `<span class="pm-sec-chev">▾</span><span class="pm-sec-title"></span><span class="pm-sec-count">${sec.nodes.length}</span>`;
+        h.querySelector('.pm-sec-title').textContent = sec.title || 'loose';
+        if (sec.id) {
+          h.title = folded ? 'unfold this section' : 'fold this section away';
+          h.addEventListener('click', () => {
+            if (App._pmFold.has(sec.id)) App._pmFold.delete(sec.id); else App._pmFold.add(sec.id);
+            App.toggleParams(true);
+          });
+        }
+        list.appendChild(h);
       }
-      const body = document.createElement('div');
-      body.className = 'node-body pm-body';
-      row.appendChild(body);
-      def.buildBody(n, body, () => { App._paramsDirty.add(n.id); App._paramsSelfAt = performance.now(); App.onGraphChanged(); });
-      list.appendChild(row);
+      if (folded) continue;
+      for (const n of sec.nodes) {
+        const def = NODE_DEFS[n.type];
+        const row = document.createElement('div');
+        row.className = 'pm-row ' + (COMPACT.has(n.type) ? 'compact' : 'wide');
+        row.dataset.id = n.id;
+        row.style.setProperty('--cat', CATS[def.cat] || '#6b7891');
+        const lab = document.createElement('div');
+        lab.className = 'pm-label';
+        lab.textContent = def.title; // the eyebrow: what kind of control
+        row.appendChild(lab);
+        const name = n.label || (n.values && n.values.label);
+        if (name && !OWN_LABEL.has(n.type)) {
+          const nm = document.createElement('div');
+          nm.className = 'pm-name';
+          nm.textContent = name;
+          row.appendChild(nm);
+        }
+        const body = document.createElement('div');
+        body.className = 'node-body pm-body';
+        row.appendChild(body);
+        def.buildBody(n, body, () => { App._paramsDirty.add(n.id); App._paramsSelfAt = performance.now(); App.onGraphChanged(); });
+        list.appendChild(row);
+      }
     }
-    if (!nodes.length) list.innerHTML = '<p class="pm-empty">no controls on the loom yet — add a slider, knob, toggle, swatch or button and it shows up here.</p>';
+    if (!count) list.innerHTML = '<p class="pm-empty">no controls on the loom yet — add a slider, knob, toggle, swatch or button and it shows up here.</p>';
     sheet.querySelector('.pm-x').addEventListener('click', () => App.toggleParams(false));
+    sheet.querySelector('.pm-min').addEventListener('click', () => App.stripParams(true));
     sheet.addEventListener('pointerdown', e => e.stopPropagation()); // the loom's gestures stop at the sheet
     ed.appendChild(sheet);
     ed.classList.add('params-open');
+    ed.classList.remove('params-strip');
     App._params = sheet;
     if (scrollTop) list.scrollTop = scrollTop;
   },
