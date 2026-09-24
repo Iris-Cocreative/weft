@@ -901,6 +901,25 @@ for (const name of Object.keys(EXAMPLES)) {
     if (sImg.I !== 0 || sImg.N !== 1) failures.push('disp/shapesample: a clear pixel lets the shape below show, got ' + JSON.stringify(sImg));
     const sImg2 = SS.compute({ G: [shapes[0], IM], P: { x: 50, y: 5 }, R: 4, C: [red] }, c4, {});
     if (sImg2.I !== 1 || sImg2.C.g !== 255) failures.push('disp/shapesample: an opaque pixel wins with its own color');
+    /* Echo blends between recorded frames: a point moving at a steady speed,
+       sampled on an uneven frame clock, comes back exactly on its line T s ago */
+    {
+      const EC = NODE_DEFS['state/echo'], en = {}, dts = [0.007, 0.023, 0.011, 0.019, 0.016, 0.009, 0.025];
+      let tt = 0, worst = 0, o;
+      for (let f = 0; f < 200; f++) {
+        tt += dts[f % dts.length];
+        const c = mkCtx(); c.t = tt; c.dt = dts[f % dts.length];
+        o = EC.compute({ V: { x: 100 * tt, y: -50 * tt }, T: 0.5, N: 3 }, c, en);
+        if (tt > 0.6) worst = Math.max(worst, Math.abs(o.R.x - 100 * (tt - 0.5)), Math.abs(o.R.y + 50 * (tt - 0.5)));
+      }
+      if (worst > 1e-6) failures.push('state/echo: delayed point must interpolate between frames, off by ' + worst);
+      if (Math.abs(o.L[0].x - 100 * tt) > 1e-6 || Math.abs(o.L[1].x - 100 * (tt - 0.25)) > 1e-6) failures.push('state/echo: trail spread evenly across T, newest first');
+      const es = {}; let r;
+      for (let f = 1; f <= 30; f++) { const c = mkCtx(); c.t = f * 0.05; r = EC.compute({ V: f < 20 ? 'a' : 'b', T: 0.2, N: 2 }, c, es); }
+      if (r.R !== 'b') failures.push('state/echo: a string holds, never blends');
+      if (LM.lerpAny({ r: 0, g: 0, b: 0, a: 0 }, { r: 200, g: 100, b: 0, a: 1 }, 0.5).g !== 50) failures.push('lerpAny: colors blend');
+      if (LM.lerpAny({ kind: 'circle', cx: 0, cy: 0, r: 1 }, { kind: 'circle', cx: 9, cy: 0, r: 1 }, 0.5).cx !== 0) failures.push('lerpAny: geometry holds');
+    }
     /* a cluster forwards the channel */
     const cl = { values: { ins: [], outs: [], graph: { nodes: [{ id: 'i', type: 'params/image', values: { src: 'data:in', w: 1, h: 1 } }], wires: [] } } };
     const c3 = mkCtx(); NODE_DEFS['meta/cluster'].compute({}, c3, cl);

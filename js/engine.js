@@ -15,6 +15,19 @@ const LM = {
   /* ---------- numbers ---------- */
   clamp: (v, a, b) => v < a ? a : v > b ? b : v,
   lerp: (a, b, t) => a + (b - a) * t,
+  /* blend any two port values of the same shape: numbers, and flat objects of
+     numbers (point, vector, point3, color). Anything else — bools, strings,
+     geometry, paints, mismatched shapes — holds a (no halfway exists) */
+  lerpAny: (a, b, t) => {
+    if (typeof a === 'number' && typeof b === 'number') return a + (b - a) * t;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) || a.kind !== undefined || a.paint !== undefined) return a;
+    const o = {};
+    for (const k in a) {
+      if (typeof a[k] !== 'number' || typeof b[k] !== 'number') return a;
+      o[k] = a[k] + (b[k] - a[k]) * t;
+    }
+    return o;
+  },
   fract: n => n - Math.floor(n),
 
   hash1: n => { const s = Math.sin(n * 127.1) * 43758.5453123; return s - Math.floor(s); },

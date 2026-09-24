@@ -769,6 +769,12 @@ Then:
   cached per frame on `node._shp`), not a canvas read-back, so it stays
   deterministic and exports as-is. *Pixel sprite* example (with Echo lagging
   a disc behind the pointer).
+- ✅ **Echo interpolates** (2026-09-24) — it used to hand back the nearest
+  recorded frame, so on an uneven browser frame clock a delayed point stalled
+  a frame then jumped two (worst on a curve through the trail). It now blends
+  the frames either side via `LM.lerpAny` (numbers and flat numeric objects —
+  point, vector, point3, color; everything else holds), history cap 900 →
+  2400 so a 10 s delay survives 240 fps. Smoke pins it.
 - Video and **Webcam** as animated image sources (getUserMedia — nothing like
   it exists in GH).
 - Feedback buffer (previous frame as an image) → trails, decay, flow.

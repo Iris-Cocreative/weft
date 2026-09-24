@@ -3476,15 +3476,22 @@ defNode('state/echo', {
     if (s.ts.length && t < s.ts[s.ts.length - 1]) { s.ts.length = 0; s.vs.length = 0; } // time ran backwards — start over
     if (s.ts.length && s.ts[s.ts.length - 1] === t) s.vs[s.vs.length - 1] = a.V;
     else { s.ts.push(t); s.vs.push(a.V); }
-    while (s.ts.length > 1 && (s.ts[0] < t - T - 0.25 || s.ts.length > 900)) { s.ts.shift(); s.vs.shift(); }
-    const at = tt => { // newest sample at or before tt (the oldest kept until history fills)
-      let lo = 0, hi = s.ts.length - 1, r = 0;
-      while (lo <= hi) { const mid = (lo + hi) >> 1; if (s.ts[mid] <= tt) { r = mid; lo = mid + 1; } else hi = mid - 1; }
-      return s.vs[r];
+    /* keep one sample older than the window so the far end can blend; 2400
+       covers a 10 s delay at 240 fps */
+    while (s.ts.length > 2 && (s.ts[1] <= t - T || s.ts.length > 2400)) { s.ts.shift(); s.vs.shift(); }
+    const at = tt => { // V at time tt, blended between the frames either side (the oldest held until history fills)
+      const n = s.ts.length;
+      if (tt <= s.ts[0]) return s.vs[0];
+      if (tt >= s.ts[n - 1]) return s.vs[n - 1];
+      let lo = 0, hi = n - 1;
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (s.ts[mid] <= tt) lo = mid; else hi = mid; }
+      /* browser frames land unevenly; snapping to the nearest recorded one made
+         a delayed point stall a frame then jump two — blend instead */
+      return LM.lerpAny(s.vs[lo], s.vs[hi], (tt - s.ts[lo]) / (s.ts[hi] - s.ts[lo]));
     };
-    const trail = []; // the 1e-6 keeps float jitter from landing one sample early at exact boundaries
-    for (let k = 0; k < N; k++) trail.push(at(t - (N > 1 ? T * k / (N - 1) : 0) + 1e-6));
-    return { R: at(t - T + 1e-6), L: trail };
+    const trail = [];
+    for (let k = 0; k < N; k++) trail.push(at(t - (N > 1 ? T * k / (N - 1) : 0)));
+    return { R: at(t - T), L: trail };
   }
 });
 
