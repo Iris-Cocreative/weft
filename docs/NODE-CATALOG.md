@@ -2334,6 +2334,24 @@ A paint running from C1 at center P (solid inside radius R0) out to C2 at radius
 |---|---|---|
 | P | color | paint |
 
+### `disp/shapesample` — Shape Sample
+
+Which shape in G covers point P — the topmost one (last in the list) wins. Its index, how many overlap, and its color from list C (an image gives its pixel color). Wire a grid of points in: pixel art from any vector drawing
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | shapes (whole list) · receives whole list |
+| P | point | `{"x":0,"y":0}` |  |
+| R | number | `4` | reach px (lines, points) |
+| C | color | `{"r":230,"g":237,"b":250,"a":1}` | colors per shape · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| B | bool | hit |
+| I | number | index of top shape (-1 = none) |
+| N | number | shapes covering P |
+| C | color |  |
+
 ### `disp/text` — Text
 
 Text geometry at point P — wire into Draw
@@ -2650,4 +2668,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-191 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+192 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

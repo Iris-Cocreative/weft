@@ -75,6 +75,12 @@ geometry that reaches no Draw node is invisible.
   radius, dark = big)` → `crv/circle(P, R)` → Draw. One Sample node, list
   matching does the rest; C gives the color if you want it. Example:
   *Halftone*.
+- **Pixel art from vector shapes** — wire every shape into one
+  `disp/shapesample` G (draw order: last = on top) and a swatch per shape into
+  its C; `vec/grid(S → P)` into P, then `crv/rect(P, W=H=S)` → Draw with F =
+  Shape Sample's C. Raise R to catch thin lines. Example: *Pixel sprite*.
+- **Something that lags behind** — `state/echo(V, T seconds)`: R is V as it
+  was T seconds ago (any type — a point, a number, a color); L is the trail.
 - **A row or field of identical copies** — `xf/tile(G, V1, N1, V2, N2 → G, I, J)`.
   Only for *identical* copies: if the cells differ, use `vec/grid` + list
   matching instead (that is the whole point of principle 6).

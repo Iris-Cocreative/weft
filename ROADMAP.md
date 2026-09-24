@@ -761,6 +761,14 @@ Then:
   one Grid, one Sample, one Remap — the killer node, and it is one node.
   Open: blend modes, an image *paint* (pattern fill), video/webcam sources
   (the channel is ready for them — a frame is just a src that changes).
+- ✅ **Shape Sample** `disp/shapesample` (2026-09-24, unreleased) — Image
+  Sample for vectors: G takes the whole shape list, the last shape covering P
+  wins (draw order), outputs hit / index / overlap count / that shape's color
+  from list C; R is the reach for lines and points; image items count where
+  opaque and give their pixel. Pure hit-testing (`LM.pointInGeom`, polys
+  cached per frame on `node._shp`), not a canvas read-back, so it stays
+  deterministic and exports as-is. *Pixel sprite* example (with Echo lagging
+  a disc behind the pointer).
 - Video and **Webcam** as animated image sources (getUserMedia — nothing like
   it exists in GH).
 - Feedback buffer (previous frame as an image) → trails, decay, flow.

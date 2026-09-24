@@ -2529,6 +2529,47 @@ defNode('disp/sample', {
   }
 });
 
+/* Shape Sample — Image Sample for vector geometry: which of the shapes in G
+ * covers point P. The list is read in draw order, so the LAST shape wins, the
+ * way it would sit on top on the canvas. Image items count where their pixels
+ * are at least half opaque and hand back the pixel color. The flattened
+ * polygons are cached per frame on node._shp (the engine hands every list
+ * item the same G array), so a 60×60 grid against a few shapes stays cheap. */
+defNode('disp/shapesample', {
+  title: 'Shape Sample', cat: 'Display',
+  desc: 'Which shape in G covers point P — the topmost one (last in the list) wins. Its index, how many overlap, and its color from list C (an image gives its pixel color). Wire a grid of points in: pixel art from any vector drawing',
+  inputs: [
+    { name: 'G', type: 'geometry', label: 'shapes (whole list)' },
+    { name: 'P', type: 'point', default: { x: 0, y: 0 } },
+    { name: 'R', type: 'number', default: 4, label: 'reach px (lines, points)' },
+    { name: 'C', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 }, label: 'colors per shape' }],
+  outputs: [
+    { name: 'B', type: 'bool', label: 'hit' },
+    { name: 'I', type: 'number', label: 'index of top shape (-1 = none)' },
+    { name: 'N', type: 'number', label: 'shapes covering P' },
+    { name: 'C', type: 'color' }],
+  listInputs: ['G', 'C'],
+  compute: (a, ctx, node) => {
+    const G = a.G || [], cs = a.C || [], p = a.P, pad = Math.max(0, +a.R || 0);
+    if (!node._shp || node._shp.G !== G)
+      node._shp = { G, polys: G.map(g => (g && g.kind && g.kind !== 'circle' && g.kind !== 'text' && g.kind !== 'image') ? LM.toPoly(g, 48) : null) };
+    const polys = node._shp.polys;
+    let top = -1, n = 0, col = null;
+    for (let k = 0; k < G.length; k++) {
+      const g = G[k];
+      if (!g) continue;
+      if (g.kind === 'image') {
+        const c = LM.imageAt(g, ctx.imageState && ctx.imageState[g.src], p);
+        if (c.a >= 0.5) { top = k; n++; col = c; }
+      } else if (LM.pointInGeom(g, p, pad, polys[k] || undefined)) {
+        top = k; n++;
+        col = cs.length ? cs[Math.min(k, cs.length - 1)] : { r: 230, g: 237, b: 250, a: 1 };
+      }
+    }
+    return { B: top >= 0, I: top, N: n, C: col || { r: 0, g: 0, b: 0, a: 0 } };
+  }
+});
+
 defNode('disp/bg', {
   title: 'Background', cat: 'Display', desc: 'Set the canvas background — a color, or a paint from Linear / Radial Gradient (laid in centered px like geometry)',
   inputs: [{ name: 'C', type: 'color', default: { r: 11, g: 14, b: 20, a: 1 } }],

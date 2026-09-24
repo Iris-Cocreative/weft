@@ -959,8 +959,10 @@ const LM = {
     }
   },
 
-  /* hit test: inside a closed shape, or within pad px of an open curve/point */
-  pointInGeom: (g, p, pad) => {
+  /* hit test: inside a closed shape, or within pad px of an open curve/point.
+     P is optional — g's toPoly, when a caller tests many points against the
+     same shape and has already flattened it (Shape Sample) */
+  pointInGeom: (g, p, pad, P0) => {
     if (!g || !p) return false;
     pad = pad === undefined ? 6 : pad;
     if (g.kind === undefined && g.x !== undefined) return Math.hypot(g.x - p.x, g.y - p.y) <= Math.max(pad, 4);
@@ -969,7 +971,7 @@ const LM = {
       const s = g.size || 24, w = String(g.text === undefined ? '' : g.text).length * s * 0.6;
       return Math.abs(p.x - (g.x || 0)) <= w / 2 + pad && Math.abs(p.y - (g.y || 0)) <= s * 0.7;
     }
-    const P = LM.toPoly(g, 48), pts = P.pts;
+    const P = P0 || LM.toPoly(g, 48), pts = P.pts;
     if (!pts.length) return false;
     if (P.closed && pts.length > 2 && LM.ptInPoly(p, pts)) {
       /* a point inside one of a poly's holes is outside the region */

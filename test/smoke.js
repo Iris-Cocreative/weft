@@ -886,6 +886,21 @@ for (const name of Object.keys(EXAMPLES)) {
     if (sm.C.r !== 255 || Math.abs(sm.B - 1) > 1e-9 || sm.A !== 1) failures.push('disp/sample: white pixel → B 1, got ' + JSON.stringify(sm));
     const sm0 = NODE_DEFS['disp/sample'].compute({ G: IM, P: { x: 50, y: 5 } }, mkCtx());
     if (sm0.C.a !== 0 || sm0.B !== 0) failures.push('disp/sample: no read-back → transparent, B 0');
+    /* Shape Sample: the last shape in the list covering P wins; reach for lines; images by pixel alpha */
+    const SS = NODE_DEFS['disp/shapesample'], ssNode = {};
+    const shapes = [{ kind: 'rect', cx: 0, cy: 0, w: 200, h: 200, rot: 0 }, { kind: 'circle', cx: 50, cy: 0, r: 30 }, { kind: 'line', a: { x: -100, y: 150 }, b: { x: 100, y: 150 } }];
+    const red = { r: 255, g: 0, b: 0, a: 1 }, blu = { r: 0, g: 0, b: 255, a: 1 };
+    const ss = P => SS.compute({ G: shapes, P, R: 4, C: [red, blu] }, mkCtx(), ssNode);
+    const s1 = ss({ x: 50, y: 0 }), s2 = ss({ x: -50, y: 0 }), s3 = ss({ x: 0, y: 153 }), s4 = ss({ x: 0, y: 120 });
+    if (!s1.B || s1.I !== 1 || s1.N !== 2 || s1.C.b !== 255) failures.push('disp/shapesample: top of two overlapping shapes, got ' + JSON.stringify(s1));
+    if (s2.I !== 0 || s2.C.r !== 255) failures.push('disp/shapesample: bottom shape alone');
+    if (s3.I !== 2 || s3.C.b !== 255) failures.push('disp/shapesample: open line within reach, color repeats the last in C');
+    if (s4.B || s4.I !== -1 || s4.C.a !== 0) failures.push('disp/shapesample: miss is transparent, index -1');
+    const c4 = mkCtx(); c4.imageState = { x: st };
+    const sImg = SS.compute({ G: [shapes[0], IM], P: { x: 50, y: 40 }, R: 4, C: [red] }, c4, {});
+    if (sImg.I !== 0 || sImg.N !== 1) failures.push('disp/shapesample: a clear pixel lets the shape below show, got ' + JSON.stringify(sImg));
+    const sImg2 = SS.compute({ G: [shapes[0], IM], P: { x: 50, y: 5 }, R: 4, C: [red] }, c4, {});
+    if (sImg2.I !== 1 || sImg2.C.g !== 255) failures.push('disp/shapesample: an opaque pixel wins with its own color');
     /* a cluster forwards the channel */
     const cl = { values: { ins: [], outs: [], graph: { nodes: [{ id: 'i', type: 'params/image', values: { src: 'data:in', w: 1, h: 1 } }], wires: [] } } };
     const c3 = mkCtx(); NODE_DEFS['meta/cluster'].compute({}, c3, cl);

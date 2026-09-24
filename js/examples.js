@@ -48,6 +48,41 @@ const EXAMPLES = {
     ['im', 'G', 'd2', 'G']
   ]),
 
+  /* Shape Sample (v0.23): vector shapes read back as pixels. A spinning
+   * triangle, a disc on the pointer and a second disc that Echo holds half a
+   * second behind it all go into ONE Shape Sample in draw order; a grid of
+   * points asks which shape is on top under each cell and paints the square
+   * with that shape's color from the swatch list — pixel art from live vectors. */
+  'Pixel sprite': _EX([
+    ['tm', 'input/time', 30, 40],
+    ['mo', 'input/mouse', 30, 200],
+    ['cp', 'vec/construct', 250, 200],
+    ['ec', 'state/echo', 470, 280, { T: 0.5 }],
+    ['pg', 'crv/polygon', 250, 20, { R: 190, N: 3 }],
+    ['ro', 'xf/rotate', 470, 40],
+    ['c1', 'crv/circle', 690, 200, { R: 70 }],
+    ['c2', 'crv/circle', 690, 340, { R: 50 }],
+    ['s1', 'params/swatch', 690, 480, { hex: '#3b2a6b', a: 1 }],
+    ['s2', 'params/swatch', 690, 560, { hex: '#f472b6', a: 1 }],
+    ['s3', 'params/swatch', 690, 640, { hex: '#5eead4', a: 1 }],
+    ['px', 'params/slider', 30, 460, { label: 'pixel size', min: 6, max: 30, value: 14 }],
+    ['gr', 'vec/grid', 250, 460, { W: 720, H: 480 }],
+    ['ss', 'disp/shapesample', 930, 200],
+    ['rc', 'crv/rect', 930, 460],
+    ['dr', 'disp/draw', 1170, 300, { S: { r: 12, g: 12, b: 20, a: 1 }, W: 1 }],
+    ['bg', 'disp/bg', 1170, 500, { C: { r: 12, g: 12, b: 20, a: 1 } }]
+  ], [
+    ['mo', 'X', 'cp', 'X'], ['mo', 'Y', 'cp', 'Y'],
+    ['cp', 'P', 'ec', 'V'],
+    ['pg', 'C', 'ro', 'G'], ['tm', 'T', 'ro', 'A'],
+    ['cp', 'P', 'c1', 'P'], ['ec', 'R', 'c2', 'P'],
+    ['ro', 'G', 'ss', 'G'], ['c2', 'C', 'ss', 'G'], ['c1', 'C', 'ss', 'G'],
+    ['s1', 'C', 'ss', 'C'], ['s2', 'C', 'ss', 'C'], ['s3', 'C', 'ss', 'C'],
+    ['px', 'N', 'gr', 'S'], ['gr', 'P', 'ss', 'P'],
+    ['gr', 'P', 'rc', 'P'], ['px', 'N', 'rc', 'W'], ['px', 'N', 'rc', 'H'],
+    ['rc', 'C', 'dr', 'G'], ['ss', 'C', 'dr', 'F']
+  ]),
+
   'Lantern': _EX([
     ['sk', 'disp/linear', 30, 40, { A: { x: 0, y: -320 }, B: { x: 0, y: 320 }, C1: { r: 10, g: 14, b: 36, a: 1 }, C2: { r: 74, g: 22, b: 62, a: 1 } }],
     ['bg', 'disp/bg', 280, 40],
@@ -18223,6 +18258,13 @@ const EXAMPLE_META = {
     teaches: 'A picture is geometry: Image In emits it, Draw draws it, Image Sample reads it — the same value in three roles — and list matching turns one Sample node into a whole halftone.',
     tags: ['image', 'halftone', 'sample', 'grid', 'brightness', 'remap'],
     needs: [], frames: 30
+  },
+  'Pixel sprite': {
+    cat: 'Lists & grids',
+    blurb: 'Vector shapes rendered as chunky pixels — a spinning triangle, a disc on your pointer and its echo half a second behind, each cell colored by whichever shape sits on top.',
+    teaches: 'Shape Sample is Image Sample for vectors: one node takes every shape as a list, and a grid of points asks which one covers each cell. Echo delays any value — here a point — by T seconds.',
+    tags: ['pixel', 'sample', 'grid', 'shape sample', 'echo', 'delay', 'mouse'],
+    needs: [], frames: 40
   },
   'Lantern': {
     cat: 'Fundamentals',
