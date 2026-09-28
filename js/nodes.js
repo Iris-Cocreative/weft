@@ -1812,9 +1812,16 @@ defNode('vec/cross', {
   compute: a => ({ C: LM.vcross(a.A, a.B) })
 });
 
+/* Grid — one anchored lattice for both kinds. Points sit at
+ *   P − (ox, oy) + (i·s + stagger, j·vs)   (stagger = s/2 on odd iso rows)
+ * and (ox, oy) picks what lands on the center P: a lattice point, a cell center
+ * (square middle / iso triangle centroid), or — in auto — whatever the W×H
+ * parity gives, the way the square grid always has (odd count → a point, even
+ * → between). Kept: every point within W/2 + s/2 (H/2 + vs/2) of P, which
+ * reproduces the old square grid exactly. */
 defNode('vec/grid', {
-  title: 'Grid', cat: 'Vector', width: 156,
-  desc: 'Point lattice filling a W×H region, square or isometric — wire Viewport into W/H for a grid that always fills the canvas',
+  title: 'Grid', cat: 'Vector', width: 176,
+  desc: 'Point lattice filling a W×H region, square or isometric. Center: auto (by W/H parity — a point or between points), point (a lattice point on P), or cell (a cell center on P — a square’s middle, an iso triangle’s centroid). Wire Viewport into W/H for a grid that always fills the canvas',
   inputs: [
     { name: 'P', type: 'point', default: { x: 0, y: 0 }, label: 'center' },
     { name: 'S', type: 'number', default: 40, label: 'spacing' },
@@ -1827,44 +1834,48 @@ defNode('vec/grid', {
     { name: 'R', type: 'number', label: 'row' },
     { name: 'K', type: 'number', label: 'color class — 2 square · 3 iso' }
   ],
-  defaults: { iso: true },
+  defaults: { iso: true, center: 'auto' },
   compute: (a, ctx, node) => {
     const iso = node.values.iso !== false;
+    const mode = node.values.center || 'auto';
     const s = Math.max(0.5, Math.abs(a.S));
     const vs = iso ? s * 0.8660254037844386 : s;   /* √3/2 → equilateral rows */
-    const nx = LM.clamp(Math.floor(Math.abs(a.W) / s) + 2, 1, 1024);
-    const ny = LM.clamp(Math.floor(Math.abs(a.H) / vs) + 2, 1, 1024);
-    const x0 = a.P.x - (nx - 1) * s / 2, y0 = a.P.y - (ny - 1) * vs / 2;
+    const hx = Math.min(Math.abs(a.W) / 2 + s / 2, 512 * s), hy = Math.min(Math.abs(a.H) / 2 + vs / 2, 512 * vs);
+    let ox = 0, oy = 0;
+    if (mode === 'cell') { ox = s / 2; oy = iso ? vs / 3 : s / 2; }
+    else if (mode !== 'point') {
+      const nx = Math.floor(Math.abs(a.W) / s) + 2, ny = Math.floor(Math.abs(a.H) / vs) + 2;
+      if (!iso) { ox = (nx % 2) ? 0 : s / 2; oy = (ny % 2) ? 0 : s / 2; }
+      else if (ny % 2) { ox = (nx % 2) ? 0 : s / 2; }   /* a row through P: a point, or an edge midpoint */
+      else { ox = s / 4; oy = vs / 2; }                 /* between rows: the midpoint of a slanted edge */
+    }
+    const e = 1e-7, x0 = a.P.x - ox, y0 = a.P.y - oy;
+    const j0 = Math.ceil((oy - hy) / vs - e), j1 = Math.floor((oy + hy) / vs + e);
     const P = [], C = [], R = [], K = [];
-    for (let j = 0; j < ny && P.length < 20000; j++) {
-      /* iso rows half-stagger; ±s/4 keeps the lattice centered on P */
-      const dx = iso ? ((j & 1) ? s / 4 : -s / 4) : 0;
-      for (let i = 0; i < nx && P.length < 20000; i++) {
-        P.push({ x: x0 + i * s + dx, y: y0 + j * vs });
-        C.push(i); R.push(j);
+    for (let j = j0; j <= j1 && P.length < 20000; j++) {
+      const st = iso && (j & 1) ? s / 2 : 0;
+      const i0 = Math.ceil((ox - st - hx) / s - e), i1 = Math.floor((ox - st + hx) / s + e);
+      for (let i = i0; i <= i1 && P.length < 20000; i++) {
+        P.push({ x: x0 + i * s + st, y: y0 + j * vs });
+        C.push(i - i0); R.push(j - j0);
         /* K = the lattice's canonical coloring: the fewest classes such that no
            two neighbors share one. Square needs 2 (checkerboard). Iso needs 3,
            and it is NOT (i % 3) — the half-stagger means you must go through
            axial coords: q = i - floor(j/2), r = j, k = (q + 2r) mod 3. Then each
-           point's six neighbors carry the other two classes. Wire K into a phase
-           offset and one Circle node gives you the whole three-phase field. */
-        K.push(iso ? ((((i - Math.floor(j / 2) + 2 * j) % 3) + 3) % 3) : (i + j) % 2);
+           point's six neighbors carry the other two classes. Iso uses the
+           anchored i, j, so the point on P is always class 0. Wire K into a
+           phase offset and one Circle node gives you the whole three-phase field. */
+        K.push(iso ? ((((i - Math.floor(j / 2) + 2 * j) % 3) + 3) % 3) : (i - i0 + j - j0) % 2);
       }
     }
     return { P: P, C: C, R: R, K: K };
   },
   buildBody: (node, body, changed) => {
-    const seg = _mk('div', 'seg', body);
-    [['square', false], ['iso', true]].forEach(m => {
-      const b = _mk('div', 'seg-b' + ((node.values.iso !== false) === m[1] ? ' on' : ''), seg);
-      b.textContent = m[0];
-      _cleanClick(b, () => {
-        node.values.iso = m[1];
-        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
-        b.classList.add('on');
-        changed();
-      });
-    });
+    _modeSeg(node, body, changed, 'iso', [['square', false], ['iso', true]], true);
+    _modeSeg(node, body, changed, 'center', [
+      ['auto', 'auto', 'center follows W/H — a point or between points, like the square grid'],
+      ['point', 'point', 'a lattice point sits on the center'],
+      ['cell', 'cell', 'a cell center sits on the center — a square’s middle, an iso triangle’s centroid']], 'auto');
   }
 });
 

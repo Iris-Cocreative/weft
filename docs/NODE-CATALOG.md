@@ -1165,7 +1165,7 @@ A · B — how much of A points along B. Zero means perpendicular; with unit vec
 
 ### `vec/grid` — Grid
 
-Point lattice filling a W×H region, square or isometric — wire Viewport into W/H for a grid that always fills the canvas
+Point lattice filling a W×H region, square or isometric. Center: auto (by W/H parity — a point or between points), point (a lattice point on P), or cell (a cell center on P — a square’s middle, an iso triangle’s centroid). Wire Viewport into W/H for a grid that always fills the canvas
 
 | in | type | default | note |
 |---|---|---|---|
@@ -1181,7 +1181,7 @@ Point lattice filling a W×H region, square or isometric — wire Viewport into 
 | R | number | row |
 | K | number | color class — 2 square · 3 iso |
 
-Node values (`values` keys, not ports): `{"iso":true}`
+Node values (`values` keys, not ports): `{"iso":true,"center":"auto"}`
 
 ### `vec/line2vec` — Line to Vector
 

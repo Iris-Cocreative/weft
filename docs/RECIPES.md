@@ -166,6 +166,9 @@ downstream knows 3D happened.
   vec/construct(X)`.
 - **A grid of things** — `vec/grid(S:spacing → P, C:col R:row K:color-class)`;
   `values.iso:true` for a triangular lattice. K 3-colors the iso grid.
+  `values.center` decides what lands on P: `point` (a hexagon around a
+  point, a star from a vertex), `cell` (a triangle or square centered on P),
+  or `auto` (by W/H parity).
 - **Vary each item by its index** — Series feeds both the position *and* any
   per-item parameter (radius, hue) — longest-list matching lines them up.
 - **Random scatter** — `sets/random(N A B S:seed → R)` twice (different seeds) →

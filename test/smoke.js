@@ -850,6 +850,34 @@ for (const name of Object.keys(EXAMPLES)) {
     if (js.indexOf('createRadialGradient') < 0 || js.indexOf('fillBg') < 0) failures.push('exporter: paint helpers must survive the shake');
   }
 
+  /* Grid centering: point / cell / auto land a lattice feature on P, square and iso alike */
+  {
+    const GR = NODE_DEFS['vec/grid'], Pc = { x: 30, y: -20 };
+    const run = (iso, center, W, H) => GR.compute({ P: Pc, S: 40, W, H }, mkCtx(), { values: { iso, center } });
+    const has = (o, x, y) => o.P.some(p => Math.abs(p.x - x) < 1e-6 && Math.abs(p.y - y) < 1e-6);
+    const vs = 40 * Math.sqrt(3) / 2;
+    for (const iso of [false, true]) for (const [W, H] of [[800, 600], [780, 590], [400, 377]]) {
+      const pt = run(iso, 'point', W, H);
+      if (!has(pt, Pc.x, Pc.y)) failures.push('vec/grid: point mode must put a point on P (iso ' + iso + ', ' + W + '×' + H + ')');
+      if (iso && pt.K[pt.P.findIndex(p => Math.abs(p.x - Pc.x) < 1e-6 && Math.abs(p.y - Pc.y) < 1e-6)] !== 0) failures.push('vec/grid: the iso point on P is color class 0');
+      const ce = run(iso, 'cell', W, H);
+      if (has(ce, Pc.x, Pc.y)) failures.push('vec/grid: cell mode keeps points off P');
+      /* the cell around P: square corners at ±s/2; iso triangle (−s/2, −vs/3), (s/2, −vs/3), (0, 2vs/3) */
+      const corners = iso ? [[-20, -vs / 3], [20, -vs / 3], [0, 2 * vs / 3]] : [[-20, -20], [20, -20], [-20, 20], [20, 20]];
+      if (!corners.every(c => has(ce, Pc.x + c[0], Pc.y + c[1]))) failures.push('vec/grid: cell mode must surround P with one cell (iso ' + iso + ')');
+      const au = run(iso, 'auto', W, H);
+      /* auto: P is a point, or the midpoint of two neighbors */
+      const onPt = has(au, Pc.x, Pc.y);
+      const mid = au.P.some(p => au.P.some(q => q !== p && Math.abs(Math.hypot(p.x - q.x, p.y - q.y) - 40) < 1e-6 && Math.abs((p.x + q.x) / 2 - Pc.x) < 1e-6 && Math.abs((p.y + q.y) / 2 - Pc.y) < 1e-6));
+      const sqCell = !iso && corners.every(c => has(au, Pc.x + c[0], Pc.y + c[1]));
+      if (!onPt && !mid && !sqCell) failures.push('vec/grid: auto must center on a point, between two, or (square) on a cell (iso ' + iso + ', ' + W + '×' + H + ')');
+      /* the region is covered: extreme points reach at least W/2, H/2 from P */
+      const xs = au.P.map(p => p.x), ys = au.P.map(p => p.y);
+      if (Math.min(...xs) > Pc.x - W / 2 + 1e-6 && W > 40) failures.push('vec/grid: must cover the region width');
+      if (Math.max(...ys) < Pc.y + H / 2 - (iso ? vs : 40) / 2 - 1e-6) failures.push('vec/grid: must cover the region height');
+    }
+  }
+
   /* images (v0.22): the image kind, the declare/read-back channel, sampling */
   {
     const IM = { kind: 'image', src: 'x', cx: 10, cy: 20, w: 100, h: 50, rot: 0, alpha: 1 };

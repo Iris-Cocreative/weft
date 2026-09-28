@@ -775,6 +775,13 @@ Then:
   the frames either side via `LM.lerpAny` (numbers and flat numeric objects —
   point, vector, point3, color; everything else holds), history cap 900 →
   2400 so a 10 s delay survives 240 fps. Smoke pins it.
+- ✅ **Grid centering** (2026-09-28) — a second 3-way toggle on Grid,
+  `values.center`: auto (by W/H parity, as square always did), point (a
+  lattice point on P), cell (a square's middle / an iso triangle's centroid
+  on P). One anchored lattice for both kinds; the iso grid used to stagger
+  ±s/4 so its center never touched the lattice — now auto lands it on a
+  point, an edge midpoint, or between rows. Square auto is byte-identical to
+  before (240-case comparison); the iso point on P is color class 0.
 - Video and **Webcam** as animated image sources (getUserMedia — nothing like
   it exists in GH).
 - Feedback buffer (previous frame as an image) → trails, decay, flow.

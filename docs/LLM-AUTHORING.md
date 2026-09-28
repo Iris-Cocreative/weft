@@ -186,7 +186,7 @@ and/or/xor/not).
 | `vec/polar` | O:point A:angle R:radius | P:point | |
 | `vec/distance` | A B | D | |
 | `vec/angle` | A B | R | |
-| `vec/grid` | P S:spacing W H | P:point C:col R:row K:color-class | values.iso for iso lattice |
+| `vec/grid` | P S:spacing W H | P:point C:col R:row K:color-class | values.iso for iso lattice (default true); values.center `auto` (by W/H parity) · `point` (a lattice point on P) · `cell` (a cell center on P — square middle / iso triangle centroid) |
 | `vec/vecxy` | X Y | V:vector | |
 | `vec/vec2pt` | A B U:unit | V:vector L | |
 | `vec/line2vec` | C:geometry U:unit | V:vector L | start → end of any curve; a Line becomes the vector it draws |
