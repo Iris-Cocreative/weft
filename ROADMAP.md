@@ -634,7 +634,9 @@ Then:
 - [shipped 2026-09-30] **Expression grows** (James): the source field wraps
   and grows with the expression (Enter commits, Shift+Enter breaks a line),
   and the card carries variable chips — rename in place, × removes, + var
-  adds, Custom JS style. Stored as `values.ins`; a card without it is the
+  adds (X Y Z, then A B C…), Custom JS style. Each chip is one bordered pill
+  holding a monospace name and a quiet ✕ icon (`_portX`, shared with Custom
+  JS's port rows); the source text dropped v0.1's pink for the code color. Stored as `values.ins`; a card without it is the
   classic X Y Z, so every old graph loads unchanged. Engine side it's one new
   def flag, `varIns` (inputs only may live on the node — unlike `dynamic`, no
   list inputs, no sink, no cluster styling); editor, ops, validator, exporter

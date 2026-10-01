@@ -672,13 +672,22 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .expr-src {
   width: 100%; padding: 3px 7px;
   background: #0c111c; border: 1px solid #26304a; border-radius: 6px;
-  color: #e2b7f5; font: 11px/1.45 ui-monospace, Consolas, monospace; outline: none;
+  color: #c8d2e4; font: 11px/1.45 ui-monospace, Consolas, monospace; outline: none;
   display: block; resize: none; overflow: hidden;
   white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.expr-src:focus { border-color: #a855f7; }
-.expr-vars { display: flex; flex-wrap: wrap; gap: 3px 8px; align-items: center; margin-top: 4px; }
-.expr-vars .js-port input.js-name { max-width: 120px; }
+.expr-src:focus { border-color: var(--accent-dim); }
+/* variable chips: each name and its ✕ share one bordered pill */
+.expr-vars { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; }
+.var-chip {
+  display: inline-flex; align-items: center; gap: 1px; height: 20px; padding: 0 1px 0 6px;
+  background: #0c111c; border: 1px solid #26304a; border-radius: 5px;
+}
+.var-chip:focus-within { border-color: var(--accent-dim); }
+.node-body .var-chip input.js-name {
+  background: none; border: 0; border-radius: 0; padding: 0; min-width: 1ch; max-width: 14ch;
+  color: #c8d2e4; font: 11px var(--font-val);
+}
 
 /* --- Custom JS (meta/js): code body + port editor --- */
 .js-code {
@@ -691,16 +700,18 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .js-ports { display: flex; gap: 8px; margin-top: 4px; }
 .js-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .js-port { display: flex; gap: 3px; align-items: center; min-width: 0; }
-.js-port input.js-name { width: 34px; flex: 0 0 auto; }
+.js-port input.js-name { width: 34px; flex: 0 0 auto; font-family: var(--font-val); }
 .js-port select.js-type {
   flex: 1; min-width: 0; background: var(--dark-150); border: 1px solid var(--dark-400);
   border-radius: 3px; color: var(--white-60); font: 10px var(--font-ui); outline: none; padding: 1px 2px;
 }
-.js-x {
-  flex: 0 0 auto; color: var(--white-40); cursor: pointer; font: 12px var(--font-ui);
-  padding: 0 2px; user-select: none;
+/* remove ✕ for a port row or variable chip — quiet until hovered */
+.port-x {
+  flex: 0 0 auto; display: grid; place-items: center; width: 16px; height: 16px; padding: 0;
+  background: none; border: 0; border-radius: 3px; color: var(--white-40); opacity: 0.6; cursor: pointer;
 }
-.js-x:hover { color: var(--type-bool); }
+.port-x svg { width: 8px; height: 8px; display: block; }
+.port-x:hover, .port-x:focus-visible { opacity: 1; color: var(--type-bool); background: rgba(255, 255, 255, 0.06); outline: none; }
 .js-add {
   color: var(--white-40); cursor: pointer; font: 10px var(--font-ui);
   padding: 1px 2px; user-select: none;
@@ -1309,6 +1320,7 @@ body { touch-action: none; }
   #viewHud button { height: 32px; min-width: 34px; }
   .row { min-height: 24px; }
   .lit input[type="number"], .lit input[type="text"] { padding: 3px 4px; }
+  .port-x { width: 22px; height: 22px; opacity: 0.8; }
   .pal-item { touch-action: pan-y; } /* the list scrolls under a finger; a sideways drag still lifts a node out */
 }
 

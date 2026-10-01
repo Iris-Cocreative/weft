@@ -35,6 +35,15 @@ function _mk(tag, cls, parent) {
   if (parent) parent.appendChild(e);
   return e;
 }
+/* the small ✕ that removes a port row / variable chip (Expression, Custom JS) */
+function _portX(parent, tip, onRemove) {
+  const x = _mk('button', 'port-x', parent);
+  x.type = 'button'; x.title = tip; x.setAttribute('aria-label', tip);
+  x.innerHTML = '<svg viewBox="0 0 8 8" aria-hidden="true"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  x.addEventListener('pointerdown', e => e.stopPropagation());
+  x.addEventListener('click', onRemove);
+  return x;
+}
 function _numInput(cls, value, parent) {
   const i = _mk('input', cls, parent);
   i.type = 'number'; i.step = 'any'; i.value = value;
@@ -1472,11 +1481,11 @@ defNode('math/expr', {
     const rebuild = () => { changed(); Editor.rebuildNode(node.id); };
     const wrap = _mk('div', 'expr-vars', body);
     for (const p of v.ins || NODE_DEFS['math/expr'].inputs) {
-      const row = _mk('div', 'js-port', wrap);
-      const nm = _mk('input', 'js-name', row);
+      const chip = _mk('div', 'var-chip', wrap);
+      const nm = _mk('input', 'js-name', chip);
       nm.type = 'text'; nm.value = p.name; nm.spellcheck = false;
       nm.title = 'a variable in the expression — rename it here';
-      const size = () => { nm.style.width = Math.max(3, nm.value.length + 2) + 'ch'; };
+      const size = () => { nm.style.width = Math.max(1, nm.value.length) + 'ch'; }; // mono: 1ch = 1 letter
       size(); nm.addEventListener('input', size);
       nm.addEventListener('pointerdown', e => e.stopPropagation());
       nm.addEventListener('keydown', e => e.stopPropagation());
@@ -1486,11 +1495,7 @@ defNode('math/expr', {
         if (q.name !== was && v[was] !== undefined) { v[q.name] = v[was]; delete v[was]; }
         rebuild();
       });
-      const x = _mk('span', 'js-x', row);
-      x.textContent = '×';
-      x.title = 'remove this variable';
-      x.addEventListener('pointerdown', e => e.stopPropagation());
-      x.addEventListener('click', () => {
+      _portX(chip, 'remove ' + p.name, () => {
         const L = ins();
         L.splice(L.findIndex(q => q.name === p.name), 1);
         delete v[p.name];
@@ -1503,7 +1508,8 @@ defNode('math/expr', {
     add.addEventListener('pointerdown', e => e.stopPropagation());
     add.addEventListener('click', () => {
       const taken = ins().map(p => p.name);
-      const s = 'XYZWUVABCDFGHIJKLMNOPQS'.split('').find(c => taken.indexOf(c) < 0) || clean('A', null);
+      // past X Y Z, count from the top of the alphabet (E is Math.E, R the output, T time)
+      const s = 'XYZABCDFGHIJKLMNOPQSUVW'.split('').find(c => taken.indexOf(c) < 0) || clean('A', null);
       ins().push({ name: s, type: 'number', default: 0 });
       rebuild();
     });
@@ -3743,11 +3749,7 @@ defNode('meta/js', {
         ty.style.color = TYPE_COLORS[p.type] || '';
         ty.addEventListener('pointerdown', e => e.stopPropagation());
         ty.addEventListener('change', () => { p.type = ty.value; rebuild(); });
-        const x = _mk('span', 'js-x', row);
-        x.textContent = '×';
-        x.title = 'remove port';
-        x.addEventListener('pointerdown', e => e.stopPropagation());
-        x.addEventListener('click', () => { list.splice(list.indexOf(p), 1); rebuild(); });
+        _portX(row, 'remove port ' + p.name, () => { list.splice(list.indexOf(p), 1); rebuild(); });
       }
       const add = _mk('div', 'js-add', col);
       add.textContent = dir === 'in' ? '+ in' : '+ out';
