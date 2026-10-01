@@ -28,7 +28,7 @@ const WeftOps = {
     const portSet = (node, dir) => {
       const def = defs[node.type] || {};
       const list = def.dynamic ? ((node.values || {})[dir === 'in' ? 'ins' : 'outs'] || [])
-        : (dir === 'in' ? def.inputs : def.outputs) || [];
+        : (dir === 'in' ? (def.varIns && (node.values || {}).ins) || def.inputs : def.outputs) || [];
       return new Set(list.map(p => p.name));
     };
     const checkEnd = (end, dir, label) => {
@@ -220,7 +220,7 @@ const WeftOps = {
    * to real sizes once the graph lands; this keeps headless layouts sane) */
   nodeSize(n, defs) {
     const def = (defs && defs[n.type]) || {};
-    const ins = def.dynamic ? ((n.values || {}).ins || []) : (def.inputs || []);
+    const ins = def.dynamic ? ((n.values || {}).ins || []) : ((def.varIns && (n.values || {}).ins) || def.inputs || []);
     const outs = def.dynamic ? ((n.values || {}).outs || []) : (def.outputs || []);
     const rows = Math.max(ins.length, outs.length);
     if (n.collapsed) return { w: 60, h: Math.max(46, rows * 17 + 14) };

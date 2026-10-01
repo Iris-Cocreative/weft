@@ -54,6 +54,7 @@ const WeftExport = (() => {
         ((d.outputs || []).length ? '    outputs: ' + JSON.stringify(d.outputs.map(slimOut)) + ',\n' : '') +
         ((d.listInputs || []).length ? '    listInputs: ' + JSON.stringify(d.listInputs) + ',\n' : '') +
         (d.dynamic ? '    dynamic: true,\n' : '') +
+        (d.varIns ? '    varIns: true,\n' : '') +
         (d.feedback ? '    feedback: true,\n' : '') +
         '    compute: ' + d.compute.toString() + '\n  }';
     });

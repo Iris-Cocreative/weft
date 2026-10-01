@@ -1420,27 +1420,93 @@ defNode('math/smooth', {
   compute: a => { const t = LM.clamp(a.T, 0, 1); return { R: LM.lerp(a.A, a.B, t * t * (3 - 2 * t)) }; }
 });
 
+/* Expression — its variables are its input ports. X Y Z by default; add more
+ * (or rename / remove) on the card, stored in values.ins (def.varIns: only the
+ * inputs live on the node — mapping, outputs and styling stay ordinary). A
+ * node without values.ins is the classic X Y Z card, so old graphs load as-is. */
 defNode('math/expr', {
-  title: 'Expression', cat: 'Maths', desc: 'Evaluate an expression of X, Y, Z, T (time). Math functions available.',
-  width: 190,
+  title: 'Expression', cat: 'Maths', varIns: true, width: 190,
+  desc: 'Evaluate an expression of its input variables (X, Y, Z by default — add more on the card) and T (time). Math functions available.',
   inputs: [{ name: 'X', type: 'number', default: 0 }, { name: 'Y', type: 'number', default: 0 }, { name: 'Z', type: 'number', default: 0 }],
   outputs: [{ name: 'R', type: 'number' }],
   defaults: { expr: 'sin(X) * Y' },
   compute: (a, ctx, node) => {
     const src = node.values.expr || '0';
+    const names = (node.values.ins || [{ name: 'X' }, { name: 'Y' }, { name: 'Z' }]).map(p => p.name);
+    const key = src + ' ' + names.join(',');
     /* also guard _exprFn's type: a graph serialized mid-run can carry a stray
      * _exprSrc string (functions never survive JSON) — rebuild in that case */
-    if (node._exprSrc !== src || typeof node._exprFn !== 'function') {
-      node._exprSrc = src;
-      node._exprFn = new Function('X', 'Y', 'Z', 'T', 'with(Math){return (' + src + ');}');
+    if (node._exprSrc !== key || typeof node._exprFn !== 'function') {
+      node._exprSrc = key;
+      node._exprFn = new Function(...names, 'T', 'with(Math){return (' + src + ');}');
     }
-    const r = +node._exprFn(a.X || 0, a.Y || 0, a.Z || 0, ctx.t);
+    const r = +node._exprFn.apply(null, names.map(k => a[k] || 0).concat(ctx.t));
     return { R: isNaN(r) ? 0 : r };
   },
   buildBody: (node, body, changed) => {
-    const i = _mk('input', 'expr-src', body);
-    i.type = 'text'; i.value = node.values.expr; i.spellcheck = false;
-    i.addEventListener('change', () => { node.values.expr = i.value; changed(); });
+    const v = node.values;
+    /* the source wraps and grows with what's typed; Enter commits, Shift+Enter breaks a line */
+    const i = _mk('textarea', 'expr-src', body);
+    i.value = v.expr || ''; i.spellcheck = false; i.rows = 1;
+    const fit = () => { i.style.height = 'auto'; i.style.height = i.scrollHeight + 2 + 'px'; };
+    requestAnimationFrame(fit);
+    i.addEventListener('pointerdown', e => e.stopPropagation());
+    i.addEventListener('keydown', e => {
+      e.stopPropagation();
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); i.blur(); }
+    });
+    i.addEventListener('input', fit);
+    i.addEventListener('change', () => { v.expr = i.value; changed(); });
+
+    /* variable chips — rename in place, × removes, + var adds; wires to a
+     * vanished port are pruned by Editor.rebuildNode */
+    const ins = () => v.ins || (v.ins = NODE_DEFS['math/expr'].inputs.map(p => ({ name: p.name, type: 'number', default: 0 })));
+    const RESERVED = ['expr', 'ins', 'T'].concat(Object.getOwnPropertyNames(Math));
+    const legal = s => { try { new Function(s, ''); return true; } catch (e) { return false; } };
+    const clean = (name, self) => {
+      let s = String(name).trim().replace(/\W/g, '').replace(/^\d+/, '') || 'A';
+      const taken = ins().filter(p => p !== self).map(p => p.name);
+      while (taken.indexOf(s) >= 0 || RESERVED.indexOf(s) >= 0 || !legal(s)) s += '2';
+      return s;
+    };
+    const rebuild = () => { changed(); Editor.rebuildNode(node.id); };
+    const wrap = _mk('div', 'expr-vars', body);
+    for (const p of v.ins || NODE_DEFS['math/expr'].inputs) {
+      const row = _mk('div', 'js-port', wrap);
+      const nm = _mk('input', 'js-name', row);
+      nm.type = 'text'; nm.value = p.name; nm.spellcheck = false;
+      nm.title = 'a variable in the expression — rename it here';
+      const size = () => { nm.style.width = Math.max(3, nm.value.length + 2) + 'ch'; };
+      size(); nm.addEventListener('input', size);
+      nm.addEventListener('pointerdown', e => e.stopPropagation());
+      nm.addEventListener('keydown', e => e.stopPropagation());
+      nm.addEventListener('change', () => {
+        const q = ins().find(x => x.name === p.name), was = q.name;
+        q.name = clean(nm.value, q);
+        if (q.name !== was && v[was] !== undefined) { v[q.name] = v[was]; delete v[was]; }
+        rebuild();
+      });
+      const x = _mk('span', 'js-x', row);
+      x.textContent = '×';
+      x.title = 'remove this variable';
+      x.addEventListener('pointerdown', e => e.stopPropagation());
+      x.addEventListener('click', () => {
+        const L = ins();
+        L.splice(L.findIndex(q => q.name === p.name), 1);
+        delete v[p.name];
+        rebuild();
+      });
+    }
+    const add = _mk('div', 'js-add', wrap);
+    add.textContent = '+ var';
+    add.title = 'add an input variable';
+    add.addEventListener('pointerdown', e => e.stopPropagation());
+    add.addEventListener('click', () => {
+      const taken = ins().map(p => p.name);
+      const s = 'XYZWUVABCDFGHIJKLMNOPQS'.split('').find(c => taken.indexOf(c) < 0) || clean('A', null);
+      ins().push({ name: s, type: 'number', default: 0 });
+      rebuild();
+    });
   }
 });
 

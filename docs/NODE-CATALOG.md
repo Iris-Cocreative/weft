@@ -595,7 +595,7 @@ Division of A and B
 
 ### `math/expr` — Expression
 
-Evaluate an expression of X, Y, Z, T (time). Math functions available.
+Evaluate an expression of its input variables (X, Y, Z by default — add more on the card) and T (time). Math functions available.
 
 | in | type | default | note |
 |---|---|---|---|

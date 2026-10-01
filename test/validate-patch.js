@@ -31,7 +31,7 @@ catch (e) { console.log('NOT JSON — ' + e.message); process.exit(1); }
 if (!Array.isArray(g.nodes) || !Array.isArray(g.wires)) { console.log('not a weft graph (needs nodes[] and wires[])'); process.exit(1); }
 
 /* ports of a node — dynamic defs (cluster, custom js) keep them on the node */
-const insOf = n => { const d = NODE_DEFS[n.type]; return d ? ((d.dynamic && n.values && n.values.ins) || d.inputs || []) : []; };
+const insOf = n => { const d = NODE_DEFS[n.type]; return d ? (((d.dynamic || d.varIns) && n.values && n.values.ins) || d.inputs || []) : []; };
 const outsOf = n => { const d = NODE_DEFS[n.type]; return d ? ((d.dynamic && n.values && n.values.outs) || d.outputs || []) : []; };
 
 const byId = {};

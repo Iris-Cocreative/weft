@@ -307,6 +307,7 @@ defNode('cat/name', {
   defaults: {},               // initial node.values (non-port state)
   feedback: false,            // true = contributes no eval-order edges; reads node._fbIns (Delay)
   dynamic: false,             // true = ports live on node.values.ins/outs (clusters)
+  varIns: false,              // true = only inputs may live on node.values.ins (else def.inputs) — Expression
   hidden: false,              // true = omitted from palette & quick-add (cluster machinery)
   compute: (a, ctx, node) => ({ R: a.A }),   // PURE — see rules
   buildBody: (node, el, changed) => {},      // editor-only, optional

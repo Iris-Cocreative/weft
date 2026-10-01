@@ -157,7 +157,7 @@ and/or/xor/not).
 | `math/clamp` | V A=0 B=1 | R | |
 | `math/lerp` | A B T=0.5 | R | |
 | `math/smooth` | A B T | R | eased lerp |
-| `math/expr` | X Y Z | R | values.expr, e.g. `"sin(X)*Y"` — Math in scope, T=time |
+| `math/expr` | X Y Z | R | values.expr, e.g. `"sin(X)*Y"` — Math in scope, T=time. More/renamed variables: `values.ins: [{name,type:'number',default:0}…]` replaces X Y Z as the ports (names are identifiers; not T, E, PI or a Math function) |
 | `math/noise` | X Y | N | smooth pseudo-random |
 | `math/masadd` | L (list-in) | R P | sum + partial sums |
 | `math/pi` / `math/phi` | F=1 | P | π·F / φ·F |

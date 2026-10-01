@@ -672,9 +672,13 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .expr-src {
   width: 100%; padding: 3px 7px;
   background: #0c111c; border: 1px solid #26304a; border-radius: 6px;
-  color: #e2b7f5; font: 11px ui-monospace, Consolas, monospace; outline: none;
+  color: #e2b7f5; font: 11px/1.45 ui-monospace, Consolas, monospace; outline: none;
+  display: block; resize: none; overflow: hidden;
+  white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .expr-src:focus { border-color: #a855f7; }
+.expr-vars { display: flex; flex-wrap: wrap; gap: 3px 8px; align-items: center; margin-top: 4px; }
+.expr-vars .js-port input.js-name { max-width: 120px; }
 
 /* --- Custom JS (meta/js): code body + port editor --- */
 .js-code {

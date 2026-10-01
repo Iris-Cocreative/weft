@@ -1745,6 +1745,8 @@ const LM = {
    *
    * def.dynamic — ports live on the NODE (node.values.ins / node.values.outs)
    * instead of the def, and every input receives the whole list (clusters).
+   * def.varIns — only the INPUTS may live on the node (values.ins, falling back
+   * to def.inputs when absent); everything else is an ordinary node (Expression).
    *
    * def.feedback — the node contributes NO edges to the topological sort, so
    * wiring through it makes a cycle legal (Delay). It evaluates before its
@@ -1770,7 +1772,7 @@ const LM = {
     const insOf = n => {
       const d = defs[n.type];
       if (!d) return [];
-      return (d.dynamic && n.values && n.values.ins) || d.inputs || [];
+      return ((d.dynamic || d.varIns) && n.values && n.values.ins) || d.inputs || [];
     };
     const outsOf = n => {
       const d = defs[n.type];

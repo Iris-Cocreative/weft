@@ -631,6 +631,15 @@ they're cheap next to the tracks above.
   confirmation of this autopsy.
 
 Then:
+- [shipped 2026-09-30] **Expression grows** (James): the source field wraps
+  and grows with the expression (Enter commits, Shift+Enter breaks a line),
+  and the card carries variable chips — rename in place, × removes, + var
+  adds, Custom JS style. Stored as `values.ins`; a card without it is the
+  classic X Y Z, so every old graph loads unchanged. Engine side it's one new
+  def flag, `varIns` (inputs only may live on the node — unlike `dynamic`, no
+  list inputs, no sink, no cluster styling); editor, ops, validator, exporter
+  and apply-ops `--describe` read it. Smoke check 28 pins legacy, variables
+  and export equivalence.
 - [idea] insert node onto an existing wire (drop-on-wire splices it in)
 - [idea] **inline expressions on inputs** (GH's port expressions — type `*2`
   or `x/360` on a port to modify values in-wire; James priority: mid). Design

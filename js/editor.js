@@ -30,7 +30,7 @@ const Editor = (() => {
   const nodeById = id => S.graph.nodes.find(n => n.id === id);
   const defOf = n => NODE_DEFS[n.type];
   /* dynamic defs (clusters) keep their ports on the node, not the def */
-  const insOf = n => { const d = defOf(n); return d ? ((d.dynamic && n.values && n.values.ins) || d.inputs || []) : []; };
+  const insOf = n => { const d = defOf(n); return d ? (((d.dynamic || d.varIns) && n.values && n.values.ins) || d.inputs || []) : []; };
   const outsOf = n => { const d = defOf(n); return d ? ((d.dynamic && n.values && n.values.outs) || d.outputs || []) : []; };
   const previewCapable = (def, n) => !!def && def.cat !== 'Display' && !def.relay &&
     ((def.dynamic && n ? (n.values.outs || []) : def.outputs) || []).some(o => o.type === 'geometry' || o.type === 'point');

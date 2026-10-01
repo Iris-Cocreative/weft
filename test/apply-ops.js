@@ -101,7 +101,7 @@ if (opt('describe')) {
   console.log('\nHEALTH  ' + (c.evalErrors.length ? c.evalErrors.length + ' eval error(s):\n  ' + c.evalErrors.join('\n  ') : 'evaluates clean') + ' · ' + (c.drew ? 'draws' : 'DRAWS NOTHING') + (c.exportErr ? ' · export fails: ' + c.exportErr : ' · export compiles'));
   if (sel.size) console.log('SELECTED ' + [...sel].join(', '));
   const ports = new Set();
-  for (const n of graph.nodes) { const d = NODE_DEFS[n.type]; if (!d) continue; const key = n.type + ' in:' + (d.inputs || []).map(p => p.name).join(',') + ' out:' + (d.outputs || []).map(p => p.name).join(','); ports.add(key); }
+  for (const n of graph.nodes) { const d = NODE_DEFS[n.type]; if (!d) continue; const v = n.values || {}; const key = n.type + ' in:' + (((d.dynamic || d.varIns) && v.ins) || d.inputs || []).map(p => p.name).join(',') + ' out:' + ((d.dynamic && v.outs) || d.outputs || []).map(p => p.name).join(','); ports.add(key); }
   console.log('\nPORTS OF TYPES IN USE  (exact letters)');
   for (const p of [...ports].sort()) console.log('  ' + p);
   process.exit(0);

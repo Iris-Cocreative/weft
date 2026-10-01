@@ -1527,6 +1527,30 @@ for (const name of Object.keys(EXAMPLES)) {
   if (snug.errors.length || /re-tiled/.test(snug.summary) || snug.graph.nodes[3].x !== tidy.graph.nodes[3].x) failures.push('ops: a frame that overlaps nothing must not move the rest of the loom');
 }
 
+/* 28 — Expression variables (def.varIns): a card without values.ins is the
+ * classic X Y Z; one with values.ins takes those names as its ports — wired,
+ * literal and default — in the editor engine and in the export alike */
+{
+  const legacy = { nodes: [ { id: 'e', type: 'math/expr', values: { expr: 'X + Y * 10 + Z * 100', X: 1, Y: 2, Z: 3 } } ], wires: [] };
+  const cl = mkCtx(); LM.evaluateGraph(legacy, NODE_DEFS, cl);
+  if ((cl.out.e.R || [])[0] !== 321) failures.push('expr legacy X Y Z: expected 321, got ' + JSON.stringify(cl.out.e.R));
+  const g = { nodes: [
+      { id: 's', type: 'params/number', values: { N: 4 } },
+      { id: 'e', type: 'math/expr', values: { expr: 'lo + (hi - lo) * k + amp * T', lo: 10, hi: 20, k: 0.5,
+        ins: [ { name: 'lo', type: 'number', default: 0 }, { name: 'hi', type: 'number', default: 0 },
+               { name: 'k', type: 'number', default: 0 }, { name: 'amp', type: 'number', default: 0 } ] } },
+      { id: 'c', type: 'crv/circle', values: {} }, { id: 'd', type: 'disp/draw', values: {} } ],
+    wires: [ { from: ['s', 'N'], to: ['e', 'amp'] }, { from: ['e', 'R'], to: ['c', 'R'] }, { from: ['c', 'C'], to: ['d', 'G'] } ] };
+  const cv = mkCtx(); cv.t = 0.5; LM.evaluateGraph(g, NODE_DEFS, cv);
+  if ((cv.out.e.R || [])[0] !== 17) failures.push('expr variables: expected 17, got ' + JSON.stringify(cv.out.e.R) + ' ' + JSON.stringify(cv.errors));
+  const parts = WeftExport.buildParts(JSON.parse(JSON.stringify(g)));
+  if (parts.defsJS.indexOf('varIns: true') < 0) failures.push('expr variables: export dropped varIns');
+  const EX = new Function('const LM = ' + parts.lmJS + '; const DEFS = ' + parts.defsJS +
+    '; const GRAPH = ' + parts.graphJS + '; return { LM: LM, DEFS: DEFS, GRAPH: GRAPH };')();
+  const ce = mkCtx(); ce.t = 0.5; ce.defs = EX.DEFS; EX.LM.evaluateGraph(EX.GRAPH, EX.DEFS, ce);
+  if (JSON.stringify(ce.drawList) !== JSON.stringify(cv.drawList)) failures.push('expr variables: export draws differently from the editor');
+}
+
 /* 27 — the prompt-ready spec names every node: a def missing from
  * docs/LLM-AUTHORING.md is a node the assistant can't reach (the orbit-harp
  * session found params/angle absent and spent 32k tokens agonizing over it) */
