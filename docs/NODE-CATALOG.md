@@ -2010,7 +2010,7 @@ Straight segments through 3D points V — closed, it also counts as a face and t
 
 ### `d3/project` — Project
 
-Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a color node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh
+Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth, I the index in G each piece came from — parallel lists, so wire S through a color node and ONE Draw paints the whole shaded solid (or I into List Item over a color list to keep each shape its own color through the sort). Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2023,6 +2023,7 @@ Camera → flat geometry. F is screen-space 2D polys already sorted back to fron
 | F | geometry | screen faces, back to front |
 | S | number | shade 0..1 |
 | D | number | view depth |
+| I | number | source index in G |
 
 Node values (`values` keys, not ports): `{"mode":"shaded"}`
 

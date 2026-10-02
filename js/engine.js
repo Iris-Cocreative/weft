@@ -1503,7 +1503,9 @@ const LM = {
 
   /* the software renderer, in one place: a geometry LIST plus a camera → three
    * index-aligned lists — screen geometry, shade 0..1, view depth — sorted back
-   * to front, so drawList insertion order IS the painter's algorithm.
+   * to front, so drawList insertion order IS the painter's algorithm. A fourth,
+   * I, is the index in gs each piece came from: the sort scrambles order, and I
+   * is how a per-shape color list follows its shape through it.
    *   mode  'shaded' faces only · 'wire' every unique edge · 'both' faces with
    *         the front-facing edges laid over them
    *   L     the direction the light comes FROM
@@ -1516,7 +1518,7 @@ const LM = {
     const lit = LM.v3unit(L && (L.x || L.y || L.z) ? L : { x: -0.4, y: -0.8, z: -0.5 });
     const wantFaces = mode !== 'wire', wantWire = mode === 'wire' || mode === 'both';
     const main = [], wires = [], seen = {};
-    for (const g of gs || []) for (const pr of LM.prims3(g)) {
+    for (let gi = 0; gi < (gs || []).length; gi++) for (const pr of LM.prims3(gs[gi])) {
       const S = [], dep = [];
       let ok = true, dsum = 0, cx = 0, cy = 0, cz = 0;
       for (const p of pr.pts) {
@@ -1528,15 +1530,15 @@ const LM = {
       }
       if (!ok || !S.length) continue;
       const n = S.length, d = dsum / n;
-      if (n === 1) { main.push({ g: S[0], d: d, s: 1 }); continue; }
+      if (n === 1) { main.push({ g: S[0], d: d, s: 1, i: gi }); continue; }
       /* an open curve or a point has no facing and no shade — it comes through
          lit (S = 1), so a color wired from S doesn't silently blacken it */
-      if (!pr.face) { main.push({ g: { kind: 'poly', pts: S, closed: !!pr.closed }, d: d, s: 1 }); continue; }
+      if (!pr.face) { main.push({ g: { kind: 'poly', pts: S, closed: !!pr.closed }, d: d, s: 1, i: gi }); continue; }
       /* face against the eye, measured from its centroid — a vertex would
          misjudge which way a big quad faces */
       const front = LM.v3dot(pr.normal, LM.v3sub(M.eye, { x: cx / n, y: cy / n, z: cz / n })) >= 0;
       const sh = LM.clamp(LM.v3dot(front ? pr.normal : LM.v3mul(pr.normal, -1), lit), 0, 1);
-      if (wantFaces) main.push({ g: { kind: 'poly', pts: S, closed: true }, d: d, s: sh });
+      if (wantFaces) main.push({ g: { kind: 'poly', pts: S, closed: true }, d: d, s: sh, i: gi });
       /* wire alone shows every edge (a see-through frame); over faces only the
          front ones, which is hidden-line removal for the price of a dot product */
       if (wantWire && (front || !wantFaces)) for (let i = 0; i < S.length; i++) {
@@ -1545,14 +1547,14 @@ const LM = {
         const k = ka < kb ? ka + '|' + kb : kb + '|' + ka;
         if (seen[k]) continue;
         seen[k] = 1;
-        wires.push({ g: { kind: 'line', a: S[i], b: S[j] }, d: (dep[i] + dep[j]) / 2, s: sh });
+        wires.push({ g: { kind: 'line', a: S[i], b: S[j] }, d: (dep[i] + dep[j]) / 2, s: sh, i: gi });
       }
     }
     main.sort((p, q) => q.d - p.d);
     wires.sort((p, q) => q.d - p.d);
-    const F = [], Sh = [], D = [];
-    for (const r of main.concat(wires)) { F.push(r.g); Sh.push(r.s); D.push(r.d); }
-    return { F: F, S: Sh, D: D };
+    const F = [], Sh = [], D = [], I = [];
+    for (const r of main.concat(wires)) { F.push(r.g); Sh.push(r.s); D.push(r.d); I.push(r.i); }
+    return { F: F, S: Sh, D: D, I: I };
   },
 
   /* ---------- canvas rendering ---------- */

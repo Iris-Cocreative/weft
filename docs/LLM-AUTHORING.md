@@ -245,7 +245,7 @@ alternate wedges reflected so neighbors share mirrored edges; keep the motif
 ### 3D (`js/nodes-3d.js` — the pack; world axes are x right, y **down**, z away)
 | node | in | out | |
 |---|---|---|---|
-| `d3/project` | G:geometry(**list-in**) C:camera L:point3 | F:geometry S:number D:number | `values.mode` `'shaded'`\|`'wire'`\|`'both'`; F is 2D screen geometry **already sorted back to front**, S the shade 0..1, D the depth — three index-aligned lists |
+| `d3/project` | G:geometry(**list-in**) C:camera L:point3 | F:geometry S:number D:number I:number | `values.mode` `'shaded'`\|`'wire'`\|`'both'`; F is 2D screen geometry **already sorted back to front**, S the shade 0..1, D the depth, I the source index in G — index-aligned lists. Per-shape colors survive the sort via `sets/item`(L:color list, i:I) → Draw S |
 | `d3/camera` | P:pos T:target F:fov° Z:zoom U:up | C:camera | `values.mode` `'persp'`\|`'ortho'` |
 | `d3/orbit` | T:target D D:dist A:yaw E:pitch F:fov° | C:camera A E | drag the cloth to orbit, wheel to pull back; A/E are resting angles the drag adds to |
 | `d3/extrude` | G:2D-geometry H C:cap | G:mesh | centered on its own plane; open curves become ribbons |

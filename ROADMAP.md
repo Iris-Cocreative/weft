@@ -842,7 +842,9 @@ Still open, in rough order of appetite:
   an honest near-plane clip would fix both; neither needs new architecture.
 - **Two Draw nodes still can't interleave in depth** — the same rule 2D already
   has. One Project → one Draw is the idiom; a Draw that accepted a depth key
-  would generalize it.
+  would generalize it. *Done in part (2026-10-01):* Project's `I` output names
+  the source item in G for every piece, so `sets/item` over a color list keeps
+  per-shape colors through the sort inside that one Draw.
 - **A camera cannot frame itself.** The projection's pixel scale comes from the
   canvas *height* alone (a vertical field of view, the usual convention), so what
   a 3D patch fills depends on the canvas aspect ratio, and the author has to hand-

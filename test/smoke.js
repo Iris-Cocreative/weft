@@ -1225,6 +1225,11 @@ for (const name of Object.keys(EXAMPLES)) {
   if (!sorted) failures.push('3D render3: one global back-to-front order across both meshes — [' + two.D.map(d => Math.round(d)).join(',') + ']');
   if (two.S.some(s => !(s >= 0 && s <= 1))) failures.push('3D render3: shade must stay in 0..1, got [' + two.S.join(',') + ']');
   if (!two.S.some(s => s > 0.05)) failures.push('3D render3: two-sided shading should light something, got all black');
+  /* I follows each piece back to its source through the sort — per-shape colors depend on it */
+  if (two.I.length !== 12 || two.I.filter(i => i === 0).length !== 6 || two.I.filter(i => i === 1).length !== 6)
+    failures.push('3D render3: I must give each face its source index in G (6 from each box), got [' + two.I.join(',') + ']');
+  const holey = LM.render3([null, boxB], null, null, 'shaded', 800, 600);
+  if (holey.I.some(i => i !== 1)) failures.push('3D render3: an empty slot in G must not shift I, got [' + holey.I.join(',') + ']');
   const wire = LM.render3([boxA], null, null, 'wire', 800, 600);
   if (wire.F.length !== 12) failures.push('3D render3 wire: a box has 12 unique edges, got ' + wire.F.length);
   else if (wire.F[0].kind !== 'line') failures.push('3D render3 wire: edges must be line geometry, got ' + wire.F[0].kind);

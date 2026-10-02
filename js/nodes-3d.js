@@ -157,7 +157,7 @@ defNode('d3/orbit', {
 
 defNode('d3/project', {
   title: 'Project', cat: '3D', width: 184,
-  desc: 'Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth — three parallel lists, so wire S through a color node and ONE Draw paints the whole shaded solid. Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh',
+  desc: 'Camera → flat geometry. F is screen-space 2D polys already sorted back to front, S the shade 0..1 per face (open curves and points come through at 1), D the view depth, I the index in G each piece came from — parallel lists, so wire S through a color node and ONE Draw paints the whole shaded solid (or I into List Item over a color list to keep each shape its own color through the sort). Takes the geometry as a whole list on purpose: that is what makes the depth sort global instead of per-mesh',
   inputs: [
     { name: 'G', type: 'geometry', label: 'geometry (whole list)' },
     { name: 'C', type: 'camera' },
@@ -165,11 +165,12 @@ defNode('d3/project', {
   outputs: [
     { name: 'F', type: 'geometry', label: 'screen faces, back to front' },
     { name: 'S', type: 'number', label: 'shade 0..1' },
-    { name: 'D', type: 'number', label: 'view depth' }],
+    { name: 'D', type: 'number', label: 'view depth' },
+    { name: 'I', type: 'number', label: 'source index in G' }],
   listInputs: ['G'],
   defaults: { mode: 'shaded' },
   compute: (a, ctx, node) =>
-    LM.render3((a.G || []).filter(g => g), a.C, a.L, node.values.mode || 'shaded', ctx.W, ctx.H),
+    LM.render3(a.G || [], a.C, a.L, node.values.mode || 'shaded', ctx.W, ctx.H),
   buildBody: (node, body, changed) =>
     _modeSeg(node, body, changed, 'mode', [
       ['shaded', 'shaded', 'one filled face per polygon, painted back to front'],
