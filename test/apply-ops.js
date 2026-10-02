@@ -125,7 +125,9 @@ if (!r.graph) {
 const c = check(r.graph);
 const outPath = opt('out', graphPath.replace(/\.json$/i, '') + '.woven.json');
 const out = Object.assign({}, raw, { format: 2, nodes: r.graph.nodes, wires: r.graph.wires, groups: r.graph.groups, notes: r.graph.notes });
-fs.writeFileSync(outPath, JSON.stringify(out, null, 1));
+/* check() evaluated the graph, which hangs runtime fields (_last, _state,
+   _subs…) on the nodes — drop every underscore key so they never reach disk */
+fs.writeFileSync(outPath, JSON.stringify(out, (k, v) => k[0] === '_' ? undefined : v, 1));
 const ok = !c.evalErrors.length && !c.exportErr && c.drew;
 console.log((ok ? 'WOVEN     ' : 'APPLIED WITH PROBLEMS  ') + r.summary + ' → ' + outPath);
 if (!quiet) {
