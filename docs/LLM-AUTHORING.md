@@ -142,7 +142,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `state/prev` | Previous Value | V:any | P:any | |
 | `state/edge` | Edge | B:bool | R:bool F:bool | rise / fall triggers |
 | `state/delay` | Delay | V:any I:any=0 (list-in V,I) | V:any | **the legal feedback edge** |
-| `state/echo` | Echo | V:any T=0.35 N=12 | R:any L:any | V as it was T seconds ago; L = the last N samples, newest first (motion-blur trails) |
+| `state/echo` | Echo | V:any T=0.35 N=12 (≤1000) | R:any L:any | V as it was T seconds ago; L = the last N samples, newest first (motion-blur trails). `values.mode:"fixed"` pins trail points to a steady clock so they never wobble — use it for drawn traces; default `"slide"` |
 
 ### Maths
 Unary (`V:number → R:number`): `math/abs` `math/neg` `math/round` `math/floor`

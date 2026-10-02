@@ -295,6 +295,22 @@ for (const name of Object.keys(EXAMPLES)) {
   if ((cl.out.ce.N || []).join(',') !== '3') failures.push('cluster list mode: the inside sees the whole list, expected N 3 got [' + (cl.out.ce.N || []).join(',') + ']');
   if ((cE.out.ce.N || []).join(',') !== '1,1,1') failures.push('cluster each mode: one run per item, expected N 1,1,1 got [' + (cE.out.ce.N || []).join(',') + ']');
   const longTrail = NODE_DEFS['state/echo'].compute({ V: 1, T: 1, N: 500 }, mkCtx(), {}).L;
+  { // echo "fixed": uneven frames, yet a point laid on the clock holds still
+    const node = { values: { mode: 'fixed' } }, dt = [0.004, 0.011, 0.007, 0.016, 0.005];
+    let t = 0, prev = null, prevLast = null, moved = 0;
+    for (let f = 0; f < 400; f++) {
+      t += dt[f % dt.length];
+      const c = mkCtx(); c.t = t;
+      const L = NODE_DEFS['state/echo'].compute({ V: Math.sin(t * 9) * 100, T: 0.5, N: 31 }, c, node).L;
+      const last = Math.floor(t / (0.5 / 30));
+      if (prev && t > 0.6) { // tick k here is tick k + (last - prevLast) last frame
+        const sh = last - prevLast;
+        for (let k = 1; k + sh < 31 && k < 31; k++) moved = Math.max(moved, Math.abs(L[k + sh] - prev[k]));
+      }
+      prev = L; prevLast = last;
+    }
+    if (moved > 1e-9) failures.push('echo fixed: a trail point moved ' + moved + ' between frames — it should hold still');
+  }
   if (longTrail.length !== 500) failures.push('echo: a 500-sample trail is allowed (cap 1000), got ' + longTrail.length);
   if ((cE.out.ce.R || []).join(',') !== '10,20,30') failures.push('cluster each mode: every run keeps its own Echo memory, expected 10,20,30 got [' + (cE.out.ce.R || []).join(',') + ']');
 }

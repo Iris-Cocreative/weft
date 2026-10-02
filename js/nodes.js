@@ -3542,7 +3542,7 @@ defNode('state/delay', {
 
 defNode('state/echo', {
   title: 'Echo', cat: 'State',
-  desc: 'V as it was T seconds ago — the data twin of the audio Delay. L is the trail: the last N samples spread evenly across the window, newest first (wire a point through and draw the trail as motion blur).',
+  desc: 'V as it was T seconds ago — the data twin of the audio Delay. L is the trail: the last N samples spread evenly across the window, newest first (wire a point through and draw the trail as motion blur). “slide” spaces the trail back from this frame, so its points glide along the path; “fixed” pins them to a steady clock, so a point once laid never moves — no corner flicker on fast moves, at any frame rate.',
   inputs: [
     { name: 'V', type: 'any' },
     { name: 'T', type: 'number', default: 0.35, label: 'delay s' },
@@ -3573,9 +3573,23 @@ defNode('state/echo', {
       return LM.lerpAny(s.vs[lo], s.vs[hi], (tt - s.ts[lo]) / (s.ts[hi] - s.ts[lo]));
     };
     const trail = [];
-    for (let k = 0; k < N; k++) trail.push(at(t - (N > 1 ? T * k / (N - 1) : 0)));
+    const dT = N > 1 ? T / (N - 1) : 0;
+    if (node.values && node.values.mode === 'fixed' && dT > 0) {
+      /* the live point, then the last N-1 ticks of a clock that runs every
+         dT seconds: tick times don't depend on when frames land, so each
+         point is blended from the same two frames every frame and holds still */
+      const last = Math.floor(t / dT);
+      trail.push(at(t));
+      for (let k = 0; k < N - 1; k++) trail.push(at((last - k) * dT));
+    } else {
+      for (let k = 0; k < N; k++) trail.push(at(t - dT * k));
+    }
     return { R: at(t - T), L: trail };
-  }
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [
+      ['slide', 'slide', 'trail points sit at fixed distances back from this frame — they glide along the path'],
+      ['fixed', 'fixed', 'trail points sit on a steady clock — once laid, a point never moves']], 'slide')
 });
 
 defNode('state/edge', {

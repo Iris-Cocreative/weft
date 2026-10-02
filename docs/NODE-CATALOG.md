@@ -369,7 +369,7 @@ V from the previous frame — contributes no edge to the evaluation order, so wi
 
 ### `state/echo` — Echo
 
-V as it was T seconds ago — the data twin of the audio Delay. L is the trail: the last N samples spread evenly across the window, newest first (wire a point through and draw the trail as motion blur).
+V as it was T seconds ago — the data twin of the audio Delay. L is the trail: the last N samples spread evenly across the window, newest first (wire a point through and draw the trail as motion blur). “slide” spaces the trail back from this frame, so its points glide along the path; “fixed” pins them to a steady clock, so a point once laid never moves — no corner flicker on fast moves, at any frame rate.
 
 | in | type | default | note |
 |---|---|---|---|
