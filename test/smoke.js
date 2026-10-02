@@ -294,6 +294,8 @@ for (const name of Object.keys(EXAMPLES)) {
   if (Object.keys(cE.errors).length) failures.push('cluster each: errored → ' + JSON.stringify(cE.errors));
   if ((cl.out.ce.N || []).join(',') !== '3') failures.push('cluster list mode: the inside sees the whole list, expected N 3 got [' + (cl.out.ce.N || []).join(',') + ']');
   if ((cE.out.ce.N || []).join(',') !== '1,1,1') failures.push('cluster each mode: one run per item, expected N 1,1,1 got [' + (cE.out.ce.N || []).join(',') + ']');
+  const longTrail = NODE_DEFS['state/echo'].compute({ V: 1, T: 1, N: 500 }, mkCtx(), {}).L;
+  if (longTrail.length !== 500) failures.push('echo: a 500-sample trail is allowed (cap 1000), got ' + longTrail.length);
   if ((cE.out.ce.R || []).join(',') !== '10,20,30') failures.push('cluster each mode: every run keeps its own Echo memory, expected 10,20,30 got [' + (cE.out.ce.R || []).join(',') + ']');
 }
 

@@ -3554,7 +3554,7 @@ defNode('state/echo', {
     const st = node._state = node._state || {};
     const s = st[ctx.i || 0] = st[ctx.i || 0] || { ts: [], vs: [] };
     const T = LM.clamp(+a.T || 0, 0, 10);
-    const N = Math.round(LM.clamp(+a.N || 1, 1, 120));
+    const N = Math.round(LM.clamp(+a.N || 1, 1, 1000));
     const t = ctx.t || 0;
     if (s.ts.length && t < s.ts[s.ts.length - 1]) { s.ts.length = 0; s.vs.length = 0; } // time ran backwards — start over
     if (s.ts.length && s.ts[s.ts.length - 1] === t) s.vs[s.vs.length - 1] = a.V;

@@ -1915,7 +1915,10 @@ const Editor = (() => {
     refreshAllLiterals();
     drawWires();
     changed();
-    App.flash('cluster expanded — ' + newIds.length + ' node(s)');
+    // an "each" cluster ran its inside once per item — flat, the same nodes see
+    // whole lists, so a list-in node (PolyLine3, Length) merges every item
+    App.flash('cluster expanded — ' + newIds.length + ' node(s)' + (v.mode === 'each'
+      ? ' · it ran once per item; flat, these nodes see whole lists, so per-item results merge (Ctrl+Z to undo)' : ''));
   }
 
   /* ------------------------------ zoom to fit ------------------------------ */
