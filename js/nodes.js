@@ -1447,9 +1447,18 @@ defNode('math/expr', {
      * _exprSrc string (functions never survive JSON) — rebuild in that case */
     if (node._exprSrc !== key || typeof node._exprFn !== 'function') {
       node._exprSrc = key;
-      node._exprFn = new Function(...names, 'T', 'with(Math){return (' + src + ');}');
+      /* Math's members are bound once, as closure variables, rather than
+         through with(Math), which kept the function from being optimized — an
+         expression runs once per list item, so on thousands of items that was
+         most of its cost */
+      const mk = Object.getOwnPropertyNames(Math).filter(k => names.indexOf(k) < 0);
+      node._exprFn = new Function(...mk, 'return function (' + names.concat('T').join(', ') + ') { return (' + src + '); };')
+        .apply(null, mk.map(k => Math[k]));
     }
-    const r = +node._exprFn.apply(null, names.map(k => a[k] || 0).concat(ctx.t));
+    const args = [];
+    for (let i = 0; i < names.length; i++) args.push(a[names[i]] || 0);
+    args.push(ctx.t);
+    const r = +node._exprFn.apply(null, args);
     return { R: isNaN(r) ? 0 : r };
   },
   buildBody: (node, body, changed) => {
