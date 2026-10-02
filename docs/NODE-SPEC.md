@@ -267,10 +267,15 @@ passing through a Delay is still refused.
 A cluster (`meta/cluster`) is a subgraph folded into one node. Its ports live
 on the node (`values.ins` / `values.outs`, arrays of `{name, type}`), its
 subgraph in `values.graph`, its display name in `values.title`; a literal for
-an unwired port is stored under the port's name — so `title`, `ins`, `outs`
-and `graph` are **reserved port names**. Inside the subgraph, `meta/portin` /
+an unwired port is stored under the port's name — so `title`, `ins`, `outs`,
+`graph` and `mode` are **reserved port names**. Inside the subgraph, `meta/portin` /
 `meta/portout` nodes (with `values.port` naming the port) mark the boundary.
-Clusters nest, export, and receive whole lists on every input. In the editor:
+Clusters nest and export. `values.mode` picks the list semantics:
+`"list"` (default) runs the inside once and every port carries the whole list;
+`"each"` runs it once per list item with longest-list matching, each run on
+its own copy of the subgraph — so a stateful node inside keeps a memory per
+item, and a whole-list node inside (PolyLine3, Length) makes one result per
+item. The runs' outputs concatenate. In the editor:
 select nodes → right-click → *Collapse to cluster* (or Ctrl+G); right-click a
 cluster → *Expand cluster*; double-click its name to rename.
 

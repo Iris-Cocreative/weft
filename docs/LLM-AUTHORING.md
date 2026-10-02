@@ -301,8 +301,11 @@ cluster's outside ports); `values.graph` is `{nodes, wires}`; inside it a
 `meta/portin` node with `values.port: "X"` **emits the outside input X on its
 single output `V`**, and a `meta/portout` node with `values.port: "Y"` **takes
 the outside output Y on its single input `V`** — the port letters inside are
-always `V`, whatever the port is called. Prefer emitting flat patches; author
-a cluster only when *reuse* is the request. To hide clutter, use groups and
+always `V`, whatever the port is called. `values.mode: "each"` runs the inside
+once per list item (own memory per item) — the way to get one polyline per
+item from a list-in node like `d3/polyline3`; the default `"list"` runs once.
+Prefer emitting flat patches; author a cluster only when *reuse* or per-item
+grouping is the request. To hide clutter, use groups and
 collapsed nodes instead (format-2 annotations, no rewiring): the assistant's
 `group` op and `set collapsed:true`.
 `meta/js` — **Custom JS**, see §7.

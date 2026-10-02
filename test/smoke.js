@@ -269,6 +269,32 @@ for (const name of Object.keys(EXAMPLES)) {
   const js = WeftExport.buildJS({ nodes: [clusterNode], wires: [] });
   try { new Function(js); } catch (e) { failures.push('cluster export does not compile → ' + e.message); }
   if (js.indexOf('meta/portin') < 0 || js.indexOf('math/neg') < 0) failures.push('cluster export: inner defs not collected');
+  // mode "each": the inside runs once per item, each run with its own memory
+  const eachCl = mode => ({
+    id: 'ce', type: 'meta/cluster', x: 0, y: 0,
+    values: { title: 'each', mode, ins: [{ name: 'X', type: 'number' }],
+      outs: [{ name: 'N', type: 'number' }, { name: 'R', type: 'number' }],
+      graph: { nodes: [
+          { id: 'a', type: 'meta/portin', values: { port: 'X' } },
+          { id: 'b', type: 'sets/length', values: {} },
+          { id: 'c', type: 'meta/portout', values: { port: 'N' } },
+          { id: 'd', type: 'state/echo', values: { T: 0.5, N: 2 } },
+          { id: 'e', type: 'meta/portout', values: { port: 'R' } } ],
+        wires: [ { from: ['a', 'V'], to: ['b', 'L'] }, { from: ['b', 'N'], to: ['c', 'V'] },
+          { from: ['a', 'V'], to: ['d', 'V'] }, { from: ['d', 'R'], to: ['e', 'V'] } ] } }
+  });
+  const ge = m => ({ nodes: [{ id: 'sr', type: 'sets/series', values: { S: 10, N: 10, C: 3 } }, eachCl(m)],
+    wires: [{ from: ['sr', 'S'], to: ['ce', 'X'] }] });
+  const gl = ge('list'), gE = ge('each');
+  let cl, cE;
+  for (const t of [0, 0.25, 0.5, 0.75, 1]) {
+    cl = mkCtx(); cl.t = t; LM.evaluateGraph(gl, NODE_DEFS, cl);
+    cE = mkCtx(); cE.t = t; LM.evaluateGraph(gE, NODE_DEFS, cE);
+  }
+  if (Object.keys(cE.errors).length) failures.push('cluster each: errored → ' + JSON.stringify(cE.errors));
+  if ((cl.out.ce.N || []).join(',') !== '3') failures.push('cluster list mode: the inside sees the whole list, expected N 3 got [' + (cl.out.ce.N || []).join(',') + ']');
+  if ((cE.out.ce.N || []).join(',') !== '1,1,1') failures.push('cluster each mode: one run per item, expected N 1,1,1 got [' + (cE.out.ce.N || []).join(',') + ']');
+  if ((cE.out.ce.R || []).join(',') !== '10,20,30') failures.push('cluster each mode: every run keeps its own Echo memory, expected 10,20,30 got [' + (cE.out.ce.R || []).join(',') + ']');
 }
 
 /* 11 — element node declares real DOM and reads state back */

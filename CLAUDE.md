@@ -145,8 +145,10 @@ plus the category order arrays in the two generators (and `catDesc` in
    the inner graph through `ctx.defs` with `meta/portin`/`meta/portout` marking
    the boundary. The engine, exporter and editor know about `dynamic` ports —
    nothing else is cluster-aware. Port names share `values` with port literals,
-   so `title`, `ins`, `outs` and `graph` are reserved port names. Runtime state
-   lives on `node._sub` (a copy) — never let underscore fields leak into
+   so `title`, `ins`, `outs`, `graph` and `mode` are reserved port names. Runtime state
+   lives on `node._subs[k]` — one inner copy per run; `values.mode: 'each'` runs the
+   inside once per list item (k = item index), so stateful nodes inside keep
+   separate memory per item, while the default `'list'` runs once on whole lists — never let underscore fields leak into
    `values.graph` (they survive JSON as stale strings; see the `_exprSrc` guard
    in math/expr). **Custom JS** (`meta/js`) is the second dynamic def and adds
    `code` and `mode` to the reserved names; its compute rebuilds `node._jsFn`

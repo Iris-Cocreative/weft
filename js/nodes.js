@@ -3602,28 +3602,55 @@ defNode('state/edge', {
 
 defNode('meta/cluster', {
   title: 'Cluster', cat: 'Meta', dynamic: true, hidden: true,
-  desc: 'A subgraph folded into one node — select nodes and choose “Collapse to cluster”; its ports are the wires that crossed the selection edge',
+  desc: 'A subgraph folded into one node — select nodes and choose “Collapse to cluster”; its ports are the wires that crossed the selection edge. “list” runs the inside once on whole lists; “each” runs it once per list item, each run with its own memory — one polyline per item, one Echo history per item',
   inputs: [], outputs: [],
   defaults: { title: 'cluster', ins: [], outs: [], graph: { nodes: [], wires: [] } },
   compute: (a, ctx, node) => {
     const v = node.values || {};
-    if (!node._sub) node._sub = JSON.parse(JSON.stringify(v.graph || { nodes: [], wires: [] }));
     if (!ctx.defs) return {};
-    const c2 = {
-      t: ctx.t, dt: ctx.dt, frame: ctx.frame, mouse: ctx.mouse, keys: ctx.keys, scroll: ctx.scroll,
-      W: ctx.W, H: ctx.H, measureText: ctx.measureText, defs: ctx.defs,
-      drawList: ctx.drawList, domList: ctx.domList, domState: ctx.domState,
-      audioList: ctx.audioList, audioState: ctx.audioState, tuneA4: ctx.tuneA4,
-      imageList: ctx.imageList, imageState: ctx.imageState,
-      bg: null, errors: {}, out: {}, clusterIns: a, clusterOuts: {}
+    /* one inner copy per run: "each" mode keys them by item index, so a
+       stateful node inside (Echo, Spring, Counter) keeps a separate memory
+       per item instead of every item writing into one */
+    const subs = node._subs = node._subs || {};
+    const run = (ins, k) => {
+      const sub = subs[k] = subs[k] || JSON.parse(JSON.stringify(v.graph || { nodes: [], wires: [] }));
+      const c2 = {
+        t: ctx.t, dt: ctx.dt, frame: ctx.frame, mouse: ctx.mouse, keys: ctx.keys, scroll: ctx.scroll,
+        W: ctx.W, H: ctx.H, measureText: ctx.measureText, defs: ctx.defs,
+        drawList: ctx.drawList, domList: ctx.domList, domState: ctx.domState,
+        audioList: ctx.audioList, audioState: ctx.audioState, tuneA4: ctx.tuneA4,
+        imageList: ctx.imageList, imageState: ctx.imageState,
+        bg: null, errors: {}, out: {}, clusterIns: ins, clusterOuts: {}
+      };
+      LM.evaluateGraph(sub, ctx.defs, c2);
+      if (c2.bg) ctx.bg = c2.bg;
+      for (const e in c2.errors) throw new Error('inside ' + e + ': ' + c2.errors[e]);
+      return c2.clusterOuts;
     };
-    LM.evaluateGraph(node._sub, ctx.defs, c2);
-    if (c2.bg) ctx.bg = c2.bg;
-    for (const k in c2.errors) throw new Error('inside ' + k + ': ' + c2.errors[k]);
     const r = {};
-    for (const o of v.outs || []) r[o.name] = c2.clusterOuts[o.name] || [];
+    for (const o of v.outs || []) r[o.name] = [];
+    if (v.mode !== 'each') {
+      const co = run(a, 0);
+      for (const o of v.outs || []) r[o.name] = co[o.name] || [];
+      return r;
+    }
+    /* each: longest-list matching across the ports, like a native node — the
+       inside sees one item per port per run, and the runs' outputs concatenate */
+    let iter = 1;
+    for (const p of v.ins || []) { const L = a[p.name] || []; if (L.length > iter) iter = L.length; }
+    if (iter > 10000) iter = 10000;
+    for (let i = 0; i < iter; i++) {
+      const one = {};
+      for (const p of v.ins || []) { const L = a[p.name] || []; one[p.name] = L.length ? [L[Math.min(i, L.length - 1)]] : []; }
+      const co = run(one, i);
+      for (const o of v.outs || []) for (const x of co[o.name] || []) r[o.name].push(x);
+    }
     return r;
-  }
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [
+      ['list', 'list', 'run the inside once — every port carries the whole list'],
+      ['each', 'each', 'run the inside once per list item (longest-list matching), each run with its own memory']], 'list')
 });
 
 defNode('meta/portin', {

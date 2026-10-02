@@ -2637,7 +2637,7 @@ XY oscilloscope — signal X deflects the beam horizontally, Y vertically, plott
 
 ### `meta/cluster` — Cluster
 
-A subgraph folded into one node — select nodes and choose “Collapse to cluster”; its ports are the wires that crossed the selection edge
+A subgraph folded into one node — select nodes and choose “Collapse to cluster”; its ports are the wires that crossed the selection edge. “list” runs the inside once on whole lists; “each” runs it once per list item, each run with its own memory — one polyline per item, one Echo history per item
 
 Node values (`values` keys, not ports): `{"title":"cluster","ins":[],"outs":[],"graph":{"nodes":[],"wires":[]}}`
 

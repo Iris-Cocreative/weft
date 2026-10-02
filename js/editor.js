@@ -1787,7 +1787,7 @@ const Editor = (() => {
 
     const portTypeIn = (nid, port) => { const n = nodeById(nid); const p = n && insOf(n).find(i => i.name === port); return p ? p.type : 'any'; };
     const portTypeOut = (nid, port) => { const n = nodeById(nid); const p = n && outsOf(n).find(o => o.name === port); return p ? p.type : 'any'; };
-    const mkNamer = () => { const used = new Set(); return base => { let nm = base, k = 2; while (used.has(nm)) nm = base + (k++); used.add(nm); return nm; }; };
+    const mkNamer = () => { const used = new Set(['title', 'ins', 'outs', 'graph', 'mode']); return base => { let nm = base, k = 2; while (used.has(nm)) nm = base + (k++); used.add(nm); return nm; }; };
 
     // promoted inputs: one port per inner (node, input) that an outside wire reaches
     const nameIn = mkNamer(), nameOut = mkNamer();
