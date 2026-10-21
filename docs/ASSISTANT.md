@@ -32,7 +32,7 @@ tell them apart, so switching is a matter of which URL you paste in:
 | File | Model | Notes |
 |---|---|---|
 | `tools/n8n-weave-assistant-hf.json` | any open model on the **Hugging Face router** (default `Qwen/Qwen3.8-27B`) | the one to start with — see the bench scores in `HF-INTEGRATION-PLAN.md` |
-| `tools/n8n-weave-assistant.json` | **Claude** (`claude-sonnet-5`) | the original; prompt-cached spec |
+| `tools/n8n-weave-assistant.json` | **Claude** (default `claude-opus-5-5`) | same pipeline and error handling as the HF one; prompt-cached spec |
 
 ## Setup — Hugging Face (one time, ~10 minutes)
 
@@ -74,11 +74,22 @@ The system prompt is fetched live from the site on every call:
 
 ## Setup — Claude
 
-Same steps with `tools/n8n-weave-assistant.json`; the credential on the
-**Claude** node is a *Header Auth* named `x-api-key` with your Anthropic key.
-Model and budget live in its **Compose request** node
-(`model: 'claude-sonnet-5'`, `max_tokens: 8000`). It marks the spec with
-`cache_control`, so repeat calls inside the cache window don't re-pay for it.
+Same steps with `tools/n8n-weave-assistant.json` (webhook path
+`weft-assistant-claude`); the credential on the **Claude** node is a
+*Header Auth* named `x-api-key` with your Anthropic key
+(console.anthropic.com → *API keys*). Point the panel at it by pasting the
+production URL under *own webhook* in the ⚙ form.
+
+Its **Model** node is the one place to switch: `model` (`claude-opus-5-5`;
+`claude-sonnet-5-5` is faster and cheaper), `effort`
+(`low`/`medium`/`high`/`xhigh`/`max`, default `high` — how hard it thinks
+before answering; drop to `medium` if replies feel slow), `max_tokens`
+(32000, the output budget including hidden thinking) and `vision`. There is
+no temperature: current Claude models reject it. The spec is marked with
+`cache_control`, so repeat calls inside the cache window don't re-pay for
+it, and `fallbacks: "default"` lets the API retry a safety refusal on a
+fallback model by itself. Errors come back in words like the HF workflow's
+(529 overloaded, 429, out of credits, bad key).
 
 ## Weaving from a terminal
 

@@ -171,7 +171,11 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   runs from a terminal: `test/apply-ops.js` describes a loom and applies
   ops with the panel's validator, and the **`/weft-weave` skill** makes
   Claude the model for an existing loom (`/weft-patch` stays the
-  from-scratch skill).
+  from-scratch skill). [2026-10-21] The Claude workflow
+  (`tools/n8n-weave-assistant.json`) caught up with the HF one — same live
+  ASSISTANT-CORE + spec fetch, Model node (`claude-opus-5-5`, effort
+  `high`), retry and errors in words — so the panel can run on Claude by
+  pasting its webhook under *own webhook*.
 
   **Next on this thread — from one prompt to a router.** The small model is
   good at simple things and the spec it reads is already ~200 nodes and

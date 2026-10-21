@@ -1,21 +1,24 @@
 {
-  "name": "Weft — weave assistant",
+  "name": "Weft — weave assistant (Claude)",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "weft-assistant",
+        "path": "weft-assistant-claude",
         "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "*"
         }
       },
-      "id": "weft-wh-1",
+      "id": "weft-cl-wh",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
-      "webhookId": "weft-assistant"
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "weft-assistant-claude"
     },
     {
       "parameters": {
@@ -40,11 +43,14 @@
         },
         "options": {}
       },
-      "id": "weft-if-1",
+      "id": "weft-cl-if",
       "name": "Key ok?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -54,11 +60,78 @@
           "responseCode": 401
         }
       },
-      "id": "weft-401",
+      "id": "weft-cl-401",
       "name": "Respond 401",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [440, 160]
+      "position": [
+        440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m-model",
+              "name": "model",
+              "value": "claude-opus-5-5",
+              "type": "string"
+            },
+            {
+              "id": "m-vision",
+              "name": "vision",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "m-max",
+              "name": "max_tokens",
+              "value": 32000,
+              "type": "number"
+            },
+            {
+              "id": "m-effort",
+              "name": "effort",
+              "value": "high",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "weft-cl-model",
+      "name": "Model",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        -80
+      ],
+      "notes": "The one place to switch models. model = any Claude model id (claude-opus-5-5, claude-sonnet-5-5 for faster/cheaper, claude-fable-5-1 for the most capable). effort = low | medium | high | xhigh | max: how hard it thinks before answering - higher is slower and costs more output tokens; medium is a good step down if replies feel slow. max_tokens is the OUTPUT budget and includes the hidden thinking. vision = send the cloth snapshot. No temperature: current Claude models reject it.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "url": "https://iris-cocreative.github.io/weft/docs/ASSISTANT-CORE.md",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "weft-cl-core",
+      "name": "Fetch core prompt",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -80
+      ]
     },
     {
       "parameters": {
@@ -71,21 +144,27 @@
           }
         }
       },
-      "id": "weft-spec",
+      "id": "weft-cl-spec",
       "name": "Fetch authoring spec",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [440, -80]
+      "position": [
+        880,
+        -80
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Compose the Anthropic Messages API request.\n// System = assistant role + ops protocol, then the live authoring spec\n// (fetched fresh from GitHub Pages, cached by the API between calls).\nconst spec = String($json.data || '');\nconst req = $('Webhook').first().json.body || {};\n\nconst CORE = [\n  'You are the weave assistant, living inside Weft — a node-based parametric designer for the web.',\n  'The user is looking at their node canvas (the loom) and the live render (the cloth). You can edit the graph for them.',\n  '',\n  'You receive with every message: the full graph JSON, the ids of any selected nodes (that is what the user means by \"this\"/\"these\"),',\n  'live per-node eval errors, and often a small snapshot of the current render.',\n  '',\n  'HOW TO ANSWER',\n  'Reply conversationally and briefly. To change the graph, append exactly ONE fenced block labelled weft-ops containing a JSON array of ops:',\n  '',\n  '```weft-ops',\n  '[ { \"op\": \"...\" }, ... ]',\n  '```',\n  '',\n  'No block means no changes (fine for questions). Ops are validated and applied atomically — if any op is invalid, NOTHING applies and the user sees the errors. The user can Ctrl+Z any applied change.',\n  '',\n  'THE OPS',\n  '1. add — new nodes and/or wires:',\n  '   {\"op\":\"add\",\"nodes\":[{\"id\":\"f1\",\"type\":\"crv/circle\",\"x\":320,\"y\":80,\"values\":{\"R\":90}}],\"wires\":[{\"from\":[\"f1\",\"C\"],\"to\":[\"n5\",\"G\"]}]}',\n  '   Give every new node an id so you can wire it (ids colliding with existing nodes are auto-renamed, and the wires you send in the SAME add op are remapped with them). Omit x/y to auto-layout below the existing patch.',\n  '2. set — edit an existing node: {\"op\":\"set\",\"id\":\"n3\",\"values\":{\"max\":50,\"value\":12},\"x\":120,\"y\":40}',\n  '   values merge shallowly into node.values. Sliders use {min,max,value,mode:\"int\"|\"float\",prec}. Also accepts enabled/preview booleans.',\n  '3. delete — {\"op\":\"delete\",\"ids\":[\"n3\",\"n4\"]} and/or {\"op\":\"delete\",\"wires\":[{\"from\":[\"n1\",\"T\"],\"to\":[\"n2\",\"X\"]}]}',\n  '4. wire — {\"op\":\"wire\",\"from\":[\"n1\",\"T\"],\"to\":[\"n2\",\"X\"]} — replaces whatever feeds that input; add \"stack\":true to merge alongside instead (multi-wire inputs concatenate).',\n  '5. unwire — {\"op\":\"unwire\",\"to\":[\"n2\",\"X\"]} (or from, or both) — removes matching wires.',\n  '6. replace — {\"op\":\"replace\",\"graph\":{\"format\":1,\"nodes\":[...],\"wires\":[...]}} — swaps the whole patch. Last resort; prefer minimal edits so the user keeps their layout and history.',\n  '',\n  'RULES',\n  '- Use exact node type ids and single-letter port names from the spec below. Wrong ports/types reject the whole op list.',\n  '- Everything in values must be plain JSON.',\n  '- Prefer editing what exists over rebuilding. Respect the user\\'s layout; place new nodes near what they connect to (~250px columns, x grows rightward, y downward).',\n  '- Give parameters as params/slider nodes wired in, not magic constants, when the user is likely to want to play with them.',\n  '- If eval errors are present and relevant, explain the cause in your reply.',\n  '- If the request is ambiguous, make the smallest reasonable interpretation and say what you assumed.'\n].join('\\n');\n\nconst messages = [];\nfor (const t of req.history || []) {\n  if (t && t.text) messages.push({ role: t.role === 'assistant' ? 'assistant' : 'user', content: String(t.text) });\n}\nconst content = [];\nif (typeof req.snapshot === 'string' && req.snapshot.indexOf('data:image/jpeg;base64,') === 0) {\n  content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: req.snapshot.split(',')[1] } });\n}\ncontent.push({\n  type: 'text',\n  text: 'CURRENT GRAPH (weft format 1):\\n' + JSON.stringify(req.graph || { nodes: [], wires: [] })\n    + '\\n\\nSELECTED NODE IDS: ' + JSON.stringify(req.selection || [])\n    + '\\n\\nLIVE EVAL ERRORS: ' + JSON.stringify(req.errors || {})\n    + '\\n\\nUSER MESSAGE:\\n' + String(req.message || '')\n});\nmessages.push({ role: 'user', content });\n\nreturn [{ json: { body: {\n  model: 'claude-sonnet-5',\n  max_tokens: 8000,\n  system: [\n    { type: 'text', text: CORE },\n    { type: 'text', text: 'AUTHORITATIVE WEFT AUTHORING SPEC (node types, ports, list semantics):\\n\\n' + spec, cache_control: { type: 'ephemeral' } }\n  ],\n  messages\n} } }];"
+        "jsCode": "// Compose an Anthropic Messages API request.\n// System = docs/ASSISTANT-CORE.md (role + ops protocol) + docs/LLM-AUTHORING.md\n// (the live spec), both fetched fresh from GitHub Pages and prompt-cached so\n// repeat calls inside the cache window don't re-pay for them. Model settings\n// come from the Model node - the only place to touch when switching models.\nconst core = String($('Fetch core prompt').first().json.data || '');\nconst spec = String($('Fetch authoring spec').first().json.data || '');\nconst cfg = $('Model').first().json;\nconst req = $('Webhook').first().json.body || {};\n\n// history: text turns, consecutive same-role turns merged, starting on a user turn\nconst messages = [];\nfor (const t of req.history || []) {\n  if (!t || !t.text) continue;\n  const role = t.role === 'assistant' ? 'assistant' : 'user';\n  if (!messages.length && role === 'assistant') continue;\n  const last = messages[messages.length - 1];\n  if (last && last.role === role) last.content += '\\n\\n' + String(t.text);\n  else messages.push({ role, content: String(t.text) });\n}\nconst text = 'CURRENT GRAPH (weft format 2):\\n' + JSON.stringify(req.graph || { nodes: [], wires: [] })\n  + '\\n\\nSELECTED NODE IDS: ' + JSON.stringify(req.selection || [])\n  + '\\n\\nLIVE EVAL ERRORS: ' + JSON.stringify(req.errors || {})\n  + '\\n\\nUSER MESSAGE:\\n' + String(req.message || '');\nconst content = [];\nif (cfg.vision === true && typeof req.snapshot === 'string' && req.snapshot.indexOf('data:image/jpeg;base64,') === 0) {\n  content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: req.snapshot.split(',')[1] } });\n}\ncontent.push({ type: 'text', text });\nconst last = messages[messages.length - 1];\nif (last && last.role === 'user') last.content = [{ type: 'text', text: last.content }].concat(content);\nelse messages.push({ role: 'user', content });\n\nconst body = {\n  model: cfg.model,\n  max_tokens: Number(cfg.max_tokens) || 32000,\n  thinking: { type: 'adaptive' },\n  output_config: { effort: cfg.effort || 'high' },\n  // on a safety refusal the API retries on a fallback model by itself (beta header on the Claude node)\n  fallbacks: 'default',\n  system: [\n    { type: 'text', text: core },\n    { type: 'text', text: 'AUTHORITATIVE WEFT AUTHORING SPEC (node types, ports, list semantics):\\n\\n' + spec, cache_control: { type: 'ephemeral' } }\n  ],\n  messages\n};\nreturn [{ json: { body } }];\n"
       },
-      "id": "weft-compose",
+      "id": "weft-cl-compose",
       "name": "Compose request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, -80]
+      "position": [
+        1100,
+        -80
+      ]
     },
     {
       "parameters": {
@@ -99,6 +178,10 @@
             {
               "name": "anthropic-version",
               "value": "2023-06-01"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
             }
           ]
         },
@@ -109,39 +192,53 @@
           "timeout": 170000
         }
       },
-      "id": "weft-claude",
+      "id": "weft-cl-router",
       "name": "Claude",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -80],
+      "position": [
+        1320,
+        -80
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE-AFTER-IMPORT",
-          "name": "Anthropic x-api-key"
+          "name": "Anthropic API key"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "notes": "170s timeout; one retry after 3s (529 overloaded and 5xx are usually transient); on error the item carries json.error and Parse reply turns it into a readable message instead of a failed execution. Credential: Header Auth, name x-api-key, value = your Anthropic API key."
     },
     {
       "parameters": {
-        "jsCode": "// Split the model's answer into reply text + the weft-ops block (if any).\nconst res = $json;\nconst text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nlet reply = text.trim();\nlet ops = [];\nconst m = text.match(/```(?:weft-ops|json)\\s*\\n([\\s\\S]*?)```/);\nif (m) {\n  try {\n    const p = JSON.parse(m[1]);\n    ops = Array.isArray(p) ? p : (Array.isArray(p.ops) ? p.ops : []);\n    reply = text.replace(m[0], '').trim();\n  } catch (e) { /* leave the fence visible so the user can see what went wrong */ }\n}\nreturn [{ json: { reply, ops } }];"
+        "jsCode": "// A failed call (with \"continue on error\" the HTTP node hands us json.error\n// instead of throwing): say what happened in the panel, in words.\nif ($json.error && !$json.content) {\n  const e = $json.error;\n  const msg = typeof e === 'string' ? e : (e.message || e.description || JSON.stringify(e));\n  const code = String((e && (e.httpCode || e.status || e.code)) || (msg.match(/\\b(4\\d\\d|5\\d\\d)\\b/) || [])[1] || '');\n  let reply;\n  if (/credit balance/i.test(msg)) reply = '(the Anthropic account is out of credits - top it up at console.anthropic.com/settings/billing)';\n  else if (code === '529' || code === '503' || code === '502' || code === '504' || code === '500') reply = '(Claude is overloaded or the call timed out (' + code + ') - try again in a moment; if it repeats, ask for a smaller step or molt the chat)';\n  else if (code === '429') reply = '(the Anthropic API is rate-limiting us (429) - wait a moment and try again)';\n  else if (code === '401' || code === '403') reply = '(the Anthropic API refused the key (' + code + ') - check the Anthropic API key credential in n8n)';\n  else reply = '(the model call failed' + (code ? ' (' + code + ')' : '') + ': ' + msg.slice(0, 300) + ')';\n  return [{ json: { reply, ops: null, model: '', finish: 'error', error: code || 'error' } }];\n}\n\n// Split the model's answer into reply text + the weft-ops block (if any).\n// Tolerates JS-isms (// comments, trailing commas) - mirrors WeftOps.tidyJSON\n// in js/ops.js. If the block still won't parse, ops is null and the fence\n// stays in the reply so the panel gets a go.\nconst stop = $json.stop_reason || '';\nconst text = ($json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nconst tidy = s => {\n  let out = '', inStr = false, i = 0;\n  while (i < s.length) {\n    const c = s[i];\n    if (inStr) { out += c; if (c === '\\\\') { out += s[i + 1] || ''; i += 2; continue; } if (c === '\"') inStr = false; i++; }\n    else if (c === '\"') { inStr = true; out += c; i++; }\n    else if (c === '/' && s[i + 1] === '/') { while (i < s.length && s[i] !== '\\n') i++; }\n    else if (c === '/' && s[i + 1] === '*') { const j = s.indexOf('*/', i + 2); i = j < 0 ? s.length : j + 2; }\n    else { out += c; i++; }\n  }\n  return out.replace(/,(\\s*[\\]}])/g, '$1');\n};\nconst pick = p => Array.isArray(p) ? p : (p && Array.isArray(p.ops) ? p.ops : null);\nlet reply = text.trim();\nlet ops = null;\nconst m = text.match(/```(?:weft-ops|json)?[ \\t]*\\n([\\s\\S]*?)```/);\nif (m) {\n  try { ops = pick(JSON.parse(m[1])); } catch (e) { try { ops = pick(JSON.parse(tidy(m[1]))); } catch (e2) { ops = null; } }\n  if (ops) reply = text.replace(m[0], '').trim();\n}\nif (stop === 'refusal') reply = (reply ? reply + '\\n\\n' : '') + '(the model declined this one - try rewording the ask)';\nelse if (!text.trim()) reply = '(the model came back with no answer' + (stop === 'max_tokens' ? ' - it spent the whole output budget thinking; ask for a smaller step, or raise max_tokens / lower effort in the Model node' : '') + ')';\nelse if (stop === 'max_tokens' && !ops) reply += '\\n\\n(the model ran out of output tokens mid-answer - try again or ask for a smaller change)';\nreturn [{ json: { reply, ops, model: $json.model || '', finish: stop } }];\n"
       },
-      "id": "weft-parse",
+      "id": "weft-cl-parse",
       "name": "Parse reply",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, -80]
+      "position": [
+        1540,
+        -80
+      ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops || [] }) }}",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops, model: $json.model }) }}",
         "options": {}
       },
-      "id": "weft-ok",
+      "id": "weft-cl-ok",
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [1320, -80]
+      "position": [
+        1760,
+        -80
+      ]
     }
   ],
   "connections": {
@@ -160,7 +257,7 @@
       "main": [
         [
           {
-            "node": "Fetch authoring spec",
+            "node": "Model",
             "type": "main",
             "index": 0
           }
@@ -168,6 +265,28 @@
         [
           {
             "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model": {
+      "main": [
+        [
+          {
+            "node": "Fetch core prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch core prompt": {
+      "main": [
+        [
+          {
+            "node": "Fetch authoring spec",
             "type": "main",
             "index": 0
           }
