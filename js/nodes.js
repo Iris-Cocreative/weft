@@ -151,6 +151,45 @@ defNode('input/hotspot', {
   }
 });
 
+defNode('input/drag', {
+  title: 'Drag', cat: 'Input',
+  desc: 'Click and drag on the cloth: X/Y is how far this drag has moved, TX/TY the running total of every drag (a slider’s value). G limits where a drag may start (none = the whole cloth); the drag keeps going wherever the pointer roams until release. F moves the region by the total, so a handle drawn at TX/TY stays grabbable. X0/X1 and Y0/Y1 bound the total (leave empty for no limit; equal values lock that axis) — dragging past an end holds there, and dragging back moves again once the pointer returns to the handle',
+  inputs: [
+    { name: 'G', type: 'geometry', label: 'region (none = whole cloth)' },
+    { name: 'R', type: 'number', default: 8, label: 'reach px (open curves)' },
+    { name: 'F', type: 'bool', default: false, label: 'region follows the total' },
+    { name: 'X0', type: 'number', label: 'total x min (empty = none)' },
+    { name: 'X1', type: 'number', label: 'total x max (empty = none)' },
+    { name: 'Y0', type: 'number', label: 'total y min (empty = none)' },
+    { name: 'Y1', type: 'number', label: 'total y max (empty = none)' }],
+  outputs: [
+    { name: 'X', type: 'number', label: 'this drag Δx px' }, { name: 'Y', type: 'number', label: 'this drag Δy px' },
+    { name: 'TX', type: 'number', label: 'total Δx px' }, { name: 'TY', type: 'number', label: 'total Δy px' },
+    { name: 'D', type: 'bool', label: 'dragging' }],
+  compute: (a, ctx, node) => {
+    const st = node._state = node._state || {};
+    const s = st[ctx.i || 0] = st[ctx.i || 0] || { on: false, sx: 0, sy: 0, tx: 0, ty: 0 };
+    const m = ctx.mouse || {};
+    /* F tests the pointer against the region shifted by the committed total —
+       the same as moving G, without wiring TX back into G (a cycle) */
+    const p = a.F ? { x: m.x - s.tx, y: m.y - s.ty } : m;
+    if (m.pressed && !s.on && (!a.G || LM.pointInGeom(a.G, p, a.R))) { s.on = true; s.sx = m.x; s.sy = m.y; }
+    const dx = s.on ? m.x - s.sx : 0, dy = s.on ? m.y - s.sy : 0;
+    /* an unset or non-numeric limit is no limit; reversed limits still bound */
+    const lim = (v, a0, a1) => {
+      const lo = Number.isFinite(+a0) && a0 !== '' && a0 !== null ? +a0 : -Infinity;
+      const hi = Number.isFinite(+a1) && a1 !== '' && a1 !== null ? +a1 : Infinity;
+      return Math.min(Math.max(v, Math.min(lo, hi)), Math.max(lo, hi));
+    };
+    /* bound the live total, and commit the bounded value — an over-run never
+       carries into the next drag */
+    const tx = lim(s.tx + dx, a.X0, a.X1), ty = lim(s.ty + dy, a.Y0, a.Y1);
+    if (s.on && (m.released || !m.down)) s.on = false;
+    if (!s.on) { s.tx = tx; s.ty = ty; }
+    return { X: dx, Y: dy, TX: tx, TY: ty, D: s.on };
+  }
+});
+
 defNode('input/button', {
   title: 'Button', cat: 'Input', desc: 'A real button overlaid on the canvas at P — clicked trigger, held state, click count',
   inputs: [
@@ -3819,7 +3858,7 @@ defNode('meta/js', {
   const groups = {
     /* Input: 1 ambient (time/mouse/viewport) · 2 interaction */
     'input/time': 1, 'input/turntable': 1, 'input/mouse': 1, 'input/viewport': 1,
-    'input/hotspot': 2, 'input/button': 2, 'input/keyboard': 2, 'input/scroll': 2,
+    'input/hotspot': 2, 'input/drag': 2, 'input/button': 2, 'input/keyboard': 2, 'input/scroll': 2,
     /* State: 1 motion (followers) · 2 memory · 3 time/triggers */
     'state/smooth': 1, 'state/spring': 1,
     'state/counter': 2, 'state/latch': 2, 'state/sample': 2, 'state/prev': 2, 'state/delay': 2,

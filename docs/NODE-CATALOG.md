@@ -20,6 +20,28 @@ A real button overlaid on the canvas at P — clicked trigger, held state, click
 | D | bool | held down |
 | N | number | click count |
 
+### `input/drag` — Drag
+
+Click and drag on the cloth: X/Y is how far this drag has moved, TX/TY the running total of every drag (a slider’s value). G limits where a drag may start (none = the whole cloth); the drag keeps going wherever the pointer roams until release. F moves the region by the total, so a handle drawn at TX/TY stays grabbable. X0/X1 and Y0/Y1 bound the total (leave empty for no limit; equal values lock that axis) — dragging past an end holds there, and dragging back moves again once the pointer returns to the handle
+
+| in | type | default | note |
+|---|---|---|---|
+| G | geometry |  | region (none = whole cloth) |
+| R | number | `8` | reach px (open curves) |
+| F | bool | `false` | region follows the total |
+| X0 | number |  | total x min (empty = none) |
+| X1 | number |  | total x max (empty = none) |
+| Y0 | number |  | total y min (empty = none) |
+| Y1 | number |  | total y max (empty = none) |
+
+| out | type | note |
+|---|---|---|
+| X | number | this drag Δx px |
+| Y | number | this drag Δy px |
+| TX | number | total Δx px |
+| TY | number | total Δy px |
+| D | bool | dragging |
+
 ### `input/hotspot` — Hotspot
 
 Turn any geometry into an interface element: hover / pressed / clicked (per list item)
@@ -2669,4 +2691,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-192 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+193 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

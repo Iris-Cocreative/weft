@@ -329,7 +329,8 @@ const Editor = (() => {
     if (inp.type === 'number') {
       const i = document.createElement('input');
       i.type = 'number'; i.step = 'any'; i.value = cur() === undefined ? '' : cur();
-      i.addEventListener('change', () => set(parseFloat(i.value) || 0));
+      // no default = the port may be unset (e.g. Drag's limits) — clearing it unsets it rather than writing 0
+      i.addEventListener('change', () => set(i.value.trim() === '' && inp.default === undefined ? undefined : parseFloat(i.value) || 0));
       holder.appendChild(i);
     } else if (inp.type === 'bool') {
       const i = document.createElement('input');

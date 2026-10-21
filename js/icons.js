@@ -158,6 +158,7 @@ const WEFT_ICONS = {
 
   /* ---- code drafts — input II ---- */
   'input/button': '<rect x="3.5" y="11" width="16" height="8" rx="4" stroke="currentColor" stroke-miterlimit="10"/><path d="M21.5 8.5L24 6" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M23 11.5L26 10.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M19 6.5L19.5 3.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
+  'input/drag': '<circle cx="7" cy="20" r="3.5" stroke="currentColor" stroke-miterlimit="10" stroke-dasharray="2 2"/><circle cx="20.5" cy="6.5" r="3.5" fill="currentColor"/><path d="M9.5 17.5L17 10" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M17 10L13.8 10.2" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M17 10L16.8 13.2" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
   'input/hotspot': '<circle cx="13.5" cy="13.5" r="8" stroke="currentColor" stroke-miterlimit="10" stroke-dasharray="2.5 3"/><circle cx="13.5" cy="13.5" r="1.4" fill="currentColor"/><path d="M25 25L16.5 16.5" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M16.5 16.5L19.7 16.9" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/><path d="M16.5 16.5L16.9 19.7" stroke="currentColor" stroke-miterlimit="10" stroke-linecap="round"/>',
 
   /* ---- code drafts — params II ---- */

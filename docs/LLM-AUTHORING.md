@@ -100,6 +100,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 |---|---|---|---|---|
 | `input/button` | Button | L:string="press" P:point | C:bool D:bool N:number | |
 | `input/hotspot` | Hotspot | G:geometry R:number=8 | H:bool D:bool C:bool | H hover · D down · C clicked |
+| `input/drag` | Drag | G:geometry R:number=8 F:bool=false X0:number X1:number Y0:number Y1:number | X:number Y:number TX:number TY:number D:bool | X/Y this drag · TX/TY total of all drags · D dragging · no G = whole cloth · F = region follows TX/TY · X0/X1, Y0/Y1 bound the total (unset = none; equal = axis locked) |
 | `input/keyboard` | Keyboard | K:string="space" | D:bool P:bool R:bool | held / pressed / released |
 | `input/mouse` | Mouse | | X:number Y:number NX:number NY:number D:bool | px centered · normalized 0–1 · down |
 | `input/scroll` | Scroll | | Y:number N:number V:number | px · normalized · velocity |

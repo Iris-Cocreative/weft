@@ -110,6 +110,16 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
 - [shipped v0.8] **Feedback edges** — the Delay node (track 0.5). Interactions
   where the thing you point at moves in response are now expressible; the
   ceiling on this track is lifted.
+- [shipped 2026-10-21] **Drag** (`input/drag`) — click-and-drag on the cloth:
+  X/Y this drag, TX/TY the running total of all drags, D dragging. Optional
+  region G (none = whole cloth; a list = independent handles), and F lets the
+  region follow the total so a handle drawn at TX/TY stays grabbable with no
+  Delay loop. Built on the latched `pressed`/`released` like Hotspot, so a
+  sub-frame tap never strands a drag. Limits X0/X1, Y0/Y1 bound the total
+  inside the node (unset = none, equal = axis locked) and the bounded value is
+  what's kept, so an over-run never leaves a dead zone on the next drag. The
+  editor's number field now unsets a no-default port when cleared, instead of
+  writing 0. Next: a grab cursor over drag regions.
 - [shipped 2026-07-15] ***Living lattice* example** — the state-track showcase:
   viewport-filling iso lattice tiled with hexagons (circumradius spacing/√3),
   one Spring node = hundreds of per-cell machines (R → size/hue, velocity →

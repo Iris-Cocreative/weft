@@ -185,7 +185,14 @@ downstream knows 3D happened.
 - **Toggle on click** — `hotspot(C) → state/latch(T → B)`. Per item: a list of
   shapes through one hotspot+latch is N independent toggles.
 - **Count clicks** — `hotspot(C) → state/counter(U → N)`.
-- **Freeze a value at an event** — `state/sample(V, T:trigger → R)`.
+- **Freeze a value at an event** — `state/sample(V, T:trigger → R)`. V can be a point or a
+  whole list — one trigger freezes every item.
+- **Drag on the cloth / a canvas slider** — `input/drag(G:region → X,Y this drag;
+  TX,TY total of all drags; D dragging)`. No G = drag anywhere. For a handle:
+  draw it at rest into G, set F (region follows the total), and move the drawn
+  handle by TX/TY — no feedback wire needed. A list of handles in G drags each
+  one on its own. A horizontal slider: X0 0, X1 200 (the track length), Y0 = Y1
+  = 0 to lock the handle to its line; TX then runs 0–200 → `math/remap`.
 - **Key press** — `input/keyboard(K:"space" → D held, P pressed, R released)`.
 - **Scroll-driven scene** — `input/scroll(N: 0–1 → math/remap)` drives anything;
   exports read the real page scroll.
