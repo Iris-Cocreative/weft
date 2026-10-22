@@ -427,29 +427,86 @@ const Editor = (() => {
     return `M ${p1.x} ${p1.y} C ${p1.x + L} ${p1.y}, ${p2.x - L} ${p2.y}, ${p2.x} ${p2.y}`;
   }
 
-  function outputTypeColor(from, depth) {
+  /* ---- carried types ----
+   * A port declared 'any' shows what actually flows through it. Every fixed
+   * def with an 'any' output passes its 'any' inputs through (Select, Item,
+   * Merge, Sample & Hold, Delay, Relay…), so the output carries whatever its
+   * wired 'any' inputs agree on, followed upstream to a typed source — which
+   * keeps point vs vector and audio vs string apart. Where that finds nothing
+   * (cluster boundaries, Custom JS, inputs that disagree) the last evaluated
+   * values decide. Memoized per paint pass; `stack` stops at feedback loops. */
+  function valueType(v) {
+    if (typeof v === 'boolean') return 'bool';
+    if (typeof v === 'number') return 'number';
+    if (typeof v === 'string') return 'string';
+    if (!v || typeof v !== 'object') return 'any';
+    if (v.paint || ('r' in v && 'g' in v && 'b' in v)) return 'color';
+    if (v.kind !== undefined) return 'geometry';
+    if (v.pos && v.target) return 'camera';
+    if ('x' in v && 'y' in v) return 'z' in v ? 'point3' : 'point';
+    return 'any';
+  }
+  function liveType(n, port) {
+    const L = n._last && n._last.outs && n._last.outs[port];
+    if (!L || !L.length) return 'any';
+    const t = valueType(L[0]);
+    for (let i = 1; i < L.length; i++) if (valueType(L[i]) !== t) return 'any';
+    return t;
+  }
+  function carriedType(from, memo, stack) {
+    const key = from[0] + ':' + from[1];
+    if (memo && memo.has(key)) return memo.get(key);
     const n = nodeById(from[0]);
     const d = n && defOf(n);
-    // relays are transparent: their wires (and ports) take the color of
-    // whatever feeds them; a disconnected relay speaks 'any'
-    if (d && d.relay) return (depth || 0) > 32 ? TYPE_COLORS.any : relayColor(n.id, (depth || 0) + 1);
-    const o = n && outsOf(n).find(o => o.name === from[1]);
-    return o ? (TYPE_COLORS[o.type] || '#999') : '#999';
+    const o = d && outsOf(n).find(o => o.name === from[1]);
+    if (!o) return 'any';
+    if (o.type !== 'any') return o.type;
+    stack = stack || new Set();
+    if (stack.has(n.id)) return 'any';
+    stack.add(n.id);
+    let t = null, mixed = false;
+    if (!d.dynamic) {
+      for (const inp of insOf(n)) {
+        if (inp.type !== 'any') continue;
+        for (const w of wiresToInput(n.id, inp.name)) {
+          const u = carriedType(w.from, memo, stack);
+          if (u === 'any') continue;
+          if (t && t !== u) mixed = true;
+          t = u;
+        }
+      }
+    }
+    stack.delete(n.id);
+    const r = (t && !mixed) ? t : liveType(n, from[1]);
+    if (memo) memo.set(key, r);
+    return r;
+  }
+  function outputTypeColor(from, memo) {
+    return TYPE_COLORS[carriedType(from, memo)] || '#999';
   }
 
-  function relayColor(nodeId, depth) {
-    const w = S.graph.wires.find(w => w.to[0] === nodeId);
-    return w ? outputTypeColor(w.from, depth || 0) : TYPE_COLORS.any;
-  }
-
-  function paintRelayPorts() {
+  /* 'any' port dots take the color of what they carry (an input: what its
+   * wire brings; unwired stays 'any'), and say so in their tooltip */
+  function paintAnyPorts(memo) {
+    memo = memo || new Map();
     for (const n of S.graph.nodes) {
-      const d = defOf(n);
-      if (!d || !d.relay) continue;
       const el = S.els.get(n.id);
       if (!el) continue;
-      const c = relayColor(n.id, 0);
-      el.querySelectorAll('.port').forEach(p => p.style.setProperty('--t', c));
+      const paint = (dir, p, t) => {
+        const pe = el.querySelector(`.port[data-dir="${dir}"][data-port="${p.name}"]`);
+        if (!pe) return;
+        const c = TYPE_COLORS[t] || '#999';
+        if (pe._c === c) return;
+        pe._c = c;
+        pe.style.setProperty('--t', c);
+        pe.title = (p.label || p.name) + ' · any' + (t !== 'any' ? ' — carrying ' + t : '');
+      };
+      for (const o of outsOf(n)) if (o.type === 'any') paint('out', o, carriedType([n.id, o.name], memo));
+      for (const i of insOf(n)) {
+        if (i.type !== 'any') continue;
+        const w = wiresToInput(n.id, i.name)[0];
+        paint('in', i, w ? carriedType(w.from, memo) : 'any');
+      }
     }
   }
 
@@ -502,6 +559,7 @@ const Editor = (() => {
     paintArmed();
     paintWiring();
     const liveTint = typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true);
+    const memo = new Map();
     for (const w of S.graph.wires) {
       // folded groups: wires between two members vanish with them; wires
       // crossing the boundary terminate on the frame edge
@@ -514,7 +572,7 @@ const Editor = (() => {
       const path = document.createElementNS(NS, 'path');
       path.setAttribute('d', d);
       path.setAttribute('class', 'wire' + (S.selWire === w.id ? ' selected' : '') + (alive.has(w.to[0]) ? '' : ' dead'));
-      path.setAttribute('stroke', (liveTint && S.wireTint.get(w.id)) || outputTypeColor(w.from));
+      path.setAttribute('stroke', (liveTint && S.wireTint.get(w.id)) || outputTypeColor(w.from, memo));
       S.wirePaths.set(w.id, path); // addressable for the live-color tint
       svgEl.appendChild(path);
 
@@ -543,7 +601,7 @@ const Editor = (() => {
       });
       svgEl.appendChild(hit);
     }
-    paintRelayPorts();
+    paintAnyPorts(memo);
     if (S.drag && S.drag.kind === 'wire') {
       const fixed = portPos(S.drag.fixed.node, S.drag.fixed.dir, S.drag.fixed.port);
       const m = { x: S.drag.mx, y: S.drag.my };
@@ -2174,30 +2232,33 @@ const Editor = (() => {
           });
         }
       }
-      // live wires (optional setting) — same 150ms cadence as the readouts:
-      // color wires take the color flowing through them, bool wires go dark
-      // red while everything on them is false (one true item keeps them lit)
-      if (readouts && typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true)) {
+      // wires and 'any' ports follow what flows, on the readouts' 150ms
+      // cadence — a type read from live values can change between draws. With
+      // the live-wires setting on, color wires also take the color flowing
+      // through them, and bool wires go dark red while everything on them is
+      // false (one true item keeps them lit).
+      if (readouts) {
+        const live = typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true);
+        const memo = new Map();
         for (const w of S.graph.wires) {
           const path = S.wirePaths.get(w.id);
           if (!path) continue;
-          const tc = outputTypeColor(w.from);
-          if (tc === TYPE_COLORS.bool) {
+          const tc = outputTypeColor(w.from, memo);
+          let hex = tc;
+          if (live && (tc === TYPE_COLORS.bool || tc === TYPE_COLORS.color)) {
             const L = (ctx.out[w.from[0]] || {})[w.from[1]];
-            const hex = L && L.length && !L.some(Boolean) ? BOOL_OFF : tc;
-            if (S.wireTint.get(w.id) !== hex) { S.wireTint.set(w.id, hex); path.setAttribute('stroke', hex); }
-            continue;
+            if (tc === TYPE_COLORS.bool) {
+              if (L && L.length && !L.some(Boolean)) hex = BOOL_OFF;
+            } else {
+              let c = L && L[0];
+              if (c && c.paint) c = c.stops && c.stops[0] && c.stops[0].c; // a paint shows its first stop
+              if (c && typeof c === 'object' && 'r' in c) hex = LM.colorToHex(c);
+            }
           }
-          if (tc !== TYPE_COLORS.color) continue;
-          const L = (ctx.out[w.from[0]] || {})[w.from[1]];
-          let c = L && L[0];
-          if (c && c.paint) c = c.stops && c.stops[0] && c.stops[0].c; // a paint shows its first stop
-          if (c && typeof c === 'object' && 'r' in c) {
-            const hex = LM.colorToHex(c);
-            S.wireTint.set(w.id, hex); // drawWiresNow reapplies this on rebuild
-            path.setAttribute('stroke', hex);
-          }
+          if (live) S.wireTint.set(w.id, hex); // drawWiresNow reapplies this on rebuild
+          if (path._c !== hex) { path._c = hex; path.setAttribute('stroke', hex); }
         }
+        paintAnyPorts(memo);
       }
     },
 

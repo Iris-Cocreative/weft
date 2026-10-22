@@ -131,6 +131,15 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   it is wired or an output's wire is being dragged/armed): a wired Toggle
   follows its input and ignores clicks, a wired Button is true while pressed
   *or* while its input is true. A toggle can now drive another toggle.
+- [shipped 2026-10-21] **Wires and `any` ports show what they carry** — an
+  `any` output takes the type its wired `any` inputs agree on, followed
+  upstream to a typed source (every fixed def with an `any` output passes its
+  `any` inputs through: Select, Item, Merge, Sample & Hold, Delay, Panel,
+  Relay…), so point vs vector and audio vs string stay distinct. Where that
+  finds nothing — cluster boundaries, Custom JS, inputs that disagree — the
+  last evaluated values decide; a mixed list stays `any`. Port dots recolor and
+  their tooltip says "any — carrying bool"; the bool-off and live-color tints
+  follow. Generalizes the old relay-only coloring (`relayColor` is gone).
 - [shipped 2026-07-15] ***Living lattice* example** — the state-track showcase:
   viewport-filling iso lattice tiled with hexagons (circumradius spacing/√3),
   one Spring node = hundreds of per-cell machines (R → size/hue, velocity →
