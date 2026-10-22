@@ -101,7 +101,7 @@ const App = {
   SETTINGS: [
     { key: 'angle-sliders', label: 'angle sliders', hint: 'typing 90 / 180 / 360 makes a degree slider wired into a Radians node', def: true },
     { key: 'smallint-sliders', label: '0–12 sliders', hint: 'typing a small integer makes a 0–12 integer slider', def: true },
-    { key: 'live-colour-wires', label: 'live color wires', hint: 'color wires take the color flowing through them', def: true }
+    { key: 'live-colour-wires', label: 'live color wires', hint: 'color wires take the color flowing through them; bool wires go dark red while all false', def: true }
   ],
 
   bindSettings() {

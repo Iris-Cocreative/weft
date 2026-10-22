@@ -307,6 +307,7 @@ defNode('cat/name', {
   cat: 'Maths',               // existing category
   desc: 'One sentence.',      // tooltip + catalog
   inputs:  [{ name: 'A', type: 'number', default: 0, label: 'long name' }],
+                              // + reveal: true = the editor hides the port until it is wired or a wire is dragged (Toggle / Button drive inputs)
   outputs: [{ name: 'R', type: 'number' }],
   listInputs: [],             // inputs that take the whole list
   defaults: {},               // initial node.values (non-port state)

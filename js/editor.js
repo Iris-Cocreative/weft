@@ -2,6 +2,9 @@
 /* Weft node editor — pan/zoom world, DOM nodes, SVG wires. */
 const Editor = (() => {
 
+  /* a bool wire whose every value is false — the dark of --type-bool (mirrors --type-bool-off) */
+  const BOOL_OFF = '#7a1f23';
+
   const S = {
     graph: { nodes: [], wires: [] },
     pan: { x: 60, y: 40 }, zoom: 1,
@@ -271,7 +274,7 @@ const Editor = (() => {
     insCol.className = 'col-ins';
     for (const inp of insOf(n)) {
       const row = document.createElement('div');
-      row.className = 'row in';
+      row.className = 'row in' + (inp.reveal ? ' reveal' : ''); // reveal: hidden until wired, or while a wire is dragged
       row.dataset.input = inp.name;
       row.innerHTML = `<span class="port" data-node="${n.id}" data-dir="in" data-port="${inp.name}" style="--t:${TYPE_COLORS[inp.type] || '#999'}" title="${(inp.label || inp.name)} · ${inp.type}"></span><span class="label">${inp.name}</span>`;
       const lit = document.createElement('span');
@@ -497,6 +500,7 @@ const Editor = (() => {
     const alive = LM.sinkReachable(S.graph, NODE_DEFS, (n, d) => !!d.inspect);
     for (const [id, el] of S.els) el.classList.toggle('dead', !alive.has(id));
     paintArmed();
+    paintWiring();
     const liveTint = typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true);
     for (const w of S.graph.wires) {
       // folded groups: wires between two members vanish with them; wires
@@ -968,6 +972,8 @@ const Editor = (() => {
       }
     }
     const wp = worldPos(e);
+    // reveal hidden inputs now, before portRects measures the touch snap targets
+    nodesEl.classList.toggle('wiring-out', fixed.dir === 'out');
     S.drag = {
       kind: 'wire', fixed, mx: wp.x, my: wp.y, detached,
       startEl: portEl,                                     // the port the finger pressed (a tap asks about it)
@@ -1041,12 +1047,20 @@ const Editor = (() => {
     disarm();
     S.armed = { node: el.dataset.node, dir: el.dataset.dir, port: el.dataset.port };
     el.classList.add('armed');
+    paintWiring();
     showPortTip(el, (el.title || el.dataset.port) + ' · now tap an ' + (el.dataset.dir === 'out' ? 'input' : 'output'), 4000);
   }
   function disarm() {
     if (!S.armed) return;
     S.armed = null;
     for (const el of nodesEl.querySelectorAll('.port.armed')) el.classList.remove('armed');
+    paintWiring();
+  }
+  /* hidden (reveal) inputs show while an output's wire is looking for a home —
+   * dragged, or armed on touch */
+  function paintWiring() {
+    const d = S.drag, a = S.armed;
+    nodesEl.classList.toggle('wiring-out', !!((d && d.kind === 'wire' && d.fixed.dir === 'out') || (a && a.dir === 'out')));
   }
   function paintArmed() {
     const a = S.armed;
@@ -1076,6 +1090,7 @@ const Editor = (() => {
     const wasDetached = d.detached;
     const fixed = d.fixed;
     S.drag = null;
+    paintWiring(); // hide the reveal inputs again (the new wire, if any, keeps its own shown)
     if (S.hotPort) { S.hotPort.classList.remove('hot'); S.hotPort = null; }
     if (e.pointerType === 'touch' && !d.moved) {
       // a still finger on a port asked what it is, not for a wire — put back
@@ -1296,6 +1311,7 @@ const Editor = (() => {
     if (!S.drag) return;
     const d = S.drag;
     S.drag = null;
+    paintWiring();
     if (marqueeEl) { marqueeEl.remove(); marqueeEl = null; }
     if (S.hotPort) { S.hotPort.classList.remove('hot'); S.hotPort = null; }
     editorEl.classList.remove('panning');
@@ -2158,13 +2174,21 @@ const Editor = (() => {
           });
         }
       }
-      // color wires take the color flowing through them (optional setting) —
-      // same 150ms cadence as the readouts, only wires whose type is color
+      // live wires (optional setting) — same 150ms cadence as the readouts:
+      // color wires take the color flowing through them, bool wires go dark
+      // red while everything on them is false (one true item keeps them lit)
       if (readouts && typeof App !== 'undefined' && App.setting && App.setting('live-colour-wires', true)) {
         for (const w of S.graph.wires) {
           const path = S.wirePaths.get(w.id);
           if (!path) continue;
-          if (outputTypeColor(w.from) !== TYPE_COLORS.color) continue;
+          const tc = outputTypeColor(w.from);
+          if (tc === TYPE_COLORS.bool) {
+            const L = (ctx.out[w.from[0]] || {})[w.from[1]];
+            const hex = L && L.length && !L.some(Boolean) ? BOOL_OFF : tc;
+            if (S.wireTint.get(w.id) !== hex) { S.wireTint.set(w.id, hex); path.setAttribute('stroke', hex); }
+            continue;
+          }
+          if (tc !== TYPE_COLORS.color) continue;
           const L = (ctx.out[w.from[0]] || {})[w.from[1]];
           let c = L && L[0];
           if (c && c.paint) c = c.stops && c.stops[0] && c.stops[0].c; // a paint shows its first stop

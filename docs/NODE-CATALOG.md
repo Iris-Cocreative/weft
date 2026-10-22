@@ -153,7 +153,11 @@ Node values (`values` keys, not ports): `{"deg":0,"out":"rad"}`
 
 ### `params/toggle` — Boolean Toggle
 
-True / false switch
+True / false switch — wire a bool into its hidden input (it appears while you drag a wire) and the switch follows it
+
+| in | type | default | note |
+|---|---|---|---|
+| B | bool |  | drive (wired: the switch follows it) |
 
 | out | type | note |
 |---|---|---|
@@ -163,7 +167,11 @@ Node values (`values` keys, not ports): `{"on":true}`
 
 ### `params/button` — Button
 
-Momentary push button — true while pressed, false again on release (an editor control, like the toggle)
+Momentary push button — true while pressed, false again on release (an editor control, like the toggle). Its hidden input (it appears while you drag a wire) presses it too: true while pressed or while the input is true
+
+| in | type | default | note |
+|---|---|---|---|
+| B | bool |  | press (wired: true also presses it) |
 
 | out | type | note |
 |---|---|---|

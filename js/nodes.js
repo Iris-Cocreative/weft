@@ -715,19 +715,32 @@ defNode('params/angle', {
 });
 
 defNode('params/toggle', {
-  title: 'Boolean Toggle', cat: 'Params', desc: 'True / false switch', bare: true,
-  inputs: [], outputs: [{ name: 'B', type: 'bool' }],
+  title: 'Boolean Toggle', cat: 'Params', bare: true,
+  desc: 'True / false switch — wire a bool into its hidden input (it appears while you drag a wire) and the switch follows it',
+  inputs: [{ name: 'B', type: 'bool', reveal: true, label: 'drive (wired: the switch follows it)' }],
+  outputs: [{ name: 'B', type: 'bool' }],
   defaults: { on: true },
-  compute: (a, c, node) => ({ B: !!node.values.on }),
+  compute: (a, c, node) => ({ B: a.B === undefined ? !!node.values.on : !!a.B }),
   buildBody: (node, body, changed) => {
     const tg = _mk('div', 'tg' + (node.values.on ? ' on' : ''), body);
     tg.title = 'Boolean Toggle';
     _mk('div', 'tg-knob', tg);
     _cleanClick(tg, () => {
+      if (node._driven) return; // a wired input owns the switch
       node.values.on = !node.values.on;
       tg.classList.toggle('on', !!node.values.on);
       changed();
     });
+  },
+  /* wired: the switch shows what flows in (first item) and stops taking clicks */
+  postEval: (node, el) => {
+    const ins = (node._last && node._last.ins && node._last.ins.B) || [];
+    node._driven = ins.length > 0;
+    const tg = el.querySelector('.tg');
+    if (!tg) return;
+    tg.classList.toggle('driven', node._driven);
+    tg.classList.toggle('on', node._driven ? !!ins[0] : !!node.values.on);
+    tg.title = node._driven ? 'Boolean Toggle — following its input' : 'Boolean Toggle';
   }
 });
 
@@ -766,9 +779,10 @@ defNode('params/swatch', {
 
 defNode('params/button', {
   title: 'Button', cat: 'Params', bare: true,
-  desc: 'Momentary push button — true while pressed, false again on release (an editor control, like the toggle)',
-  inputs: [], outputs: [{ name: 'B', type: 'bool' }],
-  compute: (a, c, node) => ({ B: !!node._down }),
+  desc: 'Momentary push button — true while pressed, false again on release (an editor control, like the toggle). Its hidden input (it appears while you drag a wire) presses it too: true while pressed or while the input is true',
+  inputs: [{ name: 'B', type: 'bool', reveal: true, label: 'press (wired: true also presses it)' }],
+  outputs: [{ name: 'B', type: 'bool' }],
+  compute: (a, c, node) => ({ B: !!node._down || !!a.B }),
   buildBody: (node, body) => {
     const bt = _mk('div', 'pbtn', body);
     bt.title = 'Button — true while pressed';
@@ -779,6 +793,12 @@ defNode('params/button', {
       bt.classList.add('down');
       window.addEventListener('pointerup', up, { once: true });
     });
+  },
+  /* lit while the output is true — so a wired input visibly presses it */
+  postEval: (node, el) => {
+    const bt = el.querySelector('.pbtn');
+    const outs = (node._last && node._last.outs && node._last.outs.B) || [];
+    if (bt) bt.classList.toggle('down', !!node._down || outs.some(Boolean));
   }
 });
 

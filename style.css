@@ -16,6 +16,7 @@
    * value widgets wear the color of the type they output */
   --type-number: #3e9aff;
   --type-bool: #ff3b41;
+  --type-bool-off: #7a1f23;   /* a bool wire carrying only false (editor.js BOOL_OFF) */
   --font-ui: "Neue Kabel", Inter, "Segoe UI", system-ui, sans-serif;
   --font-val: Consolas, ui-monospace, "Cascadia Mono", monospace;
 
@@ -568,6 +569,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .tg.on { background: var(--type-bool); box-shadow: 0 0 8px rgba(255, 59, 65, 0.45); }
 .tg.on .tg-knob { top: 2px; background: var(--dark-100); }
+.tg.driven { cursor: default; }  /* a wired input owns the switch */
 
 /* --- Button (params): momentary push — solid while pressed --- */
 .pbtn {
@@ -932,6 +934,15 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .node.bare .port { pointer-events: auto; position: static; transform: none; }
 .node.bare .col-ins .port { margin-left: -7px; }
 .node.bare .col-outs .port { margin-right: -7px; }
+
+/* reveal inputs (Toggle / Button drive ports): invisible until wired, and
+ * shown while an output's wire is being dragged or armed — visibility, not
+ * display, so touch snapping can still measure them */
+.row.in.reveal:not(.connected) { visibility: hidden; }
+.wiring-out .row.in.reveal { visibility: visible; }
+.wiring-out .row.in.reveal .port { animation: port-reveal 0.18s ease-out; }
+@keyframes port-reveal { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wiring-out .row.in.reveal .port { animation: none; } }
 .node.bare .node-body { padding: 0; }
 
 /* collapsed nodes — double-click the head: icon + gradient + ports only.

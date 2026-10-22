@@ -124,6 +124,13 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   xnor** on Logic — its mode switch is now a four-column grid (`.seg.grid4`)
   so each negated gate sits under its plain one. Logic's existing modes and
   saved patches are unchanged.
+- [shipped 2026-10-21] **Bool wires show their state** — under the live-wires
+  setting, a bool wire carrying only false goes dark red (`--type-bool-off`);
+  one true item in a list keeps it lit. **Toggle and Button take a hidden
+  drive input** (`reveal: true` on an input — the editor hides the port until
+  it is wired or an output's wire is being dragged/armed): a wired Toggle
+  follows its input and ignores clicks, a wired Button is true while pressed
+  *or* while its input is true. A toggle can now drive another toggle.
 - [shipped 2026-07-15] ***Living lattice* example** — the state-track showcase:
   viewport-filling iso lattice tiled with hexagons (circumradius spacing/√3),
   one Spring node = hundreds of per-cell machines (R → size/hue, velocity →

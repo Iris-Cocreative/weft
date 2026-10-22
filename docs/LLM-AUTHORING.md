@@ -112,8 +112,8 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | node | title | in | out | |
 |---|---|---|---|---|
 | `params/slider` | Number Slider | | N:number | values: min max value label, mode:"int" |
-| `params/toggle` | Boolean Toggle | | B:bool | values: value |
-| `params/button` | Button (momentary) | | B:bool | |
+| `params/toggle` | Boolean Toggle | B:bool (optional) | B:bool | values: on · wired B drives the switch |
+| `params/button` | Button (momentary) | B:bool (optional) | B:bool | true while pressed or while wired B is true |
 | `params/swatch` | Color Swatch | | C:color | values: hex:"#rrggbb", a:0–1 |
 | `params/textlist` | Text List | | L:string | values: text (one item per line) |
 | `params/number` | Number | N:number=0 | N:number | |
