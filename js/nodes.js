@@ -1743,7 +1743,7 @@ defNode('sets/reverse', {
 });
 
 defNode('sets/sort', {
-  title: 'Sort List', cat: 'Sets',
+  title: 'Sort List', cat: 'Sets', width: 184,
   desc: 'Sort keys K (numbers), dragging a values list L along in the same new order. I is where each sorted item came from — wire it into List Item to reorder any other list the same way. “low → high” or “high → low”; equal keys keep their order; keys that aren’t numbers go last',
   inputs: [{ name: 'K', type: 'number', label: 'keys' }, { name: 'L', type: 'any', label: 'values (optional)' }],
   outputs: [
