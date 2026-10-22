@@ -2559,18 +2559,20 @@ defNode('xf/kaleido', {
 /* ============================== DISPLAY ============================== */
 
 defNode('disp/draw', {
-  title: 'Draw', cat: 'Display', desc: 'Render geometry with stroke S, fill F (a color or a paint from Linear / Radial Gradient), line width W — masked to K when a clip geometry is wired',
+  title: 'Draw', cat: 'Display', desc: 'Render geometry with stroke S, fill F (a color or a paint from Linear / Radial Gradient), line width W — masked to K when a clip geometry is wired. L is the layer: higher paints on top of lower, across every Draw in the patch; on the same layer, the Draw added later wins',
   inputs: [
     { name: 'G', type: 'geometry' },
     { name: 'S', type: 'color', default: { r: 230, g: 237, b: 250, a: 1 }, label: 'stroke' },
     { name: 'F', type: 'color', default: { r: 255, g: 255, b: 255, a: 0 }, label: 'fill' },
     { name: 'W', type: 'number', default: 1.5, label: 'width' },
-    { name: 'K', type: 'geometry', label: 'clip (optional)' }],
+    { name: 'K', type: 'geometry', label: 'clip (optional)' },
+    { name: 'L', type: 'number', default: 0, label: 'layer (higher = on top)' }],
   outputs: [{ name: 'G', type: 'geometry' }],
   compute: (a, ctx) => {
     if (a.G === undefined || a.G === null) return {};
     const it = { geom: a.G, stroke: a.S, fill: a.F, width: a.W };
     if (a.K !== undefined && a.K !== null) it.clip = a.K;
+    if (+a.L) it.layer = +a.L; // only set when it matters — LM.evaluateGraph sorts on it
     ctx.drawList.push(it);
     return { G: a.G };
   }

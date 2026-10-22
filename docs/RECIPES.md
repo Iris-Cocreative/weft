@@ -139,8 +139,8 @@ downstream knows 3D happened.
   narrowest canvas the patch has to survive.
 - **Wire every mesh into ONE Project.** Its `G` takes the whole list, which is
   what makes the depth sort global — two solids interleave correctly. Two Project
-  → Draw pairs paint in topological order instead (which is what you want for a
-  floor that is always behind everything).
+  → Draw pairs paint in topological order instead, or set by Draw's layer `L`
+  (which is what you want for a floor that is always behind everything: L −1).
 - **Wireframe** — the same Project, `values.mode:'wire'` (every unique edge once)
   or `'both'` (faces with their front-facing edges over them).
 - **Per-face effects before the camera** — `d3/faces(G → F, N:normals, C:centroids)`.
@@ -202,6 +202,10 @@ downstream knows 3D happened.
 
 ## Color
 
+- **What paints on top** — Draw's `L` (layer): higher is over lower, across
+  every Draw in the patch; default 0. On the same layer the Draw added later
+  wins, and inside one Draw the last list item wins. A list into L layers each
+  item separately.
 - **Color from a number** — `disp/hsl(H 0–1, S, L → C)` — wire a normalized
   value into H for rainbow-by-index, or L for brightness-by-state.
 - **Blend two colors** — `disp/gradient(T 0–1, A, B → C)`.

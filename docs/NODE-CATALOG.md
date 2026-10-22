@@ -2259,7 +2259,7 @@ Split a color into red, green, blue (0..255) and alpha (0..1)
 
 ### `disp/draw` — Draw
 
-Render geometry with stroke S, fill F (a color or a paint from Linear / Radial Gradient), line width W — masked to K when a clip geometry is wired
+Render geometry with stroke S, fill F (a color or a paint from Linear / Radial Gradient), line width W — masked to K when a clip geometry is wired. L is the layer: higher paints on top of lower, across every Draw in the patch; on the same layer, the Draw added later wins
 
 | in | type | default | note |
 |---|---|---|---|
@@ -2268,6 +2268,7 @@ Render geometry with stroke S, fill F (a color or a paint from Linear / Radial G
 | F | color | `{"r":255,"g":255,"b":255,"a":0}` | fill |
 | W | number | `1.5` | width |
 | K | geometry |  | clip (optional) |
+| L | number | `0` | layer (higher = on top) |
 
 | out | type | note |
 |---|---|---|

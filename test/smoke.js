@@ -1600,6 +1600,26 @@ for (const name of Object.keys(EXAMPLES)) {
   if (JSON.stringify(ce.drawList) !== JSON.stringify(cv.drawList)) failures.push('expr variables: export draws differently from the editor');
 }
 
+/* Draw layer — higher L paints on top across Draw nodes, ties keep evaluation
+ * order, and the export sorts the same way (the sort lives in LM.evaluateGraph) */
+{
+  const g = { nodes: [
+      { id: 'a', type: 'crv/circle', values: { R: 10 } }, { id: 'da', type: 'disp/draw', values: { L: 2 } },
+      { id: 'b', type: 'crv/circle', values: { R: 20 } }, { id: 'db', type: 'disp/draw', values: {} },
+      { id: 'c', type: 'crv/circle', values: { R: 30 } }, { id: 'dc', type: 'disp/draw', values: { L: -1 } },
+      { id: 'e', type: 'crv/circle', values: { R: 40 } }, { id: 'de', type: 'disp/draw', values: {} } ],
+    wires: [ { from: ['a', 'C'], to: ['da', 'G'] }, { from: ['b', 'C'], to: ['db', 'G'] },
+             { from: ['c', 'C'], to: ['dc', 'G'] }, { from: ['e', 'C'], to: ['de', 'G'] } ] };
+  const order = c => c.drawList.map(it => it.geom.r).join(',');
+  const cv = mkCtx(); LM.evaluateGraph(g, NODE_DEFS, cv);
+  if (order(cv) !== '30,20,40,10') failures.push('draw layer: expected paint order 30,20,40,10, got ' + order(cv));
+  const parts = WeftExport.buildParts(JSON.parse(JSON.stringify(g)));
+  const EX = new Function('const LM = ' + parts.lmJS + '; const DEFS = ' + parts.defsJS +
+    '; const GRAPH = ' + parts.graphJS + '; return { LM: LM, DEFS: DEFS, GRAPH: GRAPH };')();
+  const ce = mkCtx(); ce.defs = EX.DEFS; EX.LM.evaluateGraph(EX.GRAPH, EX.DEFS, ce);
+  if (order(ce) !== order(cv)) failures.push('draw layer: export paints ' + order(ce) + ', editor ' + order(cv));
+}
+
 /* 27 — the prompt-ready spec names every node: a def missing from
  * docs/LLM-AUTHORING.md is a node the assistant can't reach (the orbit-harp
  * session found params/angle absent and spent 32k tokens agonizing over it) */

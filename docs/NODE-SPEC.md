@@ -236,7 +236,10 @@ The evaluation context `ctx` provides:
 | `bg` | background color set by a Background node |
 | `errors` | nodeId → message (cycle, thrown compute, unknown type) |
 
-Rendering: `drawList` paints in graph topological order (later = on top).
+Rendering: `drawList` paints in graph topological order (later = on top),
+then `LM.evaluateGraph` stable-sorts it by each item's `layer` (Draw's `L`,
+default 0): higher layers paint over lower, ties keep evaluation order. The
+sort runs inside the engine, so editor, thumbnails and exports agree.
 A fill with `a: 0` is skipped; likewise strokes. Text uses fill, falling back
 to stroke.
 

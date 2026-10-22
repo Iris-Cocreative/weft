@@ -265,7 +265,7 @@ shade before coloring, or unlit faces come out black.
 ### Display
 | node | in | out | |
 |---|---|---|---|
-| `disp/draw` | G S:stroke-color F:fill-color W:width K:clip-geometry(optional) | G | fill alpha 0 = no fill; S and F take a color **or a paint**; anything wired into K masks the item to that geometry |
+| `disp/draw` | G S:stroke-color F:fill-color W:width K:clip-geometry(optional) L:layer=0 | G | fill alpha 0 = no fill; S and F take a color **or a paint**; anything wired into K masks the item to that geometry; higher L paints on top across all Draws (ties: later-evaluated on top) |
 | `disp/bg` | C:color | | a color or a paint (laid in centered px) |
 | `disp/sample` | G:image-geometry P:point | C:color B:brightness(0–1) A:alpha | the pixel under P — list-match a grid of points against one picture for halftones and image-driven fields; transparent/0 outside the picture or before it loads |
 | `disp/shapesample` | G:geometry(whole list) P:point R=4(reach px for lines/points) C:color(whole list) | B:hit I:index(-1=none) N:count C:color | which shape covers P — the LAST in G wins (draw order); C is that shape's color from list C (repeats the last), image items count where opaque and give their pixel. List-match a grid of points for pixel art from vectors |

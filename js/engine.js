@@ -1873,5 +1873,11 @@ const LM = {
       for (const inp of insOf(n)) fb[inp.name] = resolveList(n, inp);
       n._fbIns = fb;
     }
+
+    /* Draw's layer: higher paints on top. The sort is stable, so within a layer
+     * evaluation order still decides (later = on top), and a graph with no
+     * layers set keeps its order exactly. A cluster's inner run sorts the shared
+     * list too — harmless, the outer sort lands on the same order. */
+    if (ctx.drawList.some(it => it.layer)) ctx.drawList.sort((p, q) => (p.layer || 0) - (q.layer || 0));
   }
 };
