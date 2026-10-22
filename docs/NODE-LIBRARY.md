@@ -75,7 +75,7 @@ Still open from that harvest:
 
 ### Sets — list surgery *(planned)*
 
-- **Sort List** `sets/sort` — sort keys K (numbers), optionally dragging a values list L along with them.
+- [shipped 2026-10-22] **Sort List** `sets/sort` — sort keys K (numbers), optionally dragging a values list L along with them; I gives each item's original index; low → high / high → low.
 - **Weave** `sets/weave` — interleave lists by a pattern (GH name; too on-brand to skip).
 - **Interpolate Data** `sets/interpdata` — resample a list at parameter t
   (0..1), interpolating between items — numbers, points, *and colors*

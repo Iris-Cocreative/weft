@@ -173,6 +173,7 @@ and/or/xor/not/nand/nor/xnor). Unary bool: `math/not` (B → R:bool).
 | `sets/length` | L (list-in) | N | |
 | `sets/merge` | A B (list-in) | M | |
 | `sets/reverse` | L (list-in) | R | |
+| `sets/sort` | K:number(list-in) L:any(list-in, optional) | K L I | Sort List: K sorted, L reordered with it, I = original index of each (feed List Item to reorder other lists); `values.mode` 'asc' (default) / 'desc'; ties keep order |
 | `sets/cullpat` | L P:bool (list-in) | L | keep where pattern true |
 | `sets/shift` | L (list-in) S=1 W:wrap | L | |
 | `sets/dispatch` | L P (list-in) | A B | split by pattern |

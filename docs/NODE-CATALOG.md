@@ -1112,6 +1112,21 @@ Offset all items in L by S places — W wraps shifted items round, off drops the
 |---|---|---|
 | L | any |  |
 
+### `sets/sort` — Sort List
+
+Sort keys K (numbers), dragging a values list L along in the same new order. I is where each sorted item came from — wire it into List Item to reorder any other list the same way. “low → high” or “high → low”; equal keys keep their order; keys that aren’t numbers go last
+
+| in | type | default | note |
+|---|---|---|---|
+| K | number |  | keys · receives whole list |
+| L | any |  | values (optional) · receives whole list |
+
+| out | type | note |
+|---|---|---|
+| K | number | keys, sorted |
+| L | any | values, sorted with K |
+| I | number | original index of each |
+
 ## Vector
 
 ### `vec/amp` — Amplitude
@@ -2712,4 +2727,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-194 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+195 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

@@ -162,6 +162,10 @@ downstream knows 3D happened.
 
 ## Lists & fields
 
+- **Sort by a value** — `sets/sort(K:keys, L:values → K, L, I)`, mode `asc` /
+  `desc`. To reorder several parallel lists by the same key, take `I` into one
+  `sets/item(L:list, i:I)` per list. For paint order alone, Draw's layer `L` is
+  simpler: wire the key (negated if needed) into it, no sort at all.
 - **N things in a row** — `sets/series(S:start N:step C:count → S) →
   vec/construct(X)`.
 - **A grid of things** — `vec/grid(S:spacing → P, C:col R:row K:color-class)`;

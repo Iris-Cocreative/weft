@@ -126,6 +126,9 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   invisible order nodes were added in. One stable sort at the end of
   `LM.evaluateGraph`, skipped when no item has a layer, so editor, thumbnails
   and exports agree and unlayered graphs paint exactly as before.
+- [shipped 2026-10-22] **Sort List** (`sets/sort`) — K sorted, L dragged
+  along, I the original indices, low → high / high → low. Replaces the
+  hand-written argsort Custom JS in the torus patch, order-identical.
 - [shipped 2026-10-21] **Not** (`math/not`, one bool in) and **nand / nor /
   xnor** on Logic — its mode switch is now a four-column grid (`.seg.grid4`)
   so each negated gate sits under its plain one. Logic's existing modes and

@@ -1742,6 +1742,34 @@ defNode('sets/reverse', {
   compute: a => ({ R: (a.L || []).slice().reverse() })
 });
 
+defNode('sets/sort', {
+  title: 'Sort List', cat: 'Sets',
+  desc: 'Sort keys K (numbers), dragging a values list L along in the same new order. I is where each sorted item came from — wire it into List Item to reorder any other list the same way. “low → high” or “high → low”; equal keys keep their order; keys that aren’t numbers go last',
+  inputs: [{ name: 'K', type: 'number', label: 'keys' }, { name: 'L', type: 'any', label: 'values (optional)' }],
+  outputs: [
+    { name: 'K', type: 'number', label: 'keys, sorted' },
+    { name: 'L', type: 'any', label: 'values, sorted with K' },
+    { name: 'I', type: 'number', label: 'original index of each' }],
+  listInputs: ['K', 'L'],
+  compute: (a, ctx, node) => {
+    const K = (a.K || []).map(Number), L = a.L || [];
+    const dir = node.values && node.values.mode === 'desc' ? -1 : 1;
+    const I = K.map((_, i) => i);
+    // Array.sort is stable, so ties (and the NaN tail) keep input order
+    I.sort((p, q) => {
+      const np = Number.isNaN(K[p]), nq = Number.isNaN(K[q]);
+      if (np || nq) return np - nq;
+      return (K[p] - K[q]) * dir;
+    });
+    /* a shorter L repeats its last item, the same as longest-list matching */
+    return { K: I.map(i => K[i]), L: L.length ? I.map(i => L[Math.min(i, L.length - 1)]) : [], I };
+  },
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [
+      ['low → high', 'asc', 'smallest key first'],
+      ['high → low', 'desc', 'largest key first']], 'asc')
+});
+
 /* -- list surgery -- */
 
 defNode('sets/cullpat', {
@@ -3908,7 +3936,7 @@ defNode('meta/js', {
     /* Sets: 1 generators · 2 access · 3 list surgery · 4 set operations */
     'sets/series': 1, 'sets/range': 1, 'sets/random': 1,
     'sets/item': 2, 'sets/length': 2,
-    'sets/merge': 3, 'sets/reverse': 3, 'sets/cullpat': 3, 'sets/shift': 3, 'sets/dispatch': 3, 'sets/select': 3,
+    'sets/merge': 3, 'sets/reverse': 3, 'sets/sort': 3, 'sets/cullpat': 3, 'sets/shift': 3, 'sets/dispatch': 3, 'sets/select': 3,
     'sets/union': 4, 'sets/intersection': 4, 'sets/difference': 4,
     /* Vector: 1 points · 2 vectors · 3 measures */
     'vec/construct': 1, 'vec/deconstruct': 1, 'vec/polar': 1,
