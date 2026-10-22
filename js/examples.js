@@ -21846,6 +21846,705 @@ const EXAMPLES = {
       }
     ]
   },
+  /* press-drag-release drawing out of Sample & Hold (2026-10-22, James): held
+   * while the mouse is up, one pair marks where a press began; held while it
+   * is down, another keeps where the stroke ended. The group turns each
+   * release into a slot of a ring buffer — Counter, Series and Compare pick
+   * the slot, and per-item Sample & Hold memory keeps the last N lines. */
+  'Line Draw': {
+    "format": 2,
+    "nodes": [
+      {
+        "id": "n1",
+        "type": "input/mouse",
+        "x": -5,
+        "y": 574,
+        "values": {}
+      },
+      {
+        "id": "n2",
+        "type": "vec/construct",
+        "x": 895,
+        "y": 1050,
+        "values": {}
+      },
+      {
+        "id": "n3",
+        "type": "vec/construct",
+        "x": 895,
+        "y": 1169,
+        "values": {}
+      },
+      {
+        "id": "n5",
+        "type": "state/sample",
+        "x": 584,
+        "y": 1068,
+        "values": {}
+      },
+      {
+        "id": "n6",
+        "type": "state/sample",
+        "x": 589,
+        "y": 1180,
+        "values": {}
+      },
+      {
+        "id": "n7",
+        "type": "math/logic",
+        "x": 281,
+        "y": 972,
+        "values": {
+          "mode": "not"
+        }
+      },
+      {
+        "id": "n8",
+        "type": "state/sample",
+        "x": 1186,
+        "y": 939,
+        "values": {}
+      },
+      {
+        "id": "n9",
+        "type": "state/sample",
+        "x": 1195,
+        "y": 1076,
+        "values": {}
+      },
+      {
+        "id": "edge",
+        "type": "state/edge",
+        "x": 1182,
+        "y": 812,
+        "values": {}
+      },
+      {
+        "id": "keep",
+        "type": "params/slider",
+        "x": -399,
+        "y": 1674,
+        "values": {
+          "min": 1,
+          "max": 20,
+          "value": 5,
+          "mode": "int",
+          "label": "keep last"
+        }
+      },
+      {
+        "id": "clr",
+        "type": "params/button",
+        "x": -170,
+        "y": 1833,
+        "values": {
+          "label": "clear"
+        }
+      },
+      {
+        "id": "slots",
+        "type": "sets/series",
+        "x": 250,
+        "y": 1550,
+        "values": {
+          "S": 0,
+          "N": 1
+        }
+      },
+      {
+        "id": "count",
+        "type": "state/counter",
+        "x": 250,
+        "y": 1720,
+        "values": {
+          "S": 1
+        }
+      },
+      {
+        "id": "less1",
+        "type": "math/sub",
+        "x": 500,
+        "y": 1720,
+        "values": {
+          "B": 1
+        }
+      },
+      {
+        "id": "target",
+        "type": "math/mod",
+        "x": 750,
+        "y": 1720,
+        "values": {}
+      },
+      {
+        "id": "hit",
+        "type": "math/cmp",
+        "x": 1000,
+        "y": 1600,
+        "values": {
+          "mode": "="
+        }
+      },
+      {
+        "id": "fire",
+        "type": "math/logic",
+        "x": 1250,
+        "y": 1600,
+        "values": {
+          "mode": "and"
+        }
+      },
+      {
+        "id": "holdA",
+        "type": "state/sample",
+        "x": 1500,
+        "y": 1550,
+        "values": {}
+      },
+      {
+        "id": "holdB",
+        "type": "state/sample",
+        "x": 1500,
+        "y": 1690,
+        "values": {}
+      },
+      {
+        "id": "live",
+        "type": "math/cmp",
+        "x": 1000,
+        "y": 1820,
+        "values": {
+          "mode": "<"
+        }
+      },
+      {
+        "id": "nline",
+        "type": "crv/line",
+        "x": 1750,
+        "y": 1600,
+        "values": {}
+      },
+      {
+        "id": "ncull",
+        "type": "sets/cullpat",
+        "x": 2000,
+        "y": 1680,
+        "values": {}
+      },
+      {
+        "id": "nsw",
+        "type": "params/swatch",
+        "x": 2000,
+        "y": 1840,
+        "values": {
+          "hex": "#ff9a3c",
+          "a": 1
+        }
+      },
+      {
+        "id": "ndraw",
+        "type": "disp/draw",
+        "x": 2251,
+        "y": 1700,
+        "values": {
+          "W": 2
+        }
+      },
+      {
+        "id": "n12",
+        "type": "crv/line",
+        "x": 1666,
+        "y": 1120,
+        "values": {}
+      },
+      {
+        "id": "n13",
+        "type": "disp/draw",
+        "x": 2135,
+        "y": 1124,
+        "values": {
+          "W": 2
+        }
+      },
+      {
+        "id": "n14",
+        "type": "params/swatch",
+        "x": 1759,
+        "y": 1294,
+        "values": {
+          "hex": "#ffe3cb",
+          "a": 1
+        }
+      }
+    ],
+    "wires": [
+      {
+        "id": "w1",
+        "from": [
+          "n1",
+          "X"
+        ],
+        "to": [
+          "n5",
+          "V"
+        ]
+      },
+      {
+        "id": "w2",
+        "from": [
+          "n6",
+          "R"
+        ],
+        "to": [
+          "n2",
+          "Y"
+        ]
+      },
+      {
+        "id": "w3",
+        "from": [
+          "n5",
+          "R"
+        ],
+        "to": [
+          "n2",
+          "X"
+        ]
+      },
+      {
+        "id": "w4",
+        "from": [
+          "n1",
+          "Y"
+        ],
+        "to": [
+          "n6",
+          "V"
+        ]
+      },
+      {
+        "id": "w5",
+        "from": [
+          "n1",
+          "D"
+        ],
+        "to": [
+          "n7",
+          "A"
+        ]
+      },
+      {
+        "id": "w6",
+        "from": [
+          "n7",
+          "R"
+        ],
+        "to": [
+          "n6",
+          "T"
+        ]
+      },
+      {
+        "id": "w7",
+        "from": [
+          "n7",
+          "R"
+        ],
+        "to": [
+          "n5",
+          "T"
+        ]
+      },
+      {
+        "id": "w8",
+        "from": [
+          "n1",
+          "D"
+        ],
+        "to": [
+          "n8",
+          "T"
+        ]
+      },
+      {
+        "id": "w9",
+        "from": [
+          "n2",
+          "P"
+        ],
+        "to": [
+          "n8",
+          "V"
+        ]
+      },
+      {
+        "id": "w11",
+        "from": [
+          "n1",
+          "D"
+        ],
+        "to": [
+          "n9",
+          "T"
+        ]
+      },
+      {
+        "id": "w12",
+        "from": [
+          "n3",
+          "P"
+        ],
+        "to": [
+          "n9",
+          "V"
+        ]
+      },
+      {
+        "id": "w14",
+        "from": [
+          "n1",
+          "Y"
+        ],
+        "to": [
+          "n3",
+          "Y"
+        ]
+      },
+      {
+        "id": "w15",
+        "from": [
+          "n1",
+          "X"
+        ],
+        "to": [
+          "n3",
+          "X"
+        ]
+      },
+      {
+        "id": "w17",
+        "from": [
+          "n1",
+          "D"
+        ],
+        "to": [
+          "edge",
+          "B"
+        ]
+      },
+      {
+        "id": "w76",
+        "from": [
+          "keep",
+          "N"
+        ],
+        "to": [
+          "slots",
+          "C"
+        ]
+      },
+      {
+        "id": "w77",
+        "from": [
+          "edge",
+          "F"
+        ],
+        "to": [
+          "count",
+          "U"
+        ]
+      },
+      {
+        "id": "w78",
+        "from": [
+          "clr",
+          "B"
+        ],
+        "to": [
+          "count",
+          "R"
+        ]
+      },
+      {
+        "id": "w79",
+        "from": [
+          "count",
+          "N"
+        ],
+        "to": [
+          "less1",
+          "A"
+        ]
+      },
+      {
+        "id": "w80",
+        "from": [
+          "less1",
+          "R"
+        ],
+        "to": [
+          "target",
+          "A"
+        ]
+      },
+      {
+        "id": "w81",
+        "from": [
+          "keep",
+          "N"
+        ],
+        "to": [
+          "target",
+          "B"
+        ]
+      },
+      {
+        "id": "w82",
+        "from": [
+          "slots",
+          "S"
+        ],
+        "to": [
+          "hit",
+          "A"
+        ]
+      },
+      {
+        "id": "w83",
+        "from": [
+          "target",
+          "R"
+        ],
+        "to": [
+          "hit",
+          "B"
+        ]
+      },
+      {
+        "id": "w84",
+        "from": [
+          "hit",
+          "R"
+        ],
+        "to": [
+          "fire",
+          "A"
+        ]
+      },
+      {
+        "id": "w85",
+        "from": [
+          "edge",
+          "F"
+        ],
+        "to": [
+          "fire",
+          "B"
+        ]
+      },
+      {
+        "id": "w86",
+        "from": [
+          "n8",
+          "R"
+        ],
+        "to": [
+          "holdA",
+          "V"
+        ]
+      },
+      {
+        "id": "w87",
+        "from": [
+          "fire",
+          "R"
+        ],
+        "to": [
+          "holdA",
+          "T"
+        ]
+      },
+      {
+        "id": "w88",
+        "from": [
+          "n9",
+          "R"
+        ],
+        "to": [
+          "holdB",
+          "V"
+        ]
+      },
+      {
+        "id": "w89",
+        "from": [
+          "fire",
+          "R"
+        ],
+        "to": [
+          "holdB",
+          "T"
+        ]
+      },
+      {
+        "id": "w90",
+        "from": [
+          "slots",
+          "S"
+        ],
+        "to": [
+          "live",
+          "A"
+        ]
+      },
+      {
+        "id": "w91",
+        "from": [
+          "count",
+          "N"
+        ],
+        "to": [
+          "live",
+          "B"
+        ]
+      },
+      {
+        "id": "w92",
+        "from": [
+          "holdA",
+          "R"
+        ],
+        "to": [
+          "nline",
+          "A"
+        ]
+      },
+      {
+        "id": "w93",
+        "from": [
+          "holdB",
+          "R"
+        ],
+        "to": [
+          "nline",
+          "B"
+        ]
+      },
+      {
+        "id": "w94",
+        "from": [
+          "nline",
+          "C"
+        ],
+        "to": [
+          "ncull",
+          "L"
+        ]
+      },
+      {
+        "id": "w95",
+        "from": [
+          "live",
+          "R"
+        ],
+        "to": [
+          "ncull",
+          "P"
+        ]
+      },
+      {
+        "id": "w96",
+        "from": [
+          "ncull",
+          "L"
+        ],
+        "to": [
+          "ndraw",
+          "G"
+        ]
+      },
+      {
+        "id": "w97",
+        "from": [
+          "nsw",
+          "C"
+        ],
+        "to": [
+          "ndraw",
+          "S"
+        ]
+      },
+      {
+        "id": "w100",
+        "from": [
+          "n2",
+          "P"
+        ],
+        "to": [
+          "n12",
+          "A"
+        ]
+      },
+      {
+        "id": "w101",
+        "from": [
+          "n3",
+          "P"
+        ],
+        "to": [
+          "n12",
+          "B"
+        ]
+      },
+      {
+        "id": "w104",
+        "from": [
+          "n14",
+          "C"
+        ],
+        "to": [
+          "n13",
+          "S"
+        ]
+      },
+      {
+        "id": "w105",
+        "from": [
+          "n12",
+          "C"
+        ],
+        "to": [
+          "n13",
+          "G"
+        ]
+      }
+    ],
+    "groups": [
+      {
+        "id": "g1",
+        "x": 234,
+        "y": 1506,
+        "w": 2182,
+        "h": 455,
+        "title": "native strokes (experiment)",
+        "nodes": [
+          "slots",
+          "count",
+          "less1",
+          "target",
+          "hit",
+          "fire",
+          "holdA",
+          "holdB",
+          "live",
+          "nline",
+          "ncull",
+          "nsw",
+          "ndraw"
+        ]
+      }
+    ]
+  },
 
 };
 
@@ -22052,6 +22751,13 @@ const EXAMPLE_META = {
     blurb: 'Every two-input gate side by side, then one small circuit that can become any of the sixteen — slide the program and watch the wires light up.',
     teaches: 'Logic, Not and Select are the whole kit: four Selects pick A or B, straight or inverted, two ANDs and an OR combine them, and a four-bit program (Expressions driving the toggles’ hidden inputs) chooses which truth table the circuit computes.',
     tags: ['logic', 'gates', 'bool', 'truth table', 'circuit', 'select', 'not', 'toggle', 'nand', 'xor'],
+    needs: [], frames: 40
+  },
+  'Line Draw': {
+    cat: 'State & interaction',
+    blurb: 'Press and drag to draw a line — it rubber-bands from where you pressed, and on release joins a ring of the last few you drew. Keep last sets how many; clear wipes them.',
+    teaches: 'Sample & Hold is a whole drawing tool: held while the mouse is up it marks where a press began, held while it is down it keeps where the stroke ended — and Counter, Series and Compare turn the release trigger into a ring buffer, one Sample & Hold slot per line.',
+    tags: ['draw', 'lines', 'mouse', 'drag', 'sample and hold', 'edge', 'counter', 'ring buffer', 'per-item state'],
     needs: [], frames: 40
   },
 };
