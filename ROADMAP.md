@@ -120,6 +120,10 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   what's kept, so an over-run never leaves a dead zone on the next drag. The
   editor's number field now unsets a no-default port when cleared, instead of
   writing 0. Next: a grab cursor over drag regions.
+- [shipped 2026-10-21] **Not** (`math/not`, one bool in) and **nand / nor /
+  xnor** on Logic — its mode switch is now a four-column grid (`.seg.grid4`)
+  so each negated gate sits under its plain one. Logic's existing modes and
+  saved patches are unchanged.
 - [shipped 2026-07-15] ***Living lattice* example** — the state-track showcase:
   viewport-filling iso lattice tiled with hexagons (circumradius spacing/√3),
   one Spring node = hundreds of per-cell machines (R → size/hue, velocity →

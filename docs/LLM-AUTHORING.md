@@ -151,7 +151,7 @@ Unary (`V:number → R:number`): `math/abs` `math/neg` `math/round` `math/floor`
 Binary (`A B → R`): `math/add` `math/sub` `math/mul` `math/div` `math/mod`
 `math/pow` `math/min` `math/max` `math/atan2` (X Y → R) `math/cmp` (→ R:bool,
 values.mode: `= ≠ < ≤ > ≥`) `math/logic` (→ R:bool, values.mode:
-and/or/xor/not).
+and/or/xor/not/nand/nor/xnor). Unary bool: `math/not` (B → R:bool).
 | node | in | out | |
 |---|---|---|---|
 | `math/remap` | V S0=0 S1=1 T0=0 T1=100 C:bool=true | R | map V from [S0,S1] to [T0,T1], C clamps |

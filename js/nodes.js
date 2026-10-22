@@ -1598,30 +1598,38 @@ defNode('math/cmp', {
 
 defNode('math/logic', {
   title: 'Logic', cat: 'Maths', width: 168,
-  desc: 'Boolean logic on A and B — pick the operator on the node (not ignores B)',
+  desc: 'Boolean logic on A and B — pick the operator on the node; nand / nor / xnor are the opposite of and / or / xor (not ignores B — or use the Not node)',
   inputs: [{ name: 'A', type: 'bool', default: false }, { name: 'B', type: 'bool', default: false }],
   outputs: [{ name: 'R', type: 'bool' }],
   defaults: { mode: 'and' },
   compute: (a, ctx, node) => {
     const m = node.values.mode || 'and';
     if (m === 'not') return { R: !a.A };
-    if (m === 'and') return { R: !!(a.A && a.B) };
-    if (m === 'or') return { R: !!(a.A || a.B) };
-    return { R: !!a.A !== !!a.B };
+    const A = !!a.A, B = !!a.B;
+    if (m === 'and') return { R: A && B };
+    if (m === 'or') return { R: A || B };
+    if (m === 'nand') return { R: !(A && B) };
+    if (m === 'nor') return { R: !(A || B) };
+    if (m === 'xnor') return { R: A === B };
+    return { R: A !== B };
   },
-  buildBody: (node, body, changed) => {
-    const seg = _mk('div', 'seg', body);
-    ['and', 'or', 'xor', 'not'].forEach(m => {
-      const b = _mk('div', 'seg-b' + ((node.values.mode || 'and') === m ? ' on' : ''), seg);
-      b.textContent = m;
-      _cleanClick(b, () => {
-        node.values.mode = m;
-        seg.querySelectorAll('.seg-b').forEach(e => e.classList.remove('on'));
-        b.classList.add('on');
-        changed();
-      });
-    });
-  }
+  /* four columns, so each negated gate sits under its plain one */
+  buildBody: (node, body, changed) =>
+    _modeSeg(node, body, changed, 'mode', [
+      ['and', 'and', 'true when A and B are both true'],
+      ['or', 'or', 'true when A or B (or both) is true'],
+      ['xor', 'xor', 'true when exactly one of A and B is true'],
+      ['not', 'not', 'the opposite of A — B is ignored'],
+      ['nand', 'nand', 'not and — false only when both are true'],
+      ['nor', 'nor', 'not or — true only when both are false'],
+      ['xnor', 'xnor', 'not xor — true when A and B match']], 'and').classList.add('grid4')
+});
+
+defNode('math/not', {
+  title: 'Not', cat: 'Maths', desc: 'The opposite of B: true becomes false, false becomes true',
+  inputs: [{ name: 'B', type: 'bool', default: false }],
+  outputs: [{ name: 'R', type: 'bool' }],
+  compute: a => ({ R: !a.B })
 });
 
 defNode('math/masadd', {
@@ -3869,7 +3877,7 @@ defNode('meta/js', {
     'math/neg': 3, 'math/abs': 3, 'math/round': 3, 'math/floor': 3, 'math/ceil': 3, 'math/min': 3, 'math/max': 3,
     'math/remap': 4, 'math/clamp': 4, 'math/lerp': 4, 'math/smooth': 4, 'math/expr': 4, 'math/noise': 4,
     'math/pi': 5, 'math/phi': 5,
-    'math/cmp': 6, 'math/logic': 6,
+    'math/cmp': 6, 'math/logic': 6, 'math/not': 6,
     /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
     'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/point3': 0, 'params/curve': 0, 'params/relay': 0,
     'params/slider': 1, 'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,

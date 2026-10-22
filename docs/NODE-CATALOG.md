@@ -659,7 +659,7 @@ Linear interpolate A→B by T
 
 ### `math/logic` — Logic
 
-Boolean logic on A and B — pick the operator on the node (not ignores B)
+Boolean logic on A and B — pick the operator on the node; nand / nor / xnor are the opposite of and / or / xor (not ignores B — or use the Not node)
 
 | in | type | default | note |
 |---|---|---|---|
@@ -761,6 +761,18 @@ Smooth 2D value noise, output 0..1
 | out | type | note |
 |---|---|---|
 | N | number |  |
+
+### `math/not` — Not
+
+The opposite of B: true becomes false, false becomes true
+
+| in | type | default | note |
+|---|---|---|---|
+| B | bool | `false` |  |
+
+| out | type | note |
+|---|---|---|
+| R | bool |  |
 
 ### `math/phi` — Phi
 
@@ -2691,4 +2703,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-193 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+194 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

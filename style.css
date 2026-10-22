@@ -668,6 +668,8 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 }
 .seg-b:hover { color: var(--white-80); }
 .seg-b.on { background: var(--dark-300); color: var(--primary); }
+/* a mode set too long for one row (math/logic): four columns, wrapping */
+.seg.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); }
 
 .expr-src {
   width: 100%; padding: 3px 7px;
