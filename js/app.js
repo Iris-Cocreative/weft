@@ -575,7 +575,7 @@ const App = {
     App.bindSettings();
 
     const saved = App.restore();
-    App.setGraph(saved || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Rainbow eye']))));
+    App.setGraph(saved || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Seed torus']))));
     if (!saved) Editor.zoomToFit(false); // a first visit should see the whole loom, not the corner the camera starts in
     App.loadFromHash(); // a #w= share link replaces the graph (previous one is backed up)
     App.bindMobile(); // after the graph: a stacked shell fits the loom to its half

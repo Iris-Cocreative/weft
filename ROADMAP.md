@@ -571,6 +571,13 @@ is now in, so any of these can be picked up in a workshop pass):
   x/y scaled, swatch-coloured, Time Graph on the loom + Trace on the cloth
   from an anchored pen, white dot marking the pointer. Line cap raised 8 → 16
   same day (colour palette cycles).
+- [shipped 2026-10-23] **Seed torus** — James's torus loom (a golden-angle
+  spiral of 1500 seeds on a sphere ↔ torus morph, built from Series +
+  Expressions + Polar with no 3D nodes, a Sort List depth order shared by four
+  List Items, drag-to-spin/tilt through Sample & Hold) added as a 3D example
+  and made the **default graph** for first-time visitors, replacing Rainbow
+  eye. Three unwired cards from the working loom were dropped (an old golden
+  angle slider, tilt slider, spare swatch); layout James's own.
 - [shipped 2026-09-17] **Rainbow eye** — James's poster eye (one lens →
   Fillet → Series-driven Scale + Rotate, the look point wired into three
   transforms for parallax, a five-key OKLCH palette in Custom JS) added as an
