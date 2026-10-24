@@ -22,7 +22,7 @@ const root = path.join(__dirname, '..');
  * touches the DOM inside functions; at load it just registers its init —
  * the window stub leads the scope so typeof-guards elsewhere stay happy. */
 const src = 'const window = { addEventListener: () => {} };\n'
-  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/images.js', 'js/examples.js', 'js/export.js', 'js/app.js', 'js/ops.js']
+  + ['js/engine.js', 'js/nodes.js', 'js/nodes-3d.js', 'js/audio.js', 'js/images.js', 'js/ops.js', 'js/examples.js', 'js/motifs.js', 'js/export.js', 'js/app.js']
   .map(f => fs.readFileSync(path.join(root, f), 'utf8'))
   .join('\n;\n');
 
@@ -1628,7 +1628,121 @@ for (const name of Object.keys(EXAMPLES)) {
   if (missing.length) failures.push('LLM-AUTHORING.md does not mention: ' + missing.join(', '));
 }
 
-return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length };
+/* 29 — motifs (js/motifs.js). Every example motif is a valid, clean body and
+ * survives what a drop does to it: WeftOps.paste (the code Editor.pasteFragment
+ * runs) twice onto a loom that already uses its ids, App.serialize → migrate,
+ * evaluate at t = 0 / 0.5 / 2 with no node errors, export. Then the store
+ * itself, headless — there is no localStorage here, so it must keep working
+ * from memory, which is also what a blocked-storage browser gets. */
+{
+  const seen = new Set();
+  for (const m of EXAMPLE_MOTIFS) {
+    const tag = 'motif "' + m.title + '"';
+    if (!m.id || seen.has(m.id)) failures.push(tag + ': missing or duplicate id');
+    seen.add(m.id);
+    if (!m.title || !Array.isArray(m.tags) || !m.tags.length || !m.blurb) failures.push(tag + ': needs a title, tags and a blurb');
+    for (const e of Motifs.validate(m.body, NODE_DEFS)) failures.push(tag + ': ' + e);
+    if (JSON.stringify(Motifs.clean(m.body)) !== JSON.stringify(m.body)) failures.push(tag + ': body is not in the clean form a saved motif has');
+    const g = { format: 2, nodes: [{ id: 'n1', type: 'params/slider', x: 0, y: 0, values: { min: 0, max: 1, value: 0.5 } }], wires: [], groups: [] };
+    let ni = 1, wi = 1, gi = 1;
+    const ids = {
+      nodeId: () => { while (g.nodes.some(n => n.id === 'n' + ni)) ni++; return 'n' + (ni++); },
+      wireId: () => 'w' + (wi++), groupId: () => 'g' + (gi++)
+    };
+    for (let pass = 0; pass < 2; pass++) {
+      const r = WeftOps.paste(g, m.body, NODE_DEFS, Object.assign({ dx: 26 + pass * 2400, dy: 26 }, ids));
+      if (r.nodes.length !== m.body.nodes.length || r.unknown) failures.push(tag + ': pasted ' + r.nodes.length + ' of ' + m.body.nodes.length + ' nodes');
+      if (r.wires.length !== m.body.wires.length || r.dropped) failures.push(tag + ': pasted ' + r.wires.length + ' wires, dropped ' + r.dropped);
+      if (r.groups.length !== (m.body.groups || []).length) failures.push(tag + ': its group frame did not come along');
+      for (const f of r.groups) if (f.nodes.some(id => !r.nodes.some(n => n.id === id))) failures.push(tag + ': a pasted frame names nodes it did not paste');
+    }
+    if (new Set(g.nodes.map(n => n.id)).size !== g.nodes.length) failures.push(tag + ': pasting it twice made duplicate node ids');
+    App.graph = g;
+    const back = App.migrate(JSON.parse(JSON.stringify(App.serialize())));
+    if (back.nodes.length !== 1 + 2 * m.body.nodes.length) failures.push(tag + ': serialize lost nodes');
+    if ((back.groups || []).length !== 2 * (m.body.groups || []).length) failures.push(tag + ': serialize lost its group frames');
+    for (const t of [0, 0.5, 2]) {
+      const c = mkCtx(); c.t = t;
+      LM.evaluateGraph(back, NODE_DEFS, c);
+      for (const nid of Object.keys(c.errors)) failures.push(tag + ' t=' + t + ' node ' + nid + ': ' + c.errors[nid]);
+    }
+    try { new Function(WeftExport.buildJS(back)); }
+    catch (e) { failures.push(tag + ': exported JS does not compile → ' + e.message); }
+  }
+
+  // validation refuses what a broken motif would carry
+  const refuse = (why, body) => { if (!Motifs.validate(body, NODE_DEFS).length) failures.push('motif validate: accepted ' + why); };
+  refuse('an empty body', { nodes: [], wires: [] });
+  refuse('an unknown node type', { nodes: [{ id: 'a', type: 'no/such', values: {} }], wires: [] });
+  refuse('a wire to a missing port', { nodes: [{ id: 'a', type: 'params/slider', values: {} }, { id: 'b', type: 'math/neg', values: {} }], wires: [{ from: ['a', 'N'], to: ['b', 'Q'] }] });
+  refuse('two nodes with one id', { nodes: [{ id: 'a', type: 'params/slider', values: {} }, { id: 'a', type: 'math/neg', values: {} }], wires: [] });
+  refuse('a frame round a node it lacks', { nodes: [{ id: 'a', type: 'params/slider', values: {} }], wires: [], groups: [{ id: 'g1', title: 'x', nodes: ['a', 'zz'] }] });
+
+  // the store: save cleans (ext gone, tags normalized), refuses, files round-trip
+  const src = JSON.parse(JSON.stringify(EXAMPLE_MOTIFS.find(m => m.id === 'ex-spring-follow').body));
+  src.ext = [{ from: ['elsewhere', 'N'], to: ['kx', 'V'] }];
+  src.nodes[0]._junk = 'editor cache';
+  const s = Motifs.save({ title: '  my spring  ', tags: 'Motion, ui ,motion', body: src });
+  if (!s.motif) failures.push('motif store: a valid save was refused → ' + (s.errors || []).join('; '));
+  else {
+    const m = s.motif;
+    if (m.title !== 'my spring') failures.push('motif store: title not trimmed, got "' + m.title + '"');
+    if (m.tags.join(',') !== 'motion,ui') failures.push('motif store: tags not normalized, got ' + m.tags.join(','));
+    if ('ext' in m.body || '_junk' in m.body.nodes[0]) failures.push('motif store: ext / non-graph fields survived the save');
+    if (!s.warning) failures.push('motif store: with no storage the save must say it will not last');
+    if (Motifs.list()[0] !== m) failures.push('motif store: yours must list before the examples');
+    if (!Motifs.search('my spring motion')[0] || Motifs.search('my spring motion')[0].id !== m.id) failures.push('motif store: search by title + tag missed it');
+    if (!Motifs.search('state/spring').some(x => x.id === m.id)) failures.push('motif store: search by node type missed it');
+    const f = Motifs.fromFile(Motifs.toFile([m]), 'my-spring.motif.json');
+    if (f.motifs.length !== 1 || JSON.stringify(f.motifs[0].body) !== JSON.stringify(m.body) || f.motifs[0].title !== 'my spring')
+      failures.push('motif files: one motif does not round-trip toFile → fromFile');
+    const imp = Motifs.importMany(f.motifs);
+    if (imp.added !== 0 || imp.same !== 1) failures.push('motif files: re-importing the same motif added a copy');
+    const bare = Motifs.fromFile(JSON.stringify({ weft: 'patch', format: 1, nodes: [{ id: 'q', type: 'params/textlist', values: { text: '#fff' } }], wires: [] }), 'two tone.json');
+    if (bare.motifs.length !== 1 || bare.motifs[0].title !== 'two tone') failures.push('motif files: a bare fragment should import, named after its file');
+    if (!Motifs.fromFile(JSON.stringify({ weft: 'motifs', format: 9, motifs: [] }), 'x').skipped.length) failures.push('motif files: a newer motif format must be refused');
+    if (Motifs.fromFile(JSON.stringify({ weft: 'motifs', format: 1, motifs: [{ title: 'bad', body: { nodes: [{ id: 'a', type: 'no/such' }] } }] }), 'x').motifs.length)
+      failures.push('motif files: an invalid motif got through import');
+    Motifs.update(m.id, { title: 'renamed', tags: ['palette'] });
+    if (Motifs.get(m.id).title !== 'renamed' || !Motifs.search('renamed palette').length) failures.push('motif store: rename / retag did not stick');
+    Motifs.remove(m.id);
+    if (Motifs.get(m.id)) failures.push('motif store: remove left the motif behind');
+  }
+  if (!Motifs.save({ title: 'broken', body: { nodes: [{ id: 'a', type: 'no/such' }] } }).errors) failures.push('motif store: saved an invalid motif');
+
+  // the first group of every example, cut out the way Save as motif cuts it
+  // (members + the wires between them + the frame), still validates, pastes
+  // and evaluates on its own — inputs that were wired from outside just fall
+  // back to their defaults
+  let groupMotifs = 0;
+  for (const name of Object.keys(EXAMPLES)) {
+    const ex = EXAMPLES[name], f = (ex.groups || [])[0];
+    if (!f) continue;
+    const ids = new Set(f.nodes);
+    const body = Motifs.clean({
+      nodes: ex.nodes.filter(n => ids.has(n.id)),
+      wires: ex.wires.filter(w => ids.has(w.from[0]) && ids.has(w.to[0])),
+      groups: [f]
+    });
+    const tag = 'example "' + name + '" first group as a motif';
+    const errs = Motifs.validate(body, NODE_DEFS);
+    if (errs.length) { failures.push(tag + ': ' + errs[0]); continue; }
+    const g = { format: 2, nodes: [], wires: [], groups: [] };
+    let ni = 1, wi = 1, gi = 1;
+    const r = WeftOps.paste(g, body, NODE_DEFS, { dx: 26, dy: 26, nodeId: () => 'n' + (ni++), wireId: () => 'w' + (wi++), groupId: () => 'g' + (gi++) });
+    if (r.nodes.length !== body.nodes.length || r.dropped || r.groups.length !== 1) failures.push(tag + ': did not paste whole');
+    App.graph = g;
+    const back = App.migrate(JSON.parse(JSON.stringify(App.serialize())));
+    const c = mkCtx();
+    LM.evaluateGraph(back, NODE_DEFS, c);
+    for (const nid of Object.keys(c.errors)) failures.push(tag + ' node ' + nid + ': ' + c.errors[nid]);
+    groupMotifs++;
+  }
+  if (groupMotifs < 1) failures.push('motifs: no example group was cut out as a motif');
+  var GROUP_MOTIFS = groupMotifs;
+}
+
+return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length, motifCount: EXAMPLE_MOTIFS.length, groupMotifs: GROUP_MOTIFS };
 `;
 
 let result;
@@ -1646,5 +1760,5 @@ if (result.failures.length) {
   process.exitCode = 1;
 } else {
   console.log('SMOKE OK — ' + result.nodeCount + ' node defs evaluate, ' +
-    result.exampleCount + ' examples run/draw/export.');
+    result.exampleCount + ' examples run/draw/export, ' + result.motifCount + ' example motifs + ' + result.groupMotifs + ' example groups paste/run.');
 }

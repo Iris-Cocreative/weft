@@ -927,6 +927,43 @@ Still open, in rough order of appetite:
 - WebGL remains the answer only if a patch needs tens of thousands of faces.
   (Community Globe engine experience applies.)
 
+## 8.5 Membership — accounts, saved looms, motifs, chat history
+
+The plan is `docs/MEMBERSHIP-PLAN.md` (Supabase, optional sign-in, anonymous
+Weft keeps working completely). Three milestones; M1 and M2 don't depend on
+each other.
+
+- [shipped 2026-10-24] **M1 — Motifs, local.** Save any selection as a named,
+  tagged motif — right-click a selection, or right-click / long-press a group
+  frame's title bar (the frame comes along when the selection is exactly one
+  frame's nodes). A **Motifs** section at the top of the node library (yours,
+  then 10 shipped examples, its own search; the node search narrows it too)
+  and motif rows in quick-add. Drag one onto the loom, tap it to drop it in the
+  middle (it slides clear of what's there), or pick it in quick-add — every
+  drop is one `WeftOps.paste` and one undo step, a copy, nothing written into
+  `values`. Rename / retag / export / delete from a row's ⋯; export your whole
+  library or import files from the section's ⋯. Store: `Motifs` in
+  `js/motifs.js` over `localStorage` `weft:motifs` (every access in try/catch,
+  memory-only when storage is blocked, other tabs follow through the `storage`
+  event), records shaped like the planned `motifs` table so M2's sync slots in
+  behind `list / save / update / remove / onChange`. Example motifs: look point
+  + three transforms (Rainbow eye), the OKLCH palette walk (spectrum-walk
+  patch), spring follow, a slider bank, and three palettes as Swatch columns
+  and as Text Lists. Thumbnails render the motif framed to what it draws, or
+  fall back to its colors (palettes) or a map of its cards. A frame fitted
+  round its cards is now never narrower than its own title (a swatch column
+  read "p…"). Smoke 29 validates,
+  pastes, serializes, evaluates and exports every example motif, does the same
+  for the first group of each example that has groups (nine), and exercises
+  the store and files headless.
+- [next] **M2 — Accounts + My looms** (`js/cloud.js`, Supabase project + RLS,
+  sign-in, autosync, motif sync, the trust prompt for foreign code). See the
+  plan §2, §3, §7, §8.
+- [idea] **M3 — Chat history + account-gated assistant.**
+- [idea] Motif follow-ups, as a need shows up: *update everywhere I used this*
+  (an editor-only marker beside `label`, never in `values` — plan §4), and a
+  thumbnail stroke that doesn't thin out when a big motif is framed small.
+
 ## 9. Horizon / unsorted
 
 - Audio input (mic FFT → parameters) and WebMIDI/gamepad — live-performance patching.

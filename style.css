@@ -140,14 +140,63 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--c, var(--dim));
 }
 
-.pal-item {
+.pal-item, .mo-item {
   display: flex; align-items: center; gap: 8px;
   padding: 4px 8px; border-radius: 6px; cursor: pointer;
   color: #b9c2d4; user-select: none;
 }
-.pal-item:hover { background: #1b2334; color: var(--text); }
-.pal-item { touch-action: none; }
+.pal-item:hover, .mo-item:hover { background: #1b2334; color: var(--text); }
+.pal-item, .mo-item { touch-action: none; }
 .pal-gap { height: 7px; }
+
+/* motifs — the library's first section (js/app.js bindMotifs): yours, then
+ * the examples. A row is the node row with a thumbnail for its icon and a ⋯
+ * that shows on hover (always, under a finger). */
+.mo-head {
+  display: flex; align-items: center; gap: 6px;
+  margin: 12px 4px 4px; cursor: pointer; user-select: none;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--primary);
+}
+.mo-fold { width: 8px; font-size: 9px; color: var(--faint); }
+.mo-count { font-weight: 400; letter-spacing: 0.04em; text-transform: none; color: var(--faint); }
+.mo-btn {
+  margin-left: auto; padding: 0 5px; border: none; border-radius: 4px; background: none; cursor: pointer;
+  color: var(--dim); font-size: 13px; line-height: 16px; letter-spacing: 0;
+}
+.mo-btn:hover { color: var(--text); background: var(--dark-300); }
+#motifLib.folded .mo-body { display: none; }
+.mo-search {
+  width: 100%; margin: 2px 0 4px; padding: 4px 9px; outline: none;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-size: 12px;
+}
+.mo-search:focus { border-color: var(--accent-dim); }
+.mo-sub { margin: 7px 4px 2px; font-size: 10px; letter-spacing: 0.06em; color: var(--faint); }
+.mo-item { position: relative; padding: 3px 4px; }
+.mo-thumb {
+  width: 36px; height: 22px; flex: none; border-radius: 4px;
+  border: 1px solid var(--dark-300); background: var(--dark-100) center / cover no-repeat;
+}
+/* names wrap to two lines — "weft night · swatches" and "· text list" must
+ * stay tellable apart in a 208px column */
+.mo-name {
+  flex: 1; min-width: 0; overflow: hidden; line-height: 1.25;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+/* the ⋯ floats over the row's end on hover rather than reserving its width */
+.mo-more {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  padding: 0 5px; border-radius: 4px; color: var(--faint); background: #1b2334; visibility: hidden;
+}
+.mo-item:hover .mo-more { visibility: visible; }
+.mo-more:hover { color: var(--text); background: var(--dark-300); }
+.mo-empty { margin: 1px 4px 3px; font-size: 11px; line-height: 1.4; color: var(--faint); }
+
+/* the motif glyph (quick-add, the drag ghost): a repeated figure, 2×2 */
+.icon-motif {
+  display: inline-block; width: 12px; height: 12px; flex: none; border-radius: 2px;
+  background: conic-gradient(var(--primary) 0 25%, transparent 0 50%, var(--primary) 0 75%, transparent 0) 0 0 / 6px 6px;
+}
+.drag-ghost .icon-motif { margin-right: 7px; vertical-align: -1px; }
 
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 
@@ -1028,6 +1077,14 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .ctx-item { padding: 5px 11px; border-radius: 6px; cursor: pointer; }
 .ctx-item:hover { background: #223049; }
 .ctx-item.danger:hover { background: #3d1d26; color: var(--danger); }
+.ctx-item.off { color: var(--faint); cursor: default; }
+.ctx-item.off:hover { background: none; }
+/* the same menu outside the loom (App.popMenu — motif rows, the library ⋯) */
+.ctx-pop {
+  position: fixed; z-index: 70; min-width: 150px;
+  background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); padding: 4px;
+}
 
 /* ---------------- splitter + preview ---------------- */
 
@@ -1153,6 +1210,8 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   padding: 7px 10px; outline: none;
 }
 .ask-input:focus { border-color: var(--accent-dim); }
+.ask-fields { display: flex; flex-direction: column; gap: 10px; }
+.ask-field { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--dim); }
 
 /* ---------------- example gallery ----------------
  * Cards wear the loom livery (docs/DESIGN.md): 13px radius, dark/300 border,
@@ -1334,7 +1393,8 @@ body { touch-action: none; }
   .row { min-height: 24px; }
   .lit input[type="number"], .lit input[type="text"] { padding: 3px 4px; }
   .port-x { width: 22px; height: 22px; opacity: 0.8; }
-  .pal-item { touch-action: pan-y; } /* the list scrolls under a finger; a sideways drag still lifts a node out */
+  .pal-item, .mo-item { touch-action: pan-y; } /* the list scrolls under a finger; a sideways drag still lifts a node out */
+  .mo-more { position: static; transform: none; background: none; visibility: visible; padding: 2px 9px; } /* no hover under a finger */
 }
 
 @media (max-width: 760px) {
@@ -1379,7 +1439,7 @@ body { touch-action: none; }
   body.palette-open #palette { transform: none; }
   body.palette-open #paletteBackdrop { display: block; }
   /* 16px is the size below which iOS zooms into a focused field */
-  #paletteSearch, #quickAdd input, .as-in, .as-setup input, .ask-input, #gallerySearch, .wl-keyrow input { font-size: 16px; }
+  #paletteSearch, .mo-search, #quickAdd input, .as-in, .as-setup input, .ask-input, #gallerySearch, .wl-keyrow input { font-size: 16px; }
   #splitter { order: 1; width: auto; height: 14px; cursor: row-resize; position: relative; background: var(--panel); }
   #splitter::after {
     content: ''; position: absolute; left: 50%; top: 5px; width: 44px; height: 4px;

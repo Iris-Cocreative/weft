@@ -224,18 +224,37 @@ const App = {
   /* ------------------------------ ask dialog ------------------------------
    * Small in-app prompt/confirm (native dialogs block the page). Resolves the
    * chosen button's value — with `input` set, the accent button resolves the
-   * text instead. Esc / backdrop resolve null. */
+   * text instead; with `fields` ([{key, label, value, placeholder}]) it
+   * resolves {key: text} for every field. Esc / backdrop resolve null. */
 
-  ask({ title, body, input, buttons }) {
+  ask({ title, body, input, fields, buttons }) {
     return new Promise(resolve => {
       const modal = document.getElementById('askModal');
       const inp = document.getElementById('askInput');
+      const fieldsEl = document.getElementById('askFields');
       const actions = document.getElementById('askActions');
       document.getElementById('askTitle').textContent = title || '';
       document.getElementById('askBody').textContent = body || '';
       document.getElementById('askBody').classList.toggle('hidden', !body);
       inp.classList.toggle('hidden', input === undefined);
       if (input !== undefined) inp.value = input;
+      if (fieldsEl) { fieldsEl.innerHTML = ''; fieldsEl.classList.toggle('hidden', !fields); }
+      const fieldEls = (fieldsEl && fields || []).map(f => {
+        const row = document.createElement('label');
+        row.className = 'ask-field';
+        const lab = document.createElement('span');
+        lab.textContent = f.label || f.key;
+        const el = document.createElement('input');
+        el.className = 'ask-input';
+        el.value = f.value || '';
+        el.placeholder = f.placeholder || '';
+        el.spellcheck = false;
+        el.autocomplete = 'off';
+        row.appendChild(lab); row.appendChild(el);
+        fieldsEl.appendChild(row);
+        return { key: f.key, el };
+      });
+      const typed = input !== undefined || !!fields;
 
       const done = v => {
         modal.classList.add('hidden');
@@ -243,11 +262,17 @@ const App = {
         window.removeEventListener('keydown', onKey, true);
         resolve(v);
       };
-      const confirm = b => done(input !== undefined && b.accent ? inp.value.trim() : b.value);
+      const confirm = b => {
+        if (!b.accent || !typed) return done(b.value);
+        if (!fields) return done(inp.value.trim());
+        const out = {};
+        for (const f of fieldEls) out[f.key] = f.el.value.trim();
+        done(out);
+      };
       const onBackdrop = e => { if (e.target === modal) done(null); };
       const onKey = e => {
         if (e.key === 'Escape') { e.stopPropagation(); done(null); }
-        else if (e.key === 'Enter' && input !== undefined) {
+        else if (e.key === 'Enter' && typed) {
           const b = buttons.find(b => b.accent);
           if (b) { e.stopPropagation(); confirm(b); }
         }
@@ -265,6 +290,7 @@ const App = {
       window.addEventListener('keydown', onKey, true);
       modal.classList.remove('hidden');
       if (input !== undefined) { inp.focus(); inp.select(); }
+      else if (fieldEls.length) { fieldEls[0].el.focus(); fieldEls[0].el.select(); }
     });
   },
 
@@ -566,6 +592,7 @@ const App = {
     Editor.init(() => App.onGraphChanged());
     Viewport.init();
     App.buildPalette();
+    App.bindMotifs();
     App.buildTypeKey();
     App.bindToolbar();
     App.bindKeys();
@@ -608,7 +635,9 @@ const App = {
   /* ------------------------------ palette ------------------------------ */
 
   buildPalette() {
-    const list = document.getElementById('paletteList');
+    // #motifLib sits above this in the same scroll (bindMotifs); the fallback
+    // keeps a page cached from before motifs alive for its few minutes
+    const list = document.getElementById('paletteNodes') || document.getElementById('paletteList');
     const search = document.getElementById('paletteSearch');
     const order = ['Params', 'Input', 'State', 'Maths', 'Sets', 'Vector', 'Curve', 'Transform', '3D', 'Display', 'Audio', 'Meta'];
 
@@ -711,6 +740,364 @@ const App = {
     document.querySelector('#typeKey .tk-head').addEventListener('click', () => {
       document.getElementById('typeKey').classList.toggle('closed');
     });
+  },
+
+  /* ------------------------------ motifs ------------------------------
+   * The Motifs section at the top of the node library (docs/MEMBERSHIP-PLAN.md
+   * §4, §6): yours first, then the ones Weft ships. It has its own search, and
+   * the node search narrows it too (hiding it when no motif matches). Drag a
+   * motif onto the loom, or tap it to drop it in the middle; ⋯ (or a
+   * right-click) renames, retags, exports or deletes. Every drop is
+   * Editor.pasteFragment — a copy. Storage lives behind Motifs (js/motifs.js). */
+
+  _motifQ: '',
+  _motifThumbs: new Map(), // id → data URL; a saved body never changes, so the id is the key
+
+  bindMotifs() {
+    const lib = document.getElementById('motifLib');
+    if (!lib || typeof Motifs === 'undefined') return; // a cached index.html from before motifs
+    let open = true;
+    try { open = localStorage.getItem('weft:motifsOpen') !== '0'; } catch (e) {}
+    lib.classList.toggle('folded', !open);
+    lib.innerHTML = `
+      <div class="mo-head" title="motifs — pieces of a loom you keep and reuse">
+        <span class="mo-fold">▾</span><span>Motifs</span><span class="mo-count"></span>
+        <button class="mo-btn" title="import · export">⋯</button>
+      </div>
+      <div class="mo-body">
+        <input class="mo-search" placeholder="search motifs…" spellcheck="false" autocomplete="off">
+        <div class="mo-items"></div>
+      </div>`;
+    const head = lib.querySelector('.mo-head');
+    const items = lib.querySelector('.mo-items');
+    const search = lib.querySelector('.mo-search');
+    head.addEventListener('click', e => {
+      if (e.target.closest('.mo-btn')) { App.motifLibMenu(e.target.closest('.mo-btn')); return; }
+      const on = lib.classList.toggle('folded');
+      try { localStorage.setItem('weft:motifsOpen', on ? '0' : '1'); } catch (err) {}
+      App.renderMotifs();
+    });
+    search.addEventListener('input', () => { App._motifQ = search.value.trim(); App.renderMotifs(); });
+    document.getElementById('paletteSearch').addEventListener('input', () => App.renderMotifs());
+    Motifs.onChange(() => App.renderMotifs());
+    // another tab saved or deleted one — this library follows
+    window.addEventListener('storage', e => { if (e.key === Motifs.KEY) Motifs.reload(); });
+
+    const file = document.getElementById('motifFile');
+    file.addEventListener('change', () => {
+      const fs = [...file.files];
+      file.value = '';
+      if (fs.length) App.importMotifFiles(fs);
+    });
+
+    /* drag a motif onto the loom, or tap it — the node palette's gesture */
+    let md = null;
+    items.addEventListener('pointerdown', e => {
+      const item = e.target.closest('.mo-item');
+      if (!item || e.button === 2) return;
+      e.preventDefault();
+      if (e.target.closest('.mo-more')) { App.motifMenu(item.dataset.id, e.target.closest('.mo-more')); return; }
+      md = { id: item.dataset.id, title: item.querySelector('.mo-name').textContent, sx: e.clientX, sy: e.clientY, ghost: null };
+    });
+    items.addEventListener('contextmenu', e => {
+      const item = e.target.closest('.mo-item');
+      if (!item) return;
+      e.preventDefault();
+      App.motifMenu(item.dataset.id, { x: e.clientX, y: e.clientY });
+    });
+    window.addEventListener('pointermove', e => {
+      if (!md) return;
+      if (!md.ghost && Math.abs(e.clientX - md.sx) + Math.abs(e.clientY - md.sy) > 6) {
+        md.ghost = document.createElement('div');
+        md.ghost.className = 'drag-ghost';
+        md.ghost.innerHTML = '<span class="icon-motif"></span>';
+        md.ghost.appendChild(document.createTextNode(md.title));
+        document.body.appendChild(md.ghost);
+      }
+      if (md.ghost) {
+        md.ghost.style.left = (e.clientX + 12) + 'px';
+        md.ghost.style.top = (e.clientY + 8) + 'px';
+      }
+    });
+    window.addEventListener('pointercancel', () => {
+      // a finger that turned into a list scroll is not a drag
+      if (md && md.ghost) md.ghost.remove();
+      md = null;
+    });
+    window.addEventListener('pointerup', e => {
+      if (!md) return;
+      const d = md;
+      md = null;
+      if (!d.ghost) {
+        const item = e.target.closest && e.target.closest('.mo-item');
+        if (item && item.dataset.id === d.id) App.placeMotif(d.id);
+        return;
+      }
+      d.ghost.remove();
+      const r = document.getElementById('editor').getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom)
+        App.placeMotif(d.id, { at: Editor.worldAt(e.clientX, e.clientY) });
+    });
+    App.renderMotifs();
+  },
+
+  renderMotifs() {
+    const lib = document.getElementById('motifLib');
+    if (!lib || !lib.firstElementChild) return;
+    const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const nodeQ = document.getElementById('paletteSearch').value.trim();
+    const q = App._motifQ || nodeQ;
+    const all = Motifs.list();
+    const hits = q ? Motifs.search(q, all, !App._motifQ) : all;
+    const nMine = Motifs.mine().length;
+    lib.querySelector('.mo-count').textContent = nMine ? nMine + ' yours' : '';
+    // searching nodes for something no motif is about: the section steps aside
+    lib.classList.toggle('hidden', !!nodeQ && !App._motifQ && !hits.length);
+    lib.querySelector('.mo-fold').textContent = lib.classList.contains('folded') ? '▸' : '▾';
+    if (lib.classList.contains('folded')) return;
+    const row = m => '<div class="mo-item" data-id="' + esc(m.id) + '" title="' + esc((m.blurb ? m.blurb + ' — ' : '') + Motifs.describe(m)) + '">' +
+      '<span class="mo-thumb"></span><span class="mo-name">' + esc(m.title) + '</span>' +
+      '<span class="mo-more" title="' + (m.builtin ? 'place · export' : 'rename · tags · export · delete') + '">⋯</span></div>';
+    const mine = hits.filter(m => !m.builtin), ex = hits.filter(m => m.builtin);
+    let html = '';
+    // searching: only the halves that matched. Not searching: "yours" always
+    // shows, so an empty library says how to fill it
+    if (q && !hits.length) html = '<div class="mo-empty">no motif matches “' + esc(q) + '”</div>';
+    if (mine.length || !q) html += '<div class="mo-sub">yours</div>' + (mine.length ? mine.map(row).join('')
+      : '<div class="mo-empty">' + (App.isMobile()
+        ? 'hold a card or a group’s title bar → save as motif…'
+        : 'right-click a selection or a group’s title bar → save as motif…') + '</div>');
+    if (ex.length) html += '<div class="mo-sub">examples</div>' + ex.map(row).join('');
+    const items = lib.querySelector('.mo-items');
+    items.innerHTML = html;
+    /* thumbnails one per frame (a motif with a spring steps 60 frames), and
+     * only the first time — the cache answers every later render instantly */
+    const queue = [...items.querySelectorAll('.mo-item')];
+    const pump = () => {
+      const el = queue.shift();
+      if (!el) return;
+      const m = Motifs.get(el.dataset.id);
+      const cached = m && App._motifThumbs.has(m.id);
+      const url = m ? App.motifThumb(m) : '';
+      if (url) el.querySelector('.mo-thumb').style.backgroundImage = 'url(' + url + ')';
+      if (cached) pump(); else requestAnimationFrame(pump);
+    };
+    pump();
+  },
+
+  /* a thumbnail from evaluating the motif on its own when it draws anything;
+   * when it doesn't (a slider bank, a palette), a small picture of it */
+  motifThumb(m) {
+    if (App._motifThumbs.has(m.id)) return App._motifThumbs.get(m.id);
+    let url = '';
+    try {
+      const g = { format: 2, nodes: JSON.parse(JSON.stringify(m.body.nodes)), wires: JSON.parse(JSON.stringify(m.body.wires || [])) };
+      url = App.renderThumb(g, 96, 60, 60, { needDraw: true, fit: true }) || App.motifSketch(m.body, 96, 60);
+    } catch (e) { /* a thumbnail is never worth breaking the library for */ }
+    App._motifThumbs.set(m.id, url);
+    return url;
+  },
+
+  /* the fallback picture: a palette shows its colors as bands; anything else
+   * is a map of its cards in their category colors (swatches in their own),
+   * with the wires between them */
+  motifSketch(body, w, h) {
+    const cv = document.createElement('canvas');
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const g = cv.getContext('2d');
+    g.scale(dpr, dpr);
+    g.fillStyle = '#0b0e14';
+    g.fillRect(0, 0, w, h);
+    const hexes = n => n.type === 'params/swatch' ? [n.values.hex]
+      : n.type === 'params/textlist' ? String(n.values.text || '').split('\n').map(s => s.trim()).filter(s => /^#?[0-9a-f]{6}$/i.test(s)).map(s => s[0] === '#' ? s : '#' + s)
+      : [];
+    const colors = [].concat(...body.nodes.map(hexes)).filter(Boolean);
+    if (colors.length && body.nodes.every(n => hexes(n).length)) {
+      const bw = w / colors.length;
+      colors.forEach((c, i) => { g.fillStyle = c; g.fillRect(Math.floor(i * bw), 0, Math.ceil(bw), h); });
+      return cv.toDataURL('image/webp', 0.85);
+    }
+    // the headless card estimate runs tall for chromeless cards — they are small
+    const size = n => { const d = NODE_DEFS[n.type]; return d && d.bare ? { w: d.width || 64, h: 56 } : WeftOps.nodeSize(n, NODE_DEFS); };
+    const box = new Map(body.nodes.map(n => [n.id, { x: +n.x || 0, y: +n.y || 0, s: size(n), n }]));
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const b of box.values()) { x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.s.w); y1 = Math.max(y1, b.y + b.s.h); }
+    const pad = 6, sc = Math.min((w - pad * 2) / Math.max(1, x1 - x0), (h - pad * 2) / Math.max(1, y1 - y0), 0.2);
+    const ox = (w - (x1 - x0) * sc) / 2, oy = (h - (y1 - y0) * sc) / 2;
+    const X = v => ox + (v - x0) * sc, Y = v => oy + (v - y0) * sc;
+    g.strokeStyle = 'rgba(219, 226, 238, 0.28)';
+    g.lineWidth = 0.8;
+    for (const wr of body.wires || []) {
+      const a = box.get(wr.from[0]), b = box.get(wr.to[0]);
+      if (!a || !b) continue;
+      g.beginPath();
+      g.moveTo(X(a.x + a.s.w), Y(a.y + a.s.h / 2));
+      g.lineTo(X(b.x), Y(b.y + b.s.h / 2));
+      g.stroke();
+    }
+    for (const b of box.values()) {
+      const d = NODE_DEFS[b.n.type];
+      g.fillStyle = b.n.type === 'params/swatch' ? b.n.values.hex : (d ? CATS[d.cat] : '#f87171');
+      g.globalAlpha = b.n.type === 'params/swatch' ? 1 : 0.7;
+      const rw = Math.max(3, b.s.w * sc), rh = Math.max(2, b.s.h * sc);
+      if (g.roundRect) { g.beginPath(); g.roundRect(X(b.x), Y(b.y), rw, rh, Math.min(3, rh / 2)); g.fill(); }
+      else g.fillRect(X(b.x), Y(b.y), rw, rh);
+    }
+    g.globalAlpha = 1;
+    return cv.toDataURL('image/webp', 0.85);
+  },
+
+  /* drop a motif — at a world point (a drag, quick-add) or in the middle of
+   * the visible loom (a tap) */
+  placeMotif(id, opts) {
+    const m = typeof id === 'string' ? Motifs.get(id) : id;
+    if (!m) { App.flash('that motif is gone — maybe another tab deleted it'); return; }
+    const o = opts || {};
+    const ok = Editor.pasteFragment(JSON.parse(JSON.stringify(m.body)),
+      o.at ? { at: { x: o.at.x - 20, y: o.at.y - 14 } } : { center: true });
+    if (!ok) return;
+    // a phone shows the piece it just got, at a legible zoom (it is selected)
+    if (App.isMobile()) { App.togglePalette(false); Editor.zoomToFit(true, 0.45); }
+    const n = m.body.nodes.length;
+    App.flash('dropped “' + m.title + '” — ' + n + ' node' + (n === 1 ? '' : 's') + ', your own copy to change');
+  },
+
+  async saveMotif(frag) {
+    if (!frag || !frag.nodes || !frag.nodes.length) { App.flash('select some nodes to save as a motif'); return; }
+    const body = Motifs.clean(frag);
+    const errors = Motifs.validate(body, NODE_DEFS);
+    if (errors.length) {
+      await App.ask({
+        title: 'this can’t be a motif yet',
+        body: errors.slice(0, 3).join(' · '),
+        buttons: [{ label: 'OK', value: 'ok', accent: true }]
+      });
+      return;
+    }
+    const frame = body.groups && body.groups[0];
+    const palette = body.nodes.every(n => n.type === 'params/swatch' || n.type === 'params/textlist');
+    const draft = { title: '', tags: palette ? ['palette'] : [], body };
+    const r = await App.ask({
+      title: 'save as motif',
+      body: Motifs.describe(draft) + ' — kept in this browser, under motifs in the node library',
+      fields: [
+        { key: 'title', label: 'name', value: frame && frame.title !== 'group' ? frame.title : '', placeholder: 'a name you’ll search for' },
+        { key: 'tags', label: 'tags', value: draft.tags.join(', '), placeholder: 'comma separated — palette, motion, ui' }
+      ],
+      buttons: [{ label: 'Save motif', value: 'save', accent: true }, { label: 'Cancel', value: null }]
+    });
+    if (!r) return;
+    const res = Motifs.save({ title: r.title || (frame && frame.title) || 'motif', tags: r.tags, body });
+    if (res.errors) { App.flash('couldn’t save: ' + res.errors[0]); return; }
+    App.revealMotifs();
+    App.flash(res.warning ? 'saved “' + res.motif.title + '”, but ' + res.warning
+      : 'saved “' + res.motif.title + '” — it’s under motifs in the node library');
+  },
+
+  /* open the section and clear its search, so what just arrived is in view */
+  revealMotifs() {
+    const lib = document.getElementById('motifLib');
+    lib.classList.remove('folded');
+    try { localStorage.setItem('weft:motifsOpen', '1'); } catch (e) {}
+    App._motifQ = '';
+    lib.querySelector('.mo-search').value = '';
+    App.renderMotifs();
+  },
+
+  motifMenu(id, anchor) {
+    const m = Motifs.get(id);
+    if (!m) return;
+    const items = [{ label: 'Place on the loom', act: () => App.placeMotif(m) }];
+    if (!m.builtin) items.push(
+      { label: 'Rename…', act: async () => {
+        const t = await App.ask({ title: 'rename motif', input: m.title,
+          buttons: [{ label: 'Rename', value: 'ok', accent: true }, { label: 'Cancel', value: null }] });
+        if (t) Motifs.update(m.id, { title: t });
+      } },
+      { label: 'Edit tags…', act: async () => {
+        const t = await App.ask({ title: 'tags for “' + m.title + '”', body: 'comma separated — palette, motion, ui', input: (m.tags || []).join(', '),
+          buttons: [{ label: 'Save tags', value: 'ok', accent: true }, { label: 'Cancel', value: null }] });
+        if (t !== null) Motifs.update(m.id, { tags: t });
+      } });
+    items.push({ label: 'Export .json', act: () => App.exportMotifs([m]) });
+    if (!m.builtin) items.push({ label: 'Delete', danger: true, act: async () => {
+      const ok = await App.ask({ title: 'delete “' + m.title + '”?', body: 'it’s kept only in this browser — export it first if you might want it back. looms you dropped it on keep their copy.',
+        buttons: [{ label: 'Delete', value: 'del', accent: true }, { label: 'Cancel', value: null }] });
+      if (ok === 'del') { Motifs.remove(m.id); App.flash('deleted “' + m.title + '”'); }
+    } });
+    App.popMenu(anchor, items);
+  },
+
+  motifLibMenu(anchor) {
+    const n = Motifs.mine().length;
+    App.popMenu(anchor, [
+      { label: 'Import motif files…', act: () => document.getElementById('motifFile').click() },
+      { label: 'Export yours' + (n ? ' (' + n + ')' : ''), disabled: !n, act: () => App.exportMotifs(Motifs.mine()) }
+    ]);
+  },
+
+  exportMotifs(list) {
+    const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'motif';
+    const name = list.length === 1 ? slug(list[0].title) + '.motif.json' : 'weft-motifs.json';
+    App.download(name, Motifs.toFile(list), 'application/json');
+    App.flash('exported ' + (list.length === 1 ? '“' + list[0].title + '” — import it' : list.length + ' motifs — import them') + ' in any weft');
+  },
+
+  async importMotifFiles(files) {
+    const found = [], skipped = [];
+    for (const f of files) {
+      let text = '';
+      try { text = await f.text(); } catch (e) { skipped.push(f.name + ': could not be read'); continue; }
+      const r = Motifs.fromFile(text, f.name);
+      found.push(...r.motifs);
+      skipped.push(...r.skipped);
+    }
+    const r = Motifs.importMany(found);
+    if (r.added) App.revealMotifs();
+    const bits = [];
+    if (r.added) bits.push('imported ' + r.added + ' motif' + (r.added === 1 ? '' : 's'));
+    if (r.same) bits.push(r.same + ' already here');
+    if (skipped.length) bits.push(skipped.length + ' skipped');
+    if (skipped.length || r.warning) {
+      await App.ask({
+        title: bits.join(' · ') || 'nothing imported',
+        body: skipped.slice(0, 5).join(' · ') + (skipped.length > 5 ? ' · …' : '') + (r.warning ? (skipped.length ? ' — ' : '') + r.warning : ''),
+        buttons: [{ label: 'OK', value: 'ok', accent: true }]
+      });
+    } else App.flash(bits.join(' · ') || 'nothing to import');
+  },
+
+  /* a small menu outside the loom (the loom has #ctxMenu): anchored under an
+   * element or at a point, gone on any other press, Esc, or a pick */
+  popMenu(anchor, items) {
+    App.closePop();
+    const pop = document.createElement('div');
+    pop.className = 'ctx-pop';
+    for (const it of items) {
+      const el = document.createElement('div');
+      el.className = 'ctx-item' + (it.danger ? ' danger' : '') + (it.disabled ? ' off' : '');
+      el.textContent = it.label;
+      if (!it.disabled) el.addEventListener('click', () => { App.closePop(); it.act(); });
+      pop.appendChild(el);
+    }
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y };
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    pop.style.left = Math.max(6, Math.min(r.left, window.innerWidth - pw - 6)) + 'px';
+    pop.style.top = (r.bottom + ph + 6 > window.innerHeight ? Math.max(6, r.top - ph - 4) : r.bottom + 4) + 'px';
+    const away = e => { if (!pop.contains(e.target)) App.closePop(); };
+    const key = e => { if (e.key === 'Escape') { e.stopPropagation(); App.closePop(); } };
+    setTimeout(() => window.addEventListener('pointerdown', away, true), 0);
+    window.addEventListener('keydown', key, true);
+    App._pop = { el: pop, off: () => { window.removeEventListener('pointerdown', away, true); window.removeEventListener('keydown', key, true); } };
+  },
+
+  closePop() {
+    if (!App._pop) return;
+    App._pop.off();
+    App._pop.el.remove();
+    App._pop = null;
   },
 
   /* ------------------------------ examples ------------------------------ */
@@ -921,7 +1308,11 @@ const App = {
   THUMB_STAGE: { w: 960, h: 600 },
   _thumbs: {},
 
-  renderThumb(graph, w, h, frames) {
+  /* opts.needDraw: '' when nothing drew (the caller has a fallback);
+   * opts.fit: frame what was drawn instead of the whole stage — a motif is a
+   * piece, not a composition, and at stage scale a 28px disc is one pixel */
+  renderThumb(graph, w, h, frames, opts) {
+    const o = opts || {};
     const cv = document.createElement('canvas');
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.max(1, Math.round(w * dpr));
@@ -939,13 +1330,28 @@ const App = {
     /* pictures the graph declares start loading now, so the next thumbnail
        of it (and the live cloth) has them; this one draws what is loaded */
     if (ctx && Viewport.images) Viewport.images.sync(ctx.imageList);
+    if (o.needDraw && !(ctx && ctx.drawList.length)) return '';
     g2.fillStyle = '#0b0e14';
     g2.fillRect(0, 0, cv.width, cv.height);
     if (ctx) LM.fillBg(g2, ctx.bg, cv.width, cv.height);
     if (ctx) {
       g2.translate(cv.width / 2, cv.height / 2); // coordinates are centered (invariant 3)
-      const sc = Math.min(cv.width / S.w, cv.height / S.h);
+      let sc = Math.min(cv.width / S.w, cv.height / S.h), mx = 0, my = 0;
+      if (o.fit) {
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        for (const it of ctx.drawList) {
+          let b = null;
+          try { b = it && it.geom ? LM.geomBounds(it.geom) : null; } catch (e) {}
+          if (!b) continue;
+          x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+        }
+        if (x0 < Infinity) {
+          sc = Math.min(cv.width / Math.max(8, (x1 - x0) * 1.2), cv.height / Math.max(8, (y1 - y0) * 1.2), dpr);
+          mx = (x0 + x1) / 2; my = (y0 + y1) / 2;
+        }
+      }
       g2.scale(sc, sc);
+      g2.translate(-mx, -my);
       for (const it of ctx.drawList) {
         try { LM.drawItem(g2, it); } catch (e) { /* skip bad item */ }
       }

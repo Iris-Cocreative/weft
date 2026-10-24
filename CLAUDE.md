@@ -61,12 +61,13 @@ Definition of done for any change:
 | `js/viewport.js` | live preview loop + editor input host (event latching, DOM overlay, scroll sim); owns `Viewport.makeCtx`, the one ctx literal the loop and thumbnails share | yes |
 | `js/export.js` | graph → standalone JS compiler | no |
 | `js/examples.js` | `EXAMPLES` — doubles as test fixtures — plus the parallel `EXAMPLE_META` the gallery reads | no |
+| `js/motifs.js` | `EXAMPLE_MOTIFS` (the shipped motifs) + `Motifs`, the motif store — list / get / save / update / remove / onChange over `localStorage` `weft:motifs`, validation through `WeftOps`, motif files. The library UI is in app.js | **NO** |
 | `js/app.js` | shell: palette, toolbar, persistence, modals, example gallery + offscreen thumbnails | yes |
-| `js/ops.js` | `WeftOps` — the graph-ops validator/applier (add/set/delete/wire/unwire/replace/layout/group/ungroup) and reply parser, pure; shared by the assistant panel and `test/bench-model.js` | **NO** |
+| `js/ops.js` | `WeftOps` — the graph-ops validator/applier (add/set/delete/wire/unwire/replace/layout/group/ungroup) and reply parser, pure; shared by the assistant panel and `test/bench-model.js`. Also `WeftOps.paste`, the one path a fragment takes onto a loom (Ctrl+V, Ctrl+D, a dropped motif) | **NO** |
 | `js/assistant.js` | weave assistant — chat panel → webhook → `WeftOps` (docs/ASSISTANT.md, docs/HF-INTEGRATION-PLAN.md); dormant without a saved webhook config | yes |
 | `js/tour.js` | `Tour` — first-visit welcome modal (with the assistant's shared-key field) and the spotlight tour of the interface; shows once (`weft:welcomed`), again from the ⚙ popover | yes |
 
-Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → images → editor → viewport → export → examples → app → assistant → tour, with ops slotted after audio (the editor's paste layout uses it).
+Load order (classic scripts, shared globals): engine → nodes → nodes-3d → audio → images → editor → viewport → export → examples → motifs → app → assistant → tour, with ops slotted after audio (the editor's paste and motifs.js use it).
 
 A new node pack has to be registered in eight places, all one line each:
 `index.html`, the source lists in `test/smoke.js`, `test/gen-catalog.js`,
@@ -186,6 +187,16 @@ fails if the two key sets drift, so this is not optional. `frames` is how far
 the gallery steps the graph before snapping its thumbnail: 40 is fine for
 anything driven by time alone, 90–120 for springs, traces and scopes that are
 empty at t=0.
+
+## Recipe: adding an example motif
+
+Add to `EXAMPLE_MOTIFS` in `js/motifs.js` via `_MO({id, title, tags, blurb,
+frame?, nodes, wires})` — the `_EX` node shorthand; `frame` titles one group
+round every node. Lift from an example or a patch where you can, and keep the
+title short enough to read on two lines of a 208px column. Smoke check 29
+validates each one, pastes it twice through `WeftOps.paste`, serializes and
+evaluates it, and exports it. A motif never puts anything in `values`; a
+dropped motif is a plain copy.
 
 ## Style
 

@@ -10,6 +10,8 @@
  * No DOM, no App/Editor: the assistant panel (js/assistant.js) and the
  * headless model bench (test/bench-model.js) share this one validator, so
  * what a model gets away with in the browser is exactly what the bench scores.
+ * `paste` is the same idea for clipboard fragments and motifs: the one place
+ * a fragment gets fresh ids, which the editor and smoke both run.
  */
 const WeftOps = {
   apply(graph, ops, defs) {
@@ -214,6 +216,72 @@ const WeftOps = {
     if (grouped) bits.push(grouped + ' group' + (grouped > 1 ? 's' : ''));
     if (tiled) bits.push('re-tiled so frames do not overlap');
     return { graph: g, errors: [], summary: bits.join(' · ') || 'no changes', counts: { added, changed, removed, wired, grouped } };
+  },
+
+  /* place a clipboard fragment (Ctrl+V, Ctrl+D, a dropped motif) into a graph:
+   * every node gets a fresh id, a wire survives only when both its ends came
+   * along, external incoming wires (frag.ext) reattach when their source was
+   * already on the loom, and group frames follow their members to the new ids.
+   * Pushes into `graph` and returns what it added — the editor builds the
+   * cards, smoke runs the same path headless (the motif round trip).
+   * opts: { dx, dy, nodeId(), wireId(), groupId() } — the id makers are the
+   * caller's, since the editor keeps its own counters */
+  paste(graph, frag, defs, opts) {
+    const o = opts || {};
+    const res = { nodes: [], wires: [], groups: [], idMap: {}, dropped: 0, unknown: 0 };
+    if (!frag || !Array.isArray(frag.nodes)) return res;
+    graph.nodes = graph.nodes || []; graph.wires = graph.wires || [];
+    const dx = +o.dx || 0, dy = +o.dy || 0;
+    const before = new Set(graph.nodes.map(n => n.id));
+    for (const src of frag.nodes) {
+      if (!src || !src.type) continue;
+      const def = defs[src.type];
+      if (!def) res.unknown++;
+      const n = {
+        id: o.nodeId(), type: src.type,
+        x: Math.round((+src.x || 0) + dx), y: Math.round((+src.y || 0) + dy),
+        values: src.values !== undefined ? JSON.parse(JSON.stringify(src.values))
+          : (def && def.defaults ? JSON.parse(JSON.stringify(def.defaults)) : {})
+      };
+      if (src.enabled === false) n.enabled = false;
+      if (src.preview === false) n.preview = false;
+      if (src.collapsed) n.collapsed = true;
+      if (src.label) n.label = src.label;
+      res.idMap[src.id] = n.id;
+      graph.nodes.push(n); // pushed one by one — the caller's id maker skips ids in use
+      res.nodes.push(n);
+    }
+    const seen = new Set();
+    for (const w of Array.isArray(frag.wires) ? frag.wires : []) {
+      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) { res.dropped++; continue; }
+      const f = res.idMap[w.from[0]], t = res.idMap[w.to[0]];
+      const key = f + ':' + w.from[1] + '>' + t + ':' + w.to[1];
+      if (!f || !t || seen.has(key)) { res.dropped++; continue; }
+      seen.add(key);
+      const nw = { id: o.wireId(), from: [f, w.from[1]], to: [t, w.to[1]] };
+      graph.wires.push(nw); res.wires.push(nw);
+    }
+    for (const w of Array.isArray(frag.ext) ? frag.ext : []) {
+      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) continue;
+      const t = res.idMap[w.to[0]];
+      if (!t || !before.has(w.from[0])) continue;
+      const nw = { id: o.wireId(), from: [w.from[0], w.from[1]], to: [t, w.to[1]] };
+      graph.wires.push(nw); res.wires.push(nw);
+    }
+    for (const src of Array.isArray(frag.groups) ? frag.groups : []) {
+      if (!src || !Array.isArray(src.nodes)) continue;
+      const members = src.nodes.map(id => res.idMap[id]).filter(Boolean);
+      if (!members.length) continue;
+      const f = {
+        id: o.groupId(), x: Math.round((+src.x || 0) + dx), y: Math.round((+src.y || 0) + dy),
+        w: Math.round(+src.w || 0), h: Math.round(+src.h || 0),
+        title: src.title || 'group', nodes: Array.from(new Set(members))
+      };
+      if (src.collapsed) f.collapsed = true;
+      (graph.groups = graph.groups || []).push(f);
+      res.groups.push(f);
+    }
+    return res;
   },
 
   /* a card's footprint, estimated without the DOM (the editor refits frames

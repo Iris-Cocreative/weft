@@ -811,21 +811,35 @@ const Editor = (() => {
   /* size every frame round its members' real cards — the assistant's ops
    * estimate frames headlessly, so they get trued up once the graph lands */
   function refitGroups() {
-    for (const f of S.graph.groups || []) {
-      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-      for (const id of f.nodes) {
-        const n = nodeById(id), el = S.els.get(id);
-        if (!n || !el) continue;
-        const w = el.offsetWidth || 172, h = el.offsetHeight || 60;
-        x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
-        x1 = Math.max(x1, n.x + w); y1 = Math.max(y1, n.y + h);
-      }
-      if (x0 === Infinity) continue;
-      f.x = Math.round(x0 - 16); f.y = Math.round(y0 - 44);
-      f.w = Math.round(x1 - x0 + 32); f.h = Math.round(y1 - y0 + 60);
-      const el = S.frameEls.get(f.id);
-      if (el) positionFrame(el, f);
+    for (const f of S.graph.groups || []) fitFrame(f);
+  }
+
+  function fitFrame(f) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const id of f.nodes) {
+      const n = nodeById(id), el = S.els.get(id);
+      if (!n || !el) continue;
+      const w = el.offsetWidth || 172, h = el.offsetHeight || 60;
+      x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y);
+      x1 = Math.max(x1, n.x + w); y1 = Math.max(y1, n.y + h);
     }
+    if (x0 === Infinity) return;
+    const el = S.frameEls.get(f.id);
+    // never narrower than its own title (a column of swatches would cut
+    // "poster warm" to "p…"). The text is measured off-layout, in world px —
+    // the span itself is flexed and ellipsized, so it can't say how long
+    // its text is, and a refit must not feed its own width back in
+    const tEl = el && el.querySelector('.gf-title');
+    let need = 0;
+    if (tEl && f.title) {
+      const cs = getComputedStyle(tEl);
+      const g2 = (fitFrame.cv = fitFrame.cv || document.createElement('canvas')).getContext('2d');
+      g2.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+      need = Math.ceil(g2.measureText(f.title).width + (parseFloat(cs.letterSpacing) || 0) * f.title.length) + 64;
+    }
+    f.x = Math.round(x0 - 16); f.y = Math.round(y0 - 44);
+    f.w = Math.max(Math.round(x1 - x0 + 32), need); f.h = Math.round(y1 - y0 + 60);
+    if (el) positionFrame(el, f);
   }
 
   /* where a wire meets a folded frame: its edge, at bar height */
@@ -1218,11 +1232,14 @@ const Editor = (() => {
     if (!onCtl) {
       // long-press: the finger's right-click
       const cx = e.clientX, cy = e.clientY, id = nodeEl && nodeEl.dataset.id;
+      const bar = !id && e.target.closest && e.target.closest('.gframe-bar');
+      const fid = bar && bar.parentElement.dataset.id;
       S.lpX = cx; S.lpY = cy;
       S.lp = setTimeout(() => {
         S.lp = null;
         cancelDrag();
         if (id) { if (!S.sel.has(id)) selectOnly(id); openCtx({ clientX: cx, clientY: cy }, id); }
+        else if (fid) openFrameCtx({ clientX: cx, clientY: cy }, fid);
         else openQA({ clientX: cx, clientY: cy });
       }, 520);
     }
@@ -1288,6 +1305,8 @@ const Editor = (() => {
       // right button: pan on background; clean right-click opens menu on release
       e.preventDefault();
       if (nodeEl) { S.drag = { kind: 'rnode', id: nodeEl.dataset.id, sx: e.clientX, sy: e.clientY, moved: false }; return; }
+      const rbar = e.target.closest && e.target.closest('.gframe-bar');
+      if (rbar) { S.drag = { kind: 'rframe', id: rbar.parentElement.dataset.id, sx: e.clientX, sy: e.clientY, moved: false }; return; }
       closeQA();
       S.drag = { kind: 'pan', rmb: true, sx: e.clientX, sy: e.clientY, ox: S.pan.x, oy: S.pan.y, moved: false };
       editorEl.classList.add('panning');
@@ -1460,7 +1479,7 @@ const Editor = (() => {
     } else if (d.kind === 'clothpan') {
       Viewport.camPan(e.clientX - d.lx, e.clientY - d.ly);
       d.lx = e.clientX; d.ly = e.clientY;
-    } else if (d.kind === 'rnode') {
+    } else if (d.kind === 'rnode' || d.kind === 'rframe') {
       if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 4) d.moved = true;
     } else if (d.kind === 'wire') {
       const wp = worldPos(e);
@@ -1504,6 +1523,11 @@ const Editor = (() => {
     if (d.kind === 'rnode') {
       S.drag = null;
       if (!d.moved) openCtx(e, d.id);
+      return;
+    }
+    if (d.kind === 'rframe') {
+      S.drag = null;
+      if (!d.moved) openFrameCtx(e, d.id);
       return;
     }
     if (d.kind === 'note') {
@@ -1634,6 +1658,10 @@ const Editor = (() => {
       .sort((a, b) => (q ? 0 : rank(a) - rank(b)) || a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title))
       .slice(0, 60);
     if (qaNum) qaItems = [{ id: '__slider' }].concat(qaItems);
+    // motifs follow the nodes (Enter on "slider" still means the Slider);
+    // typing "motif" lists them all
+    if (q && typeof Motifs !== 'undefined')
+      qaItems = qaItems.concat(Motifs.search(q).slice(0, 8).map(m => ({ id: '__motif:' + m.id, motif: m })));
     // canvas annotation, not a node — pinned at the end unless searched for
     if (!q || 'sticky note annotation'.includes(q)) qaItems = qaItems.concat([{ id: '__note' }]);
     qaIndex = 0;
@@ -1641,6 +1669,12 @@ const Editor = (() => {
       if (d.id === '__slider') {
         return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="__slider" title="type a number, get a slider already set to it">
           <span class="pal-icon" style="color:${CATS.Params}">${weftIconSVG('params/slider', 'Params') || ''}</span>slider ${qaNum.value}<span class="qa-cat">${qaNum.min}–${qaNum.max}</span>
+        </div>`;
+      }
+      if (d.motif) {
+        const m = d.motif, esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        return `<div class="qa-item ${i === 0 ? 'active' : ''}" data-type="__motif:${esc(m.id)}" title="${esc(Motifs.describe(m))}">
+          <span class="pal-icon"><span class="icon-motif"></span></span>${esc(m.title)}<span class="qa-cat">motif</span>
         </div>`;
       }
       if (d.id === '__note') {
@@ -1682,6 +1716,11 @@ const Editor = (() => {
     if (type === '__note') {
       closeQA();
       addNoteAt(qaPos.x, qaPos.y);
+      return;
+    }
+    if (type.indexOf('__motif:') === 0) {
+      closeQA();
+      App.placeMotif(type.slice(8), { at: { x: qaPos.x, y: qaPos.y } });
       return;
     }
     closeQA();
@@ -1728,7 +1767,19 @@ const Editor = (() => {
     const ext = S.graph.wires
       .filter(w => S.sel.has(w.to[0]) && !S.sel.has(w.from[0]))
       .map(w => ({ from: w.from.slice(), to: w.to.slice() }));
-    return { weft: 'patch', format: 1, nodes, wires, ext };
+    const frag = { weft: 'patch', format: 1, nodes, wires, ext };
+    // a selection that is exactly one group frame's nodes brings the frame
+    // along, so the paste (or the motif saved from it) lands titled. Anything
+    // looser — a group plus a stray node, half a group — copies loose nodes,
+    // as it always has.
+    const whole = (S.graph.groups || []).filter(f => f.nodes.length === S.sel.size && f.nodes.every(id => S.sel.has(id)));
+    if (whole.length === 1) {
+      const f = whole[0];
+      const g = { id: f.id, x: f.x, y: f.y, w: f.w, h: f.h, title: f.title, nodes: f.nodes.slice() };
+      if (f.collapsed) g.collapsed = true;
+      frag.groups = [g];
+    }
+    return frag;
   }
 
   /* nodes without x/y (e.g. LLM-authored patches) get laid out in topological
@@ -1739,69 +1790,87 @@ const Editor = (() => {
     return true;
   }
 
-  function pasteFragment(data) {
+  /* opts.at = a world point: the fragment's top-left lands there (a motif
+   * dropped from the library or quick-add); opts.center = it lands in the
+   * middle of the visible loom (a tapped motif). Neither = the Ctrl+V nudge. */
+  function pasteFragment(data, opts) {
     if (!data || !Array.isArray(data.nodes) || !data.nodes.length) return false;
+    const o = opts || {};
     const wires = Array.isArray(data.wires) ? data.wires : [];
     const nodes = data.nodes.map(n => ({ ...n, values: n.values ? JSON.parse(JSON.stringify(n.values)) : undefined }));
     const laidOut = autoLayout(nodes, wires);
-    // auto-laid patches land below existing content instead of overlapping it
-    let yShift = 0;
-    if (laidOut && S.graph.nodes.length) {
+    let dx = 26, dy = 26;
+    if (o.at || o.center) {
+      // the fragment's bounds — frames reach above their cards, so they count
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const n of nodes) {
+        const sz = WeftOps.nodeSize(n, NODE_DEFS);
+        x0 = Math.min(x0, +n.x || 0); y0 = Math.min(y0, +n.y || 0);
+        x1 = Math.max(x1, (+n.x || 0) + sz.w); y1 = Math.max(y1, (+n.y || 0) + sz.h);
+      }
+      for (const f of Array.isArray(data.groups) ? data.groups : []) {
+        if (!f || typeof f.x !== 'number') continue;
+        x0 = Math.min(x0, f.x); y0 = Math.min(y0, f.y);
+        x1 = Math.max(x1, f.x + (+f.w || 0)); y1 = Math.max(y1, f.y + (+f.h || 0));
+      }
+      const c = worldCenter();
+      const at = o.at || { x: c.x - (x1 - x0) / 2, y: c.y - (y1 - y0) / 2 };
+      if (!o.at) {
+        // a tap must not stack a motif on what already sits in the middle:
+        // slide it down past every card or frame it would cover, then bring
+        // it into view (pan only — the zoom stays the reader's)
+        const w = x1 - x0, h = y1 - y0, boxes = [];
+        for (const n of S.graph.nodes) {
+          const el = S.els.get(n.id);
+          if (el && !hiddenBy(n.id)) boxes.push([n.x, n.y, el.offsetWidth, el.offsetHeight]);
+        }
+        for (const f of S.graph.groups || []) boxes.push([f.x, f.y, f.w, f.collapsed ? 26 : f.h]);
+        let moved = false;
+        for (let k = 0; k < 60; k++) {
+          let below = null;
+          for (const b of boxes) if (b[0] < at.x + w && b[0] + b[2] > at.x && b[1] < at.y + h && b[1] + b[3] > at.y) below = Math.max(below === null ? -Infinity : below, b[1] + b[3] + 50);
+          if (below === null) break;
+          at.y = below; moved = true;
+        }
+        if (moved) {
+          const r = editorEl.getBoundingClientRect();
+          S.pan.y = r.height / 2 - (at.y + Math.min(h, r.height / S.zoom * 0.8) / 2) * S.zoom;
+          applyTransform();
+        }
+      }
+      dx = at.x - x0; dy = at.y - y0;
+    } else if (laidOut && S.graph.nodes.length) {
+      // auto-laid patches land below existing content instead of overlapping it
       let maxY = -Infinity;
       for (const n of S.graph.nodes) {
         const el = S.els.get(n.id);
         maxY = Math.max(maxY, n.y + (el ? el.offsetHeight : 100));
       }
-      yShift = maxY + 80 - 60;
+      dy += maxY + 80 - 60;
     }
 
-    const idMap = {}, newIds = [];
-    for (const src of nodes) {
-      if (!src || !src.type) continue;
-      const def = NODE_DEFS[src.type];
-      const values = src.values !== undefined ? src.values
-        : (def && def.defaults ? JSON.parse(JSON.stringify(def.defaults)) : {});
-      const n = {
-        id: nextId(), type: src.type,
-        x: Math.round((+src.x || 0) + 26), y: Math.round((+src.y || 0) + 26 + yShift),
-        values
-      };
-      if (src.enabled === false) n.enabled = false;
-      if (src.preview === false) n.preview = false;
-      if (src.collapsed) n.collapsed = true;
-      if (src.label) n.label = src.label;
-      idMap[src.id] = n.id;
-      S.graph.nodes.push(n);
-      buildNode(n);
-      newIds.push(n.id);
+    const r = WeftOps.paste(S.graph, { nodes, wires, ext: data.ext, groups: data.groups }, NODE_DEFS, {
+      dx, dy, nodeId: nextId, wireId: () => 'w' + (S.widc++), groupId: nextGroupId
+    });
+    for (const n of r.nodes) buildNode(n);
+    // frames are fitted round their real cards (a hand-written motif may give
+    // no size at all), then folded if they arrived folded
+    for (const f of r.groups) {
+      const folded = !!f.collapsed;
+      delete f.collapsed;
+      buildFrame(f);
+      fitFrame(f);
+      if (folded) setFold(f.id, true);
     }
-    let dropped = 0;
-    const seenWires = new Set();
-    for (const w of wires) {
-      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) { dropped++; continue; }
-      const f = idMap[w.from[0]], t = idMap[w.to[0]];
-      const key = f + ':' + w.from[1] + '>' + t + ':' + w.to[1];
-      if (!f || !t || seenWires.has(key)) { dropped++; continue; }
-      seenWires.add(key);
-      S.graph.wires.push({ id: 'w' + (S.widc++), from: [f, w.from[1]], to: [t, w.to[1]] });
-    }
-    // reattach external incoming wires whose source node exists in this graph
-    for (const w of (Array.isArray(data.ext) ? data.ext : [])) {
-      if (!w || !Array.isArray(w.from) || !Array.isArray(w.to)) continue;
-      const t = idMap[w.to[0]];
-      if (!t || !nodeById(w.from[0])) continue;
-      S.graph.wires.push({ id: 'w' + (S.widc++), from: [w.from[0], w.from[1]], to: [t, w.to[1]] });
-    }
-    S.sel = new Set(newIds); S.selWire = null;
+    S.sel = new Set(r.nodes.map(n => n.id)); S.selWire = null;
     updateSelection();
     refreshAllLiterals();
     drawWires();
     changed();
-    const unknown = nodes.filter(n => n && n.type && !NODE_DEFS[n.type]).length;
-    App.flash('added ' + newIds.length + ' node(s)' +
-      (dropped ? ' · ' + dropped + ' wire(s) dropped' : '') +
-      (unknown ? ' · ' + unknown + ' unknown type(s)' : ''));
-    return idMap;
+    App.flash('added ' + r.nodes.length + ' node(s)' +
+      (r.dropped ? ' · ' + r.dropped + ' wire(s) dropped' : '') +
+      (r.unknown ? ' · ' + r.unknown + ' unknown type(s)' : ''));
+    return r.idMap;
   }
 
   function isTypingTarget(t) {
@@ -2035,6 +2104,7 @@ const Editor = (() => {
       ${many ? `<div class="ctx-item" data-act="collapse">Collapse to cluster (${S.sel.size})</div>` : ''}
       ${many ? `<div class="ctx-item" data-act="group">Group (${S.sel.size})</div>` : ''}
       ${n.type === 'meta/cluster' ? `<div class="ctx-item" data-act="expand">Expand cluster</div>` : ''}
+      <div class="ctx-item" data-act="motif">Save as motif…${many ? ' (' + S.sel.size + ')' : ''}</div>
       <div class="ctx-item" data-act="able">${n.enabled === false ? 'Enable' : 'Disable (pass through)'}</div>
       ${previewCapable(def, n) ? `<div class="ctx-item" data-act="prev">${n.preview === false ? 'Preview on' : 'Preview off'}</div>` : ''}
       <div class="ctx-item danger" data-act="del">Delete${many ? ' (' + S.sel.size + ')' : ''}</div>`;
@@ -2048,6 +2118,10 @@ const Editor = (() => {
       if (act === 'collapse') collapseSelection();
       if (act === 'group') groupSelection();
       if (act === 'expand') expandCluster(nodeId);
+      if (act === 'motif') {
+        if (!S.sel.has(nodeId)) selectOnly(nodeId);
+        App.saveMotif(copySelection());
+      }
       if (act === 'able') {
         n.enabled = n.enabled === false ? true : false;
         const el = S.els.get(nodeId);
@@ -2065,6 +2139,35 @@ const Editor = (() => {
         if (S.sel.has(nodeId)) deleteSelection();
         else { removeNode(nodeId); changed(); }
       }
+      closeCtx();
+    };
+  }
+
+  /* the group frame's header menu (right-click or long-press the bar) —
+   * saving goes through the same copySelection, so with the frame's nodes
+   * selected the frame itself rides along into the motif */
+  function openFrameCtx(e, fid) {
+    const f = groupById(fid);
+    if (!f) return;
+    const r = editorEl.getBoundingClientRect();
+    ctxEl.classList.remove('hidden');
+    ctxEl.style.left = (e.clientX - r.left) + 'px';
+    ctxEl.style.top = (e.clientY - r.top) + 'px';
+    ctxEl.innerHTML = `
+      <div class="ctx-item" data-act="motif">Save as motif…</div>
+      <div class="ctx-item" data-act="sel">Select its nodes (${f.nodes.length})</div>
+      <div class="ctx-item" data-act="fold">${f.collapsed ? 'Unfold' : 'Fold'}</div>
+      <div class="ctx-item danger" data-act="ungroup">Ungroup (the nodes stay)</div>`;
+    ctxEl.onpointerdown = ev => {
+      ev.stopPropagation();
+      const act = ev.target.dataset && ev.target.dataset.act;
+      if (act === 'motif' || act === 'sel') {
+        S.sel = new Set(f.nodes.filter(id => nodeById(id))); S.selWire = null; S.selNote = null;
+        updateSelection();
+      }
+      if (act === 'motif') App.saveMotif(copySelection());
+      if (act === 'fold') setFold(f.id, !f.collapsed);
+      if (act === 'ungroup') ungroup(f.id);
       closeCtx();
     };
   }
@@ -2263,6 +2366,9 @@ const Editor = (() => {
     },
 
     selectedIds() { return S.sel; },
+
+    /* the loom point under a screen point — where a dragged motif lands */
+    worldAt(clientX, clientY) { return worldPos({ clientX, clientY }); },
 
     addAt(type, clientX, clientY) {
       const wp = worldPos({ clientX, clientY });

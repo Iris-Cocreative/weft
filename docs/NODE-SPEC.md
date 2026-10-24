@@ -88,9 +88,21 @@ the standard way to hand a patch to or from an LLM: plain JSON in a chat.
 
 `ext` (optional) lists incoming wires from nodes *outside* the fragment
 (`from` ids are NOT remapped). On paste they reattach if the source node
-exists in the target graph — so same-graph paste behaves like duplicate,
+was already in the target graph — so same-graph paste behaves like duplicate,
 keeping input connections — and drop silently otherwise. LLM-authored patches
 should omit `ext`.
+
+`groups` (optional) carries group frames in the graph's own shape
+(`{id, x, y, w, h, title, nodes, collapsed?}`). Copy adds one when the
+selection is exactly one frame's nodes; paste remaps its `nodes` to the new
+ids, drops members that didn't come along, refits the frame round the real
+cards, and skips a frame left empty. One pure function places every
+fragment, `WeftOps.paste` (js/ops.js): Ctrl+V, Ctrl+D, a dropped motif.
+
+A **motif** (js/motifs.js) is a fragment without `ext`, kept with a title and
+tags. Motif files wrap one or many:
+`{ "weft": "motifs", "format": 1, "motifs": [{ "title", "tags", "body" }] }`;
+import also takes a bare fragment or a whole graph (named after its file).
 
 ## 3. Types
 
