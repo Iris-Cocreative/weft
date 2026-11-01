@@ -129,9 +129,89 @@ const Assistant = {
     const msgs = Assistant.el.querySelector('.as-msgs');
     const b = document.createElement('div');
     b.className = 'as-msg ' + kind;
-    b.textContent = text;
+    /* the model writes Markdown; everything else (your words, notes, errors)
+       stays plain text */
+    if (kind === 'assistant') { b.classList.add('md'); b.innerHTML = Assistant.md(text); }
+    else b.textContent = text;
     msgs.appendChild(b);
     msgs.scrollTop = msgs.scrollHeight;
+  },
+
+  /* a small Markdown reader for replies — the subset models actually write:
+   * headings, paragraphs, bullet and numbered lists (nested by indent), quotes,
+   * rules, fenced code, `code`, **bold**, *italic*, ~~strike~~ and links. The
+   * text is HTML-escaped before any tag is made, and links must be http(s), so
+   * a reply can never inject markup. */
+  md(src) {
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const inline = s => {
+      const codes = [];
+      s = s.replace(/`([^`\n]+)`/g, (m, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+      s = esc(s)
+        .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/\*\*([^\n]+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__([^\n]+?)__/g, '<strong>$1</strong>')
+        .replace(/(^|[^*\w])\*(?!\s)([^*\n]+?)\*(?!\w)/g, '$1<em>$2</em>')
+        .replace(/(^|[^_\w])_(?!\s)([^_\n]+?)_(?!\w)/g, '$1<em>$2</em>')
+        .replace(/~~([^\n]+?)~~/g, '<del>$1</del>');
+      return s.replace(/\u0000(\d+)\u0000/g, (m, i) => '<code>' + esc(codes[+i]) + '</code>');
+    };
+    const lines = String(src || '').replace(/\r\n?/g, '\n').split('\n');
+    let html = '', para = [], lists = [];   // lists: open stack of {tag, indent}
+    const flushPara = () => { if (para.length) { html += '<p>' + para.map(inline).join('<br>') + '</p>'; para = []; } };
+    const closeLists = (indent) => {
+      while (lists.length && lists[lists.length - 1].indent >= indent) html += '</li></' + lists.pop().tag + '>';
+    };
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const fence = /^\s*(```|~~~)\s*([\w+-]*)\s*$/.exec(line);
+      if (fence) {
+        flushPara(); closeLists(0);
+        const body = [];
+        for (i++; i < lines.length && !new RegExp('^\\s*' + fence[1] + '\\s*$').test(lines[i]); i++) body.push(lines[i]);
+        html += '<pre><code>' + esc(body.join('\n')) + '</code></pre>';
+        continue;
+      }
+      if (!line.trim()) { flushPara(); continue; }   // a blank line ends a paragraph; lists survive it
+      const item = /^(\s*)([-*+•]|\d+[.)])\s+(.*)$/.exec(line);
+      if (item) {
+        flushPara();
+        const indent = item[1].replace(/\t/g, '  ').length, tag = /\d/.test(item[2]) ? 'ol' : 'ul';
+        const top = lists[lists.length - 1];
+        if (top && indent > top.indent) {
+          lists.push({ tag: tag, indent: indent });
+          html += '<' + tag + '><li>';
+        } else {
+          closeLists(indent + 1);
+          const cur = lists[lists.length - 1];
+          if (cur && cur.tag === tag) html += '</li><li>';
+          else {
+            if (cur) html += '</li></' + lists.pop().tag + '>';
+            lists.push({ tag: tag, indent: indent });
+            html += '<' + tag + (tag === 'ol' && parseInt(item[2], 10) > 1 ? ' start="' + parseInt(item[2], 10) + '"' : '') + '><li>';
+          }
+        }
+        html += inline(item[3]);
+        continue;
+      }
+      // an indented line straight after an item continues that item
+      if (lists.length && /^\s+\S/.test(line) && !para.length) { html += ' ' + inline(line.trim()); continue; }
+      closeLists(0);
+      const h = /^\s*(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+      if (h) { flushPara(); const n = Math.min(6, h[1].length + 2); html += '<h' + n + '>' + inline(h[2]) + '</h' + n + '>'; continue; }
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { flushPara(); html += '<hr>'; continue; }
+      const q = /^\s*>\s?(.*)$/.exec(line);
+      if (q) {
+        flushPara();
+        const body = [q[1]];
+        while (i + 1 < lines.length && /^\s*>/.test(lines[i + 1])) body.push(lines[++i].replace(/^\s*>\s?/, ''));
+        html += '<blockquote>' + body.map(inline).join('<br>') + '</blockquote>';
+        continue;
+      }
+      para.push(line.trim());
+    }
+    flushPara(); closeLists(0);
+    return html;
   },
 
   /* shed the conversation: the model forgets the chat, not the loom */

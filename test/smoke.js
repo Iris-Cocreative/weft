@@ -1256,22 +1256,40 @@ for (const name of Object.keys(EXAMPLES)) {
     if (r1.F[0].pts.some(p => p.z !== undefined)) failures.push('3D render3: screen geometry must be flat 2D points');
     near('render3 depth of a shape at z = 0', r1.D[0], 420, 1e-9);
   }
-  /* two boxes whose depth ranges OVERLAP (370..470 and 410..510) — a per-mesh
-     sort would emit one solid then the other and could not stay monotonic, so
-     one monotonic list is the proof that the sort is global */
+  /* two boxes whose depth ranges OVERLAP (370..470 and 410..510): one list
+     across both meshes, three aligned outputs. A box is watertight, so its
+     back faces are culled — the default camera sees the front and one side */
   const boxA = run('d3/box', { P: { x: -80, y: 0, z: 0 }, W: 60, H: 60, D: 100 }).G;
   const boxB = run('d3/box', { P: { x: 80, y: 0, z: 40 }, W: 60, H: 60, D: 100 }).G;
   const two = LM.render3([boxA, boxB], null, null, 'shaded', 800, 600);
-  if (two.F.length !== 12 || two.S.length !== 12 || two.D.length !== 12)
-    failures.push('3D render3: two boxes are 12 faces in three aligned lists, got ' + two.F.length + '/' + two.S.length + '/' + two.D.length);
-  let sorted = true;
-  for (let i = 1; i < two.D.length; i++) if (two.D[i] > two.D[i - 1] + 1e-9) sorted = false;
-  if (!sorted) failures.push('3D render3: one global back-to-front order across both meshes — [' + two.D.map(d => Math.round(d)).join(',') + ']');
+  if (two.F.length !== 4 || two.S.length !== 4 || two.D.length !== 4 || two.I.length !== 4)
+    failures.push('3D render3: two boxes seen from the front are 4 visible faces in aligned lists, got ' + two.F.length + '/' + two.S.length + '/' + two.D.length + '/' + two.I.length);
+  if (LM.meshSolid3(boxA) !== 1) failures.push('3D meshSolid3: a box is a closed solid wound outward, got ' + LM.meshSolid3(boxA));
+  const flipped = { kind: 'mesh', vs: boxA.vs, fs: boxA.fs.map(f => f.slice().reverse()) };
+  if (LM.meshSolid3(flipped) !== -1) failures.push('3D meshSolid3: a box wound inside-out reads −1, got ' + LM.meshSolid3(flipped));
+  if (LM.render3([flipped], null, null, 'shaded', 800, 600).F.length !== 2)
+    failures.push('3D render3: an inside-out box must cull the same faces as a normal one');
+  if (LM.meshSolid3(run('d3/extrude', { G: { kind: 'line', a: { x: 0, y: 0 }, b: { x: 50, y: 0 } }, H: 40, C: true }).G) !== 0)
+    failures.push('3D meshSolid3: an open ribbon is not a solid — its back must stay visible');
   if (two.S.some(s => !(s >= 0 && s <= 1))) failures.push('3D render3: shade must stay in 0..1, got [' + two.S.join(',') + ']');
   if (!two.S.some(s => s > 0.05)) failures.push('3D render3: two-sided shading should light something, got all black');
   /* I follows each piece back to its source through the sort — per-shape colors depend on it */
-  if (two.I.length !== 12 || two.I.filter(i => i === 0).length !== 6 || two.I.filter(i => i === 1).length !== 6)
-    failures.push('3D render3: I must give each face its source index in G (6 from each box), got [' + two.I.join(',') + ']');
+  if (two.I.filter(i => i === 0).length !== 2 || two.I.filter(i => i === 1).length !== 2)
+    failures.push('3D render3: I must give each face its source index in G (2 visible from each box), got [' + two.I.join(',') + ']');
+  /* the case one depth per face gets wrong: a small box on the FAR half of a
+     big floor. The floor's centroid is nearer than the box's, so a depth sort
+     paints the floor last, over the box. The plane test knows the box sits on
+     the camera's side of the floor and paints it after. */
+  const floor = { kind: 'poly3', closed: true, pts: [{ x: -300, y: 0, z: -300 }, { x: 300, y: 0, z: -300 }, { x: 300, y: 0, z: 300 }, { x: -300, y: 0, z: 300 }] };
+  const onIt = run('d3/box', { P: { x: 0, y: -30, z: 250 }, W: 60, H: 60, D: 60 }).G;
+  const fl = LM.render3([floor, onIt], { pos: { x: 0, y: -300, z: -500 }, target: { x: 0, y: 0, z: 0 } }, null, 'shaded', 800, 600);
+  let nearBox = -1;   /* the box's front face — the one that overlaps the floor on screen */
+  fl.I.forEach((src, k) => { if (src === 1 && (nearBox < 0 || fl.D[k] < fl.D[nearBox])) nearBox = k; });
+  if (nearBox < 0 || fl.I.indexOf(0) < 0 || fl.I.indexOf(0) > nearBox)
+    failures.push('3D render3: a box standing on the far half of a floor must be painted after the floor, got I = [' + fl.I.join(',') + '] D = [' + fl.D.map(d => Math.round(d)).join(',') + ']');
+  /* pieces with nothing to settle them still go back to front by depth */
+  const pts3 = LM.render3([{ x: 0, y: 0, z: 100 }, { x: 0, y: 0, z: 300 }, { x: 0, y: 0, z: 200 }], null, null, 'shaded', 800, 600);
+  if (pts3.D.join() !== [720, 620, 520].join()) failures.push('3D render3: unrelated pieces fall back to depth order, got [' + pts3.D.join(',') + ']');
   const holey = LM.render3([null, boxB], null, null, 'shaded', 800, 600);
   if (holey.I.some(i => i !== 1)) failures.push('3D render3: an empty slot in G must not shift I, got [' + holey.I.join(',') + ']');
   const wire = LM.render3([boxA], null, null, 'wire', 800, 600);
@@ -1279,10 +1297,11 @@ for (const name of Object.keys(EXAMPLES)) {
   else if (wire.F[0].kind !== 'line') failures.push('3D render3 wire: edges must be line geometry, got ' + wire.F[0].kind);
   const both = LM.render3([boxA], null, null, 'both', 800, 600);
   const bFaces = both.F.filter(g => g.kind === 'poly').length, bEdges = both.F.filter(g => g.kind === 'line').length;
-  if (bFaces !== 6) failures.push('3D render3 both: every face is still drawn, got ' + bFaces);
-  if (!(bEdges > 0 && bEdges < 12)) failures.push('3D render3 both: only the front-facing edges overlay the solid, got ' + bEdges + ' of 12');
-  if (both.F.slice(0, 6).some(g => g.kind !== 'poly'))
-    failures.push('3D render3 both: the faces must all precede the wire laid over them');
+  if (bFaces !== 2) failures.push('3D render3 both: the visible faces are drawn, got ' + bFaces);
+  if (bEdges !== 7) failures.push('3D render3 both: the two front faces own 7 unique edges, got ' + bEdges);
+  /* each face's edges ride straight after it, so a nearer face covers them */
+  if (both.F[0].kind !== 'poly' || both.F[1].kind !== 'line')
+    failures.push('3D render3 both: a face is followed by its own edges, got ' + both.F.map(g => g.kind).join(','));
   /* a camera behind the geometry drops it rather than turning it inside out */
   if (LM.render3([{ kind: 'circle', cx: 0, cy: 0, r: 60 }], { pos: { x: 0, y: 0, z: 400 }, target: { x: 0, y: 0, z: 800 } }, null, 'shaded', 800, 600).F.length)
     failures.push('3D render3: geometry behind the near plane must be dropped, not projected');

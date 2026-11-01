@@ -189,7 +189,9 @@ offsets and Draw all keep working instead of returning nothing (an unprojected
 mesh strokes its faces as a flat wireframe). A 2D transform applies to x/y and
 leaves z untouched. For real 3D work: `d3/move3`/`rotate3`/`scale3` (which lift a
 2D shape into `poly3`), and `d3/project`, which turns 3D geometry plus a camera
-into ordinary 2D `poly` and `line` geometry, already sorted back to front.
+into ordinary 2D `poly` and `line` geometry, already in paint order (back to
+front by plane tests between overlapping faces, depth for the rest; a closed
+mesh's back faces culled).
 
 Every kind is **parameterized by arc length** over `t = 0..1`, so a parameter
 means the same place on the curve whichever node produced it: Curve

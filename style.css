@@ -894,6 +894,29 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .as-msg.note { align-self: center; font-size: 11px; color: #5eead4; background: none; padding: 2px 6px; }
 .as-msg.note.error { color: #f87171; white-space: pre-wrap; }
 .as-msg.shuttle { align-self: flex-start; background: none; padding: 2px 4px; line-height: 0; }
+/* rendered Markdown in the model's replies */
+.as-msg.md { white-space: normal; }
+.as-msg.md > :first-child { margin-top: 0; }
+.as-msg.md > :last-child { margin-bottom: 0; }
+.as-msg.md p { margin: 0 0 7px; }
+.as-msg.md h3, .as-msg.md h4, .as-msg.md h5, .as-msg.md h6 { margin: 10px 0 4px; font-size: 12px; font-weight: 600; color: var(--text); }
+.as-msg.md h3 { font-size: 13px; }
+.as-msg.md ul, .as-msg.md ol { margin: 0 0 7px; padding-left: 18px; }
+.as-msg.md li { margin: 2px 0; }
+.as-msg.md li > ul, .as-msg.md li > ol { margin: 2px 0 0; }
+.as-msg.md strong { font-weight: 600; color: var(--text); }
+.as-msg.md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px;
+  padding: 1px 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line);
+}
+.as-msg.md pre {
+  margin: 0 0 7px; padding: 7px 9px; border-radius: 7px; overflow-x: auto;
+  background: var(--bg); border: 1px solid var(--line);
+}
+.as-msg.md pre code { padding: 0; border: 0; background: none; white-space: pre; }
+.as-msg.md blockquote { margin: 0 0 7px; padding-left: 9px; border-left: 2px solid var(--accent-dim); color: var(--dim); }
+.as-msg.md hr { border: 0; border-top: 1px solid var(--line2); margin: 8px 0; }
+.as-msg.md a { color: #5eead4; }
 .as-foot { padding: 8px 10px 10px; border-top: 1px solid var(--line); }
 .as-snap { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--faint); margin-bottom: 6px; cursor: pointer; flex-wrap: wrap; }
 .as-snap .as-hint { flex-basis: 100%; padding-left: 19px; font-size: 10px; color: var(--faint); opacity: 0.75; }

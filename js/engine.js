@@ -1391,10 +1391,14 @@ const LM = {
       ? { x: +v.x || 0, y: +v.y || 0, z: +v.z || 0 } : { x: dx, y: dy, z: dz };
     const persp = c.mode !== 'ortho';
     const fov = (c.fov === undefined ? 45 : c.fov) * Math.PI / 180;
+    const eye = p3(c.pos, 0, 0, -420), tgt = p3(c.target, 0, 0, 0);
+    const back = LM.v3unit(LM.v3sub(eye, tgt));
     return {
-      view: LM.mat4LookAt(p3(c.pos, 0, 0, -420), p3(c.target, 0, 0, 0), p3(c.up, 0, -1, 0)),
+      view: LM.mat4LookAt(eye, tgt, p3(c.up, 0, -1, 0)),
       proj: persp ? LM.mat4Persp(fov, H || 600) : LM.mat4Ortho(Math.abs(c.zoom === undefined ? 1 : c.zoom) || 1),
-      eye: p3(c.pos, 0, 0, -420), persp: persp,
+      /* back: the unit direction toward the camera — what "facing the eye"
+         means in orthographic, where every ray is parallel */
+      eye: eye, back: back.x || back.y || back.z ? back : { x: 0, y: 0, z: -1 }, persp: persp,
       near: c.near === undefined ? 1 : Math.max(1e-3, c.near)
     };
   },
@@ -1502,8 +1506,11 @@ const LM = {
   v3key: p => Math.round(p.x * 64) + ',' + Math.round(p.y * 64) + ',' + Math.round((p.z || 0) * 64),
 
   /* the software renderer, in one place: a geometry LIST plus a camera → three
-   * index-aligned lists — screen geometry, shade 0..1, view depth — sorted back
-   * to front, so drawList insertion order IS the painter's algorithm. A fourth,
+   * index-aligned lists — screen geometry, shade 0..1, view depth — in paint
+   * order, back to front, so drawList insertion order IS the painter's
+   * algorithm. The order comes from LM.paintOrder3 (plane tests between
+   * overlapping faces, depth for the rest), and a closed mesh's back faces are
+   * culled when faces are painted. A fourth,
    * I, is the index in gs each piece came from: the sort scrambles order, and I
    * is how a per-shape color list follows its shape through it.
    *   mode  'shaded' faces only · 'wire' every unique edge · 'both' faces with
@@ -1518,7 +1525,13 @@ const LM = {
     const lit = LM.v3unit(L && (L.x || L.y || L.z) ? L : { x: -0.4, y: -0.8, z: -0.5 });
     const wantFaces = mode !== 'wire', wantWire = mode === 'wire' || mode === 'both';
     const main = [], wires = [], seen = {};
-    for (let gi = 0; gi < (gs || []).length; gi++) for (const pr of LM.prims3(gs[gi])) {
+    for (let gi = 0; gi < (gs || []).length; gi++) {
+    /* a watertight mesh hides its own back faces, so they are culled before
+       the sort ever sees them (when faces are painted): half the work, and a
+       whole class of ordering mistakes gone. solid is the winding — +1 normals
+       out, −1 normals in — so a mesh wound inside-out still culls correctly. */
+    const solid = wantFaces ? LM.meshSolid3(gs[gi]) : 0;
+    for (const pr of LM.prims3(gs[gi])) {
       const S = [], dep = [];
       let ok = true, dsum = 0, cx = 0, cy = 0, cz = 0;
       for (const p of pr.pts) {
@@ -1536,12 +1549,16 @@ const LM = {
       if (!pr.face) { main.push({ g: { kind: 'poly', pts: S, closed: !!pr.closed }, d: d, s: 1, i: gi }); continue; }
       /* face against the eye, measured from its centroid — a vertex would
          misjudge which way a big quad faces */
-      const front = LM.v3dot(pr.normal, LM.v3sub(M.eye, { x: cx / n, y: cy / n, z: cz / n })) >= 0;
+      const toEye = M.persp ? LM.v3sub(M.eye, { x: cx / n, y: cy / n, z: cz / n }) : M.back;
+      const front = LM.v3dot(pr.normal, toEye) >= 0;
+      if (solid && (front !== (solid > 0))) continue;
       const sh = LM.clamp(LM.v3dot(front ? pr.normal : LM.v3mul(pr.normal, -1), lit), 0, 1);
-      if (wantFaces) main.push({ g: { kind: 'poly', pts: S, closed: true }, d: d, s: sh, i: gi });
-      /* wire alone shows every edge (a see-through frame); over faces only the
-         front ones, which is hidden-line removal for the price of a dot product */
-      if (wantWire && (front || !wantFaces)) for (let i = 0; i < S.length; i++) {
+      if (wantFaces) {
+        main.push({ g: { kind: 'poly', pts: S, closed: true }, d: d, s: sh, i: gi, P3: pr.pts, n: pr.normal, front: front, dep: dep });
+        continue;
+      }
+      /* wire alone shows every edge — a see-through frame, sorted by depth */
+      for (let i = 0; i < S.length; i++) {
         const j = (i + 1) % S.length;
         const ka = LM.v3key(pr.pts[i]), kb = LM.v3key(pr.pts[j]);
         const k = ka < kb ? ka + '|' + kb : kb + '|' + ka;
@@ -1550,11 +1567,203 @@ const LM = {
         wires.push({ g: { kind: 'line', a: S[i], b: S[j] }, d: (dep[i] + dep[j]) / 2, s: sh, i: gi });
       }
     }
-    main.sort((p, q) => q.d - p.d);
+    }
+    const order = LM.paintOrder3(main, M);
+    /* over faces, each front face's edges are painted straight after the face
+       itself, so a nearer face covers them like it covers the face — real
+       hidden-line removal. An edge two faces share goes with the later one. */
+    const edgesAfter = [];
+    if (wantWire && wantFaces) for (let oi = order.length - 1; oi >= 0; oi--) {
+      const r = main[order[oi]], mine = [];
+      if (r.P3 && r.front) for (let i = 0; i < r.g.pts.length; i++) {
+        const j = (i + 1) % r.g.pts.length;
+        const ka = LM.v3key(r.P3[i]), kb = LM.v3key(r.P3[j]);
+        const k = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+        if (seen[k]) continue;
+        seen[k] = 1;
+        mine.push({ g: { kind: 'line', a: r.g.pts[i], b: r.g.pts[j] }, d: (r.dep[i] + r.dep[j]) / 2, s: r.s, i: r.i });
+      }
+      edgesAfter[oi] = mine;
+    }
     wires.sort((p, q) => q.d - p.d);
     const F = [], Sh = [], D = [], I = [];
-    for (const r of main.concat(wires)) { F.push(r.g); Sh.push(r.s); D.push(r.d); I.push(r.i); }
+    const put = r => { F.push(r.g); Sh.push(r.s); D.push(r.d); I.push(r.i); };
+    for (let oi = 0; oi < order.length; oi++) {
+      put(main[order[oi]]);
+      if (edgesAfter[oi]) for (const e of edgesAfter[oi]) put(e);
+    }
+    for (const r of wires) put(r);
     return { F: F, S: Sh, D: D, I: I };
+  },
+
+  /* is this geometry a closed solid? 0 if not a mesh or not watertight (some
+     edge isn't shared by exactly two faces), else the sign of its volume: +1
+     when the faces are wound with normals out, −1 when wound inside-out.
+     Vertices are matched by position, so a mesh that repeats its corners per
+     face still counts as closed. */
+  meshSolid3: g => {
+    if (!g || g.kind !== 'mesh') return 0;
+    const vs = g.vs || [], cnt = {};
+    let vol = 0, faces = 0;
+    for (const f of g.fs || []) {
+      const pts = [];
+      for (const i of f) if (vs[i]) pts.push(vs[i]);
+      if (pts.length < 3) continue;
+      faces++;
+      for (let i = 0; i < pts.length; i++) {
+        const ka = LM.v3key(pts[i]), kb = LM.v3key(pts[(i + 1) % pts.length]);
+        if (ka === kb) continue;   /* collapsed edges (a sphere's poles) */
+        const k = ka < kb ? ka + '|' + kb : kb + '|' + ka;
+        cnt[k] = (cnt[k] || 0) + 1;
+      }
+      const a = pts[0], az = a.z || 0;
+      for (let i = 1; i + 1 < pts.length; i++) {
+        const b = pts[i], c = pts[i + 1], bz = b.z || 0, cz = c.z || 0;
+        vol += a.x * (b.y * cz - bz * c.y) + a.y * (bz * c.x - b.x * cz) + az * (b.x * c.y - b.y * c.x);
+      }
+    }
+    if (faces < 4) return 0;
+    for (const k in cnt) if (cnt[k] !== 2) return 0;
+    return vol > 0 ? 1 : vol < 0 ? -1 : 0;
+  },
+
+  /* the painting order for render3's pieces: back to front, but not by depth
+   * alone. One depth per face is wrong whenever faces differ a lot in size — a
+   * tall column's side has its centroid halfway up and ranks behind the small
+   * top of a short neighbor it should cover. So every pair of faces whose
+   * screen shapes really overlap is settled by their planes (Newell's test):
+   * if all of B sits on the eye's side of A's plane, B is painted after A; if
+   * all of it sits on the far side, before. Those verdicts are edges in a
+   * graph, and a topological sort lays the faces out, taking the farthest
+   * ready piece first so depth still decides everything the planes don't
+   * (points, open curves, faces that don't overlap). Faces that pierce each
+   * other can form a cycle; the farthest face in it is painted first, which is
+   * the old behavior, so the worst case is no worse than plain depth.
+   *   recs: {g (screen poly or point), d, P3?, n?} — faces carry P3 and n
+   * Returns indices into recs in paint order. */
+  paintOrder3: (recs, M) => {
+    const N = recs.length;
+    if (N < 2) return recs.map((r, i) => i);
+    /* screen boxes and the planes, for the faces */
+    const bb = [], pl = [];
+    let X0 = Infinity, Y0 = Infinity, X1 = -Infinity, Y1 = -Infinity;
+    for (let i = 0; i < N; i++) {
+      const r = recs[i], pts = r.g.pts || [r.g];
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const p of pts) { if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x; if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y; }
+      bb.push([x0, y0, x1, y1]);
+      if (r.P3 && r.n) {
+        const k = LM.v3dot(r.n, r.P3[0]);
+        /* which side of the plane the camera is on: the eye itself in
+           perspective, the direction back toward the camera in orthographic */
+        const se = M.persp ? LM.v3dot(r.n, M.eye) - k : LM.v3dot(r.n, M.back);
+        let ext = 0;
+        for (const p of r.P3) ext = Math.max(ext, Math.abs(p.x), Math.abs(p.y), Math.abs(p.z));
+        pl.push({ k: k, se: se, eps: 1e-6 * Math.max(1, ext) + 1e-4 });
+        if (x0 < X0) X0 = x0; if (y0 < Y0) Y0 = y0; if (x1 > X1) X1 = x1; if (y1 > Y1) Y1 = y1;
+      } else pl.push(null);
+    }
+    /* -1: B entirely on the far side of A's plane, +1: entirely on the eye's
+       side, 0: straddles it, lies in it, or A is seen edge-on */
+    const side = (a, b) => {
+      const P = pl[a], n = recs[a].n;
+      if (Math.abs(P.se) < P.eps) return 0;
+      let pos = false, neg = false;
+      for (const p of recs[b].P3) {
+        const s = (LM.v3dot(n, p) - P.k) * (P.se > 0 ? 1 : -1);
+        if (s > P.eps) pos = true; else if (s < -P.eps) neg = true;
+        if (pos && neg) return 0;
+      }
+      return pos ? 1 : neg ? -1 : 0;
+    };
+    /* do two screen polygons overlap by more than a hair? Separating axes on
+       their edges — exact for convex faces, conservative for concave ones */
+    const overlap = (A, B) => {
+      for (const P of [A, B]) for (let i = 0; i < P.length; i++) {
+        const p = P[i], q = P[(i + 1) % P.length];
+        const ax = q.y - p.y, ay = p.x - q.x, L = Math.hypot(ax, ay);
+        if (L < 1e-9) continue;
+        let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+        for (const v of A) { const t = (v.x * ax + v.y * ay) / L; if (t < a0) a0 = t; if (t > a1) a1 = t; }
+        for (const v of B) { const t = (v.x * ax + v.y * ay) / L; if (t < b0) b0 = t; if (t > b1) b1 = t; }
+        if (a1 - b0 < 0.05 || b1 - a0 < 0.05) return false;
+      }
+      return true;
+    };
+    const adj = [], indeg = new Array(N).fill(0);
+    for (let i = 0; i < N; i++) adj.push([]);
+    const decide = (i, j) => {
+      const A = bb[i], B = bb[j];
+      if (A[2] <= B[0] || B[2] <= A[0] || A[3] <= B[1] || B[3] <= A[1]) return;
+      if (!overlap(recs[i].g.pts, recs[j].g.pts)) return;
+      let s = side(i, j), behind = -1, ahead = -1;
+      if (s) { if (s > 0) { behind = i; ahead = j; } else { behind = j; ahead = i; } }
+      else {
+        s = side(j, i);
+        if (!s) return;
+        if (s > 0) { behind = j; ahead = i; } else { behind = i; ahead = j; }
+      }
+      adj[behind].push(ahead); indeg[ahead]++;
+    };
+    /* candidate pairs from a coarse screen grid; a pair is only weighed in the
+       one cell holding the top-left corner of the two boxes' intersection */
+    const faces = [];
+    for (let i = 0; i < N; i++) if (pl[i]) faces.push(i);
+    if (faces.length > 1) {
+      const G = LM.clamp(Math.ceil(Math.sqrt(faces.length)), 1, 64);
+      const cw = Math.max(1e-6, (X1 - X0) / G), ch = Math.max(1e-6, (Y1 - Y0) / G);
+      const cx = x => LM.clamp(Math.floor((x - X0) / cw), 0, G - 1), cy = y => LM.clamp(Math.floor((y - Y0) / ch), 0, G - 1);
+      const cells = new Array(G * G);
+      for (const i of faces) {
+        const b = bb[i];
+        for (let gy = cy(b[1]); gy <= cy(b[3]); gy++) for (let gx = cx(b[0]); gx <= cx(b[2]); gx++)
+          (cells[gy * G + gx] = cells[gy * G + gx] || []).push(i);
+      }
+      for (let c = 0; c < cells.length; c++) {
+        const L = cells[c];
+        if (!L) continue;
+        for (let u = 0; u < L.length; u++) for (let v = u + 1; v < L.length; v++) {
+          const i = L[u], j = L[v], A = bb[i], B = bb[j];
+          if (cy(Math.max(A[1], B[1])) * G + cx(Math.max(A[0], B[0])) !== c) continue;
+          decide(i, j);
+        }
+      }
+    }
+    /* Kahn's sort on a max-heap of depth (farthest first, then input order) */
+    const heap = [];
+    const before = (a, b) => recs[a].d > recs[b].d || (recs[a].d === recs[b].d && a < b);
+    const push = x => {
+      heap.push(x);
+      let i = heap.length - 1;
+      while (i > 0) { const p = (i - 1) >> 1; if (!before(heap[i], heap[p])) break; const t = heap[i]; heap[i] = heap[p]; heap[p] = t; i = p; }
+    };
+    const pop = () => {
+      const top = heap[0], last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1, r = l + 1;
+          let m = i;
+          if (l < heap.length && before(heap[l], heap[m])) m = l;
+          if (r < heap.length && before(heap[r], heap[m])) m = r;
+          if (m === i) break;
+          const t = heap[i]; heap[i] = heap[m]; heap[m] = t; i = m;
+        }
+      }
+      return top;
+    };
+    for (let i = 0; i < N; i++) if (!indeg[i]) push(i);
+    const done = new Array(N).fill(false), out = [];
+    while (out.length < N) {
+      let x = -1;
+      while (heap.length) { const h = pop(); if (!done[h]) { x = h; break; } }
+      if (x < 0)   /* a cycle: break it at its farthest face */
+        for (let i = 0; i < N; i++) if (!done[i] && (x < 0 || before(i, x))) x = i;
+      done[x] = true; out.push(x);
+      for (const v of adj[x]) if (!done[v] && --indeg[v] === 0) push(v);
+    }
+    return out;
   },
 
   /* ---------- canvas rendering ---------- */

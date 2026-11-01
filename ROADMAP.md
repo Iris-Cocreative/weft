@@ -886,10 +886,16 @@ primitives, Extrude and Revolve as bridges from every existing curve node,
 3D transforms, and face analysis.
 
 Still open, in rough order of appetite:
-- **Depth fidelity.** The painter's algorithm sorts by face centroid, so large
-  interpenetrating faces can sort wrong, and a face with a vertex behind the
-  camera is dropped rather than clipped. A face-splitting sort mode (BSP-ish) or
-  an honest near-plane clip would fix both; neither needs new architecture.
+- **Depth fidelity.** *Done in part (2026-10-31):* the paint order is no longer
+  one centroid depth per face. `LM.paintOrder3` settles every pair of faces that
+  overlap on screen with Newell's plane test and topologically sorts the result
+  (depth breaks ties and cycles), and a watertight mesh's back faces are culled
+  (`LM.meshSolid3`). Tall-and-short column fields, boxes on floors and other
+  mixed-size scenes now paint right; over faces, `both` mode lays each face's
+  edges straight after it, so hidden edges stay hidden. Still open: faces that
+  truly *interpenetrate* form a cycle and fall back to depth (a splitting sort
+  would fix it), and a face with a vertex behind the camera is dropped rather
+  than clipped.
 - **Two Draw nodes still can't interleave in depth** — the same rule 2D already
   has. One Project → one Draw is the idiom; a Draw that accepted a depth key
   would generalize it. *Done in part (2026-10-01):* Project's `I` output names
