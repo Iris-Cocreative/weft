@@ -62,7 +62,8 @@ if (!problems.length) {
     W: 800, H: 600, defs: NODE_DEFS,
     measureText: (s, sz) => ({ w: String(s).length * sz * 0.6, h: sz * 1.2 }),
     drawList: [], domList: [], audioList: [], audioState: {}, domState: {}, bg: null, errors: {}, out: {},
-    tuneA4: (g.meta && g.meta.tuneA4) || 432
+    tuneA4: (g.meta && g.meta.tuneA4) || 432,
+    now: 1700000000000
   });
   let drew = false, madeDom = false, madeAudio = false;
   for (const t of [0, 0.5, 2]) {

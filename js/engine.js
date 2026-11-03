@@ -41,6 +41,178 @@ const LM = {
       LM.lerp(h(xi, yi + 1), h(xi + 1, yi + 1), sx), sy);
   },
 
+  /* ---------- graph mapper ----------
+   * A graph is a kind plus its grips — [u, v] points in the unit square, v up.
+   * The grips are the whole state: the curve is a pure function of them, so a
+   * Graph Mapper exports as the same arithmetic its card draws. */
+  graphGrips: k => ({
+    bezier: [[0, 0], [0.66, 0.28], [0.22, 0.78], [1, 1]],
+    bounce: [[0, 0], [1, 1], [0.6, 0.7]],
+    conic: [[0, 0], [0.8, 0.2], [1, 1], [0.68, 0.32]],
+    elastic: [[0, 0], [1, 0.75], [0.22, 0.95]],
+    gaussian: [[0.5, 0.9], [0.68, 0.1]],
+    linear: [[0.25, 0.25], [0.75, 0.75]],
+    parabola: [[0.5, 0.1], [0.88, 0.9]],
+    perlin: [[0.15, 0.5], [0.3, 0.9]],
+    power: [[0, 0], [1, 1], [0.6, 0.25]],
+    sinc: [[0.5, 0.92], [0.62, 0.25]],
+    sine: [[0.25, 0.85], [0.5, 0.5]],
+    sinesum: [[0.25, 0.85], [0.5, 0.5], [0.43, 0]],
+    spline: [[0, 0], [0.33, 0.62], [0.66, 0.38], [1, 1]],
+    sqrt: [[0, 0], [1, 1]],
+    steps: [[0, 0], [1, 1], [0.21, 0]],
+    triangle: [[0.25, 0.85], [0.75, 0.15]]
+  })[k] || [],
+
+  /* a t along a curve whose x rises with t, found by halving — the unit-square
+   * grips keep Bezier and Conic x monotonic, so one root is the only root */
+  graphSolve: (fx, x) => {
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2; if (fx(m) < x) lo = m; else hi = m; }
+    return (lo + hi) / 2;
+  },
+
+  /* x in, y out, both 0–1. Unclipped: Graph Mapper clamps to the box it draws. */
+  graphMap: (kind, grips, x) => {
+    const P = Array.isArray(grips) && grips.length ? grips : LM.graphGrips(kind);
+    const u = i => P[i][0], v = i => P[i][1];
+    const off = (i, j) => { const d = u(j) - u(i); return Math.abs(d) < 0.005 ? (d < 0 ? -0.005 : 0.005) : d; };
+    switch (kind) {
+      case 'bezier': {
+        const cub = (a, b, c, d, t) => { const s = 1 - t; return s * s * s * a + 3 * s * s * t * b + 3 * s * t * t * c + t * t * t * d; };
+        const t = LM.graphSolve(q => cub(u(0), u(1), u(2), u(3), q), x);
+        return cub(v(0), v(1), v(2), v(3), t);
+      }
+      case 'conic': {
+        /* a rational quadratic: endpoints, a shoulder, and the fourth grip
+         * reads as how far the curve leans from the chord toward the shoulder */
+        const mx = (u(0) + u(2)) / 2, my = (v(0) + v(2)) / 2;
+        const dx = u(1) - mx, dy = v(1) - my, dd = dx * dx + dy * dy;
+        const rho = dd < 1e-9 ? 0.5 : LM.clamp(((u(3) - mx) * dx + (v(3) - my) * dy) / dd, 0.02, 0.98);
+        const w = rho / (1 - rho);
+        const rat = (a, b, c, t) => {
+          const s = 1 - t, A = s * s, B = 2 * w * s * t, C = t * t;
+          return (A * a + B * b + C * c) / (A + B + C);
+        };
+        const t = LM.graphSolve(q => rat(u(0), u(1), u(2), q), x);
+        return rat(v(0), v(1), v(2), t);
+      }
+      case 'gaussian': {
+        const s = Math.max(0.005, Math.abs(u(1) - u(0))), d = (x - u(0)) / s;
+        return v(1) + (v(0) - v(1)) * Math.exp(-0.5 * d * d);
+      }
+      case 'linear': return v(0) + (x - u(0)) * (v(1) - v(0)) / off(0, 1);
+      case 'parabola': { const d = off(0, 1), q = x - u(0); return v(0) + (v(1) - v(0)) * q * q / (d * d); }
+      case 'perlin': {
+        const n = LM.noise2((x - u(0)) / Math.max(0.01, Math.abs(u(1) - u(0))) + 41.7, 3.7);
+        return v(0) + Math.abs(v(1) - v(0)) * (2 * n - 1);
+      }
+      case 'power': {
+        const span = v(1) - v(0);
+        if (Math.abs(span) < 1e-9) return v(0);
+        const a = LM.clamp(u(2), 0.01, 0.99), b = LM.clamp((v(2) - v(0)) / span, 0.01, 0.99);
+        return v(0) + span * Math.pow(x, Math.log(b) / Math.log(a));
+      }
+      case 'sinc': {
+        const q = (x - u(0)) * Math.PI / off(0, 1);
+        return v(1) + (v(0) - v(1)) * (Math.abs(q) < 1e-6 ? 1 : Math.sin(q) / q);
+      }
+      case 'sine': return v(1) + (v(0) - v(1)) * Math.cos((x - u(0)) * Math.PI / 2 / off(0, 1));
+      case 'sinesum': {
+        const n = 1 + Math.round(LM.clamp(u(2), 0, 1) * 7), w = (x - u(0)) * Math.PI / 2 / off(0, 1);
+        let sum = 0, norm = 0;
+        for (let k = 1; k <= n; k++) { sum += Math.cos(k * w) / k; norm += 1 / k; }
+        return v(1) + (v(0) - v(1)) * sum / norm;
+      }
+      case 'spline': {
+        /* monotone cubic (Fritsch–Carlson): smooth through every grip, and it
+         * never overshoots between two of them */
+        const s = P.slice().sort((a, b) => a[0] - b[0]), n = s.length;
+        if (x <= s[0][0] || n < 2) return s[0][1];
+        if (x >= s[n - 1][0]) return s[n - 1][1];
+        const d = [];
+        for (let i = 0; i < n - 1; i++) d[i] = (s[i + 1][1] - s[i][1]) / Math.max(1e-6, s[i + 1][0] - s[i][0]);
+        const m = [d[0]];
+        for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : 2 * d[i - 1] * d[i] / (d[i - 1] + d[i]);
+        m[n - 1] = d[n - 2];
+        let i = 0;
+        while (i < n - 2 && x >= s[i + 1][0]) i++;
+        const h = Math.max(1e-6, s[i + 1][0] - s[i][0]), t = (x - s[i][0]) / h, t2 = t * t, t3 = t2 * t;
+        return (2 * t3 - 3 * t2 + 1) * s[i][1] + (t3 - 2 * t2 + t) * h * m[i] +
+          (-2 * t3 + 3 * t2) * s[i + 1][1] + (t3 - t2) * h * m[i + 1];
+      }
+      case 'sqrt': return v(0) + (v(1) - v(0)) * Math.sqrt(x);
+      case 'steps': {
+        const n = 2 + Math.round(LM.clamp(u(2), 0, 1) * 14);
+        return v(0) + (v(1) - v(0)) * Math.min(Math.floor(x * n), n - 1) / (n - 1);
+      }
+      case 'triangle': {
+        const f = (x - u(0)) / (2 * Math.abs(off(0, 1))), g = f - Math.floor(f);
+        return v(0) + (v(1) - v(0)) * (g < 0.5 ? 2 * g : 2 - 2 * g);
+      }
+      case 'elastic': {
+        /* settles on the second grip, swinging through the third on its first overshoot */
+        const span = v(1) - v(0);
+        if (Math.abs(span) < 1e-9) return v(0);
+        const a = LM.clamp(u(2), 0.02, 1), o = LM.clamp((v(2) - v(1)) / span, 0.005, 0.95);
+        return v(0) + span * (1 - Math.pow(o, x / a) * Math.cos(Math.PI * x / a));
+      }
+      case 'bounce': {
+        /* falls to the second grip and rebounds, peaking first at the third */
+        const span = v(1) - v(0);
+        if (Math.abs(span) < 1e-9) return v(0);
+        const r = Math.sqrt(LM.clamp((v(1) - v(2)) / span, 0.001, 0.96));
+        const a = LM.clamp(u(2), 0.02, 1) / (1 + r);
+        if (x < a) { const q = x / a; return v(0) + span * q * q; }
+        let start = a, air = a, k = 0;
+        while (k < 40) {
+          air *= r;
+          if (air < 1e-4) break;
+          if (x < start + 2 * air) {
+            const q = (x - start - air) / air, h = Math.pow(r, 2 * (k + 1));
+            return v(0) + span * (1 - h * (1 - q * q));
+          }
+          start += 2 * air; k++;
+        }
+        return v(1);
+      }
+    }
+    return x; // 'none', or a kind this build has never heard of
+  },
+
+  /* ---------- wall clock ----------
+   * Calendar parts of an instant in a zone: '' or 'local' is the device, 'UTC'
+   * or an offset ('+5:30', '-8', 'UTC+2') is fixed, anything else is an IANA
+   * name. Formatters are slow to build, so the caller keeps them in `cache`. */
+  clockParts: (ms, zone, cache) => {
+    const z = String(zone === undefined || zone === null ? '' : zone).trim();
+    const fromDate = (d, utc) => utc
+      ? { y: d.getUTCFullYear(), o: d.getUTCMonth() + 1, d: d.getUTCDate(), w: d.getUTCDay(), h: d.getUTCHours(), m: d.getUTCMinutes(), s: d.getUTCSeconds() + d.getUTCMilliseconds() / 1000 }
+      : { y: d.getFullYear(), o: d.getMonth() + 1, d: d.getDate(), w: d.getDay(), h: d.getHours(), m: d.getMinutes(), s: d.getSeconds() + d.getMilliseconds() / 1000 };
+    if (!z || /^local$/i.test(z)) return fromDate(new Date(ms), false);
+    if (/^(utc|gmt|z)$/i.test(z)) return fromDate(new Date(ms), true);
+    const off = /^(?:utc|gmt)?\s*([+-]?)(\d{1,2}(?:\.\d+)?)(?::(\d{2}))?$/i.exec(z);
+    if (off) {
+      const hrs = (parseFloat(off[2]) + (off[3] ? parseInt(off[3], 10) / 60 : 0)) * (off[1] === '-' ? -1 : 1);
+      if (Math.abs(hrs) > 14) throw new Error('time zone offset out of range: "' + z + '"');
+      return fromDate(new Date(ms + hrs * 3600000), true);
+    }
+    let f = cache && cache[z];
+    if (!f || !f.formatToParts) {
+      try {
+        f = new Intl.DateTimeFormat('en-US', { timeZone: z, hourCycle: 'h23', weekday: 'short', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+      } catch (e) { throw new Error('unknown time zone "' + z + '"'); }
+      if (cache) cache[z] = f;
+    }
+    const p = {};
+    for (const part of f.formatToParts(new Date(ms))) p[part.type] = part.value;
+    const frac = (((ms % 1000) + 1000) % 1000) / 1000;
+    return {
+      y: +p.year, o: +p.month, d: +p.day, w: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday),
+      h: +p.hour % 24, m: +p.minute, s: +p.second + frac
+    };
+  },
+
   rng: seed => {
     let a = (Math.floor(seed) | 0) + 0x6D2B79F5;
     return () => {

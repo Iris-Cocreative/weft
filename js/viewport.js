@@ -339,7 +339,7 @@ const Viewport = {
     Viewport.makeCtx = (W, H, t, dt, frame, o) => {
       o = o || {};
       return {
-        t, dt, frame, W, H,
+        t, dt, frame, W, H, now: o.now === undefined ? Date.now() : o.now,
         mouse: o.mouse || { x: 0, y: 0, nx: 0.5, ny: 0.5, down: false, pressed: false, released: false },
         keys: o.keys || { down: {}, pressed: {}, released: {} },
         scroll: o.scroll || { y: 0, max: 3000, v: 0 },
@@ -353,6 +353,7 @@ const Viewport = {
     };
 
     let t = 0, frame = 0, last = performance.now(), fpsA = 60, lastFps = 0;
+    let wall = Date.now(); // the time Clock reads — pause holds it, resume jumps to the real time
 
     const drawGhosts = (ctx, wantSelected) => {
       const selIds = Editor.selectedIds();
@@ -434,7 +435,7 @@ const Viewport = {
       requestAnimationFrame(loop);
       const dt = Math.min(0.1, (now - last) / 1000);
       last = now;
-      if (Viewport.playing) t += dt;
+      if (Viewport.playing) { t += dt; wall = Date.now(); }
 
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
@@ -460,7 +461,7 @@ const Viewport = {
       scrollLastY = scroll.y;
 
       const ctx = Viewport.makeCtx(rect.width, rect.height, t, Viewport.playing ? dt : 0, frame++, {
-        mouse, keys, scroll, domState,
+        now: wall, mouse, keys, scroll, domState,
         audioState: audioHost ? audioHost.state() : {},
         imageState: imageHost ? imageHost.state() : {},
         tuneA4: App.graph.meta && App.graph.meta.tuneA4

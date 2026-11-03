@@ -231,6 +231,7 @@ The evaluation context `ctx` provides:
 | `t` | seconds since start |
 | `dt` | seconds since the previous frame (clamped ≤ 0.1; 0 while the editor is paused) |
 | `frame` | frame counter |
+| `now` | the wall clock, ms since the epoch, supplied by the host (held while the editor is paused). The one sanctioned source of real time — Clock reads it; a compute never calls `Date.now()` |
 | `i` | current list-match index (see §4; state nodes key their memory by it) |
 | `mouse` | `{x, y}` centered px · `{nx, ny}` normalized 0–1 · `down` · frame-latched `pressed` / `released` |
 | `keys` | `{down, pressed, released}` — maps keyed by lowercase `event.key` (`' '` → `'space'`); `down` is continuous, the others frame-latched |
@@ -341,7 +342,7 @@ defNode('cat/name', {
 Compute rules (they make export-to-JS possible — the tool's reason to exist):
 1. Arrow/function expression only; it is serialized with `toString()`.
 2. May reference only its parameters, `LM.*` helpers, and JS built-ins.
-3. No DOM, no `Date.now()`, no `Math.random()` — use `ctx.t` and `LM.rng(seed)`.
+3. No DOM, no `Date.now()`, no `Math.random()` — use `ctx.t`, `ctx.now` and `LM.rng(seed)`.
 4. Per-node caches go on underscore fields (`node._cache`); `values` stays JSON-safe.
 5. Return an object keyed by output names; omit a key to emit nothing;
    return an array to emit multiple items (flattened, §4).

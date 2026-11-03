@@ -88,6 +88,50 @@ defNode('input/time', {
   postEval: node => { if (node.values.R === true) node.values.R = false; }
 });
 
+defNode('input/clock', {
+  title: 'Clock', cat: 'Input', width: 196,
+  desc: 'The current time, in any time zone — type one on the card or wire it into Z: an IANA name (Asia/Tokyo), an offset (+5:30, -8, UTC+2), or empty for this device. S and F carry fractions, so hands sweep instead of tick',
+  inputs: [{ name: 'Z', type: 'string', default: '', label: 'time zone — Asia/Tokyo, +5:30, UTC, or empty for this device' }],
+  outputs: [
+    { name: 'H', type: 'number', label: 'hour, 0–23' }, { name: 'M', type: 'number', label: 'minute, 0–59' },
+    { name: 'S', type: 'number', label: 'second, with its fraction' }, { name: 'F', type: 'number', label: 'fraction of the day, 0–1' },
+    { name: 'T', type: 'string', label: 'time as text, 14:05:09' }, { name: 'Y', type: 'number', label: 'year' },
+    { name: 'O', type: 'number', label: 'month, 1–12' }, { name: 'D', type: 'number', label: 'day of the month' },
+    { name: 'W', type: 'number', label: 'weekday, 0 = Sunday' }],
+  compute: (a, ctx, node) => {
+    const c = LM.clockParts(ctx.now === undefined ? 0 : ctx.now, a.Z, node._tzFmt = node._tzFmt || {});
+    const p2 = n => (n < 10 ? '0' : '') + n;
+    return {
+      H: c.h, M: c.m, S: c.s, F: (c.h * 3600 + c.m * 60 + c.s) / 86400,
+      T: p2(c.h) + ':' + p2(c.m) + ':' + p2(Math.floor(c.s)), Y: c.y, O: c.o, D: c.d, W: c.w
+    };
+  },
+  buildBody: (node, body, changed) => {
+    const ck = _mk('div', 'clk', body);
+    _mk('div', 'clk-time', ck).textContent = '--:--:--';
+    const zone = _mk('input', 'clk-zone', ck);
+    zone.type = 'text'; zone.spellcheck = false;
+    zone.placeholder = 'this device';
+    zone.title = 'time zone — an IANA name (Asia/Tokyo), an offset (+5:30), or empty for this device';
+    zone.value = node.values.Z || '';
+    /* every zone the browser knows, shared by every Clock on the loom */
+    if (!document.getElementById('weft-zones')) {
+      const list = _mk('datalist', '', document.body);
+      list.id = 'weft-zones';
+      const names = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : [];
+      for (const n of names) _mk('option', '', list).value = n;
+    }
+    zone.setAttribute('list', 'weft-zones');
+    zone.addEventListener('pointerdown', e => e.stopPropagation());
+    zone.addEventListener('change', () => { node.values.Z = zone.value.trim(); changed(); });
+  },
+  postEval: (node, el) => {
+    const t = el.querySelector('.clk-time');
+    const T = (node._last && node._last.outs && node._last.outs.T) || [];
+    if (t && t.textContent !== (T[0] || '--:--:--')) t.textContent = T[0] || '--:--:--';
+  }
+});
+
 defNode('input/turntable', {
   title: 'Turntable', cat: 'Input',
   desc: 'Time as a record on a deck — R scales the spin (1 = realtime, 0.5 half-speed, 0 holds, negative plays backwards) and the platter integrates, so twisting the rate never jumps; Z rewinds to zero',
@@ -521,8 +565,8 @@ function _dialSVG(size, r) {
 }
 
 defNode('params/knob', {
-  title: 'Knob', cat: 'Params', bare: true, width: 108,
-  desc: 'Rotary number — drag around the dial, shift snaps to integers; double-click for label, range and rounding',
+  title: 'Control Knob', cat: 'Params', bare: true, width: 108,
+  desc: 'Rotary number — drag around the dial, shift snaps to integers; integer knobs with up to 24 steps tick each one; double-click for label, range and rounding',
   inputs: [], outputs: [{ name: 'N', type: 'number' }],
   defaults: { min: 0, max: 10, value: 5 },
   compute: (a, c, node) => ({ N: node.values.value === undefined ? 0 : node.values.value }),
@@ -541,6 +585,19 @@ defNode('params/knob', {
     const lab = _mk('div', 'sl-label kn-label', kn);
     const d = _dialSVG(64, 24);
     kn.appendChild(d.svg);
+    const notches = d.el('path', 'dial-tick');
+    /* one notch per real step on an integer knob of up to 24, otherwise tenths of the sweep */
+    const paintNotches = () => {
+      const m = v.mode || 'float', step = m === 'int' ? 1 : (m === 'odd' || m === 'even') ? 2 : 0;
+      const steps = step ? Math.round(Math.abs(v.max - v.min) / step) : 0;
+      const n = steps >= 1 && steps <= 24 ? steps : 10;
+      let path = '';
+      for (let i = 0; i <= n; i++) {
+        const a = A0 + SWEEP * i / n, p0 = d.pt(a, d.r + 3), p1 = d.pt(a, d.r + 6);
+        path += 'M' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) + 'L' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2);
+      }
+      notches.setAttribute('d', path);
+    };
     const trk = d.el('path', 'dial-track');
     trk.setAttribute('d', d.arc(A0, A0 + SWEEP, d.r));
     const fil = d.el('path', 'dial-fill');
@@ -555,6 +612,7 @@ defNode('params/knob', {
       fil.setAttribute('d', d.arc(A0, Math.max(A0 + 0.01, a), d.r));
       const p = d.pt(a, d.r - 7);
       ind.setAttribute('cx', p[0]); ind.setAttribute('cy', p[1]);
+      paintNotches();
     };
     paintLabel(); paint();
     const setVal = x => {
@@ -710,6 +768,321 @@ defNode('params/angle', {
         b.classList.add('on');
         changed();
       });
+    });
+  }
+});
+
+/* ---- pads: controls you drag a point around in (Vector Dial, XY / XYZ Slider) ---- */
+
+function _svgEl(parent, tag, cls) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  if (cls) e.setAttribute('class', cls);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+/* a captured pointer drag. start(e) returns the move handler (it also runs on
+ * the press), or nothing to let the press fall through and drag the card */
+function _svgDrag(svg, start) {
+  svg.addEventListener('pointerdown', e => {
+    const move = start(e);
+    if (!move) return;
+    e.stopPropagation();
+    e.preventDefault();
+    try { svg.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
+    move(e);
+    const up = () => {
+      svg.removeEventListener('pointermove', move);
+      svg.removeEventListener('pointerup', up);
+      svg.removeEventListener('pointercancel', up);
+    };
+    svg.addEventListener('pointermove', move);
+    svg.addEventListener('pointerup', up);
+    svg.addEventListener('pointercancel', up);
+  });
+}
+/* a pointer position in the svg's own units, whatever the loom's zoom */
+function _svgAt(svg, size, e) {
+  const r = svg.getBoundingClientRect();
+  return { x: (e.clientX - r.left) / (r.width || 1) * size, y: (e.clientY - r.top) / (r.height || 1) * size };
+}
+/* the sheet floating under a control (.sl-opts): one at a time, gone on the next
+ * press outside it. `keep` names what may be pressed without closing it. */
+function _floatOpts(body, keep, build) {
+  const nodeEl = body.closest('.node');
+  const close = op => { op.remove(); if (nodeEl) nodeEl.style.zIndex = ''; };
+  const old = body.querySelector('.sl-opts');
+  if (old) { close(old); return; }
+  const op = _mk('div', 'sl-opts', body);
+  if (nodeEl) nodeEl.style.zIndex = 25;
+  op.addEventListener('pointerdown', ev => ev.stopPropagation());
+  op.addEventListener('dblclick', ev => ev.stopPropagation());
+  build(op);
+  const closer = ev => {
+    if (op.contains(ev.target) || (keep && ev.target.closest && ev.target.closest(keep))) {
+      if (op.isConnected) return;
+    } else close(op);
+    window.removeEventListener('pointerdown', closer, true);
+  };
+  window.addEventListener('pointerdown', closer, true);
+}
+function _optRow(op, cap) {
+  const r = _mk('div', 'sl-opt-row', op);
+  _mk('span', 'sl-opt-cap', r).textContent = cap;
+  return r;
+}
+/* cap + from + to, committed together */
+function _optRange(op, cap, lo, hi, fn) {
+  const r = _optRow(op, cap);
+  const a = _numInput('', lo, r), b = _numInput('', hi, r);
+  const commit = () => fn(parseFloat(a.value) || 0, parseFloat(b.value) || 0);
+  a.addEventListener('change', commit);
+  b.addEventListener('change', commit);
+}
+/* double-click a pad for its options. The two presses of a double-click have
+ * already moved the point, so opening the sheet puts it back where it was. */
+function _padOptions(node, pad, body, repaint, changed, build) {
+  let before = null, prev = null;
+  pad.addEventListener('pointerdown', () => { prev = before; before = Object.assign({}, node.values); }, true);
+  pad.addEventListener('dblclick', e => {
+    if (e.target.tagName === 'INPUT') return;
+    e.stopPropagation();
+    if (prev && e.target.closest('svg')) { Object.assign(node.values, prev); repaint(); changed(); }
+    _floatOpts(body, null, op => {
+      const r = _optRow(op, 'label');
+      const li = _mk('input', '', r);
+      li.type = 'text'; li.value = node.values.label || ''; li.spellcheck = false; li.placeholder = 'none';
+      li.addEventListener('change', () => { node.values.label = li.value.trim(); repaint(); changed(); });
+      build(op);
+    });
+  });
+}
+/* a typed readout with a quiet caption under it */
+function _padField(foot, value, onChange) {
+  const col = _mk('div', 'pad-col', foot);
+  const input = _numInput('sl-val pad-val', value, col);
+  const cap = _mk('div', 'pad-cap', col);
+  input.addEventListener('change', () => onChange(parseFloat(input.value) || 0));
+  return { input, cap, show: x => { if (document.activeElement !== input) input.value = x; } };
+}
+function _padRound(v, x, snap) {
+  if (snap) return Math.round(x);
+  const p = Math.pow(10, v.prec === undefined ? 2 : v.prec);
+  return Math.round(x * p) / p;
+}
+function _padDecimals(op, v, apply) {
+  const r = _optRow(op, 'decimals');
+  const pi = _numInput('', v.prec === undefined ? 2 : v.prec, r);
+  pi.addEventListener('change', () => {
+    v.prec = LM.clamp(Math.round(parseFloat(pi.value) || 0), 0, 6);
+    pi.value = v.prec;
+    apply();
+  });
+}
+/* a patch may name only some of a pad's values (an authored graph usually names
+ * just the point) — the card fills the rest in rather than painting NaN */
+function _padFill(node) {
+  const d = NODE_DEFS[node.type].defaults, v = node.values;
+  for (const k in d) if (typeof v[k] !== 'number' || !isFinite(v[k])) v[k] = d[k];
+  return v;
+}
+/* the caption under an axis: the range it spans, in its smallest honest form */
+const _padSpan = (lo, hi) => LM.fmt(lo) + ':' + LM.fmt(hi);
+
+defNode('params/vecdial', {
+  title: 'Vector Dial', cat: 'Params', bare: true, width: 148,
+  desc: 'A vector you draw — drag the point anywhere inside the circle; the line from the center is the vector. Set what the circle\'s radius is worth in its radius field. Shift snaps to 15° and tenths of the radius; double-click for a label',
+  inputs: [], outputs: [{ name: 'V', type: 'vector' }],
+  defaults: { deg: 315, len: 60, radius: 100 },
+  compute: (a, c, node) => {
+    const v = node.values, R = Math.abs(v.radius === undefined ? 100 : v.radius);
+    const L = Math.min(R, Math.abs(v.len === undefined ? 0 : v.len)), r = (v.deg || 0) * Math.PI / 180;
+    return { V: { x: L * Math.cos(r), y: L * Math.sin(r) } };
+  },
+  buildBody: (node, body, changed) => {
+    const v = _padFill(node), SIZE = 116;
+    const pad = _mk('div', 'pad pad-vec', body);
+    const lab = _mk('div', 'sl-label pad-label', pad);
+    const d = _dialSVG(SIZE, 52);
+    d.svg.setAttribute('class', 'pad-svg');
+    d.svg.style.width = d.svg.style.height = SIZE + 'px';
+    pad.appendChild(d.svg);
+    const disc = d.el('circle', 'pad-bg');
+    disc.setAttribute('cx', d.c); disc.setAttribute('cy', d.c); disc.setAttribute('r', d.r);
+    const half = d.el('circle', 'pad-grid');
+    half.setAttribute('cx', d.c); half.setAttribute('cy', d.c); half.setAttribute('r', d.r / 2);
+    const cross = d.el('path', 'pad-grid');
+    cross.setAttribute('d', 'M' + (d.c - d.r) + ' ' + d.c + 'H' + (d.c + d.r) + 'M' + d.c + ' ' + (d.c - d.r) + 'V' + (d.c + d.r));
+    const line = d.el('line', 'pad-ray');
+    line.setAttribute('x1', d.c); line.setAttribute('y1', d.c);
+    const hub = d.el('circle', 'pad-hub');
+    hub.setAttribute('cx', d.c); hub.setAttribute('cy', d.c); hub.setAttribute('r', 2.5);
+    const dot = d.el('circle', 'pad-dot');
+    dot.setAttribute('r', 5);
+    const foot = _mk('div', 'pad-foot', pad);
+    const R = () => Math.abs(v.radius === undefined ? 100 : v.radius) || 1;
+    const fLen = _padField(foot, 0, x => { v.len = LM.clamp(Math.abs(x), 0, R()); paint(); changed(); });
+    const fDeg = _padField(foot, 0, x => { v.deg = ((x % 360) + 360) % 360; paint(); changed(); });
+    const fRad = _padField(foot, 0, x => { if (Math.abs(x) > 0) v.radius = Math.abs(x); paint(); changed(); });
+    fLen.cap.textContent = 'length'; fDeg.cap.textContent = 'angle °'; fRad.cap.textContent = 'radius';
+    const paint = () => {
+      const L = Math.min(R(), Math.abs(v.len === undefined ? 0 : v.len));
+      const p = d.pt(v.deg || 0, L / R() * d.r);
+      line.setAttribute('x2', p[0]); line.setAttribute('y2', p[1]);
+      dot.setAttribute('cx', p[0]); dot.setAttribute('cy', p[1]);
+      lab.textContent = v.label || '';
+      fLen.show(Math.round(L * 1000) / 1000);
+      fDeg.show(Math.round((v.deg || 0) * 10) / 10);
+      fRad.show(R());
+    };
+    paint();
+    _svgDrag(d.svg, () => ev => {
+      const at = _svgAt(d.svg, SIZE, ev), dx = at.x - d.c, dy = at.y - d.c;
+      const snap = _weftShift || ev.shiftKey;
+      let deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+      let L = Math.min(1, Math.hypot(dx, dy) / d.r) * R();
+      deg = snap ? (Math.round(deg / 15) * 15) % 360 : Math.round(deg * 10) / 10;
+      L = snap ? Math.round(L / R() * 10) * R() / 10 : Math.round(L * 1000) / 1000;
+      v.deg = deg; v.len = L;
+      paint(); changed();
+    });
+    _padOptions(node, pad, body, paint, changed, () => {});
+  }
+});
+
+defNode('params/xyslider', {
+  title: 'XY Slider', cat: 'Params', bare: true, width: 156,
+  desc: 'Two sliders in one — drag the point around the square and it comes out as a coordinate. Down the square is +y, like the canvas. Shift snaps to integers; double-click for label, ranges and decimals',
+  inputs: [], outputs: [{ name: 'P', type: 'point' }],
+  defaults: { x0: -100, x1: 100, y0: -100, y1: 100, x: 0, y: 0 },
+  compute: (a, c, node) => ({ P: { x: node.values.x || 0, y: node.values.y || 0 } }),
+  buildBody: (node, body, changed) => {
+    const v = _padFill(node), S = 136;
+    const pad = _mk('div', 'pad pad-xy', body);
+    const lab = _mk('div', 'sl-label pad-label', pad);
+    const svg = _svgEl(pad, 'svg', 'pad-svg');
+    svg.setAttribute('viewBox', '0 0 ' + S + ' ' + S);
+    svg.style.width = svg.style.height = S + 'px';
+    const bg = _svgEl(svg, 'rect', 'pad-bg');
+    bg.setAttribute('width', S); bg.setAttribute('height', S); bg.setAttribute('rx', 3);
+    let grid = '';
+    for (let i = 1; i < 8; i++) grid += 'M' + (i * S / 8) + ' 0V' + S + 'M0 ' + (i * S / 8) + 'H' + S;
+    _svgEl(svg, 'path', 'pad-grid').setAttribute('d', grid);
+    const zero = _svgEl(svg, 'path', 'pad-zero');
+    const hair = _svgEl(svg, 'path', 'pad-hair');
+    const dot = _svgEl(svg, 'circle', 'pad-dot');
+    dot.setAttribute('r', 5);
+    const foot = _mk('div', 'pad-foot', pad);
+    const fx = _padField(foot, v.x || 0, x => { v.x = x; paint(); changed(); });
+    const fy = _padField(foot, v.y || 0, y => { v.y = y; paint(); changed(); });
+    const paint = () => {
+      const sx = (v.x1 - v.x0) || 1, sy = (v.y1 - v.y0) || 1;
+      const px = LM.clamp(((v.x || 0) - v.x0) / sx, 0, 1) * S, py = LM.clamp(((v.y || 0) - v.y0) / sy, 0, 1) * S;
+      dot.setAttribute('cx', px); dot.setAttribute('cy', py);
+      hair.setAttribute('d', 'M' + px + ' 0V' + S + 'M0 ' + py + 'H' + S);
+      const zx = -v.x0 / sx, zy = -v.y0 / sy;
+      zero.setAttribute('d', (zx > 0 && zx < 1 ? 'M' + zx * S + ' 0V' + S : '') + (zy > 0 && zy < 1 ? 'M0 ' + zy * S + 'H' + S : ''));
+      lab.textContent = v.label || '';
+      fx.show(v.x || 0); fy.show(v.y || 0);
+      fx.cap.textContent = 'x ' + _padSpan(v.x0, v.x1); fy.cap.textContent = 'y ' + _padSpan(v.y0, v.y1);
+    };
+    paint();
+    _svgDrag(svg, () => ev => {
+      const at = _svgAt(svg, S, ev), snap = _weftShift || ev.shiftKey;
+      v.x = _padRound(v, v.x0 + LM.clamp(at.x / S, 0, 1) * (v.x1 - v.x0), snap);
+      v.y = _padRound(v, v.y0 + LM.clamp(at.y / S, 0, 1) * (v.y1 - v.y0), snap);
+      paint(); changed();
+    });
+    _padOptions(node, pad, body, paint, changed, op => {
+      _optRange(op, 'x range', v.x0, v.x1, (a, b) => { v.x0 = a; v.x1 = b; paint(); changed(); });
+      _optRange(op, 'y range', v.y0, v.y1, (a, b) => { v.y0 = a; v.y1 = b; paint(); changed(); });
+      _padDecimals(op, v, () => { v.x = _padRound(v, v.x || 0); v.y = _padRound(v, v.y || 0); paint(); changed(); });
+    });
+  }
+});
+
+defNode('params/xyzslider', {
+  title: 'XYZ Slider', cat: 'Params', bare: true, width: 196,
+  desc: 'A point in a box — drag in the lit square for x and y, drag its corner handle along the diagonal for z (the front of the box is the low end, since +z runs away from the viewer). Shift snaps to integers; double-click for label, ranges and decimals',
+  inputs: [], outputs: [{ name: 'P', type: 'point3' }],
+  defaults: { x0: -100, x1: 100, y0: -100, y1: 100, z0: -100, z1: 100, x: 0, y: 0, z: 0 },
+  compute: (a, c, node) => ({ P: { x: node.values.x || 0, y: node.values.y || 0, z: node.values.z || 0 } }),
+  buildBody: (node, body, changed) => {
+    const v = _padFill(node);
+    /* an oblique box: the front face low-left, the back face up and to the right */
+    const SIZE = 176, S = 116, DX = 46, DY = -46, FX = 3, FY = 54;
+    const pad = _mk('div', 'pad pad-xyz', body);
+    const lab = _mk('div', 'sl-label pad-label', pad);
+    const svg = _svgEl(pad, 'svg', 'pad-svg');
+    svg.setAttribute('viewBox', '0 0 ' + SIZE + ' ' + SIZE);
+    svg.style.width = svg.style.height = SIZE + 'px';
+    const BX = FX + DX, BY = FY + DY;
+    /* the walls behind the slice, then its hidden edges dashed like a drafted box */
+    _svgEl(svg, 'path', 'pad-wall').setAttribute('d', 'M' + FX + ' ' + FY + 'L' + BX + ' ' + BY + 'H' + (BX + S) + 'V' + (BY + S) + 'L' + (FX + S) + ' ' + (FY + S) + 'V' + FY + 'Z');
+    _svgEl(svg, 'path', 'pad-hidden').setAttribute('d', 'M' + BX + ' ' + BY + 'V' + (BY + S) + 'H' + (BX + S) + 'M' + BX + ' ' + (BY + S) + 'L' + FX + ' ' + (FY + S));
+    const depth = _svgEl(svg, 'path', 'pad-depth');
+    const ghost = _svgEl(svg, 'circle', 'pad-ghost');
+    ghost.setAttribute('r', 2);
+    const slice = _svgEl(svg, 'rect', 'pad-slice');
+    slice.setAttribute('width', S); slice.setAttribute('height', S);
+    const hair = _svgEl(svg, 'path', 'pad-hair');
+    _svgEl(svg, 'path', 'pad-box').setAttribute('d',
+      'M' + FX + ' ' + FY + 'H' + (FX + S) + 'V' + (FY + S) + 'H' + FX + 'Z' +
+      'M' + FX + ' ' + FY + 'L' + BX + ' ' + BY + 'H' + (BX + S) + 'V' + (BY + S) + 'L' + (FX + S) + ' ' + (FY + S) +
+      'M' + (FX + S) + ' ' + FY + 'L' + (BX + S) + ' ' + BY);
+    const dot = _svgEl(svg, 'circle', 'pad-dot');
+    dot.setAttribute('r', 4.5);
+    const grip = _svgEl(svg, 'path', 'pad-zgrip');
+    const gripCut = _svgEl(svg, 'path', 'pad-zcut');
+    const foot = _mk('div', 'pad-foot', pad);
+    const fx = _padField(foot, v.x || 0, n => { v.x = n; paint(); changed(); });
+    const fy = _padField(foot, v.y || 0, n => { v.y = n; paint(); changed(); });
+    const fz = _padField(foot, v.z || 0, n => { v.z = n; paint(); changed(); });
+    const depthT = () => LM.clamp(((v.z || 0) - v.z0) / ((v.z1 - v.z0) || 1), 0, 1);
+    const paint = () => {
+      const t = depthT(), ox = FX + t * DX, oy = FY + t * DY;
+      const u = LM.clamp(((v.x || 0) - v.x0) / ((v.x1 - v.x0) || 1), 0, 1), w = LM.clamp(((v.y || 0) - v.y0) / ((v.y1 - v.y0) || 1), 0, 1);
+      const px = ox + u * S, py = oy + w * S;
+      slice.setAttribute('x', ox); slice.setAttribute('y', oy);
+      hair.setAttribute('d', 'M' + px + ' ' + oy + 'V' + (oy + S) + 'M' + ox + ' ' + py + 'H' + (ox + S));
+      dot.setAttribute('cx', px); dot.setAttribute('cy', py);
+      /* the same (x,y) pushed through the whole depth: how far in the point sits */
+      const fxp = FX + u * S, fyp = FY + w * S;
+      depth.setAttribute('d', 'M' + fxp + ' ' + fyp + 'L' + (fxp + DX) + ' ' + (fyp + DY));
+      ghost.setAttribute('cx', fxp + DX); ghost.setAttribute('cy', fyp + DY);
+      const gx = ox + S, gy = oy + S;
+      grip.setAttribute('d', 'M' + gx + ' ' + gy + 'h9v9h-9z');
+      gripCut.setAttribute('d', 'M' + (gx + 9) + ' ' + gy + 'v9h-9z');
+      lab.textContent = v.label || '';
+      fx.show(v.x || 0); fy.show(v.y || 0); fz.show(v.z || 0);
+      fx.cap.textContent = 'x ' + _padSpan(v.x0, v.x1); fy.cap.textContent = 'y ' + _padSpan(v.y0, v.y1); fz.cap.textContent = 'z ' + _padSpan(v.z0, v.z1);
+    };
+    paint();
+    _svgDrag(svg, e0 => {
+      const at0 = _svgAt(svg, SIZE, e0), t0 = depthT();
+      const gx = FX + t0 * DX + S + 4.5, gy = FY + t0 * DY + S + 4.5;
+      if (Math.hypot(at0.x - gx, at0.y - gy) < 13) {
+        /* along the box's diagonal, measured from the press so the handle never jumps */
+        const dd = DX * DX + DY * DY;
+        return ev => {
+          const at = _svgAt(svg, SIZE, ev), snap = _weftShift || ev.shiftKey;
+          const t = LM.clamp(t0 + ((at.x - at0.x) * DX + (at.y - at0.y) * DY) / dd, 0, 1);
+          v.z = _padRound(v, v.z0 + t * (v.z1 - v.z0), snap);
+          paint(); changed();
+        };
+      }
+      return ev => {
+        const at = _svgAt(svg, SIZE, ev), t = depthT(), snap = _weftShift || ev.shiftKey;
+        const u = LM.clamp((at.x - FX - t * DX) / S, 0, 1), w = LM.clamp((at.y - FY - t * DY) / S, 0, 1);
+        v.x = _padRound(v, v.x0 + u * (v.x1 - v.x0), snap);
+        v.y = _padRound(v, v.y0 + w * (v.y1 - v.y0), snap);
+        paint(); changed();
+      };
+    });
+    _padOptions(node, pad, body, paint, changed, op => {
+      _optRange(op, 'x range', v.x0, v.x1, (a, b) => { v.x0 = a; v.x1 = b; paint(); changed(); });
+      _optRange(op, 'y range', v.y0, v.y1, (a, b) => { v.y0 = a; v.y1 = b; paint(); changed(); });
+      _optRange(op, 'z range', v.z0, v.z1, (a, b) => { v.z0 = a; v.z1 = b; paint(); changed(); });
+      _padDecimals(op, v, () => { v.x = _padRound(v, v.x || 0); v.y = _padRound(v, v.y || 0); v.z = _padRound(v, v.z || 0); paint(); changed(); });
     });
   }
 });
@@ -1464,6 +1837,220 @@ defNode('math/remap', {
     let t = (a.S1 - a.S0) === 0 ? 0 : (a.V - a.S0) / (a.S1 - a.S0);
     if (a.C) t = LM.clamp(t, 0, 1);
     return { R: LM.lerp(a.T0, a.T1, t) };
+  }
+});
+
+/* Graph Mapper — editor tables. The curves themselves are LM.graphMap, and the
+ * card only ever moves grips. Pins say which edge a grip rides: l, r = locked
+ * to the left or right edge, b = a stop along the bottom (Steps' count, Sine
+ * Summation's harmonics). Lines are the tangents and handles worth drawing. */
+const _GM_KINDS = [['none', 'none'], ['bezier', 'bezier'], ['bounce', 'bounce'], ['conic', 'conic'], ['elastic', 'elastic'],
+  ['gaussian', 'gaussian'], ['linear', 'linear'], ['parabola', 'parabola'], ['perlin', 'perlin'], ['power', 'power'],
+  ['sinc', 'sinc'], ['sine', 'sine'], ['sinesum', 'sine summation'], ['spline', 'spline'], ['sqrt', 'square root'],
+  ['steps', 'steps'], ['triangle', 'triangle']];
+const _GM_PIN = {
+  bezier: { 0: 'l', 3: 'r' }, bounce: { 0: 'l', 1: 'r' }, conic: { 0: 'l', 2: 'r' }, elastic: { 0: 'l', 1: 'r' },
+  power: { 0: 'l', 1: 'r' }, sqrt: { 0: 'l', 1: 'r' }, steps: { 0: 'l', 1: 'r', 2: 'b' }, sinesum: { 2: 'b' }
+};
+const _GM_LINES = {
+  bezier: [[0, 1], [3, 2]], conic: [[0, 1], [2, 1]], gaussian: [[0, 1]], perlin: [[0, 1]],
+  sinc: [[0, 1]], sine: [[0, 1]], sinesum: [[0, 1]]
+};
+/* the curve as an svg path — y clipped to the box, exactly what the output does */
+function _gmPath(kind, P, W, H, n) {
+  let d = '';
+  for (let i = 0; i <= n; i++) {
+    const x = i / n, y = LM.clamp(kind === 'none' ? x : LM.graphMap(kind, P, x), 0, 1);
+    d += (i ? 'L' : 'M') + (x * W).toFixed(1) + ' ' + ((1 - y) * H).toFixed(1);
+  }
+  return d;
+}
+/* move grip i of P to (u,w), honoring its pin. A spline stays in x order; a conic
+ * keeps its fourth grip on the line from the chord's middle to the shoulder. */
+function _gmMove(kind, P, i, u, w) {
+  u = LM.clamp(u, 0, 1); w = LM.clamp(w, 0, 1);
+  const pin = (_GM_PIN[kind] || {})[i];
+  if (pin === 'l') u = 0;
+  if (pin === 'r') u = 1;
+  if (pin === 'b') w = 0;
+  if (kind === 'spline') {
+    if (i === 0) u = 0;
+    else if (i === P.length - 1) u = 1;
+    else u = LM.clamp(u, P[i - 1][0] + 0.01, P[i + 1][0] - 0.01);
+  }
+  P[i] = [u, w];
+}
+function _gmConicLean(P, keepFrom) {
+  const lean = Q => {
+    const mx = (Q[0][0] + Q[2][0]) / 2, my = (Q[0][1] + Q[2][1]) / 2;
+    const dx = Q[1][0] - mx, dy = Q[1][1] - my, dd = dx * dx + dy * dy;
+    return { mx, my, dx, dy, rho: dd < 1e-9 ? 0.5 : LM.clamp(((Q[3][0] - mx) * dx + (Q[3][1] - my) * dy) / dd, 0.02, 0.98) };
+  };
+  const rho = lean(keepFrom || P).rho, a = lean(P);
+  P[3] = [a.mx + rho * a.dx, a.my + rho * a.dy];
+}
+
+defNode('math/graphmap', {
+  title: 'Graph Mapper', cat: 'Maths', width: 200,
+  desc: 'Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges. V outside the x range holds at the edge, and R stays inside the y range',
+  inputs: [{ name: 'V', type: 'number', default: 0.5 }],
+  outputs: [{ name: 'R', type: 'number' }],
+  defaults: { kind: 'bezier', x0: 0, x1: 1, y0: 0, y1: 1 },
+  compute: (a, c, node) => {
+    const v = node.values, k = v.kind || 'bezier';
+    if (k === 'none') return { R: a.V };
+    const x0 = v.x0 === undefined ? 0 : v.x0, x1 = v.x1 === undefined ? 1 : v.x1;
+    const y0 = v.y0 === undefined ? 0 : v.y0, y1 = v.y1 === undefined ? 1 : v.y1;
+    const t = x1 === x0 ? 0 : LM.clamp((a.V - x0) / (x1 - x0), 0, 1);
+    return { R: y0 + (y1 - y0) * LM.clamp(LM.graphMap(k, v.pts && v.pts[k], t), 0, 1) };
+  },
+  buildBody: (node, body, changed) => {
+    const v = node.values, S = 176;
+    const kind = () => v.kind || 'bezier';
+    const grips = () => (v.pts && v.pts[kind()]) || LM.graphGrips(kind());
+    /* grips are written to the node only once touched; each type keeps its own,
+     * so trying the menu loses nothing */
+    const ownGrips = () => {
+      v.pts = v.pts || {};
+      if (!v.pts[kind()]) v.pts[kind()] = LM.graphGrips(kind());
+      return v.pts[kind()];
+    };
+    const gm = _mk('div', 'gm', body);
+    const pick = _mk('div', 'gm-pick', gm);
+    const glyph = _svgEl(pick, 'svg', 'gm-glyph');
+    glyph.setAttribute('viewBox', '0 0 18 18');
+    const glyphPath = _svgEl(glyph, 'path');
+    const pickName = _mk('span', 'gm-name', pick);
+    _mk('span', 'gm-caret', pick).textContent = '▾';
+    const plot = _mk('div', 'gm-plot', gm);
+    const svg = _svgEl(plot, 'svg', 'gm-svg');
+    svg.setAttribute('viewBox', '0 0 ' + S + ' ' + S);
+    _svgEl(svg, 'rect', 'gm-bg').setAttribute('width', S);
+    svg.lastChild.setAttribute('height', S);
+    let grid = '';
+    for (let i = 1; i < 10; i++) grid += 'M' + (i * S / 10) + ' 0V' + S + 'M0 ' + (i * S / 10) + 'H' + S;
+    _svgEl(svg, 'path', 'pad-grid').setAttribute('d', grid);
+    const handles = _svgEl(svg, 'path', 'gm-handles');
+    const curve = _svgEl(svg, 'path', 'gm-curve');
+    _svgEl(svg, 'path', 'gm-rays');
+    _svgEl(svg, 'path', 'gm-dots');
+    const gripLayer = _svgEl(svg, 'g');
+    const chipY = _mk('div', 'gm-chip gm-chip-y', plot);
+    const chipX = _mk('div', 'gm-chip gm-chip-x', plot);
+    chipY.title = 'y range — what R spans'; chipX.title = 'x range — what V spans';
+    const paint = () => {
+      const k = kind(), P = grips();
+      const label = _GM_KINDS.find(o => o[0] === k);
+      pickName.textContent = label ? label[1] : k;
+      glyphPath.setAttribute('d', _gmPath(k, P, 18, 18, 36));
+      curve.setAttribute('d', _gmPath(k, P, S, S, k === 'steps' ? 480 : 160));
+      curve.classList.toggle('none', k === 'none');
+      handles.setAttribute('d', (_GM_LINES[k] || []).map(l =>
+        'M' + P[l[0]][0] * S + ' ' + (1 - P[l[0]][1]) * S + 'L' + P[l[1]][0] * S + ' ' + (1 - P[l[1]][1]) * S).join(''));
+      /* grips are reused, never rebuilt: a press on an element that vanishes
+       * mid-gesture loses its click and double-click */
+      const shown = k === 'none' ? [] : P;
+      while (gripLayer.childNodes.length > shown.length) gripLayer.removeChild(gripLayer.lastChild);
+      while (gripLayer.childNodes.length < shown.length) _svgEl(gripLayer, 'circle', 'gm-grip').setAttribute('r', 4);
+      shown.forEach((p, i) => {
+        const c = gripLayer.childNodes[i];
+        c.setAttribute('cx', p[0] * S); c.setAttribute('cy', (1 - p[1]) * S);
+      });
+      const mapped = k !== 'none';
+      chipY.textContent = LM.fmt(v.y0 === undefined ? 0 : v.y0) + ':' + LM.fmt(v.y1 === undefined ? 1 : v.y1);
+      chipX.textContent = LM.fmt(v.x0 === undefined ? 0 : v.x0) + ':' + LM.fmt(v.x1 === undefined ? 1 : v.x1);
+      chipX.style.display = chipY.style.display = mapped ? '' : 'none';
+    };
+    paint();
+    /* the type menu: every kind drawn from its own default grips */
+    _cleanClick(pick, () => _floatOpts(body, '.gm-pick', op => {
+      op.classList.add('gm-menu');
+      for (const o of _GM_KINDS) {
+        const it = _mk('div', 'gm-item' + (o[0] === kind() ? ' on' : ''), op);
+        const g = _svgEl(it, 'svg', 'gm-glyph');
+        g.setAttribute('viewBox', '0 0 18 18');
+        _svgEl(g, 'path').setAttribute('d', _gmPath(o[0], LM.graphGrips(o[0]), 18, 18, 36));
+        _mk('span', '', it).textContent = o[1];
+        it.addEventListener('click', () => {
+          v.kind = o[0];
+          op.remove();
+          const el = body.closest('.node');
+          if (el) el.style.zIndex = '';
+          paint(); changed();
+        });
+      }
+    }));
+    /* the ranges, from either corner label */
+    const openRange = () => _floatOpts(body, '.gm-chip', op => {
+      const num = (x, d) => x === undefined ? d : x;
+      _optRange(op, 'x range', num(v.x0, 0), num(v.x1, 1), (a, b) => { v.x0 = a; v.x1 = b; paint(); changed(); });
+      _optRange(op, 'y range', num(v.y0, 0), num(v.y1, 1), (a, b) => { v.y0 = a; v.y1 = b; paint(); changed(); });
+    });
+    for (const chip of [chipX, chipY]) {
+      chip.addEventListener('pointerdown', e => e.stopPropagation());
+      chip.addEventListener('click', openRange);
+    }
+    /* nearest grip to the press within a finger's width; a miss drags the card */
+    const nearest = e => {
+      const at = _svgAt(svg, S, e), P = grips();
+      const r = svg.getBoundingClientRect(), hit = Math.max(9, 11 * S / (r.width || S));
+      let best = -1, bd = hit;
+      P.forEach((p, i) => {
+        const dist = Math.hypot(p[0] * S - at.x, (1 - p[1]) * S - at.y);
+        if (dist < bd) { bd = dist; best = i; }
+      });
+      return { i: best, at };
+    };
+    _svgDrag(svg, e0 => {
+      if (kind() === 'none') return null;
+      const n = nearest(e0);
+      if (n.i < 0) return null;
+      const P0 = grips()[n.i], ox = P0[0] * S - n.at.x, oy = (1 - P0[1]) * S - n.at.y;
+      return ev => {
+        if (ev === e0) return; // a press alone moves nothing
+        const at = _svgAt(svg, S, ev), k = kind(), P = ownGrips();
+        const before = k === 'conic' ? P.map(q => q.slice()) : null;
+        _gmMove(k, P, n.i, (at.x + ox) / S, 1 - (at.y + oy) / S);
+        if (k === 'conic') _gmConicLean(P, n.i === 3 ? P : before);
+        paint(); changed();
+      };
+    });
+    /* spline only: double-click empty plot adds a grip, double-click a grip takes it away */
+    svg.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (kind() !== 'spline') return;
+      const n = nearest(e), P = ownGrips();
+      if (n.i >= 0) {
+        if (n.i === 0 || n.i === P.length - 1) return; // the two ends stay
+        P.splice(n.i, 1);
+      } else {
+        const u = LM.clamp(n.at.x / S, 0.01, 0.99), w = LM.clamp(1 - n.at.y / S, 0, 1);
+        if (P.some(p => Math.abs(p[0] - u) < 0.01)) return;
+        P.push([u, w]);
+        P.sort((a, b) => a[0] - b[0]);
+      }
+      paint(); changed();
+    });
+  },
+  /* what is flowing through, plotted on the curve */
+  postEval: (node, el) => {
+    const rays = el.querySelector('.gm-rays'), dots = el.querySelector('.gm-dots');
+    if (!rays || !dots) return;
+    const last = node._last || {}, V = (last.ins && last.ins.V) || [], R = (last.outs && last.outs.R) || [];
+    const v = node.values, n = Math.min(V.length, R.length), S = 176;
+    const mapped = (v.kind || 'bezier') !== 'none';
+    const x0 = !mapped || v.x0 === undefined ? 0 : v.x0, x1 = !mapped || v.x1 === undefined ? 1 : v.x1;
+    const y0 = !mapped || v.y0 === undefined ? 0 : v.y0, y1 = !mapped || v.y1 === undefined ? 1 : v.y1;
+    const stride = Math.max(1, Math.ceil(n / 120));
+    let dp = '', rp = '';
+    for (let i = 0; i < n; i += stride) {
+      const px = LM.clamp(x1 === x0 ? 0 : (V[i] - x0) / (x1 - x0), 0, 1) * S;
+      const py = (1 - LM.clamp(y1 === y0 ? 0 : (R[i] - y0) / (y1 - y0), 0, 1)) * S;
+      dp += 'M' + (px - 2).toFixed(1) + ' ' + py.toFixed(1) + 'a2 2 0 1 0 4 0a2 2 0 1 0 -4 0';
+      if (n <= 12) rp += 'M' + px.toFixed(1) + ' ' + S + 'V' + py.toFixed(1) + 'H0';
+    }
+    if (dots.getAttribute('d') !== dp) dots.setAttribute('d', dp);
+    if (rays.getAttribute('d') !== rp) rays.setAttribute('d', rp);
   }
 });
 
@@ -3738,7 +4325,7 @@ defNode('meta/cluster', {
         t: ctx.t, dt: ctx.dt, frame: ctx.frame, mouse: ctx.mouse, keys: ctx.keys, scroll: ctx.scroll,
         W: ctx.W, H: ctx.H, measureText: ctx.measureText, defs: ctx.defs,
         drawList: ctx.drawList, domList: ctx.domList, domState: ctx.domState,
-        audioList: ctx.audioList, audioState: ctx.audioState, tuneA4: ctx.tuneA4,
+        audioList: ctx.audioList, audioState: ctx.audioState, tuneA4: ctx.tuneA4, now: ctx.now,
         imageList: ctx.imageList, imageState: ctx.imageState,
         bg: null, errors: {}, out: {}, clusterIns: ins, clusterOuts: {}
       };
@@ -3915,7 +4502,7 @@ defNode('meta/js', {
 (function () {
   const groups = {
     /* Input: 1 ambient (time/mouse/viewport) · 2 interaction */
-    'input/time': 1, 'input/turntable': 1, 'input/mouse': 1, 'input/viewport': 1,
+    'input/time': 1, 'input/clock': 1, 'input/turntable': 1, 'input/mouse': 1, 'input/viewport': 1,
     'input/hotspot': 2, 'input/drag': 2, 'input/button': 2, 'input/keyboard': 2, 'input/scroll': 2,
     /* State: 1 motion (followers) · 2 memory · 3 time/triggers */
     'state/smooth': 1, 'state/spring': 1,
@@ -3925,12 +4512,13 @@ defNode('meta/js', {
     'math/add': 1, 'math/sub': 1, 'math/mul': 1, 'math/div': 1, 'math/mod': 1, 'math/pow': 1, 'math/sqrt': 1, 'math/masadd': 1,
     'math/sin': 2, 'math/cos': 2, 'math/tan': 2, 'math/atan2': 2, 'math/rad': 2, 'math/deg': 2,
     'math/neg': 3, 'math/abs': 3, 'math/round': 3, 'math/floor': 3, 'math/ceil': 3, 'math/min': 3, 'math/max': 3,
-    'math/remap': 4, 'math/clamp': 4, 'math/lerp': 4, 'math/smooth': 4, 'math/expr': 4, 'math/noise': 4,
+    'math/remap': 4, 'math/graphmap': 4, 'math/clamp': 4, 'math/lerp': 4, 'math/smooth': 4, 'math/expr': 4, 'math/noise': 4,
     'math/pi': 5, 'math/phi': 5,
     'math/cmp': 6, 'math/logic': 6, 'math/not': 6,
     /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
     'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/point3': 0, 'params/curve': 0, 'params/relay': 0,
-    'params/slider': 1, 'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,
+    'params/slider': 1, 'params/knob': 1, 'params/angle': 1, 'params/vecdial': 1, 'params/xyslider': 1, 'params/xyzslider': 1,
+    'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,
     'params/anchor': 2,
     'params/panel': 3, 'params/graph': 4, 'params/timegraph': 4,
     /* Sets: 1 generators · 2 access · 3 list surgery · 4 set operations */

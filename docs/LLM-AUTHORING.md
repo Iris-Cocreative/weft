@@ -105,6 +105,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `input/mouse` | Mouse | | X:number Y:number NX:number NY:number D:bool | px centered · normalized 0–1 · down |
 | `input/scroll` | Scroll | | Y:number N:number V:number | px · normalized · velocity |
 | `input/time` | Time | P:bool R:bool | T:number F:number | seconds · frame |
+| `input/clock` | Clock | Z:string | H M S F:number T:string Y O D W:number | the real wall-clock time; Z = an IANA name (`Asia/Tokyo`), an offset (`+5:30`, `-8`, `UTC+2`), or empty for this device. S and F carry fractions (F = fraction of the day, 0–1) so hands sweep; T is `14:05:09`; O = month 1–12, W = weekday 0 = Sunday. A list of zones gives a list of times |
 | `input/turntable` | Turntable | R:number=1 Z:bool | T:number | integrated time: R scales/reverses the spin without jumps, Z rewinds |
 | `input/viewport` | Viewport | | W:number H:number | |
 
@@ -120,7 +121,10 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/point` | Point | P:point | P:point | |
 | `params/vector` | Vector | V:vector | V:vector | |
 | `params/anchor` | Anchor Point | | P:point | values: x y — draggable on the canvas |
-| `params/knob` | Knob | | N:number | values: min max value — a rotary slider |
+| `params/knob` | Control Knob | | N:number | values: min max value mode:"int"? label — a rotary slider |
+| `params/vecdial` | Vector Dial | | V:vector | values: deg len radius label — drag a point within a circle; the line from the center is the vector. len is capped at radius; deg is 0 = east, clockwise (y-down) |
+| `params/xyslider` | XY Slider | | P:point | values: x y x0 x1 y0 y1 label prec — a 2D slider, Grasshopper's MD Slider. Defaults ±100; y0 sits at the top of the square, so down is +y |
+| `params/xyzslider` | XYZ Slider | | P:point3 | values: x y z x0 x1 y0 y1 z0 z1 label prec — a 3D slider: a box with a draggable slice. Defaults ±100; z0 is the front of the box |
 | `params/angle` | Angle | | A:number | values: deg, out:"rad"\|"deg" — a direction dial, emits radians by default |
 | `params/point3` | Point3 | P:point3 | P:point3 | pass-through container, like Point |
 | `params/curve` | Curve | C:geometry | C:geometry | pass-through container for geometry |
@@ -155,6 +159,7 @@ and/or/xor/not/nand/nor/xnor). Unary bool: `math/not` (B → R:bool).
 | node | in | out | |
 |---|---|---|---|
 | `math/remap` | V S0=0 S1=1 T0=0 T1=100 C:bool=true | R | map V from [S0,S1] to [T0,T1], C clamps |
+| `math/graphmap` | V=0.5 | R | Graph Mapper: bend V through a curve — values: kind x0 x1 y0 y1 pts. kind: `none` (V passes through) · `bezier` · `bounce` · `conic` · `elastic` · `gaussian` · `linear` · `parabola` · `perlin` · `power` · `sinc` · `sine` · `sinesum` · `spline` · `sqrt` · `steps` · `triangle`. V is held to [x0,x1], R stays in [y0,y1]. Leave pts out for the type's default shape; to set it, `pts: {spline: [[u,v],…]}` holds grips per kind in the unit square, v up |
 | `math/clamp` | V A=0 B=1 | R | |
 | `math/lerp` | A B T=0.5 | R | |
 | `math/smooth` | A B T | R | eased lerp |

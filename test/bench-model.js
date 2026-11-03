@@ -73,7 +73,8 @@ const mkCtx = t => ({
   W: 800, H: 600, defs: NODE_DEFS,
   measureText: (s, sz) => ({ w: String(s).length * sz * 0.6, h: sz * 1.2 }),
   drawList: [], domList: [], audioList: [], audioState: {}, domState: {}, bg: null, errors: {}, out: {},
-  tuneA4: 432
+  tuneA4: 432,
+  now: 1700000000000
 });
 const check = g => {
   const evalErrors = [];

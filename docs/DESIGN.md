@@ -99,6 +99,14 @@ color circle, alpha ghost-field below) · Note Pad (dark/100 sheet, Consolas).
 All drag as nodes (click-vs-drag distinguished by a 4px movement threshold) and
 keep their ports overlaying the widget edges.
 
+## Pads
+
+Vector Dial, XY Slider and XYZ Slider are chromeless too: a drag surface, typed
+readouts in a row beneath it, each with a quiet caption (`.pad-*`). A pad wears
+the wire color of what it outputs, and its output dot sits at the card's center
+right. Their glyphs, and those of Clock and Graph Mapper, are code drafts
+**awaiting James / Figma**.
+
 ## Known gaps / next steps
 
 - **Neue Kabel licensing**: the font renders only where it's installed (it is on

@@ -306,7 +306,7 @@ ${scrollSetup}${measureSetup}${domSetup}
     pressedBuf = releasedBuf = false;
 ${keysFrame}${scrollFrame}
     const ctx = {
-      t: (now - t0) / 1000, dt, frame: frame++, mouse, keys, scroll,
+      t: (now - t0) / 1000, dt, frame: frame++, now: Date.now(), mouse, keys, scroll,
       W: rect.width, H: rect.height, ${F.measure ? 'measureText, ' : ''}defs: DEFS,
       drawList: [], domList: [], audioList: [], ${F.dom ? 'domState' : 'domState: {}'}, bg: null, errors: {}, out: {},
       audioState: ${hasAudio ? 'audio.state()' : '{}'},

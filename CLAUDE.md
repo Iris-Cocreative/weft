@@ -81,7 +81,7 @@ plus the category order arrays in the two generators (and `catDesc` in
    serialized with `Function.prototype.toString()` into exports. Therefore:
    - `LM` properties must be arrow/function *expressions* (never shorthand methods).
    - Internal references always go through `LM.*` (never bare helper names, never closures over module scope).
-   - `compute` may use only its `(args, ctx, node)` parameters, `LM.*`, and JS built-ins. No DOM, no `document`, no editor globals, no `Date.now()`/`Math.random()` (use `ctx.t` and `LM.rng(seed)` for determinism).
+   - `compute` may use only its `(args, ctx, node)` parameters, `LM.*`, and JS built-ins. No DOM, no `document`, no editor globals, no `Date.now()`/`Math.random()` (use `ctx.t`, `ctx.now` and `LM.rng(seed)`, so a host can pin them).
    - Per-node caches go on `node._underscore` fields (e.g. `node._exprFn`); anything not prefixed `_` in `values` must stay JSON-serializable.
 2. **Everything is a list.** Port values are lists; the engine maps computes
    per-item with longest-list matching. Inputs named in `def.listInputs` receive
@@ -118,7 +118,7 @@ plus the category order arrays in the two generators (and `catDesc` in
    resets on graph load. The ctx input contract (`dt`, `mouse.pressed/released`,
    `keys`, `scroll`, `domList`/`domState`, `audioList`/`audioState`,
    `imageList`/`imageState`, `tuneA4`,
-   `measureText`, `defs`) is
+   `measureText`, `now`, `defs`) is
    supplied **identically** by `viewport.js` and the export mount — change one,
    change both, and update the ctx table in NODE-SPEC §6 and smoke's `mkCtx`.
    Inside `viewport.js` there is exactly one ctx literal, `Viewport.makeCtx`:
@@ -130,7 +130,7 @@ plus the category order arrays in the two generators (and `catDesc` in
    Web Audio nodes via `ctx.audioList` (handle strings flow through `audio`
    wires) and read back mic loudness via `ctx.audioState`; only the host
    (`js/audio.js` `WeftAudio.makeHost`) touches the `AudioContext`, and cluster
-   computes must forward `audioList`, `audioState` and `tuneA4` into the child
+   computes must forward `audioList`, `audioState`, `tuneA4` and `now` into the child
    ctx like the DOM channels. Pictures follow the same rule: Image In
    *declares* `{src}` on `ctx.imageList`, the host (`js/images.js`) decodes it
    into `LM.IMG` (the one registry `drawItem` reads — the engine never loads

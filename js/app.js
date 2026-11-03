@@ -1578,7 +1578,7 @@ const App = {
   },
 
   /* ------------------------------ params sheet ------------------------------
-   * Every control on the loom — slider, knob, angle, toggle, swatch, button,
+   * Every control on the loom — slider, knob, angle, pad, toggle, swatch, button,
    * anchor, text list — as one list: a panel docked at the loom's left on
    * desktop (Grasshopper's remote panel), the whole loom on a phone, so a
    * patch can be played without hunting cards. Each row runs the def's own buildBody
@@ -1669,7 +1669,7 @@ const App = {
     // a slider wants the full width; a dial, a toggle, a swatch, a button sit three to a row
     const COMPACT = new Set(['params/angle', 'params/knob', 'params/toggle', 'params/swatch', 'params/button']);
     // sliders, knobs and angles carry their own label widget — the rest get a name line
-    const OWN_LABEL = new Set(['params/slider', 'params/knob', 'params/angle']);
+    const OWN_LABEL = new Set(['params/slider', 'params/knob', 'params/angle', 'params/vecdial', 'params/xyslider', 'params/xyzslider']);
     sheet.innerHTML = `<div class="pm-head"><span class="pm-title">params</span><span class="pm-count">${countText}</span><button class="pm-min" title="fold to a strip">‹</button><button class="pm-x" title="back to the loom">✕</button></div><div class="pm-list"></div>`;
     const list = sheet.querySelector('.pm-list');
     App._paramsDirty = App._paramsDirty || new Set();

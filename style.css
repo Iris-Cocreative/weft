@@ -17,6 +17,10 @@
   --type-number: #3e9aff;
   --type-bool: #ff3b41;
   --type-bool-off: #7a1f23;   /* a bool wire carrying only false (editor.js BOOL_OFF) */
+  --type-string: #fbbb00;
+  --type-point: #fb6c09;
+  --type-vector: #8cff14;
+  --type-point3: #00b8d4;
   --font-ui: "Neue Kabel", Inter, "Segoe UI", system-ui, sans-serif;
   --font-val: Consolas, ui-monospace, "Cascadia Mono", monospace;
 
@@ -601,6 +605,83 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .an-deg { color: var(--white-40); font: 12px var(--font-val); }
 .an-seg { margin-top: 3px; }
 .an-seg .seg-b { padding: 2px 9px; font-size: 10px; }
+
+/* --- pads: Vector Dial, XY / XYZ Slider — a point you drag, typed readouts under
+ * it. Each wears the wire color of what it outputs, like the slider and dials. */
+.pad { --pad: var(--type-point); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 5px 8px 6px; border-radius: 8px; position: relative; }
+.pad-vec { --pad: var(--type-vector); }
+.pad-xyz { --pad: var(--type-point3); }
+.pad-label { align-self: stretch; text-align: center; }
+.pad-label:empty { display: none; }
+.pad-svg { display: block; flex: none; touch-action: none; cursor: crosshair; overflow: visible; }
+.pad-bg { fill: var(--dark-150); stroke: var(--dark-400); }
+.pad-grid { fill: none; stroke: rgba(255, 255, 255, 0.06); stroke-width: 1; }
+.pad-zero { fill: none; stroke: rgba(255, 255, 255, 0.18); stroke-width: 1; }
+.pad-hair { fill: none; stroke: var(--pad); stroke-width: 1; opacity: 0.4; }
+.pad-ray { stroke: var(--pad); stroke-width: 2; stroke-linecap: round; }
+.pad-hub { fill: var(--pad); }
+.pad-dot { fill: var(--pad); stroke: var(--dark-100); stroke-width: 1.5; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--pad) 70%, transparent)); }
+.pad-foot { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; align-self: stretch; }
+.pad-col { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.node-body input.sl-val.pad-val { width: 100%; flex: none; padding: 1px 0; text-align: center; color: var(--pad); font-size: 12px; }
+.pad-cap { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255, 255, 255, 0.28); font: 9px var(--font-val); }
+/* the XYZ box: walls behind, the lit slice at the point's depth, the corner handle for z */
+.pad-wall { fill: rgba(255, 255, 255, 0.025); }
+.pad-hidden { fill: none; stroke: rgba(255, 255, 255, 0.16); stroke-width: 1; stroke-dasharray: 2 3; }
+.pad-box { fill: none; stroke: rgba(255, 255, 255, 0.32); stroke-width: 1; stroke-linejoin: round; }
+.pad-slice { fill: color-mix(in srgb, var(--pad) 13%, transparent); stroke: var(--pad); stroke-width: 1.5; }
+.pad-depth { fill: none; stroke: var(--pad); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.55; }
+.pad-ghost { fill: var(--pad); opacity: 0.55; }
+.pad-zgrip { fill: var(--dark-100); stroke: var(--pad); stroke-width: 1; cursor: nesw-resize; }
+.pad-zcut { fill: var(--pad); pointer-events: none; }
+.pm-body .pad { padding-left: 0; padding-right: 0; }
+
+/* --- Clock: the time as the card's face, a zone field under it. The field stands
+ * in for Z's own literal, too narrow to read a zone in; wiring Z retires it. --- */
+.clk { display: flex; flex-direction: column; gap: 5px; padding-bottom: 3px; }
+.clk-time { color: var(--type-string); font: 20px/1.1 var(--font-val); letter-spacing: 0.01em; text-align: center; font-variant-numeric: tabular-nums; }
+.node-body input.clk-zone {
+  width: 100%; box-sizing: border-box; padding: 2px 5px; background: var(--dark-150);
+  border: 1px solid var(--dark-400); border-radius: 3px; color: var(--white-80); font: 11px var(--font-val); outline: none;
+}
+.node-body input.clk-zone:focus { border-color: var(--primary); }
+.node:has(.clk) .row.in .lit { display: none; }
+.node:has(.clk):has(.row.in.connected) .clk-zone { opacity: 0.35; pointer-events: none; }
+
+/* --- Graph Mapper: type menu, plot, range chips in two corners --- */
+.gm { display: flex; flex-direction: column; gap: 5px; padding-bottom: 2px; }
+.gm-pick {
+  display: flex; align-items: center; gap: 6px; padding: 2px 6px; cursor: pointer;
+  background: var(--dark-150); border: 1px solid var(--dark-400); border-radius: 3px;
+  color: var(--white-80); font-size: 11px;
+}
+.gm-pick:hover { border-color: var(--line2); }
+.gm-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-caret { color: var(--white-40); font-size: 9px; }
+.gm-glyph { flex: none; width: 14px; height: 14px; overflow: visible; }
+.gm-glyph path { fill: none; stroke: var(--type-number); stroke-width: 1.4; stroke-linejoin: round; }
+.gm-plot { position: relative; line-height: 0; }
+.gm-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; }
+.gm-bg { fill: var(--dark-150); stroke: var(--dark-400); }
+.gm-handles { fill: none; stroke: rgba(255, 255, 255, 0.34); stroke-width: 1; }
+.gm-curve { fill: none; stroke: var(--type-number); stroke-width: 1.8; stroke-linejoin: round; }
+.gm-curve.none { stroke-dasharray: 3 4; opacity: 0.5; }
+.gm-rays { fill: none; stroke: rgba(255, 255, 255, 0.22); stroke-width: 1; stroke-dasharray: 2 3; pointer-events: none; }
+.gm-dots { fill: var(--white-80); pointer-events: none; }
+.gm-grip { fill: var(--dark-100); stroke: var(--white-100); stroke-width: 1.4; cursor: grab; }
+.gm-chip {
+  position: absolute; padding: 1px 4px; cursor: pointer; line-height: 12px;
+  background: var(--dark-100); border: 1px solid var(--dark-400); border-radius: 3px;
+  color: var(--white-40); font: 9px var(--font-val);
+}
+.gm-chip:hover { color: var(--white-80); border-color: var(--line2); }
+.gm-chip-y { left: 3px; top: 3px; }
+.gm-chip-x { right: 3px; bottom: 3px; }
+.sl-opts.gm-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; left: -22px; right: -22px; padding: 5px; }
+.gm-item { display: flex; align-items: center; gap: 6px; padding: 3px 5px; border-radius: 4px; cursor: pointer; color: var(--white-80); font-size: 10.5px; line-height: 1.15; }
+.gm-item:hover { background: var(--dark-300); }
+.gm-item.on { background: var(--dark-300); color: var(--primary); }
+.gm-item .gm-glyph { width: 16px; height: 16px; }
 
 /* --- Boolean Toggle: vertical pill in the bool wire color (Figma 2026-07-15) —
  * off: outlined pill, light knob resting at the bottom

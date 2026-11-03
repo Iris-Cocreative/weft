@@ -20,6 +20,26 @@ A real button overlaid on the canvas at P — clicked trigger, held state, click
 | D | bool | held down |
 | N | number | click count |
 
+### `input/clock` — Clock
+
+The current time, in any time zone — type one on the card or wire it into Z: an IANA name (Asia/Tokyo), an offset (+5:30, -8, UTC+2), or empty for this device. S and F carry fractions, so hands sweep instead of tick
+
+| in | type | default | note |
+|---|---|---|---|
+| Z | string | `""` | time zone — Asia/Tokyo, +5:30, UTC, or empty for this device |
+
+| out | type | note |
+|---|---|---|
+| H | number | hour, 0–23 |
+| M | number | minute, 0–59 |
+| S | number | second, with its fraction |
+| F | number | fraction of the day, 0–1 |
+| T | string | time as text, 14:05:09 |
+| Y | number | year |
+| O | number | month, 1–12 |
+| D | number | day of the month |
+| W | number | weekday, 0 = Sunday |
+
 ### `input/drag` — Drag
 
 Click and drag on the cloth: X/Y is how far this drag has moved, TX/TY the running total of every drag (a slider’s value). G limits where a drag may start (none = the whole cloth); the drag keeps going wherever the pointer roams until release. F moves the region by the total, so a handle drawn at TX/TY stays grabbable. X0/X1 and Y0/Y1 bound the total (leave empty for no limit; equal values lock that axis) — dragging past an end holds there, and dragging back moves again once the pointer returns to the handle
@@ -187,6 +207,16 @@ Pick a color
 
 Node values (`values` keys, not ports): `{"hex":"#5eead4","a":1}`
 
+### `params/knob` — Control Knob
+
+Rotary number — drag around the dial, shift snaps to integers; integer knobs with up to 24 steps tick each one; double-click for label, range and rounding
+
+| out | type | note |
+|---|---|---|
+| N | number |  |
+
+Node values (`values` keys, not ports): `{"min":0,"max":10,"value":5}`
+
 ### `params/curve` — Curve
 
 Pass-through container — wire a source through it, or set it directly; swap the source later without rewiring downstream
@@ -233,16 +263,6 @@ Load a picture (embedded, ≤1024px) or point U at an image URL — comes out as
 | H | number | height (px) |
 
 Node values (`values` keys, not ports): `{"name":"","src":"","w":0,"h":0}`
-
-### `params/knob` — Knob
-
-Rotary number — drag around the dial, shift snaps to integers; double-click for label, range and rounding
-
-| out | type | note |
-|---|---|---|
-| N | number |  |
-
-Node values (`values` keys, not ports): `{"min":0,"max":10,"value":5}`
 
 ### `params/panel` — Note Pad
 
@@ -350,6 +370,16 @@ Pass-through container — wire a source through it, or set it directly; swap th
 |---|---|---|
 | V | vector |  |
 
+### `params/vecdial` — Vector Dial
+
+A vector you draw — drag the point anywhere inside the circle; the line from the center is the vector. Set what the circle's radius is worth in its radius field. Shift snaps to 15° and tenths of the radius; double-click for a label
+
+| out | type | note |
+|---|---|---|
+| V | vector |  |
+
+Node values (`values` keys, not ports): `{"deg":315,"len":60,"radius":100}`
+
 ### `params/svg` — Vector In
 
 Load an SVG file — every shape becomes an exact path (lines and cubic curves, arcs included) centered on (0,0) and scaled so its long side is S px, with each shape’s fill and stroke color beside it. Compound paths keep their holes
@@ -366,6 +396,26 @@ Load an SVG file — every shape becomes an exact path (lines and cubic curves, 
 | N | number | path count |
 
 Node values (`values` keys, not ports): `{"name":"","paths":[]}`
+
+### `params/xyslider` — XY Slider
+
+Two sliders in one — drag the point around the square and it comes out as a coordinate. Down the square is +y, like the canvas. Shift snaps to integers; double-click for label, ranges and decimals
+
+| out | type | note |
+|---|---|---|
+| P | point |  |
+
+Node values (`values` keys, not ports): `{"x0":-100,"x1":100,"y0":-100,"y1":100,"x":0,"y":0}`
+
+### `params/xyzslider` — XYZ Slider
+
+A point in a box — drag in the lit square for x and y, drag its corner handle along the diagonal for z (the front of the box is the low end, since +z runs away from the viewer). Shift snaps to integers; double-click for label, ranges and decimals
+
+| out | type | note |
+|---|---|---|
+| P | point3 |  |
+
+Node values (`values` keys, not ports): `{"x0":-100,"x1":100,"y0":-100,"y1":100,"z0":-100,"z1":100,"x":0,"y":0,"z":0}`
 
 ## State
 
@@ -650,6 +700,20 @@ Floor
 | out | type | note |
 |---|---|---|
 | R | number |  |
+
+### `math/graphmap` — Graph Mapper
+
+Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges. V outside the x range holds at the edge, and R stays inside the y range
+
+| in | type | default | note |
+|---|---|---|---|
+| V | number | `0.5` |  |
+
+| out | type | note |
+|---|---|---|
+| R | number |  |
+
+Node values (`values` keys, not ports): `{"kind":"bezier","x0":0,"x1":1,"y0":0,"y1":1}`
 
 ### `math/lerp` — Lerp
 
@@ -2727,4 +2791,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-195 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+200 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.

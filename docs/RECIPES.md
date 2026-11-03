@@ -20,6 +20,12 @@ geometry that reaches no Draw node is invisible.
   → R)`. Higher S = snappier.
 - **Springy follow** — `… → state/spring(V, F:frequency D:damping → R)`. D<0.3
   wobbles, D≈1 settles.
+- **A clock that sweeps** — `input/clock(Z:zone)`; with X = F, hour angle `X*4*PI - PI/2`,
+  minute angle `X*48*PI - PI/2`; with X = S, second angle `X/30*PI - PI/2`; each through
+  `math/expr → vec/polar(A)`. Wire a `params/textlist` of zones into Z for one
+  face per zone.
+- **Ease any 0–1 list** — `sets/range → math/graphmap(V → R)`. Remap Numbers is
+  a straight line; Graph Mapper is the same job through a curve you draw.
 - **Wobble / organic drift** — `input/time(T) → math/noise(X → N) → remap`.
   Noise of a slowly-growing X is a smooth random walk.
 - **After a click, animate for 2s** — `input/hotspot(C) → state/timer(T → S, A)`

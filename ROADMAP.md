@@ -13,6 +13,11 @@ node) shipped v0.7 (2026-07-14) with the *Iso field* example; next candidates
 per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
 **Format**, **Sort List**, **Array/Tile**.
 
+**Dynamic inputs shipped v0.24 (2026-11-03):** Vector Dial, XY Slider, XYZ Slider,
+Clock (the first real-time input, through a new `ctx.now`) and Graph Mapper, with
+Knob grown into Control Knob. Open from it: Graph Mapper's ranges live on the card
+rather than on ports, and the glyphs are code drafts awaiting Figma.
+
 ## 0. Foundation hardening — do these before the tracks below get heavy
 
 - [shipped v0.2] **Graph format version** — `format: 1` + `App.migrate()`.

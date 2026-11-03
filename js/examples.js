@@ -22723,6 +22723,102 @@ const EXAMPLES = {
       {"id":"g1","x":-65,"y":1420,"w":3182,"h":1100,"title":"seed torus — expression version","nodes":["e_ser","e_t","e_vs","e_vt","e_v","e_b","e_a","e_rho","e_y","e_th","e_pol","e_xz","e_y2","e_z2","e_k","e_sx","e_sy","e_pt","e_u","e_d","o_p","o_k","o_d","o_u"]}
     ]
   },
+  /* the dynamic inputs (v0.24). Three zones on one Clock: wire a Text List into Z
+   * and every output becomes a list, one item per zone — so one circle, one set
+   * of hands and one label become three faces by list matching alone. S and F
+   * carry fractions, which is why these hands sweep instead of tick. */
+  'World clock': _EX([
+    ['zn', 'params/textlist', 30, 40, { text: 'America/Los_Angeles\nEurope/London\nAsia/Tokyo' }],
+    ['ck', 'input/clock', 280, 40],
+    ['xs', 'sets/series', 30, 450, { S: -170, N: 170, C: 3 }],
+    ['ct', 'vec/construct', 280, 470],
+    ['ha', 'math/expr', 540, 40, { expr: 'X*4*PI - PI/2' }],
+    ['ma', 'math/expr', 540, 250, { expr: 'X*48*PI - PI/2' }],
+    ['sa', 'math/expr', 540, 460, { expr: 'X/30*PI - PI/2' }],
+    ['he', 'vec/polar', 790, 40, { R: 38 }],
+    ['me', 'vec/polar', 790, 250, { R: 56 }],
+    ['se', 'vec/polar', 790, 460, { R: 64 }],
+    ['ty', 'vec/construct', 790, 650, { Y: 98 }],
+    ['nm', 'vec/construct', 790, 780, { Y: 118 }],
+    ['hl', 'crv/line', 1030, 40],
+    ['ml', 'crv/line', 1030, 250],
+    ['sl', 'crv/line', 1030, 460],
+    ['fc', 'crv/circle', 1030, 590, { R: 72 }],
+    ['tt', 'disp/text', 1030, 730, { S: 15 }],
+    ['zt', 'disp/text', 1030, 880, { S: 10 }],
+    ['dh', 'disp/draw', 1270, 40, { W: 4 }],
+    ['dm', 'disp/draw', 1270, 270, { W: 2.5 }],
+    ['ds', 'disp/draw', 1270, 500, { S: { r: 251, g: 108, b: 9, a: 1 }, W: 1 }],
+    ['df', 'disp/draw', 1270, 730, { S: { r: 230, g: 237, b: 250, a: 0.45 }, W: 1 }],
+    ['dt', 'disp/draw', 1270, 960, { S: { r: 230, g: 237, b: 250, a: 0 }, F: { r: 230, g: 237, b: 250, a: 0.8 } }]
+  ], [
+    ['zn', 'L', 'ck', 'Z'],
+    ['xs', 'S', 'ct', 'X'],
+    ['ck', 'F', 'ha', 'X'], ['ck', 'F', 'ma', 'X'], ['ck', 'S', 'sa', 'X'],
+    ['ct', 'P', 'he', 'O'], ['ha', 'R', 'he', 'A'],
+    ['ct', 'P', 'me', 'O'], ['ma', 'R', 'me', 'A'],
+    ['ct', 'P', 'se', 'O'], ['sa', 'R', 'se', 'A'],
+    ['ct', 'P', 'hl', 'A'], ['he', 'P', 'hl', 'B'],
+    ['ct', 'P', 'ml', 'A'], ['me', 'P', 'ml', 'B'],
+    ['ct', 'P', 'sl', 'A'], ['se', 'P', 'sl', 'B'],
+    ['ct', 'P', 'fc', 'P'],
+    ['xs', 'S', 'ty', 'X'], ['xs', 'S', 'nm', 'X'],
+    ['ck', 'T', 'tt', 'T'], ['ty', 'P', 'tt', 'P'],
+    ['zn', 'L', 'zt', 'T'], ['nm', 'P', 'zt', 'P'],
+    ['hl', 'C', 'dh', 'G'], ['ml', 'C', 'dm', 'G'], ['sl', 'C', 'ds', 'G'], ['fc', 'C', 'df', 'G'],
+    ['tt', 'G', 'dt', 'G'], ['zt', 'G', 'dt', 'G']
+  ]),
+
+  /* one circle, a list of copies: t runs 0→1 across them. The XY Slider places the
+   * head, the Vector Dial says where the tail points and how long it is, the Control
+   * Knob counts, and the Graph Mapper bends t into the falloff — change its type
+   * and the same trail takes a different shape. */
+  'Comet trail': _EX([
+    ['kn', 'params/knob', 30, 40, { label: 'copies', min: 2, max: 40, value: 24, mode: 'int' }],
+    ['xy', 'params/xyslider', 30, 190, { x0: -300, x1: 300, y0: -200, y1: 200, x: -120, y: 60, label: 'head', prec: 0 }],
+    ['vd', 'params/vecdial', 30, 430, { deg: 335, len: 300, radius: 400, label: 'tail' }],
+    ['rg', 'sets/range', 280, 40, { A: 0, B: 1 }],
+    ['gm', 'math/graphmap', 500, 40, { kind: 'bezier', x0: 0, x1: 1, y0: 1, y1: 0.03 }],
+    ['ci', 'crv/circle', 280, 240, { R: 70 }],
+    ['sc', 'xf/scale', 760, 240],
+    ['dc', 'vec/deconstruct', 280, 430],
+    ['mx', 'math/mul', 500, 400],
+    ['my', 'math/mul', 500, 520],
+    ['vv', 'vec/vecxy', 760, 440],
+    ['mv', 'xf/move', 980, 240],
+    ['hu', 'disp/gradient', 980, 40, { A: { r: 45, g: 212, b: 191, a: 1 }, B: { r: 240, g: 9, b: 252, a: 0.25 } }],
+    ['dr', 'disp/draw', 1200, 240, { W: 1.5 }]
+  ], [
+    ['kn', 'N', 'rg', 'N'],
+    ['rg', 'R', 'gm', 'V'],
+    ['xy', 'P', 'ci', 'P'],
+    ['ci', 'C', 'sc', 'G'], ['gm', 'R', 'sc', 'F'], ['xy', 'P', 'sc', 'C'],
+    ['vd', 'V', 'dc', 'P'],
+    ['dc', 'X', 'mx', 'A'], ['rg', 'R', 'mx', 'B'],
+    ['dc', 'Y', 'my', 'A'], ['rg', 'R', 'my', 'B'],
+    ['mx', 'R', 'vv', 'X'], ['my', 'R', 'vv', 'Y'],
+    ['sc', 'G', 'mv', 'G'], ['vv', 'V', 'mv', 'T'],
+    ['rg', 'R', 'hu', 'T'],
+    ['mv', 'G', 'dr', 'G'], ['hu', 'C', 'dr', 'S']
+  ]),
+
+  /* the XYZ Slider's box is the scene's box: same ±100 on every axis, so the sphere
+   * goes where the crosshair says. The front of the slider's cube is -z, nearest
+   * the viewer, which is where the default camera stands too. */
+  'XYZ probe': _EX([
+    ['xz', 'params/xyzslider', 30, 40, { x0: -100, x1: 100, y0: -100, y1: 100, z0: -100, z1: 100, x: 40, y: -30, z: -60, label: 'probe', prec: 0 }],
+    ['bx', 'd3/box', 280, 40, { W: 200, H: 200, D: 200 }],
+    ['sp', 'd3/sphere', 280, 240, { R: 22 }],
+    ['mg', 'sets/merge', 500, 130],
+    ['cm', 'd3/camera', 500, 280, { P: { x: 340, y: -280, z: -640 } }],
+    ['pj', 'd3/project', 760, 130, { mode: 'wire' }],
+    ['dr', 'disp/draw', 1000, 130, { S: { r: 0, g: 184, b: 212, a: 0.9 }, W: 1 }]
+  ], [
+    ['xz', 'P', 'sp', 'P'],
+    ['bx', 'G', 'mg', 'A'], ['sp', 'G', 'mg', 'B'],
+    ['mg', 'M', 'pj', 'G'], ['cm', 'C', 'pj', 'C'],
+    ['pj', 'F', 'dr', 'G']
+  ]),
 };
 
 /* ---------------------------------------------------------------------------
@@ -22942,6 +23038,27 @@ const EXAMPLE_META = {
     blurb: 'Fifteen hundred seeds on a golden-angle spiral, wrapped onto a sphere that morphs into a turning torus — dots swell near the pointer, and dragging the cloth spins and tilts it.',
     teaches: '3D without the 3D pack: Series, a handful of Expressions and Polar place every seed, a perspective factor scales position and size, and Sort List hands one depth order to four List Items so every per-seed list is reordered together.',
     tags: ['torus', 'sphere', 'morph', 'golden angle', 'phyllotaxis', 'seeds', 'perspective', 'sort', 'depth', 'drag', 'turntable', 'expression'],
+    needs: [], frames: 40
+  },
+  'World clock': {
+    cat: 'Fundamentals',
+    blurb: 'Los Angeles, London and Tokyo on three sweeping faces — one Clock, read in a list of time zones.',
+    teaches: 'Wire a Text List of zones into Clock\'s Z and every output is a list, one item per zone, so one circle and one set of hands become three clocks by list matching alone. F is the fraction of the day, which turns straight into hour and minute angles.',
+    tags: ['clock', 'time', 'time zone', 'timezone', 'date', 'watch', 'hands', 'polar', 'list matching', 'text list'],
+    needs: [], frames: 40
+  },
+  'Comet trail': {
+    cat: 'Fundamentals',
+    blurb: 'One circle copied along a vector, shrinking on a curve you draw — drag the head, aim the tail, and change the Graph Mapper\'s type to reshape the falloff.',
+    teaches: 'The dynamic inputs in one patch: XY Slider places a point, Vector Dial gives a direction and a length, Control Knob counts, and Graph Mapper bends an even 0–1 list into any falloff, which plain Remap Numbers cannot do.',
+    tags: ['graph mapper', 'xy slider', 'md slider', 'vector dial', 'knob', 'falloff', 'easing', 'curve', 'bezier', 'trail', 'transform per index'],
+    needs: [], frames: 40
+  },
+  'XYZ probe': {
+    cat: '3D',
+    blurb: 'A sphere you move around a box from a box on the card — the XYZ Slider\'s cube is the scene\'s cube.',
+    teaches: 'XYZ Slider outputs a point3 straight into the 3D pack: drag in the lit square for x and y, drag its corner along the diagonal for z, with the front of the cube nearest the viewer.',
+    tags: ['xyz slider', 'point3', 'sphere', 'box', 'wire', 'camera', 'project', 'control'],
     needs: [], frames: 40
   },
 };

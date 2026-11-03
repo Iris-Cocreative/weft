@@ -39,7 +39,8 @@ const mkCtx = () => ({
   measureText: (t, s) => ({ w: String(t).length * s * 0.6, h: s * 1.2 }),
   drawList: [], domList: [], audioList: [], audioState: {}, domState: {}, bg: null, errors: {}, out: {},
   imageList: [], imageState: {},
-  tuneA4: 432
+  tuneA4: 432,
+  now: 1700000000000
 });
 
 /* 1 — every node def evaluates standalone with defaults */
@@ -1759,6 +1760,93 @@ for (const name of Object.keys(EXAMPLES)) {
   }
   if (groupMotifs < 1) failures.push('motifs: no example group was cut out as a motif');
   var GROUP_MOTIFS = groupMotifs;
+}
+
+/* 30 — the dynamic inputs: Vector Dial, XY / XYZ Slider, Graph Mapper, Clock. Each
+ * Graph Mapper type is checked against what its grips promise, because a grip that
+ * looks attached to a curve it does not actually pass through is a lie on the card. */
+{
+  const near = (a, b, tag, eps) => { if (!(Math.abs(a - b) <= (eps || 1e-6))) failures.push(tag + ': expected ' + b + ', got ' + a); };
+  const run = (type, values, ins) => NODE_DEFS[type].compute(ins || {}, mkCtx(), { values });
+
+  const vd = run('params/vecdial', { deg: 90, len: 50, radius: 100 }).V;
+  near(vd.x, 0, 'vecdial x'); near(vd.y, 50, 'vecdial: y-down, 90° points down the canvas');
+  near(run('params/vecdial', { deg: 0, len: 500, radius: 100 }).V.x, 100, 'vecdial: length is confined to the circle');
+  near(run('params/vecdial', { deg: 0, len: 150, radius: 400 }).V.x, 150, 'vecdial: the radius sets what fits, not what comes out');
+
+  const xy = run('params/xyslider', { x: 12, y: -7 }).P;
+  near(xy.x, 12, 'xyslider x'); near(xy.y, -7, 'xyslider y');
+  const xyz = run('params/xyzslider', { x: 1, y: 2, z: 3 }).P;
+  near(xyz.x + xyz.y * 10 + xyz.z * 100, 321, 'xyzslider x/y/z');
+
+  /* kinds: everything stays finite across the whole axis */
+  const KINDS = ['bezier', 'bounce', 'conic', 'elastic', 'gaussian', 'linear', 'parabola', 'perlin', 'power', 'sinc', 'sine', 'sinesum', 'spline', 'sqrt', 'steps', 'triangle'];
+  for (const k of KINDS) {
+    if (!LM.graphGrips(k).length) failures.push('graphmap ' + k + ': no default grips');
+    for (let i = 0; i <= 100; i++) {
+      const y = LM.graphMap(k, null, i / 100);
+      if (!isFinite(y)) { failures.push('graphmap ' + k + ': not finite at x=' + i / 100); break; }
+    }
+  }
+  /* grips the curve must pass through */
+  const passes = { bezier: [0, 3], bounce: [0, 2], conic: [0, 2], gaussian: [0], linear: [0, 1], parabola: [0, 1], power: [0, 1, 2], sinc: [0, 1], sine: [0, 1], sinesum: [0], spline: [0, 1, 2, 3], sqrt: [0, 1], elastic: [0, 2], triangle: [0, 1] };
+  for (const k of Object.keys(passes)) {
+    const P = LM.graphGrips(k);
+    for (const i of passes[k]) near(LM.graphMap(k, P, P[i][0]), P[i][1], 'graphmap ' + k + ' grip ' + i, 2e-3);
+  }
+  /* a spline never overshoots its grips, and it finds them in any order */
+  const sp = [[1, 0.5], [0, 0], [0.5, 1]];
+  for (let i = 0; i <= 200; i++) if (LM.graphMap('spline', sp, i / 200) > 1 + 1e-9) { failures.push('graphmap spline: overshoot'); break; }
+  near(LM.graphMap('spline', sp, 0.5), 1, 'graphmap spline: unsorted grips');
+  near(LM.graphMap('steps', LM.graphGrips('steps'), 0.5), 0.5, 'graphmap steps: 5 steps, the middle one');
+  near(LM.graphMap('steps', LM.graphGrips('steps'), 1), 1, 'graphmap steps: the last step reaches the end');
+
+  /* the card: ranges, clamping, unknown and pass-through kinds */
+  const gm = (values, V) => run('math/graphmap', values, { V }).R;
+  near(gm({ kind: 'linear', pts: { linear: [[0, 0], [1, 1]] } }, 0.25), 0.25, 'graphmap: identity line');
+  near(gm({ kind: 'linear', pts: { linear: [[0, 0], [1, 1]] }, x0: 0, x1: 100, y0: 10, y1: 20 }, 50), 15, 'graphmap: x and y ranges');
+  near(gm({ kind: 'linear', pts: { linear: [[0, 0], [1, 1]] } }, 9), 1, 'graphmap: V past the x range holds at the edge');
+  near(gm({ kind: 'parabola', pts: { parabola: [[0.5, 0.5], [0.6, 1]] } }, 1), 1, 'graphmap: R stays in the box');
+  near(gm({ kind: 'none', x0: 0, x1: 100 }, 37), 37, 'graphmap: none passes V through');
+  near(gm({ kind: 'made-up' }, 0.3), 0.3, 'graphmap: an unknown kind degrades to a straight line');
+  if (!isFinite(gm({}, 0.5))) failures.push('graphmap: empty values must fall back to the default curve');
+  near(gm({ kind: 'linear', x0: 5, x1: 5 }, 5), LM.graphMap('linear', null, 0), 'graphmap: a zero-width x range');
+
+  /* the clock, at a known instant: 2023-11-14 22:13:20 UTC, a Tuesday */
+  const zone = z => { const c = mkCtx(); c.now = 1700000000000; return NODE_DEFS['input/clock'].compute({ Z: z }, c, { values: {} }); };
+  const utc = zone('UTC');
+  if (utc.T !== '22:13:20' || utc.Y !== 2023 || utc.O !== 11 || utc.D !== 14 || utc.W !== 2) failures.push('clock: UTC parts wrong: ' + JSON.stringify(utc));
+  near(utc.F, (22 * 3600 + 13 * 60 + 20) / 86400, 'clock: F is the fraction of the day');
+  if (zone('+5:30').T !== '03:43:20' || zone('+5:30').D !== 15) failures.push('clock: +5:30 must cross midnight: ' + JSON.stringify(zone('+5:30')));
+  if (zone('-8').T !== '14:13:20') failures.push('clock: -8 got ' + zone('-8').T);
+  if (zone('UTC+2').T !== '00:13:20' || zone('UTC+2').W !== 3) failures.push('clock: UTC+2 got ' + JSON.stringify(zone('UTC+2')));
+  if (zone('America/New_York').T !== '17:13:20') failures.push('clock: New York got ' + zone('America/New_York').T);
+  const tokyo = zone('Asia/Tokyo');
+  if (tokyo.T !== '07:13:20' || tokyo.W !== 3 || tokyo.D !== 15) failures.push('clock: Tokyo got ' + JSON.stringify(tokyo));
+  if (typeof zone('').H !== 'number') failures.push('clock: an empty zone is this device');
+  const midnight = LM.clockParts(Date.UTC(2024, 0, 1), 'Etc/UTC', {});
+  if (midnight.h !== 0) failures.push('clock: an IANA zone at midnight must read hour 0, got ' + midnight.h);
+  /* a bad zone is a visible node error, and a list of zones is a list of times */
+  const cz = mkCtx(); cz.now = 1700000000000;
+  LM.evaluateGraph({ nodes: [{ id: 'k', type: 'input/clock', values: { Z: 'Not/AZone' } }], wires: [] }, NODE_DEFS, cz);
+  if (!cz.errors.k) failures.push('clock: an unknown zone must mark the node');
+  const cl = mkCtx(); cl.now = 1700000000000;
+  LM.evaluateGraph({ nodes: [{ id: 't', type: 'params/textlist', values: { text: 'UTC\\nAsia/Tokyo' } }, { id: 'k', type: 'input/clock', values: {} }], wires: [{ from: ['t', 'L'], to: ['k', 'Z'] }] }, NODE_DEFS, cl);
+  if (JSON.stringify(cl.out.k.T) !== '["22:13:20","07:13:20"]') failures.push('clock: a zone list must map per item, got ' + JSON.stringify(cl.out.k.T));
+  /* inside a cluster the time still arrives */
+  const cc = mkCtx(); cc.now = 1700000000000;
+  LM.evaluateGraph({ nodes: [{ id: 'c', type: 'meta/cluster', values: { title: 'x', ins: [], outs: [{ name: 'T', type: 'string' }], graph: {
+    nodes: [{ id: 'k', type: 'input/clock', values: { Z: 'UTC' } }, { id: 'o', type: 'meta/portout', values: { port: 'T' } }],
+    wires: [{ from: ['k', 'T'], to: ['o', 'V'] }] } } }], wires: [] }, NODE_DEFS, cc);
+  if ((cc.out.c.T || [])[0] !== '22:13:20') failures.push('clock: clusters must forward ctx.now, got ' + JSON.stringify(cc.out.c.T));
+  /* exports carry the wall clock and the helpers its compute reaches for */
+  const clockJS = WeftExport.buildJS({ nodes: [{ id: 'k', type: 'input/clock', values: {} }, { id: 'x', type: 'disp/text', values: {} }, { id: 'd', type: 'disp/draw', values: {} }],
+    wires: [{ from: ['k', 'T'], to: ['x', 'T'] }, { from: ['x', 'G'], to: ['d', 'G'] }] });
+  if (clockJS.indexOf('now: Date.now()') < 0) failures.push('export: ctx.now missing');
+  if (clockJS.indexOf('clockParts:') < 0) failures.push('export: LM.clockParts not bundled');
+  const gmJS = WeftExport.buildJS({ nodes: [{ id: 'g', type: 'math/graphmap', values: { kind: 'bezier' } }, { id: 'c', type: 'crv/circle', values: {} }, { id: 'd', type: 'disp/draw', values: {} }],
+    wires: [{ from: ['g', 'R'], to: ['c', 'R'] }, { from: ['c', 'C'], to: ['d', 'G'] }] });
+  for (const k of ['graphMap:', 'graphGrips:', 'graphSolve:']) if (gmJS.indexOf(k) < 0) failures.push('export: LM.' + k + ' not bundled');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length, motifCount: EXAMPLE_MOTIFS.length, groupMotifs: GROUP_MOTIFS };
