@@ -259,9 +259,11 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   as its own task), the spec split with smoke 27 checking every node still
   lands in exactly one slice, and turn logging (Supabase, consent line on
   the setup form) so classes and failures are counted on real asks, not
-  guesses. Still open: streaming replies (the cure for gateway 504s on
-  long thinks), model-authored node *types* (packs), and dataset capture
-  for fine-tuning once the log has volume.
+  guesses. Still open: model-authored node *types* (packs), and dataset
+  capture for fine-tuning once the log has volume. Long replies on the
+  Claude workflow now run as jobs the panel polls (docs/ASSISTANT.md), which
+  gets them past the gateway limit of ~100s; the HF workflow still answers
+  on the open connection.
 
 ## 3. Digital Pattern Language
 

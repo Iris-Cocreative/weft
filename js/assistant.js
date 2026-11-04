@@ -18,15 +18,17 @@ const Assistant = {
   turns: [], // {role:'user'|'assistant', text} — session memory, sent as history
   busy: false,
 
-  // the public workflow (tools/n8n-weave-assistant-hf.json on IRIS's n8n).
+  // the public workflow (tools/n8n-weave-assistant.json on IRIS's n8n).
   // Baked in so testers only need the shared key; the ⚙ form still lets
   // anyone point at their own webhook.
-  DEFAULT_URL: 'https://cocreative.app.n8n.cloud/webhook/weft-assistant-hf',
+  DEFAULT_URL: 'https://cocreative.app.n8n.cloud/webhook/weft-assistant-claude',
+  // the form saves the address it was showing, so browsers still hold this retired one
+  RETIRED_URL: 'https://cocreative.app.n8n.cloud/webhook/weft-assistant-hf',
 
   cfg() {
     let c = {};
     try { c = JSON.parse(localStorage.getItem('weft:assistant')) || {}; } catch (e) {}
-    if (!c.url) c.url = Assistant.DEFAULT_URL;
+    if (!c.url || c.url === Assistant.RETIRED_URL) c.url = Assistant.DEFAULT_URL;
     return c;
   },
 
@@ -65,6 +67,135 @@ const Assistant = {
     } catch (e) { return null; }
   },
 
+  /* a fetch that reads JSON and says what went wrong in words. When a connection
+     dies the browser only offers "Load failed" (Safari) or "Failed to fetch". */
+  async call(url, opts) {
+    let res, data;
+    try {
+      res = await fetch(url, opts);
+      if (res.ok) data = await res.json();
+    } catch (e) {
+      if (e.name === 'AbortError' || e.name === 'TimeoutError' || !(e instanceof TypeError)) throw e;
+      throw new Error('could not reach the assistant — the connection dropped or the address is not answering (browser says: ' + (e.message || e) + '). check your connection and try again.');
+    }
+    if (!res.ok) throw new Error('webhook answered ' + res.status + (res.status === 401 ? ' — check the shared key' : ''));
+    return data;
+  },
+
+  /* a long reply can't wait on one open connection: the gateway in front of n8n
+     hangs up on a silent response at about 100s. So the workflow answers at once
+     with { job, poll } and the model runs on; this collects the reply when it's
+     ready. Starts slow and settles at one check every 10s, since each check is
+     an n8n execution. Dropped checks are shrugged off for a few minutes: the job
+     keeps running whether or not we can see it. */
+  JOB_LIMIT: 900000, // the workflow's own worst case (two 7 min model calls) plus a margin
+  JOB_MISSES: 20,
+
+  async pollJob(rec) {
+    const url = rec.poll + (rec.poll.indexOf('?') < 0 ? '?' : '&') + 'job=' + encodeURIComponent(rec.job);
+    let wait = 8000, misses = 0;
+    /* the deadline is checked after a poll, never instead of one: a laptop that
+       slept through the limit wakes up here, and the reply may well be ready */
+    for (;;) {
+      await new Promise(r => setTimeout(r, wait));
+      wait = Math.min(10000, wait + 1000);
+      let d = null;
+      try {
+        d = await Assistant.call(url, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+        misses = 0;
+      } catch (e) {
+        if (++misses >= Assistant.JOB_MISSES) throw e;
+      }
+      if (d && d.status === 'done') return d;
+      if (d && d.status !== 'running') throw new Error('the assistant lost track of this reply (job ' + d.status + ') — please send it again.');
+      if (Date.now() - rec.at >= Assistant.JOB_LIMIT) throw new Error('no reply after ' + Math.round(Assistant.JOB_LIMIT / 60000) + ' min — the workflow may have stopped. check its runs in n8n, or send it again.');
+      Assistant.paintWait(Date.now() - rec.at, misses);
+    }
+  },
+
+  /* a quiet word under the shuttle, so a long wait doesn't read as a hang */
+  paintWait(ms, misses) {
+    const b = Assistant.el.querySelector('.as-msg.shuttle');
+    if (!b || (ms < 30000 && !misses)) return;
+    let w = b.querySelector('.as-wait');
+    if (!w) { w = document.createElement('span'); w.className = 'as-wait'; b.appendChild(w); }
+    const m = Math.floor(ms / 60000), sec = Math.floor(ms / 1000) % 60;
+    w.textContent = (misses ? 'connection dropped, still trying' : 'still weaving — big asks can take a few minutes') + ' · ' + m + ':' + String(sec).padStart(2, '0');
+  },
+
+  /* the job in hand, per tab: it survives a reload, and a second tab doesn't
+     pick up (and apply) the same reply */
+  saveJob(rec) {
+    try {
+      if (rec) sessionStorage.setItem('weft:assistant-job', JSON.stringify(rec));
+      else sessionStorage.removeItem('weft:assistant-job');
+    } catch (e) {}
+  },
+
+  async resume() {
+    let rec = null;
+    try { rec = JSON.parse(sessionStorage.getItem('weft:assistant-job')); } catch (e) {}
+    if (!rec || !rec.job || !rec.poll) return;
+    Assistant.toggle(true);
+    Assistant.bubble('user', rec.message);
+    Assistant.turns.push({ role: 'user', text: rec.message });
+    Assistant.bubble('note', 'picking up the reply you were waiting for');
+    Assistant.busy = true;
+    Assistant.paintBusy();
+    try {
+      Assistant.land(await Assistant.pollJob(rec), rec.sent);
+    } catch (e) {
+      Assistant.fail(e, rec.message);
+    } finally {
+      Assistant.saveJob(null);
+      Assistant.busy = false;
+      Assistant.paintBusy();
+    }
+  },
+
+  /* a reply arrived: say it, then weave it, unless the loom it was written for
+     has gone (another file opened, its nodes deleted) */
+  land(data, sent) {
+    if (data.error) throw new Error(String(data.reply || data.error).replace(/^\(|\)$/g, ''));
+    let reply = String(data.reply || data.text || '').trim();
+    let ops = Array.isArray(data.ops) ? data.ops : null;
+    // belt-and-braces: an ops fence inside the reply text also counts
+    if (!ops) { const p = WeftOps.parseReply(reply); reply = p.reply; ops = p.ops; }
+    Assistant.turns.push({ role: 'assistant', text: reply });
+    Assistant.bubble('assistant', reply || '(no text in the reply)');
+    if (!ops || !ops.length) return;
+    const have = new Set(App.graph.nodes.map(n => n.id));
+    const moved = sent && (sent.length ? sent.some(id => !have.has(id)) : have.size > 0);
+    if (!moved) { Assistant.weave(ops, data.model); return; }
+    const b = Assistant.bubble('note', 'the loom changed while this was weaving, so nothing was applied. ');
+    const btn = document.createElement('button');
+    btn.className = 'as-apply';
+    btn.textContent = 'apply to this loom anyway';
+    btn.addEventListener('click', () => { btn.remove(); Assistant.weave(ops, data.model); });
+    b.appendChild(btn);
+  },
+
+  weave(ops, model) {
+    const r = Assistant.applyOps(ops);
+    if (r.errors.length) {
+      Assistant.bubble('note error', 'the suggested changes did not apply:\n' + r.errors.join('\n'));
+      Assistant.turns.push({ role: 'user', text: '[system] your ops were rejected: ' + r.errors.join('; ') + ' — nothing was applied, please correct and resend.' });
+    } else {
+      Assistant.bubble('note', '✦ woven: ' + r.summary + (model ? ' · ' + model : '') + ' — Ctrl+Z undoes');
+      App.flash('assistant wove ' + r.summary + ' — Ctrl+Z undoes');
+    }
+  },
+
+  /* no reply: say why, take the unanswered turn back out of the history, and
+     put your words back in the box so sending again is one key */
+  fail(e, message) {
+    Assistant.bubble('note error', e.name === 'AbortError' ? 'the webhook took too long (3 min) — is the workflow active?' : e.name === 'TimeoutError' ? 'the assistant stopped answering — please send it again.' : String(e.message || e));
+    const last = Assistant.turns[Assistant.turns.length - 1];
+    if (last && last.role === 'user' && last.text === message) Assistant.turns.pop();
+    const input = Assistant.el.querySelector('.as-in');
+    if (!input.value.trim()) { input.value = message; input.dispatchEvent(new Event('input')); }
+  },
+
   async send(message) {
     const cfg = Assistant.cfg();
     if (!cfg.key) { Assistant.showSetup(true); return; }
@@ -82,40 +213,32 @@ const Assistant = {
       errors,
       tester: cfg.name || '',
       history: Assistant.turns.slice(-13, -1), // the turns before this one
-      snapshot: Assistant.el.querySelector('.as-snap input').checked ? Assistant.snapshot() : null
+      snapshot: Assistant.el.querySelector('.as-snap input').checked ? Assistant.snapshot() : null,
+      async: true // a workflow that can run this as a job answers at once; one that can't ignores it
     };
+    const sent = payload.graph.nodes.map(n => n.id);
 
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), 180000);
     try {
-      const res = await fetch(cfg.url, {
+      let data = await Assistant.call(cfg.url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-weft-key': cfg.key || '' },
         body: JSON.stringify(payload),
         signal: ctl.signal
       });
-      if (!res.ok) throw new Error('webhook answered ' + res.status + (res.status === 401 ? ' — check the shared key' : ''));
-      const data = await res.json();
-      let reply = String(data.reply || data.text || '').trim();
-      let ops = Array.isArray(data.ops) ? data.ops : null;
-      // belt-and-braces: an ops fence inside the reply text also counts
-      if (!ops) { const p = WeftOps.parseReply(reply); reply = p.reply; ops = p.ops; }
-      Assistant.turns.push({ role: 'assistant', text: reply });
-      Assistant.bubble('assistant', reply || '(no text in the reply)');
-      if (ops && ops.length) {
-        const r = Assistant.applyOps(ops);
-        if (r.errors.length) {
-          Assistant.bubble('note error', 'the suggested changes did not apply:\n' + r.errors.join('\n'));
-          Assistant.turns.push({ role: 'user', text: '[system] your ops were rejected: ' + r.errors.join('; ') + ' — nothing was applied, please correct and resend.' });
-        } else {
-          Assistant.bubble('note', '✦ woven: ' + r.summary + (data.model ? ' · ' + data.model : '') + ' — Ctrl+Z undoes');
-          App.flash('assistant wove ' + r.summary + ' — Ctrl+Z undoes');
-        }
+      clearTimeout(timer);
+      if (data.job && data.poll) {
+        const rec = { job: data.job, poll: data.poll, at: Date.now(), sent, message };
+        Assistant.saveJob(rec);
+        data = await Assistant.pollJob(rec);
       }
+      Assistant.land(data, sent);
     } catch (e) {
-      Assistant.bubble('note error', e.name === 'AbortError' ? 'the webhook took too long (3 min) — is the workflow active?' : String(e.message || e));
+      Assistant.fail(e, message);
     } finally {
       clearTimeout(timer);
+      Assistant.saveJob(null);
       Assistant.busy = false;
       Assistant.paintBusy();
     }
@@ -135,6 +258,7 @@ const Assistant = {
     else b.textContent = text;
     msgs.appendChild(b);
     msgs.scrollTop = msgs.scrollHeight;
+    return b;
   },
 
   /* a small Markdown reader for replies — the subset models actually write:
@@ -391,6 +515,7 @@ const Assistant = {
 
     const btn = document.getElementById('btnAssist');
     if (btn) btn.addEventListener('click', () => Assistant.toggle());
+    window.addEventListener('DOMContentLoaded', () => Assistant.resume()); // after App.init has put the loom back
   }
 };
 
