@@ -121,7 +121,7 @@ Format: `in-ports → out-ports`, `name:type=default`. Ports named under
 | `params/point` | Point | P:point | P:point | |
 | `params/vector` | Vector | V:vector | V:vector | |
 | `params/anchor` | Anchor Point | | P:point | values: x y — draggable on the canvas |
-| `params/knob` | Control Knob | | N:number | values: min max value mode:"int"? label — a rotary slider |
+| `params/knob` | Control Knob | | N:number | values: value turn mode:"int"? label — an endless dial with no min or max, negatives included; turn is what one full revolution is worth (default 10). Use a slider when the value must stay in a range |
 | `params/vecdial` | Vector Dial | | V:vector | values: deg len radius label — drag a point within a circle; the line from the center is the vector. len is capped at radius; deg is 0 = east, clockwise (y-down) |
 | `params/xyslider` | XY Slider | | P:point | values: x y x0 x1 y0 y1 label prec — a 2D slider, Grasshopper's MD Slider. Defaults ±100; y0 sits at the top of the square, so down is +y |
 | `params/xyzslider` | XYZ Slider | | P:point3 | values: x y z x0 x1 y0 y1 z0 z1 label prec — a 3D slider: a box with a draggable slice. Defaults ±100; z0 is the front of the box |
@@ -159,7 +159,7 @@ and/or/xor/not/nand/nor/xnor). Unary bool: `math/not` (B → R:bool).
 | node | in | out | |
 |---|---|---|---|
 | `math/remap` | V S0=0 S1=1 T0=0 T1=100 C:bool=true | R | map V from [S0,S1] to [T0,T1], C clamps |
-| `math/graphmap` | V=0.5 | R | Graph Mapper: bend V through a curve — values: kind x0 x1 y0 y1 pts. kind: `none` (V passes through) · `bezier` · `bounce` · `conic` · `elastic` · `gaussian` · `linear` · `parabola` · `perlin` · `power` · `sinc` · `sine` · `sinesum` · `spline` · `sqrt` · `steps` · `triangle`. V is held to [x0,x1], R stays in [y0,y1]. Leave pts out for the type's default shape; to set it, `pts: {spline: [[u,v],…]}` holds grips per kind in the unit square, v up |
+| `math/graphmap` | V=0.5 X0 X1 Y0 Y1 | R | Graph Mapper: bend V through a curve — values: kind x0 x1 y0 y1 pts. X0 X1 Y0 Y1 are optional wire-only ranges; a wired one wins over the matching value. kind: `none` (V passes through) · `bezier` · `bounce` · `conic` · `elastic` · `gaussian` · `linear` · `parabola` · `perlin` · `power` · `sinc` · `sine` · `sinesum` · `spline` · `sqrt` · `steps` · `triangle`. V is held to the x range, R stays in the y range. Leave pts out for the type's default shape; to set it, `pts: {spline: [[u,v],…]}` holds grips per kind in the unit square, v up |
 | `math/clamp` | V A=0 B=1 | R | |
 | `math/lerp` | A B T=0.5 | R | |
 | `math/smooth` | A B T | R | eased lerp |

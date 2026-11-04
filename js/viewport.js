@@ -57,7 +57,7 @@ const Viewport = {
     let scrollShow = 0, scrollLastY = 0;
     canvas.addEventListener('wheel', e => {
       e.preventDefault();
-      if (e.ctrlKey) { Viewport.camZoomAt(e.clientX, e.clientY, e.deltaY); return; }
+      if (e.ctrlKey) { Viewport.camZoomAt(e.clientX, e.clientY, Viewport.zoomDelta(e)); return; }
       scroll.y = LM.clamp(scroll.y + e.deltaY, 0, scroll.max);
       scrollShow = performance.now();
     }, { passive: false });
@@ -90,6 +90,26 @@ const Viewport = {
       cam.z = z2;
       paintCam();
     };
+    /* A trackpad pinch arrives as a ctrl+wheel with deltas of a few px, sized so that
+     * e^(-delta/100) is the true scale, where a mouse notch is 100 or more. Scaling
+     * those up makes the zoom follow the fingers on the loom and the cloth alike. */
+    Viewport.zoomDelta = e => (e.ctrlKey && e.deltaMode === 0 && Math.abs(e.deltaY) < 50) ? e.deltaY / 0.12 : e.deltaY;
+    /* Safari's pinch, the gesture-event form of the same thing (see Editor's listener) */
+    let gestureZ = 1;
+    Viewport.camGesture = (e, phase) => {
+      if (phase === 'start') { gestureZ = cam.z; return true; }
+      if (tch.size) return false; // a touchscreen pinch already runs through pointer events
+      const r = canvas.getBoundingClientRect();
+      const sx = e.clientX - r.left - r.width / 2, sy = e.clientY - r.top - r.height / 2;
+      const z2 = LM.clamp(gestureZ * e.scale, 0.1, 12);
+      cam.x = sx - (sx - cam.x) * (z2 / cam.z);
+      cam.y = sy - (sy - cam.y) * (z2 / cam.z);
+      cam.z = z2;
+      paintCam();
+      return true;
+    };
+    canvas.addEventListener('gesturestart', e => Viewport.camGesture(e, 'start'));
+    canvas.addEventListener('gesturechange', e => Viewport.camGesture(e, 'change'));
     Viewport.camPan = (dx, dy) => { cam.x += dx; cam.y += dy; paintCam(); };
     if (camBtn) camBtn.addEventListener('click', () => Viewport.camReset());
     let camDrag = null;

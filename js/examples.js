@@ -22774,7 +22774,7 @@ const EXAMPLES = {
    * Knob counts, and the Graph Mapper bends t into the falloff — change its type
    * and the same trail takes a different shape. */
   'Comet trail': _EX([
-    ['kn', 'params/knob', 30, 40, { label: 'copies', min: 2, max: 40, value: 24, mode: 'int' }],
+    ['kn', 'params/knob', 30, 40, { label: 'copies', turn: 40, value: 24, mode: 'int' }],
     ['xy', 'params/xyslider', 30, 190, { x0: -300, x1: 300, y0: -200, y1: 200, x: -120, y: 60, label: 'head', prec: 0 }],
     ['vd', 'params/vecdial', 30, 430, { deg: 335, len: 300, radius: 400, label: 'tail' }],
     ['rg', 'sets/range', 280, 40, { A: 0, B: 1 }],
@@ -22782,9 +22782,9 @@ const EXAMPLES = {
     ['ci', 'crv/circle', 280, 240, { R: 70 }],
     ['sc', 'xf/scale', 760, 240],
     ['dc', 'vec/deconstruct', 280, 430],
-    ['mx', 'math/mul', 500, 400],
-    ['my', 'math/mul', 500, 520],
-    ['vv', 'vec/vecxy', 760, 440],
+    ['mx', 'math/mul', 500, 500],
+    ['my', 'math/mul', 500, 620],
+    ['vv', 'vec/vecxy', 760, 540],
     ['mv', 'xf/move', 980, 240],
     ['hu', 'disp/gradient', 980, 40, { A: { r: 45, g: 212, b: 191, a: 1 }, B: { r: 240, g: 9, b: 252, a: 0.25 } }],
     ['dr', 'disp/draw', 1200, 240, { W: 1.5 }]

@@ -537,6 +537,21 @@ defNode('params/slider', {
   }
 });
 
+/* the handle on a control whose face is all drag surface (Control Knob, Angle, the
+ * pads): a strip you can always see and always grab. It has no handler of its own;
+ * a press here just reaches the editor, which drags the card. Shows the control's
+ * label, or failing that what it is — in the params sheet, only a real label. */
+function _ctlHead(parent, fallback) {
+  const head = _mk('div', 'ctl-head', parent);
+  head.title = 'drag to move';
+  _mk('span', 'ctl-grip', head);
+  const name = _mk('span', 'sl-label ctl-name', head);
+  return label => {
+    name.textContent = label || fallback;
+    head.classList.toggle('unnamed', !label);
+  };
+}
+
 /* shared dial geometry for Knob / Angle — screen convention: 0° = east,
  * degrees increase clockwise (matches atan2 in y-down and Rotate's direction) */
 function _dialSVG(size, r) {
@@ -564,15 +579,22 @@ function _dialSVG(size, r) {
   return { svg, c, r, pt, arc, el };
 }
 
+/* what one full turn of a knob is worth. Knobs saved before the endless dial have
+ * a min and max instead, and their span reads as one turn. */
+function _knobTurn(v) {
+  if (typeof v.turn === 'number' && v.turn > 0) return v.turn;
+  const span = Math.abs((v.max === undefined ? 10 : v.max) - (v.min === undefined ? 0 : v.min));
+  return span || 10;
+}
+
 defNode('params/knob', {
   title: 'Control Knob', cat: 'Params', bare: true, width: 108,
-  desc: 'Rotary number — drag around the dial, shift snaps to integers; integer knobs with up to 24 steps tick each one; double-click for label, range and rounding',
+  desc: 'An endless dial — keep turning past the top to keep counting up, or back past the start into the negatives. There is no max; its range sets what one full turn is worth, and the number at the center counts whole turns. Shift snaps to integers; double-click for label, range and rounding',
   inputs: [], outputs: [{ name: 'N', type: 'number' }],
-  defaults: { min: 0, max: 10, value: 5 },
+  defaults: { turn: 10, value: 0 },
   compute: (a, c, node) => ({ N: node.values.value === undefined ? 0 : node.values.value }),
   buildBody: (node, body, changed) => {
-    const v = node.values;
-    const A0 = 135, SWEEP = 270; // classic knob: 270° sweep, gap at the bottom
+    const v = node.values, TOP = -90; // 0 sits at twelve o'clock, clockwise counts up
     const quant = x => {
       const m = v.mode || 'float';
       if (m === 'int') return Math.round(x);
@@ -582,118 +604,105 @@ defNode('params/knob', {
       return Math.round(x * p) / p;
     };
     const kn = _mk('div', 'kn', body);
-    const lab = _mk('div', 'sl-label kn-label', kn);
+    const paintLabel = _ctlHead(kn, 'knob');
     const d = _dialSVG(64, 24);
     kn.appendChild(d.svg);
     const notches = d.el('path', 'dial-tick');
-    /* one notch per real step on an integer knob of up to 24, otherwise tenths of the sweep */
+    /* one notch per real step when an integer knob has up to 24 to a turn, otherwise tenths */
     const paintNotches = () => {
       const m = v.mode || 'float', step = m === 'int' ? 1 : (m === 'odd' || m === 'even') ? 2 : 0;
-      const steps = step ? Math.round(Math.abs(v.max - v.min) / step) : 0;
+      const steps = step ? Math.round(_knobTurn(v) / step) : 0;
       const n = steps >= 1 && steps <= 24 ? steps : 10;
       let path = '';
-      for (let i = 0; i <= n; i++) {
-        const a = A0 + SWEEP * i / n, p0 = d.pt(a, d.r + 3), p1 = d.pt(a, d.r + 6);
+      for (let i = 0; i < n; i++) {
+        const a = TOP + 360 * i / n, p0 = d.pt(a, d.r + 3), p1 = d.pt(a, d.r + 6);
         path += 'M' + p0[0].toFixed(2) + ' ' + p0[1].toFixed(2) + 'L' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2);
       }
       notches.setAttribute('d', path);
     };
-    const trk = d.el('path', 'dial-track');
-    trk.setAttribute('d', d.arc(A0, A0 + SWEEP, d.r));
+    const trk = d.el('circle', 'dial-track');
+    trk.setAttribute('cx', d.c); trk.setAttribute('cy', d.c); trk.setAttribute('r', d.r);
     const fil = d.el('path', 'dial-fill');
     const ind = d.el('circle', 'dial-ind');
     ind.setAttribute('r', 3);
-    const num = _numInput('sl-val kn-val', v.value, kn);
-    const paintLabel = () => { lab.textContent = v.label || ''; };
+    const turns = d.el('text', 'dial-turns');
+    turns.setAttribute('x', d.c); turns.setAttribute('y', d.c);
+    const num = _numInput('sl-val kn-val', v.value === undefined ? 0 : v.value, kn);
     const paint = () => {
-      const span = (v.max - v.min) || 1;
-      const t = LM.clamp((v.value - v.min) / span, 0, 1);
-      const a = A0 + t * SWEEP;
-      fil.setAttribute('d', d.arc(A0, Math.max(A0 + 0.01, a), d.r));
+      const frac = (v.value || 0) / _knobTurn(v), whole = Math.trunc(frac), part = frac - whole;
+      const a = TOP + frac * 360;
+      /* the arc is the current turn, from the top the way the dial has gone; what it
+       * cannot show, whole turns, is the number in the middle */
+      if (Math.abs(part) < 1e-6) fil.removeAttribute('d');
+      else fil.setAttribute('d', part > 0 ? d.arc(TOP, TOP + part * 360, d.r) : d.arc(TOP + part * 360, TOP, d.r));
       const p = d.pt(a, d.r - 7);
       ind.setAttribute('cx', p[0]); ind.setAttribute('cy', p[1]);
+      turns.textContent = whole ? (whole > 0 ? '+' : '') + whole : '';
       paintNotches();
     };
-    paintLabel(); paint();
+    paintLabel(v.label); paint();
     const setVal = x => {
       if (!isFinite(x)) x = 0;
       v.value = x; num.value = x;
       paint(); changed();
     };
-    d.svg.addEventListener('pointerdown', e => {
-      e.stopPropagation();
-      e.preventDefault();
-      try { d.svg.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ }
-      const apply = ev => {
-        const r = d.svg.getBoundingClientRect();
-        const dx = ev.clientX - (r.left + r.width / 2), dy = ev.clientY - (r.top + r.height / 2);
-        let rel = ((Math.atan2(dy, dx) * 180 / Math.PI) - A0 + 360) % 360;
-        if (rel > SWEEP) rel = rel < SWEEP + 45 ? SWEEP : 0; // the bottom gap snaps to the nearer end
-        const raw = v.min + (rel / SWEEP) * (v.max - v.min);
+    /* relative, not absolute: grab the dial anywhere and it turns from where it is.
+     * The unrounded value is kept through the gesture so a slow turn on a coarse
+     * step still builds up to the next one. */
+    _svgDrag(d.svg, e0 => {
+      const at = ev => _svgAt(d.svg, 64, ev);
+      const ang = p => Math.atan2(p.y - d.c, p.x - d.c) * 180 / Math.PI;
+      let prev = ang(at(e0)), raw = v.value || 0;
+      return ev => {
+        if (ev === e0) return;
+        const p = at(ev);
+        if (Math.hypot(p.x - d.c, p.y - d.c) < 3) return; // the angle means nothing at the hub
+        const a = ang(p);
+        raw += ((((a - prev) % 360) + 540) % 360 - 180) / 360 * _knobTurn(v);
+        prev = a;
         setVal(_weftShift || ev.shiftKey ? Math.round(raw) : quant(raw));
       };
-      apply(e);
-      const mv = ev => apply(ev);
-      const up = () => {
-        d.svg.removeEventListener('pointermove', mv);
-        d.svg.removeEventListener('pointerup', up);
-        d.svg.removeEventListener('pointercancel', up);
-      };
-      d.svg.addEventListener('pointermove', mv);
-      d.svg.addEventListener('pointerup', up);
-      d.svg.addEventListener('pointercancel', up);
     });
     num.addEventListener('change', () => setVal(quant(parseFloat(num.value) || 0)));
-    /* double-click → label, range, rounding (the knob has no min/max end marks) */
+    /* double-click → label, range, rounding */
     kn.addEventListener('dblclick', e => {
       if (e.target.tagName === 'INPUT') return;
       e.stopPropagation();
-      const nodeEl = body.closest('.node');
-      const old = body.querySelector('.sl-opts');
-      if (old) { old.remove(); if (nodeEl) nodeEl.style.zIndex = ''; return; }
-      const op = _mk('div', 'sl-opts', body);
-      if (nodeEl) nodeEl.style.zIndex = 25;
-      op.addEventListener('pointerdown', ev => ev.stopPropagation());
-      op.addEventListener('dblclick', ev => ev.stopPropagation());
-      const row = (cap, val, fn) => {
-        const r = _mk('div', 'sl-opt-row', op);
-        _mk('span', 'sl-opt-cap', r).textContent = cap;
-        const i = cap === 'label' ? _mk('input', '', r) : _numInput('', val, r);
-        if (cap === 'label') { i.type = 'text'; i.value = val; i.spellcheck = false; i.placeholder = 'none'; }
-        i.addEventListener('change', () => fn(i));
-        return i;
-      };
-      row('label', v.label || '', i => { v.label = i.value.trim(); paintLabel(); changed(); });
-      row('min', v.min, i => { v.min = parseFloat(i.value) || 0; setVal(quant(v.value)); });
-      row('max', v.max, i => { v.max = parseFloat(i.value) || 0; setVal(quant(v.value)); });
-      const seg = _mk('div', 'seg', op);
-      const prow = _mk('div', 'sl-opt-row', op);
-      _mk('span', 'sl-opt-cap', prow).textContent = 'decimals';
-      const pi = _numInput('', v.prec === undefined ? 3 : v.prec, prow);
-      pi.addEventListener('change', () => {
-        v.prec = LM.clamp(Math.round(parseFloat(pi.value) || 0), 0, 6);
-        pi.value = v.prec;
-        setVal(quant(v.value));
-      });
-      const paintPrec = () => { prow.style.display = (v.mode || 'float') === 'float' ? '' : 'none'; };
-      [['decimal', 'float'], ['integer', 'int'], ['odd', 'odd'], ['even', 'even']].forEach(m => {
-        const b = _mk('div', 'seg-b' + ((v.mode || 'float') === m[1] ? ' on' : ''), seg);
-        b.textContent = m[0];
-        _cleanClick(b, () => {
-          v.mode = m[1];
-          seg.querySelectorAll('.seg-b').forEach(x => x.classList.remove('on'));
-          b.classList.add('on');
-          paintPrec(); setVal(quant(v.value));
+      _floatOpts(body, null, op => {
+        op.classList.add('kn-opts'); // wider than the dial, or the rounding toggle spills out
+        const lr = _optRow(op, 'label');
+        const li = _mk('input', '', lr);
+        li.type = 'text'; li.value = v.label || ''; li.spellcheck = false; li.placeholder = 'none';
+        li.addEventListener('change', () => { v.label = li.value.trim(); paintLabel(v.label); changed(); });
+        const tr = _optRow(op, 'per turn');
+        tr.title = 'range: what one full turn is worth';
+        const ti = _numInput('', _knobTurn(v), tr);
+        ti.addEventListener('change', () => {
+          const t = Math.abs(parseFloat(ti.value));
+          if (t > 0) { v.turn = t; paint(); changed(); }
+          ti.value = _knobTurn(v);
         });
+        const seg = _mk('div', 'seg', op);
+        const prow = _optRow(op, 'decimals');
+        const pi = _numInput('', v.prec === undefined ? 3 : v.prec, prow);
+        pi.addEventListener('change', () => {
+          v.prec = LM.clamp(Math.round(parseFloat(pi.value) || 0), 0, 6);
+          pi.value = v.prec;
+          setVal(quant(v.value || 0));
+        });
+        const paintPrec = () => { prow.style.display = (v.mode || 'float') === 'float' ? '' : 'none'; };
+        [['decimal', 'float'], ['integer', 'int'], ['odd', 'odd'], ['even', 'even']].forEach(m => {
+          const b = _mk('div', 'seg-b' + ((v.mode || 'float') === m[1] ? ' on' : ''), seg);
+          b.textContent = m[0];
+          _cleanClick(b, () => {
+            v.mode = m[1];
+            seg.querySelectorAll('.seg-b').forEach(x => x.classList.remove('on'));
+            b.classList.add('on');
+            paintPrec(); setVal(quant(v.value || 0));
+          });
+        });
+        paintPrec();
       });
-      paintPrec();
-      const closer = ev => {
-        if (op.contains(ev.target)) return;
-        op.remove();
-        if (nodeEl) nodeEl.style.zIndex = '';
-        window.removeEventListener('pointerdown', closer, true);
-      };
-      window.addEventListener('pointerdown', closer, true);
     });
   }
 });
@@ -707,6 +716,7 @@ defNode('params/angle', {
   buildBody: (node, body, changed) => {
     const v = node.values;
     const an = _mk('div', 'kn', body);
+    _ctlHead(an, 'angle')(v.label);
     const d = _dialSVG(64, 24);
     an.appendChild(d.svg);
     const ring = d.el('circle', 'dial-track');
@@ -837,6 +847,7 @@ function _optRange(op, cap, lo, hi, fn) {
   const commit = () => fn(parseFloat(a.value) || 0, parseFloat(b.value) || 0);
   a.addEventListener('change', commit);
   b.addEventListener('change', commit);
+  return [a, b];
 }
 /* double-click a pad for its options. The two presses of a double-click have
  * already moved the point, so opening the sheet puts it back where it was. */
@@ -901,7 +912,7 @@ defNode('params/vecdial', {
   buildBody: (node, body, changed) => {
     const v = _padFill(node), SIZE = 116;
     const pad = _mk('div', 'pad pad-vec', body);
-    const lab = _mk('div', 'sl-label pad-label', pad);
+    const paintLabel = _ctlHead(pad, 'vector dial');
     const d = _dialSVG(SIZE, 52);
     d.svg.setAttribute('class', 'pad-svg');
     d.svg.style.width = d.svg.style.height = SIZE + 'px';
@@ -929,13 +940,13 @@ defNode('params/vecdial', {
       const p = d.pt(v.deg || 0, L / R() * d.r);
       line.setAttribute('x2', p[0]); line.setAttribute('y2', p[1]);
       dot.setAttribute('cx', p[0]); dot.setAttribute('cy', p[1]);
-      lab.textContent = v.label || '';
+      paintLabel(v.label);
       fLen.show(Math.round(L * 1000) / 1000);
       fDeg.show(Math.round((v.deg || 0) * 10) / 10);
       fRad.show(R());
     };
     paint();
-    _svgDrag(d.svg, () => ev => {
+    _svgDrag(d.svg, e0 => e0.target === d.svg ? null : ev => { // the corners outside the circle drag the card
       const at = _svgAt(d.svg, SIZE, ev), dx = at.x - d.c, dy = at.y - d.c;
       const snap = _weftShift || ev.shiftKey;
       let deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
@@ -958,7 +969,7 @@ defNode('params/xyslider', {
   buildBody: (node, body, changed) => {
     const v = _padFill(node), S = 136;
     const pad = _mk('div', 'pad pad-xy', body);
-    const lab = _mk('div', 'sl-label pad-label', pad);
+    const paintLabel = _ctlHead(pad, 'xy slider');
     const svg = _svgEl(pad, 'svg', 'pad-svg');
     svg.setAttribute('viewBox', '0 0 ' + S + ' ' + S);
     svg.style.width = svg.style.height = S + 'px';
@@ -981,7 +992,7 @@ defNode('params/xyslider', {
       hair.setAttribute('d', 'M' + px + ' 0V' + S + 'M0 ' + py + 'H' + S);
       const zx = -v.x0 / sx, zy = -v.y0 / sy;
       zero.setAttribute('d', (zx > 0 && zx < 1 ? 'M' + zx * S + ' 0V' + S : '') + (zy > 0 && zy < 1 ? 'M0 ' + zy * S + 'H' + S : ''));
-      lab.textContent = v.label || '';
+      paintLabel(v.label);
       fx.show(v.x || 0); fy.show(v.y || 0);
       fx.cap.textContent = 'x ' + _padSpan(v.x0, v.x1); fy.cap.textContent = 'y ' + _padSpan(v.y0, v.y1);
     };
@@ -1011,11 +1022,13 @@ defNode('params/xyzslider', {
     /* an oblique box: the front face low-left, the back face up and to the right */
     const SIZE = 176, S = 116, DX = 46, DY = -46, FX = 3, FY = 54;
     const pad = _mk('div', 'pad pad-xyz', body);
-    const lab = _mk('div', 'sl-label pad-label', pad);
+    const paintLabel = _ctlHead(pad, 'xyz slider');
     const svg = _svgEl(pad, 'svg', 'pad-svg');
     svg.setAttribute('viewBox', '0 0 ' + SIZE + ' ' + SIZE);
     svg.style.width = svg.style.height = SIZE + 'px';
     const BX = FX + DX, BY = FY + DY;
+    /* the box's whole silhouette takes the point; a press outside it moves the card */
+    _svgEl(svg, 'path', 'pad-hit').setAttribute('d', 'M' + FX + ' ' + FY + 'L' + BX + ' ' + BY + 'H' + (BX + S) + 'V' + (BY + S) + 'L' + (FX + S) + ' ' + (FY + S) + 'H' + FX + 'Z');
     /* the walls behind the slice, then its hidden edges dashed like a drafted box */
     _svgEl(svg, 'path', 'pad-wall').setAttribute('d', 'M' + FX + ' ' + FY + 'L' + BX + ' ' + BY + 'H' + (BX + S) + 'V' + (BY + S) + 'L' + (FX + S) + ' ' + (FY + S) + 'V' + FY + 'Z');
     _svgEl(svg, 'path', 'pad-hidden').setAttribute('d', 'M' + BX + ' ' + BY + 'V' + (BY + S) + 'H' + (BX + S) + 'M' + BX + ' ' + (BY + S) + 'L' + FX + ' ' + (FY + S));
@@ -1052,7 +1065,7 @@ defNode('params/xyzslider', {
       const gx = ox + S, gy = oy + S;
       grip.setAttribute('d', 'M' + gx + ' ' + gy + 'h9v9h-9z');
       gripCut.setAttribute('d', 'M' + (gx + 9) + ' ' + gy + 'v9h-9z');
-      lab.textContent = v.label || '';
+      paintLabel(v.label);
       fx.show(v.x || 0); fy.show(v.y || 0); fz.show(v.z || 0);
       fx.cap.textContent = 'x ' + _padSpan(v.x0, v.x1); fy.cap.textContent = 'y ' + _padSpan(v.y0, v.y1); fz.cap.textContent = 'z ' + _padSpan(v.z0, v.z1);
     };
@@ -1070,6 +1083,7 @@ defNode('params/xyzslider', {
           paint(); changed();
         };
       }
+      if (e0.target === svg) return null;
       return ev => {
         const at = _svgAt(svg, SIZE, ev), t = depthT(), snap = _weftShift || ev.shiftKey;
         const u = LM.clamp((at.x - FX - t * DX) / S, 0, 1), w = LM.clamp((at.y - FY - t * DY) / S, 0, 1);
@@ -1890,17 +1904,50 @@ function _gmConicLean(P, keepFrom) {
   P[3] = [a.mx + rho * a.dx, a.my + rho * a.dy];
 }
 
+/* the range a Graph Mapper is using, per list item: a wired port wins, then the
+ * card's own value, then 0:1. Lists match the way the engine matches them, the
+ * short one repeating its last item. Editor-only — compute spells it out, since
+ * it is serialized into exports. */
+function _gmRange(node, i) {
+  const ins = (node._last && node._last.ins) || {}, v = node.values;
+  const end = (port, key, d) => {
+    const L = ins[port] || [];
+    if (L.length) return L[Math.min(i, L.length - 1)];
+    return v[key] === undefined ? d : v[key];
+  };
+  return { x0: end('X0', 'x0', 0), x1: end('X1', 'x1', 1), y0: end('Y0', 'y0', 0), y1: end('Y1', 'y1', 1) };
+}
+/* the corner labels show what is in force, and say so when a wire is setting it */
+function _gmChips(node, root) {
+  const r = _gmRange(node, 0), ins = (node._last && node._last.ins) || {};
+  const wired = p => !!(ins[p] && ins[p].length);
+  const put = (cls, a, b, isWired) => {
+    const c = root.querySelector(cls);
+    if (!c) return;
+    const t = LM.fmt(a) + ':' + LM.fmt(b);
+    if (c.textContent !== t) c.textContent = t;
+    c.classList.toggle('wired', isWired);
+  };
+  put('.gm-chip-x', r.x0, r.x1, wired('X0') || wired('X1'));
+  put('.gm-chip-y', r.y0, r.y1, wired('Y0') || wired('Y1'));
+}
+
 defNode('math/graphmap', {
   title: 'Graph Mapper', cat: 'Maths', width: 200,
-  desc: 'Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges. V outside the x range holds at the edge, and R stays inside the y range',
-  inputs: [{ name: 'V', type: 'number', default: 0.5 }],
+  desc: 'Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges, or wire X0 X1 Y0 Y1 to drive them (a wire wins, and the card\'s value comes back when it is removed). V outside the x range holds at the edge, and R stays inside the y range',
+  inputs: [
+    { name: 'V', type: 'number', default: 0.5 },
+    { name: 'X0', type: 'number', label: 'x range start (unwired: set on the card)' },
+    { name: 'X1', type: 'number', label: 'x range end (unwired: set on the card)' },
+    { name: 'Y0', type: 'number', label: 'y range start (unwired: set on the card)' },
+    { name: 'Y1', type: 'number', label: 'y range end (unwired: set on the card)' }],
   outputs: [{ name: 'R', type: 'number' }],
   defaults: { kind: 'bezier', x0: 0, x1: 1, y0: 0, y1: 1 },
   compute: (a, c, node) => {
     const v = node.values, k = v.kind || 'bezier';
     if (k === 'none') return { R: a.V };
-    const x0 = v.x0 === undefined ? 0 : v.x0, x1 = v.x1 === undefined ? 1 : v.x1;
-    const y0 = v.y0 === undefined ? 0 : v.y0, y1 = v.y1 === undefined ? 1 : v.y1;
+    const end = (wire, own, d) => wire !== undefined ? wire : own !== undefined ? own : d;
+    const x0 = end(a.X0, v.x0, 0), x1 = end(a.X1, v.x1, 1), y0 = end(a.Y0, v.y0, 0), y1 = end(a.Y1, v.y1, 1);
     const t = x1 === x0 ? 0 : LM.clamp((a.V - x0) / (x1 - x0), 0, 1);
     return { R: y0 + (y1 - y0) * LM.clamp(LM.graphMap(k, v.pts && v.pts[k], t), 0, 1) };
   },
@@ -1957,8 +2004,7 @@ defNode('math/graphmap', {
         c.setAttribute('cx', p[0] * S); c.setAttribute('cy', (1 - p[1]) * S);
       });
       const mapped = k !== 'none';
-      chipY.textContent = LM.fmt(v.y0 === undefined ? 0 : v.y0) + ':' + LM.fmt(v.y1 === undefined ? 1 : v.y1);
-      chipX.textContent = LM.fmt(v.x0 === undefined ? 0 : v.x0) + ':' + LM.fmt(v.x1 === undefined ? 1 : v.x1);
+      _gmChips(node, plot);
       chipX.style.display = chipY.style.display = mapped ? '' : 'none';
     };
     paint();
@@ -1983,8 +2029,16 @@ defNode('math/graphmap', {
     /* the ranges, from either corner label */
     const openRange = () => _floatOpts(body, '.gm-chip', op => {
       const num = (x, d) => x === undefined ? d : x;
-      _optRange(op, 'x range', num(v.x0, 0), num(v.x1, 1), (a, b) => { v.x0 = a; v.x1 = b; paint(); changed(); });
-      _optRange(op, 'y range', num(v.y0, 0), num(v.y1, 1), (a, b) => { v.y0 = a; v.y1 = b; paint(); changed(); });
+      const ins = (node._last && node._last.ins) || {};
+      /* an end with a wire on it stays visible but cannot be typed: the wire is in charge */
+      const retire = (field, port) => {
+        if (!(ins[port] && ins[port].length)) return;
+        field.disabled = true;
+        field.title = 'set by the wire into ' + port + ' — this value returns if you remove it';
+      };
+      const xs = _optRange(op, 'x range', num(v.x0, 0), num(v.x1, 1), (a, b) => { v.x0 = a; v.x1 = b; paint(); changed(); });
+      const ys = _optRange(op, 'y range', num(v.y0, 0), num(v.y1, 1), (a, b) => { v.y0 = a; v.y1 = b; paint(); changed(); });
+      retire(xs[0], 'X0'); retire(xs[1], 'X1'); retire(ys[0], 'Y0'); retire(ys[1], 'Y1');
     });
     for (const chip of [chipX, chipY]) {
       chip.addEventListener('pointerdown', e => e.stopPropagation());
@@ -2037,15 +2091,17 @@ defNode('math/graphmap', {
     const rays = el.querySelector('.gm-rays'), dots = el.querySelector('.gm-dots');
     if (!rays || !dots) return;
     const last = node._last || {}, V = (last.ins && last.ins.V) || [], R = (last.outs && last.outs.R) || [];
-    const v = node.values, n = Math.min(V.length, R.length), S = 176;
-    const mapped = (v.kind || 'bezier') !== 'none';
-    const x0 = !mapped || v.x0 === undefined ? 0 : v.x0, x1 = !mapped || v.x1 === undefined ? 1 : v.x1;
-    const y0 = !mapped || v.y0 === undefined ? 0 : v.y0, y1 = !mapped || v.y1 === undefined ? 1 : v.y1;
+    const n = V.length ? R.length : 0, S = 176;
+    const mapped = (node.values.kind || 'bezier') !== 'none';
+    _gmChips(node, el);
     const stride = Math.max(1, Math.ceil(n / 120));
     let dp = '', rp = '';
     for (let i = 0; i < n; i += stride) {
-      const px = LM.clamp(x1 === x0 ? 0 : (V[i] - x0) / (x1 - x0), 0, 1) * S;
-      const py = (1 - LM.clamp(y1 === y0 ? 0 : (R[i] - y0) / (y1 - y0), 0, 1)) * S;
+      /* each item against its own range, since a list can arrive on the range ports too */
+      const g = mapped ? _gmRange(node, i) : { x0: 0, x1: 1, y0: 0, y1: 1 };
+      const vi = V[Math.min(i, V.length - 1)];
+      const px = LM.clamp(g.x1 === g.x0 ? 0 : (vi - g.x0) / (g.x1 - g.x0), 0, 1) * S;
+      const py = (1 - LM.clamp(g.y1 === g.y0 ? 0 : (R[i] - g.y0) / (g.y1 - g.y0), 0, 1)) * S;
       dp += 'M' + (px - 2).toFixed(1) + ' ' + py.toFixed(1) + 'a2 2 0 1 0 4 0a2 2 0 1 0 -4 0';
       if (n <= 12) rp += 'M' + px.toFixed(1) + ' ' + S + 'V' + py.toFixed(1) + 'H0';
     }

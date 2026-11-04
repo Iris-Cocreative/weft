@@ -25,7 +25,8 @@ geometry that reaches no Draw node is invisible.
   `math/expr → vec/polar(A)`. Wire a `params/textlist` of zones into Z for one
   face per zone.
 - **Ease any 0–1 list** — `sets/range → math/graphmap(V → R)`. Remap Numbers is
-  a straight line; Graph Mapper is the same job through a curve you draw.
+  a straight line; Graph Mapper is the same job through a curve you draw. Wire
+  its Y0 and Y1 to animate how far the curve reaches.
 - **Wobble / organic drift** — `input/time(T) → math/noise(X → N) → remap`.
   Noise of a slowly-growing X is a smooth random walk.
 - **After a click, animate for 2s** — `input/hotspot(C) → state/timer(T → S, A)`

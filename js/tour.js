@@ -21,7 +21,7 @@ const Tour = {
     { at: '#palette', place: 'right', title: 'the node library',
       body: 'every node weft speaks, by category. search by name, then click one to drop it at the center of the loom or drag it exactly where you want it. right-clicking the loom opens the same list in place.' },
     { at: '#preview', place: 'left', title: 'the cloth',
-      body: 'the live render. whatever reaches a Draw node is painted here, re-woven every frame as sliders, time, the mouse and the keyboard flow through the graph. ctrl-wheel zooms toward the cursor, ctrl-drag pans; the buttons at the top pause time and set the concert pitch.' },
+      body: 'the live render. whatever reaches a Draw node is painted here, re-woven every frame as sliders, time, the mouse and the keyboard flow through the graph. pinch or ctrl-wheel zooms toward the cursor, ctrl-drag pans; the buttons at the top pause time and set the concert pitch.' },
     { at: '#typeKey', place: 'left', title: 'wire colors are types',
       body: 'blue is a number, green a point, gold geometry… a port only takes wires of its type (or any). the key lives here whenever you need it — click its title to fold it away.' },
     { at: '#loomTools', place: 'left', title: 'loom tools',

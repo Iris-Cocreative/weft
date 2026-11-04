@@ -1228,7 +1228,7 @@ const Editor = (() => {
     }
     if (S.touches.size > 2 || S.pinch) return true; // a third finger, or a pinch winding down: ignored
     const nodeEl = e.target.closest && e.target.closest('.node');
-    const onCtl = e.target.closest && e.target.closest('input, textarea, select, button, [contenteditable], .port, .sl-track, .sl-grip-l, .sl-grip-r, .dial, .cp, .tg, .pbtn, .sw');
+    const onCtl = e.target.closest && e.target.closest('input, textarea, select, button, [contenteditable], .port, .sl-track, .sl-grip-l, .sl-grip-r, .dial, .pad-svg, .gm-svg, .cp, .tg, .pbtn, .sw');
     if (!onCtl) {
       // long-press: the finger's right-click
       const cx = e.clientX, cy = e.clientY, id = nodeEl && nodeEl.dataset.id;
@@ -1563,16 +1563,21 @@ const Editor = (() => {
     // cloth in split view); shift+wheel scrubs the scroll simulator instead of
     // zooming (browsers report a shifted wheel as deltaX)
     if (Viewport.merged && e.ctrlKey) {
-      Viewport.camZoomAt(e.clientX, e.clientY, e.deltaY);
+      Viewport.camZoomAt(e.clientX, e.clientY, Viewport.zoomDelta(e));
       return;
     }
     if (Viewport.merged && e.shiftKey && Viewport.forward) {
       Viewport.forward.wheel(e.deltaY || e.deltaX);
       return;
     }
+    zoomAt(e.clientX, e.clientY, S.zoom * Math.exp(-Viewport.zoomDelta(e) * 0.0012));
+  }
+
+  /* zoom the loom to z, the point under the cursor staying put */
+  function zoomAt(clientX, clientY, z) {
     const r = editorEl.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
-    const z2 = LM.clamp(S.zoom * Math.exp(-e.deltaY * 0.0012), 0.08, 2.5);
+    const mx = clientX - r.left, my = clientY - r.top;
+    const z2 = LM.clamp(z, 0.08, 2.5);
     S.pan.x = mx - (mx - S.pan.x) * (z2 / S.zoom);
     S.pan.y = my - (my - S.pan.y) * (z2 / S.zoom);
     S.zoom = z2;
@@ -2199,6 +2204,19 @@ const Editor = (() => {
       // the box never gets a chance to strand itself
       window.addEventListener('blur', () => { S.touches.clear(); S.pinch = null; cancelDrag(); });
       editorEl.addEventListener('wheel', onWheel, { passive: false });
+      /* Safari reports a trackpad pinch as gesture events rather than a ctrl+wheel.
+       * Fingers on a touchscreen fire them too, but already pinch through pointer
+       * events, so those are left alone. */
+      let gestureZ = 1, gestureCam = false;
+      editorEl.addEventListener('gesturestart', e => { gestureZ = S.zoom; gestureCam = Viewport.merged && Viewport.camGesture(e, 'start'); });
+      editorEl.addEventListener('gesturechange', e => {
+        if (S.touches.size) return;
+        if (gestureCam) Viewport.camGesture(e, 'change');
+        else zoomAt(e.clientX, e.clientY, gestureZ * e.scale);
+      });
+      /* a press on the loom never starts a text selection, wherever the drag wanders
+       * to — the user-select rule covers the loom itself, this covers the way out */
+      document.addEventListener('selectstart', e => { if (S.drag) e.preventDefault(); });
       // focusing a field near the edge makes the browser scroll the loom's
       // overflow:hidden container to reveal it (phones do this for every
       // number field); fold that scroll into the pan so the world transform

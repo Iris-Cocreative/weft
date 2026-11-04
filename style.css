@@ -222,6 +222,10 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   cursor: default;
 }
 #editor.panning { cursor: grabbing; }
+/* the loom is a drawing surface: a marquee must not select the text it crosses.
+ * What is really text keeps the normal behavior (Safari still wants the prefix). */
+#editor { -webkit-user-select: none; user-select: none; }
+#editor input, #editor textarea, #editor [contenteditable="true"], #editor .panel-out { -webkit-user-select: text; user-select: text; }
 
 #world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 
@@ -584,6 +588,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   background: var(--panel2); border: 1px solid var(--line2); border-radius: 9px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55); padding: 8px;
 }
+.sl-opts.kn-opts { left: -44px; right: -44px; }
 .sl-opt-row { display: flex; align-items: center; gap: 7px; }
 .sl-opt-cap { flex: none; width: 52px; font-size: 10px; color: var(--dim); }
 .sl-opt-row input { flex: 1; min-width: 0; }
@@ -591,7 +596,22 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 
 /* --- Knob / Angle: rotary dials in the number wire color --- */
 .kn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 10px 8px; border-radius: 8px; }
-.kn-label { text-align: center; align-self: stretch; }
+.kn:hover, .pad:hover { background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 1px var(--dark-300); }
+/* the drag handle on a control whose face is all drag surface */
+.ctl-head { display: flex; align-items: center; justify-content: center; gap: 5px; align-self: stretch; min-height: 15px; cursor: grab; }
+.ctl-head:active { cursor: grabbing; }
+.ctl-grip {
+  flex: none; width: 8px; height: 11px; opacity: 0.55;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.75) 1px, transparent 1.25px);
+  background-size: 4px 4px;
+}
+.ctl-head:hover .ctl-grip { opacity: 1; }
+.ctl-name { min-width: 0; min-height: 0; line-height: 15px; }
+.ctl-head.unnamed .ctl-name { color: rgba(255, 255, 255, 0.28); }
+.ctl-head:hover .ctl-name { color: var(--white-80); }
+.pm-body .ctl-grip, .pm-body .ctl-head.unnamed { display: none; }
+.pm-body .kn:hover, .pm-body .pad:hover { background: none; box-shadow: none; }
+.dial-turns { fill: var(--type-number); font: 10px var(--font-val); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .dial { width: 64px; height: 64px; flex: none; touch-action: none; cursor: crosshair; overflow: visible; }
 .dial-track { fill: none; stroke: var(--dark-400); stroke-width: 2; stroke-linecap: round; }
 .dial-fill { fill: none; stroke: var(--type-number); stroke-width: 2; stroke-linecap: round; }
@@ -611,9 +631,12 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .pad { --pad: var(--type-point); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 5px 8px 6px; border-radius: 8px; position: relative; }
 .pad-vec { --pad: var(--type-vector); }
 .pad-xyz { --pad: var(--type-point3); }
-.pad-label { align-self: stretch; text-align: center; }
-.pad-label:empty { display: none; }
 .pad-svg { display: block; flex: none; touch-action: none; cursor: crosshair; overflow: visible; }
+/* off the circle or the box, the svg itself is empty: a press there moves the card */
+.pad-vec .pad-svg, .pad-xyz .pad-svg { cursor: grab; }
+.pad-vec .pad-svg *, .pad-xyz .pad-svg * { cursor: crosshair; }
+.pad-xyz .pad-svg .pad-zgrip { cursor: nesw-resize; }
+.pad-hit { fill: transparent; }
 .pad-bg { fill: var(--dark-150); stroke: var(--dark-400); }
 .pad-grid { fill: none; stroke: rgba(255, 255, 255, 0.06); stroke-width: 1; }
 .pad-zero { fill: none; stroke: rgba(255, 255, 255, 0.18); stroke-width: 1; }
@@ -661,7 +684,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .gm-glyph { flex: none; width: 14px; height: 14px; overflow: visible; }
 .gm-glyph path { fill: none; stroke: var(--type-number); stroke-width: 1.4; stroke-linejoin: round; }
 .gm-plot { position: relative; line-height: 0; }
-.gm-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; }
+.gm-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; cursor: grab; }
 .gm-bg { fill: var(--dark-150); stroke: var(--dark-400); }
 .gm-handles { fill: none; stroke: rgba(255, 255, 255, 0.34); stroke-width: 1; }
 .gm-curve { fill: none; stroke: var(--type-number); stroke-width: 1.8; stroke-linejoin: round; }
@@ -675,7 +698,11 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   color: var(--white-40); font: 9px var(--font-val);
 }
 .gm-chip:hover { color: var(--white-80); border-color: var(--line2); }
+.gm-chip.wired { color: var(--type-number); border-color: color-mix(in srgb, var(--type-number) 45%, transparent); }
 .gm-chip-y { left: 3px; top: 3px; }
+/* the range ports are wire-only: their manual values live behind the corner labels */
+.node:has(.gm) .row.in:not([data-input="V"]) .lit { display: none; }
+.sl-opts input:disabled { opacity: 0.4; cursor: not-allowed; }
 .gm-chip-x { right: 3px; bottom: 3px; }
 .sl-opts.gm-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 4px; left: -22px; right: -22px; padding: 5px; }
 .gm-item { display: flex; align-items: center; gap: 6px; padding: 3px 5px; border-radius: 4px; cursor: pointer; color: var(--white-80); font-size: 10.5px; line-height: 1.15; }

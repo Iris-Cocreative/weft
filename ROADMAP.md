@@ -15,8 +15,11 @@ per NODE-LIBRARY: **Colour param + Split Colour** (GH demos lean on them),
 
 **Dynamic inputs shipped v0.24 (2026-11-03):** Vector Dial, XY Slider, XYZ Slider,
 Clock (the first real-time input, through a new `ctx.now`) and Graph Mapper, with
-Knob grown into Control Knob. Open from it: Graph Mapper's ranges live on the card
-rather than on ports, and the glyphs are code drafts awaiting Figma.
+Knob grown into Control Knob. Open from it: the glyphs are code drafts awaiting Figma.
+**v0.24.1:** Control Knob is endless (no min or max; `values.turn` is what one
+revolution is worth), controls with an all-drag face got a visible drag handle,
+a marquee no longer selects loom text, a trackpad pinch zooms the loom and the
+cloth at finger speed, and Graph Mapper's ranges can be wired (X0 X1 Y0 Y1).
 
 ## 0. Foundation hardening — do these before the tracks below get heavy
 

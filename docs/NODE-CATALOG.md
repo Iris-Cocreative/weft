@@ -209,13 +209,13 @@ Node values (`values` keys, not ports): `{"hex":"#5eead4","a":1}`
 
 ### `params/knob` — Control Knob
 
-Rotary number — drag around the dial, shift snaps to integers; integer knobs with up to 24 steps tick each one; double-click for label, range and rounding
+An endless dial — keep turning past the top to keep counting up, or back past the start into the negatives. There is no max; its range sets what one full turn is worth, and the number at the center counts whole turns. Shift snaps to integers; double-click for label, range and rounding
 
 | out | type | note |
 |---|---|---|
 | N | number |  |
 
-Node values (`values` keys, not ports): `{"min":0,"max":10,"value":5}`
+Node values (`values` keys, not ports): `{"turn":10,"value":0}`
 
 ### `params/curve` — Curve
 
@@ -703,11 +703,15 @@ Floor
 
 ### `math/graphmap` — Graph Mapper
 
-Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges. V outside the x range holds at the edge, and R stays inside the y range
+Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges, or wire X0 X1 Y0 Y1 to drive them (a wire wins, and the card's value comes back when it is removed). V outside the x range holds at the edge, and R stays inside the y range
 
 | in | type | default | note |
 |---|---|---|---|
 | V | number | `0.5` |  |
+| X0 | number |  | x range start (unwired: set on the card) |
+| X1 | number |  | x range end (unwired: set on the card) |
+| Y0 | number |  | y range start (unwired: set on the card) |
+| Y1 | number |  | y range end (unwired: set on the card) |
 
 | out | type | note |
 |---|---|---|

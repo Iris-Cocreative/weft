@@ -1774,6 +1774,12 @@ for (const name of Object.keys(EXAMPLES)) {
   near(run('params/vecdial', { deg: 0, len: 500, radius: 100 }).V.x, 100, 'vecdial: length is confined to the circle');
   near(run('params/vecdial', { deg: 0, len: 150, radius: 400 }).V.x, 150, 'vecdial: the radius sets what fits, not what comes out');
 
+  /* the knob is endless: no clamp in either direction, whatever an old graph's min and max said */
+  near(run('params/knob', { turn: 10, value: -37 }).N, -37, 'knob: negatives pass through');
+  near(run('params/knob', { min: 0, max: 10, value: 250 }).N, 250, 'knob: no max');
+  near(_knobTurn({ turn: 4, min: 0, max: 10 }), 4, 'knob: turn wins over a saved range');
+  near(_knobTurn({ min: 2, max: 40 }), 38, 'knob: an old range reads as one turn');
+  near(_knobTurn({}), 10, 'knob: default turn');
   const xy = run('params/xyslider', { x: 12, y: -7 }).P;
   near(xy.x, 12, 'xyslider x'); near(xy.y, -7, 'xyslider y');
   const xyz = run('params/xyzslider', { x: 1, y: 2, z: 3 }).P;
@@ -1811,6 +1817,24 @@ for (const name of Object.keys(EXAMPLES)) {
   near(gm({ kind: 'made-up' }, 0.3), 0.3, 'graphmap: an unknown kind degrades to a straight line');
   if (!isFinite(gm({}, 0.5))) failures.push('graphmap: empty values must fall back to the default curve');
   near(gm({ kind: 'linear', x0: 5, x1: 5 }, 5), LM.graphMap('linear', null, 0), 'graphmap: a zero-width x range');
+
+  /* range ports: a wire wins over the card's value, one end at a time; unwired they change nothing */
+  const line = { kind: 'linear', pts: { linear: [[0, 0], [1, 1]] }, x0: 0, x1: 100, y0: 10, y1: 20 };
+  near(run('math/graphmap', line, { V: 50, X1: 200 }).R, 12.5, 'graphmap: wired X1 overrides x1');
+  near(run('math/graphmap', line, { V: 50, X0: 50 }).R, 10, 'graphmap: wired X0 overrides x0');
+  near(run('math/graphmap', line, { V: 50, Y0: 0, Y1: 100 }).R, 50, 'graphmap: wired Y0 and Y1 override the y range');
+  near(run('math/graphmap', line, { V: 50, Y1: 0 }).R, 5, 'graphmap: a wired 0 is a value, not an absent port');
+  /* through the engine: an unwired port stays unset, and a list on a range port maps per item */
+  const cg = mkCtx();
+  LM.evaluateGraph({ nodes: [
+    { id: 'g', type: 'math/graphmap', values: Object.assign({}, line, { V: 50 }) },
+    { id: 'u', type: 'math/graphmap', values: Object.assign({}, line, { V: 50 }) },
+    { id: 't', type: 'sets/series', values: { S: 100, N: 100, C: 2 } }
+  ], wires: [{ from: ['t', 'S'], to: ['g', 'Y1'] }] }, NODE_DEFS, cg);
+  if (cg.errors.g || cg.errors.u) failures.push('graphmap: range ports errored: ' + (cg.errors.g || cg.errors.u));
+  near(cg.out.u.R[0], 15, 'graphmap: unwired range ports leave the card in charge');
+  if ((cg.out.g.R || []).length !== 2) failures.push('graphmap: a list on Y1 must map per item, got ' + JSON.stringify(cg.out.g.R));
+  else { near(cg.out.g.R[0], 10 + 0.5 * 90, 'graphmap: first Y1'); near(cg.out.g.R[1], 10 + 0.5 * 190, 'graphmap: second Y1'); }
 
   /* the clock, at a known instant: 2023-11-14 22:13:20 UTC, a Tuesday */
   const zone = z => { const c = mkCtx(); c.now = 1700000000000; return NODE_DEFS['input/clock'].compute({ Z: z }, c, { values: {} }); };
