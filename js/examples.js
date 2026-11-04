@@ -22819,6 +22819,62 @@ const EXAMPLES = {
     ['mg', 'M', 'pj', 'G'], ['cm', 'C', 'pj', 'C'],
     ['pj', 'F', 'dr', 'G']
   ]),
+
+  /* a curve that is no function: a Graph Mapper reads a star, and at each x it hits
+   * an even number of edges. Sorted top first, the hits pair up into the stretches
+   * inside the star, which is how a scanline fill works. The ranges run x and y out
+   * to ±240, flipping y, so R lands in cloth coordinates at 2.4 times the star. */
+  'Star scanlines': _EX([
+    ['tm', 'input/time', 30, 40],
+    ['sr', 'sets/series', 30, 200, { S: 0, N: 1, C: 10 }],
+    ['an', 'math/expr', 280, 40, { expr: 'X*PI/5 + Y*0.2' }],
+    ['rd', 'math/expr', 280, 250, { expr: 'X%2 ? 38 : 96' }],
+    ['po', 'vec/polar', 530, 130],
+    ['pl', 'crv/polyline', 780, 130, { C: true }, { preview: false }],
+    ['xs', 'sets/series', 780, 330, { S: -240, N: 4, C: 121 }],
+    ['gm', 'math/graphmap', 1030, 130, { x0: -240, x1: 240, y0: 240, y1: -240 }],
+    ['ct', 'vec/construct', 1290, 130],
+    ['pt', 'sets/series', 1290, 300, { S: 1, N: -1, C: 2 }],
+    ['dp', 'sets/dispatch', 1530, 130],
+    ['ln', 'crv/line', 1770, 130],
+    ['dr', 'disp/draw', 2010, 130, { S: { r: 45, g: 212, b: 191, a: 1 }, W: 1.5 }]
+  ], [
+    ['sr', 'S', 'an', 'X'], ['tm', 'T', 'an', 'Y'],
+    ['sr', 'S', 'rd', 'X'],
+    ['an', 'R', 'po', 'A'], ['rd', 'R', 'po', 'R'],
+    ['po', 'P', 'pl', 'V'],
+    ['xs', 'S', 'gm', 'V'], ['pl', 'C', 'gm', 'C'],
+    ['gm', 'X', 'ct', 'X'], ['gm', 'R', 'ct', 'Y'],
+    ['ct', 'P', 'dp', 'L'], ['pt', 'S', 'dp', 'P'],
+    ['dp', 'A', 'ln', 'A'], ['dp', 'B', 'ln', 'B'],
+    ['ln', 'C', 'dr', 'G']
+  ]),
+
+  /* one shape, three jobs: drag a grip on the Graph Curve and height, size and color
+   * all follow, each through its own Graph Mapper with its own y range. Time is wired
+   * straight in, and mirror keeps it looping smoothly past the end of the x range. */
+  'One graph, three jobs': _EX([
+    ['gc', 'params/graphcurve', 30, 40, { kind: 'bezier' }, { preview: false }],
+    ['tm', 'input/time', 30, 400],
+    ['rg', 'sets/range', 30, 560, { A: 0, B: 1, N: 23 }],
+    ['ph', 'math/expr', 280, 480, { expr: 'X + Y*0.35' }],
+    ['my', 'math/graphmap', 530, 40, { x0: 0, x1: 1, y0: 150, y1: -150, past: 'mirror' }],
+    ['ms', 'math/graphmap', 530, 480, { x0: 0, x1: 1, y0: 5, y1: 34, past: 'mirror' }],
+    ['mc', 'math/graphmap', 530, 920, { x0: 0, x1: 1, y0: 0, y1: 1, past: 'mirror' }],
+    ['xs', 'sets/series', 790, 40, { S: -276, N: 24, C: 24 }],
+    ['ct', 'vec/construct', 1030, 40],
+    ['ci', 'crv/circle', 1270, 300],
+    ['hu', 'disp/gradient', 790, 920, { A: { r: 45, g: 212, b: 191, a: 1 }, B: { r: 240, g: 9, b: 252, a: 1 } }],
+    ['dr', 'disp/draw', 1510, 480, { W: 2 }]
+  ], [
+    ['rg', 'R', 'ph', 'X'], ['tm', 'T', 'ph', 'Y'],
+    ['gc', 'C', 'my', 'C'], ['gc', 'C', 'ms', 'C'], ['gc', 'C', 'mc', 'C'],
+    ['ph', 'R', 'my', 'V'], ['ph', 'R', 'ms', 'V'], ['ph', 'R', 'mc', 'V'],
+    ['xs', 'S', 'ct', 'X'], ['my', 'R', 'ct', 'Y'],
+    ['ct', 'P', 'ci', 'P'], ['ms', 'R', 'ci', 'R'],
+    ['mc', 'R', 'hu', 'T'],
+    ['ci', 'C', 'dr', 'G'], ['hu', 'C', 'dr', 'S']
+  ]),
 };
 
 /* ---------------------------------------------------------------------------
@@ -23059,6 +23115,20 @@ const EXAMPLE_META = {
     blurb: 'A sphere you move around a box from a box on the card — the XYZ Slider\'s cube is the scene\'s cube.',
     teaches: 'XYZ Slider outputs a point3 straight into the 3D pack: drag in the lit square for x and y, drag its corner along the diagonal for z, with the front of the cube nearest the viewer.',
     tags: ['xyz slider', 'point3', 'sphere', 'box', 'wire', 'camera', 'project', 'control'],
+    needs: [], frames: 40
+  },
+  'Star scanlines': {
+    cat: 'Geometry',
+    blurb: 'A turning star filled with lines, by asking a Graph Mapper for every height of the star at each x.',
+    teaches: 'Wire any curve into Graph Mapper\'s C and one V can give several results. X repeats V once per hit so the two stay lined up, and because hits come top first, Dispatch can pair them into the stretches inside a closed shape.',
+    tags: ['graph mapper', 'curve', 'scanline', 'hatch', 'fill', 'star', 'dispatch', 'multiple values', 'list matching'],
+    needs: [], frames: 40
+  },
+  'One graph, three jobs': {
+    cat: 'Fundamentals',
+    blurb: 'One Graph Curve drives height, size and color at once. Drag a grip and all three follow.',
+    teaches: 'Graph Curve outputs an ordinary curve, so any number of Graph Mappers can read one shape, each with its own y range. Mirror past the range lets time wire straight in and loop without a jump.',
+    tags: ['graph curve', 'graph mapper', 'shared', 'easing', 'mirror', 'loop', 'wave', 'list matching'],
     needs: [], frames: 40
   },
 };

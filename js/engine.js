@@ -180,6 +180,132 @@ const LM = {
     return x; // 'none', or a kind this build has never heard of
   },
 
+  /* ---------- a graph you can wire ----------
+   * Graph Curve draws a graph as an ordinary curve, in a box from (-100,100)
+   * bottom left to (100,-100) top right. Graph Mapper reads any curve in that
+   * box: a table holds it in unit-square terms, u right and w up, the same terms
+   * graphMap speaks, so everything from here on is one arithmetic. */
+  graphCurve: (kind, grips) => {
+    const n = kind === 'steps' ? 480 : 256, pts = [];
+    for (let i = 0; i <= n; i++) {
+      const u = i / n;
+      pts.push({ x: -100 + 200 * u, y: 100 - 200 * LM.clamp(LM.graphMap(kind, grips, u), 0, 1) });
+    }
+    return { kind: 'poly', pts, closed: false };
+  },
+
+  /* mono: x only ever rises, so one binary search finds the one hit. A curve
+   * drawn right to left is read as the same curve, reversed. */
+  graphTable: g => {
+    const P = LM.toPoly(g, 256), E = 1e-9;
+    const pts = (P.pts || []).map(p => [(p.x + 100) / 200, (100 - p.y) / 200]), n = pts.length;
+    const closed = !!P.closed && n > 2;
+    let up = n > 1 && !closed, down = up, u0 = Infinity, u1 = -Infinity;
+    for (let i = 0; i < n; i++) {
+      u0 = Math.min(u0, pts[i][0]); u1 = Math.max(u1, pts[i][0]);
+      if (i) { const d = pts[i][0] - pts[i - 1][0]; if (d <= E) up = false; if (d >= -E) down = false; }
+    }
+    if (down) pts.reverse();
+    const t = { pts, closed, mono: up || down, u0, u1, rise: 0, s: null, e: null, ds: null, de: null };
+    if (n > 1 && !closed) {
+      /* the way each end points, outward, past any repeated points */
+      const away = (from, step) => {
+        const a = pts[from];
+        for (let i = from + step; i >= 0 && i < n; i += step) {
+          if (Math.abs(pts[i][0] - a[0]) > E || Math.abs(pts[i][1] - a[1]) > E) return [a[0] - pts[i][0], a[1] - pts[i][1]];
+        }
+        return null;
+      };
+      t.s = pts[0]; t.e = pts[n - 1]; t.ds = away(0, 1); t.de = away(n - 1, -1);
+      /* left to right, whichever way it was drawn: what stack climbs per cycle */
+      t.rise = t.e[0] >= t.s[0] ? t.e[1] - t.s[1] : t.s[1] - t.e[1];
+    }
+    return t;
+  },
+
+  /* highest first — so a list of hits reads top to bottom on the cloth — with
+   * the one point two segments share counted once */
+  graphTidy: L => {
+    L.sort((a, b) => b - a);
+    return L.filter((w, i) => !i || L[i - 1] - w > 1e-7);
+  },
+
+  /* every height of the curve at u: none, one or many. A side standing straight
+   * up has endless heights at its u, so it answers with its two ends. */
+  graphHits: (t, u) => {
+    const P = t.pts, n = P.length, E = 1e-9, out = [];
+    if (n < 2 || !(u >= t.u0 - E && u <= t.u1 + E)) return out;
+    if (t.mono) {
+      let lo = 0, hi = n - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m][0] <= u) lo = m; else hi = m; }
+      const q = LM.clamp((u - P[lo][0]) / (P[hi][0] - P[lo][0]), 0, 1);
+      return [P[lo][1] + q * (P[hi][1] - P[lo][1])];
+    }
+    const segs = t.closed ? n : n - 1;
+    const upright = i => {
+      if (t.closed) i = (i + segs) % segs;
+      else if (i < 0 || i >= segs) return false;
+      return Math.abs(P[i][0] - P[(i + 1) % n][0]) < E;
+    };
+    for (let i = 0; i < segs; i++) {
+      const a = P[i], b = P[(i + 1) % n];
+      if (u < Math.min(a[0], b[0]) - E || u > Math.max(a[0], b[0]) + E) continue;
+      if (upright(i)) {
+        if (!upright(i - 1)) out.push(a[1]);
+        if (!upright(i + 1)) out.push(b[1]);
+      } else out.push(a[1] + LM.clamp((u - a[0]) / (b[0] - a[0]), 0, 1) * (b[1] - a[1]));
+    }
+    return LM.graphTidy(out);
+  },
+
+  /* where repeat, mirror and stack read inside the box: [local u, whole cycles
+   * to climb]. A V at the very top of its range stays the end of the curve
+   * rather than the start of the next cycle. */
+  graphWrap: (mode, u) => {
+    if (!isFinite(u)) return [0, 0];
+    const n = Math.floor(u), f = u - n;
+    if (mode === 'stack') return [f, n];
+    if (mode === 'mirror') return [n % 2 ? 1 - f : f, 0];
+    return [u === 1 ? 1 : f, 0];
+  },
+
+  /* a built-in graph at any u, by what happens past its ends. Heights stay in the
+   * box; only extend and stack leave it, because leaving it is what they do. */
+  graphFn: (kind, grips, mode, u) => {
+    const f = q => LM.clamp(LM.graphMap(kind, grips, q), 0, 1);
+    if (mode === 'repeat' || mode === 'mirror' || mode === 'stack') {
+      const w = LM.graphWrap(mode, u);
+      return f(w[0]) + (w[1] ? w[1] * (f(1) - f(0)) : 0);
+    }
+    if (mode === 'extend') {
+      const e = 1 / 256;
+      if (u < 0) return f(0) + u * (f(e) - f(0)) / e;
+      if (u > 1) return f(1) + (u - 1) * (f(1) - f(1 - e)) / e;
+    }
+    return f(LM.clamp(u, 0, 1));
+  },
+
+  /* a wired curve at any u, the same choice. Repeat, mirror and stack tile what
+   * is inside the box. Hold and extend read the curve wherever it goes, and act
+   * at its own ends; a closed curve has none, so past its span there is nothing. */
+  graphRead: (t, mode, u) => {
+    if (mode === 'repeat' || mode === 'mirror' || mode === 'stack') {
+      const w = LM.graphWrap(mode, u), L = LM.graphHits(t, w[0]);
+      return w[1] ? L.map(h => h + w[1] * t.rise) : L;
+    }
+    if (t.closed) return LM.graphHits(t, u);
+    if (mode === 'extend') {
+      const out = LM.graphHits(t, u);
+      for (const r of [[t.s, t.ds], [t.e, t.de]]) {
+        if (r[0] && r[1] && Math.abs(r[1][0]) > 1e-9 && (u - r[0][0]) * r[1][0] > 0) {
+          out.push(r[0][1] + (u - r[0][0]) * r[1][1] / r[1][0]);
+        }
+      }
+      return LM.graphTidy(out);
+    }
+    return LM.graphHits(t, LM.clamp(u, t.u0, t.u1));
+  },
+
   /* ---------- wall clock ----------
    * Calendar parts of an instant in a zone: '' or 'local' is the device, 'UTC'
    * or an offset ('+5:30', '-8', 'UTC+2') is fixed, anything else is an IANA

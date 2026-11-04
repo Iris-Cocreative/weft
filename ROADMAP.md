@@ -20,6 +20,12 @@ Knob grown into Control Knob. Open from it: the glyphs are code drafts awaiting 
 revolution is worth), controls with an all-drag face got a visible drag handle,
 a marquee no longer selects loom text, a trackpad pinch zooms the loom and the
 cloth at finger speed, and Graph Mapper's ranges can be wired (X0 X1 Y0 Y1).
+**v0.25 (2026-11-04):** Graph Curve draws a graph as an ordinary curve, and Graph
+Mapper takes any curve on C, so one shape can drive many mappers and a V can hit
+none, one or many times (X keeps V lined up with R). A menu under the plot sets what
+V does past the range: hold, extend, repeat, mirror or stack. Open from it: the
+Graph Curve glyph is a code draft; a curve overflowing the box is clipped by repeat,
+mirror and stack rather than overlapping its neighbors.
 
 ## 0. Foundation hardening — do these before the tracks below get heavy
 

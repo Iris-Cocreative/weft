@@ -27,6 +27,15 @@ geometry that reaches no Draw node is invisible.
 - **Ease any 0–1 list** — `sets/range → math/graphmap(V → R)`. Remap Numbers is
   a straight line; Graph Mapper is the same job through a curve you draw. Wire
   its Y0 and Y1 to animate how far the curve reaches.
+- **One shape, many eases** — `params/graphcurve(C) → math/graphmap(C)` on as many
+  mappers as you need, each with its own y range.
+- **Loop a graph from time** — `input/time(T) → math/graphmap(V)` with *past the range*
+  set to `mirror` (smooth) or `repeat` (jumps if the ends differ). `stack` keeps
+  climbing, which suits eased stepped rotation.
+- **Every height of a shape at each x** — `sets/series → math/graphmap(V)` with the
+  shape in C. Use its `X` and `R` together, since they stay lined up and V does not.
+  Hits come top first, so on a closed shape `sets/dispatch` with the pattern 1, 0
+  pairs them into the stretches inside it (*Star scanlines*).
 - **Wobble / organic drift** — `input/time(T) → math/noise(X → N) → remap`.
   Noise of a slowly-growing X is a smooth random walk.
 - **After a click, animate for 2s** — `input/hotspot(C) → state/timer(T → S, A)`

@@ -1932,86 +1932,120 @@ function _gmChips(node, root) {
   put('.gm-chip-y', r.y0, r.y1, wired('Y0') || wired('Y1'));
 }
 
-defNode('math/graphmap', {
-  title: 'Graph Mapper', cat: 'Maths', width: 200,
-  desc: 'Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges, or wire X0 X1 Y0 Y1 to drive them (a wire wins, and the card\'s value comes back when it is removed). V outside the x range holds at the edge, and R stays inside the y range',
-  inputs: [
-    { name: 'V', type: 'number', default: 0.5 },
-    { name: 'X0', type: 'number', label: 'x range start (unwired: set on the card)' },
-    { name: 'X1', type: 'number', label: 'x range end (unwired: set on the card)' },
-    { name: 'Y0', type: 'number', label: 'y range start (unwired: set on the card)' },
-    { name: 'Y1', type: 'number', label: 'y range end (unwired: set on the card)' }],
-  outputs: [{ name: 'R', type: 'number' }],
-  defaults: { kind: 'bezier', x0: 0, x1: 1, y0: 0, y1: 1 },
-  compute: (a, c, node) => {
-    const v = node.values, k = v.kind || 'bezier';
-    if (k === 'none') return { R: a.V };
-    const end = (wire, own, d) => wire !== undefined ? wire : own !== undefined ? own : d;
-    const x0 = end(a.X0, v.x0, 0), x1 = end(a.X1, v.x1, 1), y0 = end(a.Y0, v.y0, 0), y1 = end(a.Y1, v.y1, 1);
-    const t = x1 === x0 ? 0 : LM.clamp((a.V - x0) / (x1 - x0), 0, 1);
-    return { R: y0 + (y1 - y0) * LM.clamp(LM.graphMap(k, v.pts && v.pts[k], t), 0, 1) };
-  },
-  buildBody: (node, body, changed) => {
-    const v = node.values, S = 176;
-    const kind = () => v.kind || 'bezier';
-    const grips = () => (v.pts && v.pts[kind()]) || LM.graphGrips(kind());
-    /* grips are written to the node only once touched; each type keeps its own,
-     * so trying the menu loses nothing */
-    const ownGrips = () => {
-      v.pts = v.pts || {};
-      if (!v.pts[kind()]) v.pts[kind()] = LM.graphGrips(kind());
-      return v.pts[kind()];
-    };
-    const gm = _mk('div', 'gm', body);
-    const pick = _mk('div', 'gm-pick', gm);
-    const glyph = _svgEl(pick, 'svg', 'gm-glyph');
-    glyph.setAttribute('viewBox', '0 0 18 18');
-    const glyphPath = _svgEl(glyph, 'path');
-    const pickName = _mk('span', 'gm-name', pick);
-    _mk('span', 'gm-caret', pick).textContent = '▾';
-    const plot = _mk('div', 'gm-plot', gm);
-    const svg = _svgEl(plot, 'svg', 'gm-svg');
-    svg.setAttribute('viewBox', '0 0 ' + S + ' ' + S);
-    _svgEl(svg, 'rect', 'gm-bg').setAttribute('width', S);
-    svg.lastChild.setAttribute('height', S);
-    let grid = '';
-    for (let i = 1; i < 10; i++) grid += 'M' + (i * S / 10) + ' 0V' + S + 'M0 ' + (i * S / 10) + 'H' + S;
-    _svgEl(svg, 'path', 'pad-grid').setAttribute('d', grid);
-    const handles = _svgEl(svg, 'path', 'gm-handles');
-    const curve = _svgEl(svg, 'path', 'gm-curve');
-    _svgEl(svg, 'path', 'gm-rays');
-    _svgEl(svg, 'path', 'gm-dots');
-    const gripLayer = _svgEl(svg, 'g');
-    const chipY = _mk('div', 'gm-chip gm-chip-y', plot);
-    const chipX = _mk('div', 'gm-chip gm-chip-x', plot);
-    chipY.title = 'y range — what R spans'; chipX.title = 'x range — what V spans';
-    const paint = () => {
-      const k = kind(), P = grips();
-      const label = _GM_KINDS.find(o => o[0] === k);
-      pickName.textContent = label ? label[1] : k;
-      glyphPath.setAttribute('d', _gmPath(k, P, 18, 18, 36));
-      curve.setAttribute('d', _gmPath(k, P, S, S, k === 'steps' ? 480 : 160));
-      curve.classList.toggle('none', k === 'none');
-      handles.setAttribute('d', (_GM_LINES[k] || []).map(l =>
-        'M' + P[l[0]][0] * S + ' ' + (1 - P[l[0]][1]) * S + 'L' + P[l[1]][0] * S + ' ' + (1 - P[l[1]][1]) * S).join(''));
-      /* grips are reused, never rebuilt: a press on an element that vanishes
-       * mid-gesture loses its click and double-click */
-      const shown = k === 'none' ? [] : P;
-      while (gripLayer.childNodes.length > shown.length) gripLayer.removeChild(gripLayer.lastChild);
-      while (gripLayer.childNodes.length < shown.length) _svgEl(gripLayer, 'circle', 'gm-grip').setAttribute('r', 4);
-      shown.forEach((p, i) => {
-        const c = gripLayer.childNodes[i];
-        c.setAttribute('cx', p[0] * S); c.setAttribute('cy', (1 - p[1]) * S);
-      });
-      const mapped = k !== 'none';
+/* what V does past the x range: name, tooltip, glyph */
+const _GM_PAST = [
+  ['hold', 'stays at the end value', 'M1 13H6L12 5H17'],
+  ['extend', 'continues straight along the end tangents, forever', 'M1 17L17 1'],
+  ['repeat', 'loops the curve, and jumps if its ends do not match', 'M1 14L7 5V14L13 5V14L17 8'],
+  ['mirror', 'plays the curve back and forth, with no jumps', 'M1 14L6 5L11 14L16 5L17 6.8'],
+  ['stack', 'loops, with each cycle starting where the last one ended', 'M1 16H4L7 11H10L13 6H16']
+];
+/* curves in the box as svg path data, at most eight of them */
+function _gmCurveD(L, S) {
+  let d = '';
+  for (const g of L.slice(0, 8)) {
+    if (!g || typeof g !== 'object') continue;
+    const t = LM.graphTable(g);
+    t.pts.forEach((p, i) => { d += (i ? 'L' : 'M') + (p[0] * S).toFixed(1) + ' ' + ((1 - p[1]) * S).toFixed(1); });
+    if (t.closed && t.pts.length) d += 'Z';
+  }
+  return d;
+}
+/* the card both graph nodes share: a type menu over a plot of grips. A Graph
+ * Mapper adds the range labels and the past-the-range menu, and shows a curve
+ * wired into C in place of its own graph, which waits underneath, unchanged. */
+function _gmCard(node, body, changed, mapper) {
+  const v = node.values, S = 176;
+  const kinds = mapper ? _GM_KINDS : _GM_KINDS.filter(o => o[0] !== 'none');
+  const kind = () => v.kind || 'bezier';
+  const fromC = () => (mapper && node._last && node._last.ins && node._last.ins.C) || [];
+  const grips = () => (v.pts && v.pts[kind()]) || LM.graphGrips(kind());
+  /* grips are written to the node only once touched; each type keeps its own,
+   * so trying the menu loses nothing */
+  const ownGrips = () => {
+    v.pts = v.pts || {};
+    if (!v.pts[kind()]) v.pts[kind()] = LM.graphGrips(kind());
+    return v.pts[kind()];
+  };
+  const gm = _mk('div', 'gm', body);
+  const pick = _mk('div', 'gm-pick gm-pick-kind', gm);
+  const glyph = _svgEl(pick, 'svg', 'gm-glyph');
+  glyph.setAttribute('viewBox', '0 0 18 18');
+  const glyphPath = _svgEl(glyph, 'path');
+  const pickName = _mk('span', 'gm-name', pick);
+  _mk('span', 'gm-caret', pick).textContent = '▾';
+  const plot = _mk('div', 'gm-plot', gm);
+  const svg = _svgEl(plot, 'svg', 'gm-svg');
+  svg.setAttribute('viewBox', '0 0 ' + S + ' ' + S);
+  _svgEl(svg, 'rect', 'gm-bg').setAttribute('width', S);
+  svg.lastChild.setAttribute('height', S);
+  let grid = '';
+  for (let i = 1; i < 10; i++) grid += 'M' + (i * S / 10) + ' 0V' + S + 'M0 ' + (i * S / 10) + 'H' + S;
+  _svgEl(svg, 'path', 'pad-grid').setAttribute('d', grid);
+  const handles = _svgEl(svg, 'path', 'gm-handles');
+  const curve = _svgEl(svg, 'path', 'gm-curve');
+  /* a wired curve can run anywhere, so it draws in a nested svg, which clips to the box */
+  const box = _svgEl(svg, 'svg');
+  box.setAttribute('width', S); box.setAttribute('height', S);
+  box.setAttribute('viewBox', '0 0 ' + S + ' ' + S);
+  const curveIn = _svgEl(box, 'path', 'gm-curve');
+  _svgEl(svg, 'path', 'gm-rays');
+  _svgEl(svg, 'path', 'gm-dots');
+  const gripLayer = _svgEl(svg, 'g');
+  const chipY = _mk('div', 'gm-chip gm-chip-y' + (mapper ? '' : ' still'), plot);
+  const chipX = _mk('div', 'gm-chip gm-chip-x' + (mapper ? '' : ' still'), plot);
+  if (mapper) { chipY.title = 'y range — what R spans'; chipX.title = 'x range — what V spans'; }
+  else { chipY.textContent = 'y 100:-100'; chipX.textContent = 'x -100:100'; }
+  let pastRow = null, pastPath = null, pastName = null;
+  if (mapper) {
+    pastRow = _mk('div', 'gm-pick gm-past', gm);
+    const g = _svgEl(pastRow, 'svg', 'gm-glyph');
+    g.setAttribute('viewBox', '0 0 18 18');
+    pastPath = _svgEl(g, 'path');
+    _mk('span', 'gm-past-cap', pastRow).textContent = 'past the range';
+    pastName = _mk('span', 'gm-name', pastRow);
+    _mk('span', 'gm-caret', pastRow).textContent = '▾';
+  }
+  const paint = () => {
+    const k = kind(), L = fromC(), wired = L.length > 0, P = grips();
+    gm._src = L.slice(0, 8);
+    pick.classList.toggle('still', wired);
+    const label = _GM_KINDS.find(o => o[0] === k);
+    pickName.textContent = wired ? 'from C' : label ? label[1] : k;
+    glyphPath.setAttribute('d', wired ? _gmCurveD(L, 18) : _gmPath(k, P, 18, 18, 36));
+    curve.setAttribute('d', wired ? '' : _gmPath(k, P, S, S, k === 'steps' ? 480 : 160));
+    curveIn.setAttribute('d', wired ? _gmCurveD(L, S) : '');
+    curve.classList.toggle('none', k === 'none');
+    handles.setAttribute('d', wired ? '' : (_GM_LINES[k] || []).map(l =>
+      'M' + P[l[0]][0] * S + ' ' + (1 - P[l[0]][1]) * S + 'L' + P[l[1]][0] * S + ' ' + (1 - P[l[1]][1]) * S).join(''));
+    /* grips are reused, never rebuilt: a press on an element that vanishes
+     * mid-gesture loses its click and double-click */
+    const shown = wired || k === 'none' ? [] : P;
+    while (gripLayer.childNodes.length > shown.length) gripLayer.removeChild(gripLayer.lastChild);
+    while (gripLayer.childNodes.length < shown.length) _svgEl(gripLayer, 'circle', 'gm-grip').setAttribute('r', 4);
+    shown.forEach((p, i) => {
+      const c = gripLayer.childNodes[i];
+      c.setAttribute('cx', p[0] * S); c.setAttribute('cy', (1 - p[1]) * S);
+    });
+    if (mapper) {
+      const mapped = wired || k !== 'none';
       _gmChips(node, plot);
       chipX.style.display = chipY.style.display = mapped ? '' : 'none';
-    };
-    paint();
-    /* the type menu: every kind drawn from its own default grips */
-    _cleanClick(pick, () => _floatOpts(body, '.gm-pick', op => {
+      pastRow.style.display = mapped ? '' : 'none';
+      const o = _GM_PAST.find(q => q[0] === (v.past || 'hold')) || _GM_PAST[0];
+      pastName.textContent = o[0];
+      pastPath.setAttribute('d', o[2]);
+      pastRow.title = 'when V goes past the x range: ' + o[1];
+    }
+  };
+  gm._paint = paint;
+  paint();
+  /* the type menu: every kind drawn from its own default grips */
+  _cleanClick(pick, () => {
+    if (fromC().length) return; // the wire is the graph
+    _floatOpts(body, '.gm-pick-kind', op => {
       op.classList.add('gm-menu');
-      for (const o of _GM_KINDS) {
+      for (const o of kinds) {
         const it = _mk('div', 'gm-item' + (o[0] === kind() ? ' on' : ''), op);
         const g = _svgEl(it, 'svg', 'gm-glyph');
         g.setAttribute('viewBox', '0 0 18 18');
@@ -2019,6 +2053,26 @@ defNode('math/graphmap', {
         _mk('span', '', it).textContent = o[1];
         it.addEventListener('click', () => {
           v.kind = o[0];
+          op.remove();
+          const el = body.closest('.node');
+          if (el) el.style.zIndex = '';
+          paint(); changed();
+        });
+      }
+    });
+  });
+  if (mapper) {
+    _cleanClick(pastRow, () => _floatOpts(body, '.gm-past', op => {
+      op.classList.add('gm-menu');
+      for (const o of _GM_PAST) {
+        const it = _mk('div', 'gm-item' + (o[0] === (v.past || 'hold') ? ' on' : ''), op);
+        it.title = o[1];
+        const g = _svgEl(it, 'svg', 'gm-glyph');
+        g.setAttribute('viewBox', '0 0 18 18');
+        _svgEl(g, 'path').setAttribute('d', o[2]);
+        _mk('span', '', it).textContent = o[0];
+        it.addEventListener('click', () => {
+          v.past = o[0];
           op.remove();
           const el = body.closest('.node');
           if (el) el.style.zIndex = '';
@@ -2044,64 +2098,124 @@ defNode('math/graphmap', {
       chip.addEventListener('pointerdown', e => e.stopPropagation());
       chip.addEventListener('click', openRange);
     }
-    /* nearest grip to the press within a finger's width; a miss drags the card */
-    const nearest = e => {
-      const at = _svgAt(svg, S, e), P = grips();
-      const r = svg.getBoundingClientRect(), hit = Math.max(9, 11 * S / (r.width || S));
-      let best = -1, bd = hit;
-      P.forEach((p, i) => {
-        const dist = Math.hypot(p[0] * S - at.x, (1 - p[1]) * S - at.y);
-        if (dist < bd) { bd = dist; best = i; }
-      });
-      return { i: best, at };
-    };
-    _svgDrag(svg, e0 => {
-      if (kind() === 'none') return null;
-      const n = nearest(e0);
-      if (n.i < 0) return null;
-      const P0 = grips()[n.i], ox = P0[0] * S - n.at.x, oy = (1 - P0[1]) * S - n.at.y;
-      return ev => {
-        if (ev === e0) return; // a press alone moves nothing
-        const at = _svgAt(svg, S, ev), k = kind(), P = ownGrips();
-        const before = k === 'conic' ? P.map(q => q.slice()) : null;
-        _gmMove(k, P, n.i, (at.x + ox) / S, 1 - (at.y + oy) / S);
-        if (k === 'conic') _gmConicLean(P, n.i === 3 ? P : before);
-        paint(); changed();
-      };
+  }
+  /* nearest grip to the press within a finger's width; a miss drags the card */
+  const nearest = e => {
+    const at = _svgAt(svg, S, e), P = grips();
+    const r = svg.getBoundingClientRect(), hit = Math.max(9, 11 * S / (r.width || S));
+    let best = -1, bd = hit;
+    P.forEach((p, i) => {
+      const dist = Math.hypot(p[0] * S - at.x, (1 - p[1]) * S - at.y);
+      if (dist < bd) { bd = dist; best = i; }
     });
-    /* spline only: double-click empty plot adds a grip, double-click a grip takes it away */
-    svg.addEventListener('dblclick', e => {
-      e.stopPropagation();
-      if (kind() !== 'spline') return;
-      const n = nearest(e), P = ownGrips();
-      if (n.i >= 0) {
-        if (n.i === 0 || n.i === P.length - 1) return; // the two ends stay
-        P.splice(n.i, 1);
-      } else {
-        const u = LM.clamp(n.at.x / S, 0.01, 0.99), w = LM.clamp(1 - n.at.y / S, 0, 1);
-        if (P.some(p => Math.abs(p[0] - u) < 0.01)) return;
-        P.push([u, w]);
-        P.sort((a, b) => a[0] - b[0]);
-      }
+    return { i: best, at };
+  };
+  _svgDrag(svg, e0 => {
+    if (kind() === 'none' || fromC().length) return null;
+    const n = nearest(e0);
+    if (n.i < 0) return null;
+    const P0 = grips()[n.i], ox = P0[0] * S - n.at.x, oy = (1 - P0[1]) * S - n.at.y;
+    return ev => {
+      if (ev === e0) return; // a press alone moves nothing
+      const at = _svgAt(svg, S, ev), k = kind(), P = ownGrips();
+      const before = k === 'conic' ? P.map(q => q.slice()) : null;
+      _gmMove(k, P, n.i, (at.x + ox) / S, 1 - (at.y + oy) / S);
+      if (k === 'conic') _gmConicLean(P, n.i === 3 ? P : before);
       paint(); changed();
-    });
+    };
+  });
+  /* spline only: double-click empty plot adds a grip, double-click a grip takes it away */
+  svg.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    if (kind() !== 'spline' || fromC().length) return;
+    const n = nearest(e), P = ownGrips();
+    if (n.i >= 0) {
+      if (n.i === 0 || n.i === P.length - 1) return; // the two ends stay
+      P.splice(n.i, 1);
+    } else {
+      const u = LM.clamp(n.at.x / S, 0.01, 0.99), w = LM.clamp(1 - n.at.y / S, 0, 1);
+      if (P.some(p => Math.abs(p[0] - u) < 0.01)) return;
+      P.push([u, w]);
+      P.sort((a, b) => a[0] - b[0]);
+    }
+    paint(); changed();
+  });
+}
+
+defNode('params/graphcurve', {
+  title: 'Graph Curve', cat: 'Params', width: 200,
+  desc: 'Draw a graph and use it as a curve, in a box from (-100,100) bottom left to (100,-100) top right. Wire it into the C of as many Graph Mappers as you like so one shape drives them all, or draw it, move it and sample it like any other curve',
+  inputs: [],
+  outputs: [{ name: 'C', type: 'geometry' }],
+  defaults: { kind: 'bezier' },
+  /* the same object until the graph changes, so whatever reads it can keep its table */
+  compute: (a, c, node) => {
+    const v = node.values, k = v.kind || 'bezier', g = v.pts && v.pts[k], key = k + JSON.stringify(g || null);
+    if (node._gcKey !== key || !node._gcPoly) { node._gcKey = key; node._gcPoly = LM.graphCurve(k, g); }
+    return { C: node._gcPoly };
   },
+  buildBody: (node, body, changed) => _gmCard(node, body, changed, false)
+});
+
+defNode('math/graphmap', {
+  title: 'Graph Mapper', cat: 'Maths', width: 200,
+  desc: 'Bend numbers through a curve — V comes in along the bottom axis, R goes out up the side. Pick the graph type above the plot and drag its grips, or wire any curve into C: the box runs from (-100,100) bottom left to (100,-100) top right, V can meet the curve none, one or many times, R lists the hits top first, and X repeats V once per hit so the two stay lined up. Click a corner label to set the ranges, or wire X0 X1 Y0 Y1 to drive them (a wire wins, and the card\'s value comes back when it is removed). The menu under the plot picks what V does past the x range: hold, extend, repeat, mirror or stack',
+  inputs: [
+    { name: 'V', type: 'number', default: 0.5 },
+    { name: 'C', type: 'geometry', label: 'curve (unwired: the graph on the card)' },
+    { name: 'X0', type: 'number', label: 'x range start (unwired: set on the card)' },
+    { name: 'X1', type: 'number', label: 'x range end (unwired: set on the card)' },
+    { name: 'Y0', type: 'number', label: 'y range start (unwired: set on the card)' },
+    { name: 'Y1', type: 'number', label: 'y range end (unwired: set on the card)' }],
+  outputs: [{ name: 'R', type: 'number' }, { name: 'X', type: 'number', label: 'V, once per hit' }],
+  defaults: { kind: 'bezier', x0: 0, x1: 1, y0: 0, y1: 1, past: 'hold' },
+  compute: (a, c, node) => {
+    const v = node.values, k = v.kind || 'bezier', past = v.past || 'hold', wired = a.C !== undefined;
+    if (!wired && k === 'none') return { R: a.V, X: a.V };
+    const end = (wire, own, d) => wire !== undefined ? wire : own !== undefined ? own : d;
+    const x0 = end(a.X0, v.x0, 0), x1 = end(a.X1, v.x1, 1), y0 = end(a.Y0, v.y0, 0), y1 = end(a.Y1, v.y1, 1);
+    const u = x1 === x0 ? 0 : (a.V - x0) / (x1 - x0);
+    if (!wired) return { R: y0 + (y1 - y0) * LM.graphFn(k, v.pts && v.pts[k], past, u), X: a.V };
+    if (!a.C || typeof a.C !== 'object') return {};
+    /* one table per curve object: V can be a long list, and a curve only changes
+     * identity when something upstream rebuilds it */
+    if (!(node._gmTabs instanceof WeakMap)) node._gmTabs = new WeakMap();
+    let t = node._gmTabs.get(a.C);
+    if (!t) { t = LM.graphTable(a.C); node._gmTabs.set(a.C, t); }
+    const W = LM.graphRead(t, past, u);
+    return { R: W.map(w => y0 + (y1 - y0) * w), X: W.map(() => a.V) };
+  },
+  buildBody: (node, body, changed) => _gmCard(node, body, changed, true),
   /* what is flowing through, plotted on the curve */
   postEval: (node, el) => {
-    const rays = el.querySelector('.gm-rays'), dots = el.querySelector('.gm-dots');
+    const rays = el.querySelector('.gm-rays'), dots = el.querySelector('.gm-dots'), gm = el.querySelector('.gm');
     if (!rays || !dots) return;
-    const last = node._last || {}, V = (last.ins && last.ins.V) || [], R = (last.outs && last.outs.R) || [];
-    const n = V.length ? R.length : 0, S = 176;
-    const mapped = (node.values.kind || 'bezier') !== 'none';
+    const last = node._last || {}, X = (last.outs && last.outs.X) || [], R = (last.outs && last.outs.R) || [];
+    const C = (last.ins && last.ins.C) || [], shown = C.slice(0, 8);
+    /* the card repaints when a curve arrives, leaves or changes */
+    if (gm && gm._paint && (!gm._src || gm._src.length !== shown.length || gm._src.some((g, i) => g !== shown[i]))) gm._paint();
+    const n = R.length, S = 176, wired = C.length > 0, v = node.values;
+    const past = v.past || 'hold', k = v.kind || 'bezier';
+    const mapped = wired || k !== 'none', wraps = past === 'repeat' || past === 'mirror' || past === 'stack';
     _gmChips(node, el);
+    let rise = null;
+    if (past === 'stack' && mapped) {
+      if (wired) { rise = C[0] && typeof C[0] === 'object' ? LM.graphTable(C[0]).rise : 0; }
+      else { const P = v.pts && v.pts[k], f = q => LM.clamp(LM.graphMap(k, P, q), 0, 1); rise = f(1) - f(0); }
+    }
     const stride = Math.max(1, Math.ceil(n / 120));
     let dp = '', rp = '';
     for (let i = 0; i < n; i += stride) {
       /* each item against its own range, since a list can arrive on the range ports too */
       const g = mapped ? _gmRange(node, i) : { x0: 0, x1: 1, y0: 0, y1: 1 };
-      const vi = V[Math.min(i, V.length - 1)];
-      const px = LM.clamp(g.x1 === g.x0 ? 0 : (vi - g.x0) / (g.x1 - g.x0), 0, 1) * S;
-      const py = (1 - LM.clamp(g.y1 === g.y0 ? 0 : (R[i] - g.y0) / (g.y1 - g.y0), 0, 1)) * S;
+      let u = g.x1 === g.x0 ? 0 : (X[i] - g.x0) / (g.x1 - g.x0);
+      let w = g.y1 === g.y0 ? 0 : (R[i] - g.y0) / (g.y1 - g.y0);
+      if (mapped && wraps) {
+        const q = LM.graphWrap(past, u);
+        u = q[0];
+        if (q[1]) w -= q[1] * rise;
+      }
+      const px = LM.clamp(u, 0, 1) * S, py = (1 - LM.clamp(w, 0, 1)) * S;
       dp += 'M' + (px - 2).toFixed(1) + ' ' + py.toFixed(1) + 'a2 2 0 1 0 4 0a2 2 0 1 0 -4 0';
       if (n <= 12) rp += 'M' + px.toFixed(1) + ' ' + S + 'V' + py.toFixed(1) + 'H0';
     }
@@ -4573,7 +4687,7 @@ defNode('meta/js', {
     'math/cmp': 6, 'math/logic': 6, 'math/not': 6,
     /* Params: 0 pass-through containers · 1 values · 2 canvas objects · 3 inspection */
     'params/number': 0, 'params/point': 0, 'params/vector': 0, 'params/point3': 0, 'params/curve': 0, 'params/relay': 0,
-    'params/slider': 1, 'params/knob': 1, 'params/angle': 1, 'params/vecdial': 1, 'params/xyslider': 1, 'params/xyzslider': 1,
+    'params/slider': 1, 'params/knob': 1, 'params/angle': 1, 'params/vecdial': 1, 'params/xyslider': 1, 'params/xyzslider': 1, 'params/graphcurve': 1,
     'params/toggle': 1, 'params/button': 1, 'params/swatch': 1, 'params/textlist': 1,
     'params/anchor': 2,
     'params/panel': 3, 'params/graph': 4, 'params/timegraph': 4,

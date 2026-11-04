@@ -229,6 +229,16 @@ Pass-through container — wire a source through it, or set it directly; swap th
 |---|---|---|
 | C | geometry |  |
 
+### `params/graphcurve` — Graph Curve
+
+Draw a graph and use it as a curve, in a box from (-100,100) bottom left to (100,-100) top right. Wire it into the C of as many Graph Mappers as you like so one shape drives them all, or draw it, move it and sample it like any other curve
+
+| out | type | note |
+|---|---|---|
+| C | geometry |  |
+
+Node values (`values` keys, not ports): `{"kind":"bezier"}`
+
 ### `params/graph` — Graph Data
 
 Plots the data flowing through it — X alone draws the values over an automatic series from 0; X and Y together plot (x,y) points. Range fits the data, or wire two corner points A (min x,y) and B (max x,y) to pin it.
@@ -703,11 +713,12 @@ Floor
 
 ### `math/graphmap` — Graph Mapper
 
-Bend numbers through a curve you draw — V comes in along the bottom axis, R goes out up the side. Pick the graph type from the menu above the plot, drag its grips; click a corner label to set the ranges, or wire X0 X1 Y0 Y1 to drive them (a wire wins, and the card's value comes back when it is removed). V outside the x range holds at the edge, and R stays inside the y range
+Bend numbers through a curve — V comes in along the bottom axis, R goes out up the side. Pick the graph type above the plot and drag its grips, or wire any curve into C: the box runs from (-100,100) bottom left to (100,-100) top right, V can meet the curve none, one or many times, R lists the hits top first, and X repeats V once per hit so the two stay lined up. Click a corner label to set the ranges, or wire X0 X1 Y0 Y1 to drive them (a wire wins, and the card's value comes back when it is removed). The menu under the plot picks what V does past the x range: hold, extend, repeat, mirror or stack
 
 | in | type | default | note |
 |---|---|---|---|
 | V | number | `0.5` |  |
+| C | geometry |  | curve (unwired: the graph on the card) |
 | X0 | number |  | x range start (unwired: set on the card) |
 | X1 | number |  | x range end (unwired: set on the card) |
 | Y0 | number |  | y range start (unwired: set on the card) |
@@ -716,8 +727,9 @@ Bend numbers through a curve you draw — V comes in along the bottom axis, R go
 | out | type | note |
 |---|---|---|
 | R | number |  |
+| X | number | V, once per hit |
 
-Node values (`values` keys, not ports): `{"kind":"bezier","x0":0,"x1":1,"y0":0,"y1":1}`
+Node values (`values` keys, not ports): `{"kind":"bezier","x0":0,"x1":1,"y0":0,"y1":1,"past":"hold"}`
 
 ### `math/lerp` — Lerp
 
@@ -2795,4 +2807,4 @@ Node values (`values` keys, not ports): `{"port":"A"}`
 
 ## Icon coverage
 
-200 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
+201 node glyphs + 3 category fallback(s) in `js/icons.js`. Full coverage.
