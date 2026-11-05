@@ -18,6 +18,7 @@ CATS/TYPE_COLORS, `js/icons.js`) mirrors what's written here.
 | D5 | Wire language — carried over unchanged (color = source type, 2px). Trigger/list ideas still open. | — | pending |
 | D7 | Cloth & atmosphere — current dark canvas kept. | — | pending |
 | D8 | Brand mark — deferred to the Phase 6 naming decision. | — | pending |
+| D9 | **Light theme** — the same tokens with light values under `:root[data-theme="light"]` (bottom of `style.css`), nothing forked. `js/theme.js` picks the theme: the toolbar toggle (system, light, dark; `localStorage` `weft:theme`), else a `data-theme` an embedder set on `<html>`, else `prefers-color-scheme`. Canvas code reads the tokens through `Theme` (cloth clear colour, ink, overlay accents); colours a design or an example paints itself, and the category and type hues, stay as drawn. | 2026-11-05 | tokens |
 
 ## Tokens
 

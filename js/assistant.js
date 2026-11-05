@@ -384,12 +384,12 @@ const Assistant = {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, W, H);
       ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(130, 141, 163, 0.32)';
+      ctx.strokeStyle = Theme.sketchWire;
       for (let i = 1; i <= warp; i++) { const x = i * gap; ctx.beginPath(); ctx.moveTo(x, 3); ctx.lineTo(x, H - 3); ctx.stroke(); }
       // the previous pick lies finished behind the one being woven
       const thread = (sign, alpha, x0, x1) => {
         if (x1 <= x0) return;
-        ctx.strokeStyle = 'rgba(94, 234, 212, ' + alpha + ')';
+        ctx.strokeStyle = Theme.accent(alpha);
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         for (let x = x0; x <= x1; x += 1) {
@@ -401,7 +401,7 @@ const Assistant = {
       if (n > 0 || reduced) thread(-flip, 0.28, 0, W);
       if (flip > 0) thread(flip, 0.85, 0, head); else thread(flip, 0.85, head, W);
       if (!reduced) {
-        ctx.fillStyle = 'rgba(94, 234, 212, 0.95)';
+        ctx.fillStyle = Theme.accent(0.95);
         ctx.beginPath(); ctx.arc(head, mid + flip * amp * Math.sin(Math.PI * head / gap), 2, 0, Math.PI * 2); ctx.fill();
         state.raf = requestAnimationFrame(draw);
       }

@@ -20,6 +20,9 @@ Knob grown into Control Knob. Open from it: the glyphs are code drafts awaiting 
 revolution is worth), controls with an all-drag face got a visible drag handle,
 a marquee no longer selects loom text, a trackpad pinch zooms the loom and the
 cloth at finger speed, and Graph Mapper's ranges can be wired (X0 X1 Y0 Y1).
+**Light theme:** `:root[data-theme="light"]` re-tokens the whole app — loom, cards,
+cloth, gallery, panels; `js/theme.js` follows the OS, a toolbar toggle, or a `data-theme`
+an embedder sets on `<html>`.
 **v0.25 (2026-11-04):** Graph Curve draws a graph as an ordinary curve, and Graph
 Mapper takes any curve on C, so one shape can drive many mappers and a V can hit
 none, one or many times (X keeps V lined up with R). A menu under the plot sets what

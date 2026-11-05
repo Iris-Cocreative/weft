@@ -600,6 +600,8 @@ const App = {
     App.bindExport();
     App.bindGallery();
     App.bindSettings();
+    // thumbnails bake in the cloth colour — a theme change redraws them
+    Theme.onChange(() => { App._thumbs = {}; App._motifThumbs.clear(); App.renderMotifs(); });
 
     const saved = App.restore();
     App.setGraph(saved || App.migrate(JSON.parse(JSON.stringify(EXAMPLES['Seed torus']))));
@@ -907,7 +909,7 @@ const App = {
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     const g = cv.getContext('2d');
     g.scale(dpr, dpr);
-    g.fillStyle = '#0b0e14';
+    g.fillStyle = Theme.cloth;
     g.fillRect(0, 0, w, h);
     const hexes = n => n.type === 'params/swatch' ? [n.values.hex]
       : n.type === 'params/textlist' ? String(n.values.text || '').split('\n').map(s => s.trim()).filter(s => /^#?[0-9a-f]{6}$/i.test(s)).map(s => s[0] === '#' ? s : '#' + s)
@@ -926,7 +928,7 @@ const App = {
     const pad = 6, sc = Math.min((w - pad * 2) / Math.max(1, x1 - x0), (h - pad * 2) / Math.max(1, y1 - y0), 0.2);
     const ox = (w - (x1 - x0) * sc) / 2, oy = (h - (y1 - y0) * sc) / 2;
     const X = v => ox + (v - x0) * sc, Y = v => oy + (v - y0) * sc;
-    g.strokeStyle = 'rgba(219, 226, 238, 0.28)';
+    g.strokeStyle = Theme.sketchWire;
     g.lineWidth = 0.8;
     for (const wr of body.wires || []) {
       const a = box.get(wr.from[0]), b = box.get(wr.to[0]);
@@ -1331,7 +1333,7 @@ const App = {
        of it (and the live cloth) has them; this one draws what is loaded */
     if (ctx && Viewport.images) Viewport.images.sync(ctx.imageList);
     if (o.needDraw && !(ctx && ctx.drawList.length)) return '';
-    g2.fillStyle = '#0b0e14';
+    g2.fillStyle = Theme.cloth;
     g2.fillRect(0, 0, cv.width, cv.height);
     if (ctx) LM.fillBg(g2, ctx.bg, cv.width, cv.height);
     if (ctx) {
