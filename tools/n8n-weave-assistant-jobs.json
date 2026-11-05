@@ -1,0 +1,108 @@
+{
+  "name": "Weft — weave assistant jobs",
+  "nodes": [
+    {
+      "id": "d2dcdb22-913c-40d9-838a-6608f01e934a",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "429a415d-b24a-46e0-abf4-e10362b407af",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "weft-assistant-job",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      }
+    },
+    {
+      "id": "242a9789-c504-4396-a8db-53e60edf39a2",
+      "name": "Find job",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ],
+      "alwaysOutputData": true,
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "weft_assistant_jobs"
+        },
+        "returnAll": false,
+        "limit": 1,
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "job",
+              "condition": "eq",
+              "keyValue": "={{ $json.query.job || 'none' }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4962db19-9428-43a6-a9b4-1ac99b1e9cfe",
+      "name": "Answer",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.status === 'done' ? Object.assign({ status: 'done' }, JSON.parse($json.result)) : { status: $json.status || 'unknown' }) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Find job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find job": {
+      "main": [
+        [
+          {
+            "node": "Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none"
+  }
+}

@@ -23,6 +23,12 @@ cloth at finger speed, and Graph Mapper's ranges can be wired (X0 X1 Y0 Y1).
 **Light theme:** `:root[data-theme="light"]` re-tokens the whole app — loom, cards,
 cloth, gallery, panels; `js/theme.js` follows the OS, a toolbar toggle, or a `data-theme`
 an embedder sets on `<html>`.
+**v0.25 (2026-11-04):** Graph Curve draws a graph as an ordinary curve, and Graph
+Mapper takes any curve on C, so one shape can drive many mappers and a V can hit
+none, one or many times (X keeps V lined up with R). A menu under the plot sets what
+V does past the range: hold, extend, repeat, mirror or stack. Open from it: the
+Graph Curve glyph is a code draft; a curve overflowing the box is clipped by repeat,
+mirror and stack rather than overlapping its neighbors.
 
 ## 0. Foundation hardening — do these before the tracks below get heavy
 
@@ -256,9 +262,11 @@ design rationale lives in `docs/EVENTS-AND-STATE.md`.
   as its own task), the spec split with smoke 27 checking every node still
   lands in exactly one slice, and turn logging (Supabase, consent line on
   the setup form) so classes and failures are counted on real asks, not
-  guesses. Still open: streaming replies (the cure for gateway 504s on
-  long thinks), model-authored node *types* (packs), and dataset capture
-  for fine-tuning once the log has volume.
+  guesses. Still open: model-authored node *types* (packs), and dataset
+  capture for fine-tuning once the log has volume. Long replies on the
+  Claude workflow now run as jobs the panel polls (docs/ASSISTANT.md), which
+  gets them past the gateway limit of ~100s; the HF workflow still answers
+  on the open connection.
 
 ## 3. Digital Pattern Language
 

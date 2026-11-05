@@ -1836,6 +1836,109 @@ for (const name of Object.keys(EXAMPLES)) {
   if ((cg.out.g.R || []).length !== 2) failures.push('graphmap: a list on Y1 must map per item, got ' + JSON.stringify(cg.out.g.R));
   else { near(cg.out.g.R[0], 10 + 0.5 * 90, 'graphmap: first Y1'); near(cg.out.g.R[1], 10 + 0.5 * 190, 'graphmap: second Y1'); }
 
+  /* past the range, on the card's own graph. Inside the range every choice is the same graph */
+  const line0 = { kind: 'linear', pts: { linear: [[0, 0], [1, 1]] } };
+  const past = (mode, V) => gm(Object.assign({ past: mode }, line0), V);
+  near(past('hold', 9), 1, 'past hold');
+  near(past('extend', 1.5), 1.5, 'past extend: above'); near(past('extend', -0.5), -0.5, 'past extend: below');
+  near(past('repeat', 1.25), 0.25, 'past repeat'); near(past('repeat', -0.25), 0.75, 'past repeat: below');
+  near(past('repeat', 1), 1, 'past repeat: the top of the range is still the end'); near(past('repeat', 2), 0, 'past repeat: later cycles start over');
+  near(past('mirror', 1.25), 0.75, 'past mirror'); near(past('mirror', 2.25), 0.25, 'past mirror: forward again'); near(past('mirror', -0.25), 0.25, 'past mirror: below');
+  near(past('stack', 2.25), 2.25, 'past stack'); near(past('stack', 1), 1, 'past stack: joins up'); near(past('stack', -0.5), -0.5, 'past stack: below');
+  for (const k of ['bezier', 'sine', 'spline', 'steps', 'bounce']) {
+    for (const mode of ['extend', 'repeat', 'mirror', 'stack']) for (const V of [0, 0.3, 0.77]) {
+      near(gm({ kind: k, past: mode }, V), gm({ kind: k }, V), 'past ' + mode + ': ' + k + ' inside the range at ' + V);
+    }
+    if (!isFinite(gm({ kind: k, past: 'extend' }, 5))) failures.push('past extend: ' + k + ' not finite');
+  }
+
+  /* Graph Curve: an ordinary open curve across the box, reading back as the graph it drew */
+  const gcNode = v => ({ values: v });
+  const gcd = NODE_DEFS['params/graphcurve'], gcOut = gcd.compute({}, mkCtx(), gcNode({ kind: 'linear', pts: { linear: [[0, 0], [1, 1]] } })).C;
+  near(gcOut.pts[0].x, -100, 'graph curve: starts at the left of the box'); near(gcOut.pts[0].y, 100, 'graph curve: starts at the bottom');
+  near(gcOut.pts[gcOut.pts.length - 1].x, 100, 'graph curve: ends at the right'); near(gcOut.pts[gcOut.pts.length - 1].y, -100, 'graph curve: ends at the top');
+  for (const k of ['bezier', 'bounce', 'conic', 'elastic', 'gaussian', 'linear', 'parabola', 'perlin', 'power', 'sinc', 'sine', 'sinesum', 'spline', 'sqrt', 'steps', 'triangle']) {
+    const C = gcd.compute({}, mkCtx(), gcNode({ kind: k })).C;
+    for (let i = 0; i <= 97; i++) {
+      const V = i / 97, r = run('math/graphmap', {}, { V, C }).R;
+      if (r.length !== 1) { failures.push('graph curve ' + k + ': ' + r.length + ' hits at ' + V); break; }
+      near(r[0], gm({ kind: k }, V), 'graph curve ' + k + ' reads back at ' + V, 0.01);
+    }
+  }
+  const held = gcNode({ kind: 'sine' });
+  if (gcd.compute({}, mkCtx(), held).C !== gcd.compute({}, mkCtx(), held).C) failures.push('graph curve: must keep its object until the graph changes');
+  const before = gcd.compute({}, mkCtx(), held).C;
+  held.values.kind = 'sqrt';
+  if (gcd.compute({}, mkCtx(), held).C === before) failures.push('graph curve: a new type must draw a new curve');
+
+  /* a curve in C: none, one or many hits, top first, with X lined up */
+  const onC = (C, V, values) => run('math/graphmap', values || {}, { V, C });
+  const circle = { kind: 'circle', cx: 0, cy: 0, r: 50 };
+  const mid = onC(circle, 0.5);
+  if (mid.R.length !== 2) failures.push('curve in C: a circle through its middle must hit twice, got ' + mid.R.length);
+  else { near(mid.R[0], 0.75, 'curve in C: top hit first'); near(mid.R[1], 0.25, 'curve in C: bottom hit second'); }
+  if (mid.X.length !== 2 || mid.X[0] !== 0.5 || mid.X[1] !== 0.5) failures.push('curve in C: X must repeat V per hit');
+  const side = onC(circle, 0.75);
+  if (side.R.length !== 1) failures.push('curve in C: a circle at its side must hit once, got ' + side.R.length);
+  else near(side.R[0], 0.5, 'curve in C: the tangent point');
+  if (onC(circle, 0.9).R.length !== 0) failures.push('curve in C: beside a circle must hit nothing');
+  const upright = { kind: 'poly', closed: true, pts: [{ x: 0, y: -50 }, { x: 0, y: 0 }, { x: 0, y: 50 }, { x: 50, y: 50 }, { x: 50, y: -50 }] };
+  const sideway = onC(upright, 0.5);
+  if (sideway.R.length !== 2) failures.push('curve in C: an upright side must give its two ends, got ' + JSON.stringify(sideway.R));
+  else { near(sideway.R[0], 0.75, 'curve in C: upright side, top end'); near(sideway.R[1], 0.25, 'curve in C: upright side, bottom end'); }
+  const lr = { kind: 'line', a: { x: -50, y: 50 }, b: { x: 50, y: -50 } }, rl = { kind: 'line', a: lr.b, b: lr.a };
+  near(onC(lr, 0.6).R[0], 0.6, 'curve in C: a line'); near(onC(rl, 0.6).R[0], 0.6, 'curve in C: the same line drawn the other way');
+  near(onC({ kind: 'line', a: { x: -100, y: -150 }, b: { x: 100, y: -150 } }, 0.5).R[0], 1.25, 'curve in C: R follows the curve out of the box');
+  near(onC(lr, 0.5, { x0: 0, x1: 1, y0: 10, y1: 20 }).R[0], 15, 'curve in C: the y range applies');
+  near(onC(lr, 50, { x0: 0, x1: 100 }).R[0], 0.5, 'curve in C: the x range applies');
+
+  /* past the range, on a wired curve: this line stops short of the box on both sides */
+  const pc = (mode, V, C) => onC(C || lr, V, { past: mode }).R;
+  near(pc('hold', 0.9)[0], 0.75, 'curve past hold: above'); near(pc('hold', 0.1)[0], 0.25, 'curve past hold: below');
+  near(pc('extend', 0.9)[0], 0.9, 'curve past extend: above'); near(pc('extend', 0.1)[0], 0.1, 'curve past extend: below');
+  near(onC(rl, 0.9, { past: 'extend' }).R[0], 0.9, 'curve past extend: drawn the other way');
+  near(pc('repeat', 1.5)[0], 0.5, 'curve past repeat'); near(pc('mirror', 1.25)[0], 0.75, 'curve past mirror');
+  near(pc('stack', 1.5)[0], 1, 'curve past stack climbs by the rise of the curve');
+  near(onC(rl, 1.5, { past: 'stack' }).R[0], 1, 'curve past stack: drawn the other way');
+  if (pc('repeat', 1.1).length !== 0) failures.push('curve past repeat: the gap beside the curve repeats too');
+  if (pc('hold', 0.9, circle).length || pc('extend', 0.9, circle).length) failures.push('curve past: a closed curve has no ends to hold or extend');
+  if (pc('repeat', 1.5, circle).length !== 2) failures.push('curve past repeat: a circle repeats as a row of circles');
+
+  /* through the engine: one curve, two mappers, and lists that stay lined up */
+  const sg = mkCtx();
+  LM.evaluateGraph({ nodes: [
+    { id: 'c', type: 'crv/circle', values: { R: 50 } },
+    { id: 'gc', type: 'params/graphcurve', values: { kind: 'linear', pts: { linear: [[0, 0], [1, 1]] } } },
+    { id: 'v', type: 'sets/series', values: { S: 0.5, N: 0.2, C: 3 } },
+    { id: 'a', type: 'math/graphmap', values: {} },
+    { id: 'b', type: 'math/graphmap', values: { y0: 0, y1: 100 } },
+    { id: 'o', type: 'math/graphmap', values: {} },
+    { id: 'p', type: 'vec/construct', values: {} }
+  ], wires: [
+    { from: ['v', 'S'], to: ['a', 'V'] }, { from: ['c', 'C'], to: ['a', 'C'] },
+    { from: ['a', 'X'], to: ['p', 'X'] }, { from: ['a', 'R'], to: ['p', 'Y'] },
+    { from: ['gc', 'C'], to: ['b', 'C'] }, { from: ['gc', 'C'], to: ['o', 'C'] }
+  ] }, NODE_DEFS, sg);
+  for (const id of ['a', 'b', 'o', 'p', 'gc']) if (sg.errors[id]) failures.push('curve in C: ' + id + ' errored: ' + sg.errors[id]);
+  /* V 0.5 and 0.7 are inside the circle (cx 0 and 40), 0.9 is beside it */
+  if (sg.out.a.R.length !== 4 || sg.out.a.X.join() !== [0.5, 0.5, 0.7, 0.7].join()) failures.push('curve in C: list V, got ' + JSON.stringify(sg.out.a));
+  if ((sg.out.p.P || []).length !== 4 || sg.out.p.P[2].x !== 0.7) failures.push('curve in C: X and R must build points, got ' + JSON.stringify(sg.out.p));
+  near(sg.out.b.R[0], 50, 'one graph: range of the first mapper'); near(sg.out.o.R[0], 0.5, 'one graph: range of the second mapper');
+
+  const twoC = mkCtx();
+  LM.evaluateGraph({ nodes: [
+    { id: 'r', type: 'sets/series', values: { S: 30, N: 20, C: 2 } },
+    { id: 'c', type: 'crv/circle', values: {} },
+    { id: 'm', type: 'math/graphmap', values: { x0: 0, x1: 1 } }
+  ], wires: [{ from: ['r', 'S'], to: ['c', 'R'] }, { from: ['c', 'C'], to: ['m', 'C'] }] }, NODE_DEFS, twoC);
+  if (twoC.errors.m || twoC.out.m.R.length !== 4) failures.push('curve in C: a list of curves must map per item, got ' + JSON.stringify(twoC.out.m));
+
+  const junk = run('math/graphmap', {}, { V: 0.5, C: 5 });
+  if (junk.R !== undefined) failures.push('curve in C: a number on C must give nothing, got ' + JSON.stringify(junk));
+  /* a cache that came through JSON inside a cluster is a plain object, not a WeakMap */
+  const stale = NODE_DEFS['math/graphmap'].compute({ V: 0.5, C: circle }, mkCtx(), { values: {}, _gmTabs: {} });
+  if (stale.R.length !== 2) failures.push('curve in C: a stale table cache must be replaced');
+
   /* the clock, at a known instant: 2023-11-14 22:13:20 UTC, a Tuesday */
   const zone = z => { const c = mkCtx(); c.now = 1700000000000; return NODE_DEFS['input/clock'].compute({ Z: z }, c, { values: {} }); };
   const utc = zone('UTC');
@@ -1870,7 +1973,10 @@ for (const name of Object.keys(EXAMPLES)) {
   if (clockJS.indexOf('clockParts:') < 0) failures.push('export: LM.clockParts not bundled');
   const gmJS = WeftExport.buildJS({ nodes: [{ id: 'g', type: 'math/graphmap', values: { kind: 'bezier' } }, { id: 'c', type: 'crv/circle', values: {} }, { id: 'd', type: 'disp/draw', values: {} }],
     wires: [{ from: ['g', 'R'], to: ['c', 'R'] }, { from: ['c', 'C'], to: ['d', 'G'] }] });
-  for (const k of ['graphMap:', 'graphGrips:', 'graphSolve:']) if (gmJS.indexOf(k) < 0) failures.push('export: LM.' + k + ' not bundled');
+  for (const k of ['graphMap:', 'graphGrips:', 'graphSolve:', 'graphFn:', 'graphWrap:', 'graphRead:', 'graphTable:', 'graphHits:', 'graphTidy:']) if (gmJS.indexOf(k) < 0) failures.push('export: LM.' + k + ' not bundled');
+  const gcJS = WeftExport.buildJS({ nodes: [{ id: 'g', type: 'params/graphcurve', values: { kind: 'sine' } }, { id: 'd', type: 'disp/draw', values: {} }],
+    wires: [{ from: ['g', 'C'], to: ['d', 'G'] }] });
+  if (gcJS.indexOf('graphCurve:') < 0) failures.push('export: LM.graphCurve not bundled');
 }
 
 return { failures, nodeCount: Object.keys(NODE_DEFS).length, exampleCount: Object.keys(EXAMPLES).length, motifCount: EXAMPLE_MOTIFS.length, groupMotifs: GROUP_MOTIFS };

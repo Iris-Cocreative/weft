@@ -131,7 +131,8 @@
       "position": [
         660,
         -80
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -151,7 +152,8 @@
       "position": [
         880,
         -80
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -164,7 +166,8 @@
       "position": [
         1100,
         -80
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -189,7 +192,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.body) }}",
         "options": {
-          "timeout": 170000
+          "timeout": 420000
         }
       },
       "id": "weft-cl-router",
@@ -214,7 +217,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// A failed call (with \"continue on error\" the HTTP node hands us json.error\n// instead of throwing): say what happened in the panel, in words.\nif ($json.error && !$json.content) {\n  const e = $json.error;\n  const msg = typeof e === 'string' ? e : (e.message || e.description || JSON.stringify(e));\n  const code = String((e && (e.httpCode || e.status || e.code)) || (msg.match(/\\b(4\\d\\d|5\\d\\d)\\b/) || [])[1] || '');\n  let reply;\n  if (/credit balance/i.test(msg)) reply = '(the Anthropic account is out of credits - top it up at console.anthropic.com/settings/billing)';\n  else if (code === '529' || code === '503' || code === '502' || code === '504' || code === '500') reply = '(Claude is overloaded or the call timed out (' + code + ') - try again in a moment; if it repeats, ask for a smaller step or molt the chat)';\n  else if (code === '429') reply = '(the Anthropic API is rate-limiting us (429) - wait a moment and try again)';\n  else if (code === '401' || code === '403') reply = '(the Anthropic API refused the key (' + code + ') - check the Anthropic API key credential in n8n)';\n  else reply = '(the model call failed' + (code ? ' (' + code + ')' : '') + ': ' + msg.slice(0, 300) + ')';\n  return [{ json: { reply, ops: null, model: '', finish: 'error', error: code || 'error' } }];\n}\n\n// Split the model's answer into reply text + the weft-ops block (if any).\n// Tolerates JS-isms (// comments, trailing commas) - mirrors WeftOps.tidyJSON\n// in js/ops.js. If the block still won't parse, ops is null and the fence\n// stays in the reply so the panel gets a go.\nconst stop = $json.stop_reason || '';\nconst text = ($json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nconst tidy = s => {\n  let out = '', inStr = false, i = 0;\n  while (i < s.length) {\n    const c = s[i];\n    if (inStr) { out += c; if (c === '\\\\') { out += s[i + 1] || ''; i += 2; continue; } if (c === '\"') inStr = false; i++; }\n    else if (c === '\"') { inStr = true; out += c; i++; }\n    else if (c === '/' && s[i + 1] === '/') { while (i < s.length && s[i] !== '\\n') i++; }\n    else if (c === '/' && s[i + 1] === '*') { const j = s.indexOf('*/', i + 2); i = j < 0 ? s.length : j + 2; }\n    else { out += c; i++; }\n  }\n  return out.replace(/,(\\s*[\\]}])/g, '$1');\n};\nconst pick = p => Array.isArray(p) ? p : (p && Array.isArray(p.ops) ? p.ops : null);\nlet reply = text.trim();\nlet ops = null;\nconst m = text.match(/```(?:weft-ops|json)?[ \\t]*\\n([\\s\\S]*?)```/);\nif (m) {\n  try { ops = pick(JSON.parse(m[1])); } catch (e) { try { ops = pick(JSON.parse(tidy(m[1]))); } catch (e2) { ops = null; } }\n  if (ops) reply = text.replace(m[0], '').trim();\n}\nif (stop === 'refusal') reply = (reply ? reply + '\\n\\n' : '') + '(the model declined this one - try rewording the ask)';\nelse if (!text.trim()) reply = '(the model came back with no answer' + (stop === 'max_tokens' ? ' - it spent the whole output budget thinking; ask for a smaller step, or raise max_tokens / lower effort in the Model node' : '') + ')';\nelse if (stop === 'max_tokens' && !ops) reply += '\\n\\n(the model ran out of output tokens mid-answer - try again or ask for a smaller change)';\nreturn [{ json: { reply, ops, model: $json.model || '', finish: stop } }];\n"
+        "jsCode": "// A failed call (with \"continue on error\" the HTTP node hands us json.error\n// instead of throwing): say what happened in the panel, in words.\nif ($json.error && !$json.content) {\n  const e = $json.error;\n  const msg = typeof e === 'string' ? e : (e.message || e.description || JSON.stringify(e));\n  const code = String((e && (e.httpCode || e.status || e.code)) || (msg.match(/\\b(4\\d\\d|5\\d\\d)\\b/) || [])[1] || '');\n  let reply;\n  if (/credit balance/i.test(msg)) reply = '(the Anthropic account is out of credits - top it up at console.anthropic.com/settings/billing)';\n  else if (code === '529' || code === '503' || code === '502' || code === '504' || code === '500') reply = '(Claude is overloaded or the call timed out (' + code + ') - try again in a moment; if it repeats, ask for a smaller step or molt the chat)';\n  else if (code === '429') reply = '(the Anthropic API is rate-limiting us (429) - wait a moment and try again)';\n  else if (code === '401' || code === '403') reply = '(the Anthropic API refused the key (' + code + ') - check the Anthropic API key credential in n8n)';\n  else if (/timeout|ECONNABORTED/i.test(msg)) reply = '(the model hit the 7 min limit twice without finishing - ask for a smaller step, or molt the chat and try again)';\n  else reply = '(the model call failed' + (code ? ' (' + code + ')' : '') + ': ' + msg.slice(0, 300) + ')';\n  return [{ json: { reply, ops: null, model: '', finish: 'error', error: code || 'error' } }];\n}\n\n// Split the model's answer into reply text + the weft-ops block (if any).\n// Tolerates JS-isms (// comments, trailing commas) - mirrors WeftOps.tidyJSON\n// in js/ops.js. If the block still won't parse, ops is null and the fence\n// stays in the reply so the panel gets a go.\nconst stop = $json.stop_reason || '';\nconst text = ($json.content || []).filter(b => b.type === 'text').map(b => b.text).join('\\n');\nconst tidy = s => {\n  let out = '', inStr = false, i = 0;\n  while (i < s.length) {\n    const c = s[i];\n    if (inStr) { out += c; if (c === '\\\\') { out += s[i + 1] || ''; i += 2; continue; } if (c === '\"') inStr = false; i++; }\n    else if (c === '\"') { inStr = true; out += c; i++; }\n    else if (c === '/' && s[i + 1] === '/') { while (i < s.length && s[i] !== '\\n') i++; }\n    else if (c === '/' && s[i + 1] === '*') { const j = s.indexOf('*/', i + 2); i = j < 0 ? s.length : j + 2; }\n    else { out += c; i++; }\n  }\n  return out.replace(/,(\\s*[\\]}])/g, '$1');\n};\nconst pick = p => Array.isArray(p) ? p : (p && Array.isArray(p.ops) ? p.ops : null);\nlet reply = text.trim();\nlet ops = null;\nconst m = text.match(/```(?:weft-ops|json)?[ \\t]*\\n([\\s\\S]*?)```/);\nif (m) {\n  try { ops = pick(JSON.parse(m[1])); } catch (e) { try { ops = pick(JSON.parse(tidy(m[1]))); } catch (e2) { ops = null; } }\n  if (ops) reply = text.replace(m[0], '').trim();\n}\nif (stop === 'refusal') reply = (reply ? reply + '\\n\\n' : '') + '(the model declined this one - try rewording the ask)';\nelse if (!text.trim()) reply = '(the model came back with no answer' + (stop === 'max_tokens' ? ' - it spent the whole output budget thinking; ask for a smaller step, or raise max_tokens / lower effort in the Model node' : '') + ')';\nelse if (stop === 'max_tokens' && !ops) reply += '\\n\\n(the model ran out of output tokens mid-answer - try again or ask for a smaller change)';\nreturn [{ json: { reply, ops, model: $json.model || '', finish: stop } }];\n"
       },
       "id": "weft-cl-parse",
       "name": "Parse reply",
@@ -223,12 +226,13 @@
       "position": [
         1540,
         -80
-      ]
+      ],
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops, model: $json.model }) }}",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops, model: $json.model, error: $json.error }) }}",
         "options": {}
       },
       "id": "weft-cl-ok",
@@ -237,8 +241,272 @@
       "typeVersion": 1.1,
       "position": [
         1760,
-        -80
+        80
       ]
+    },
+    {
+      "id": "b71aafb7-09cb-4ba5-ab71-6eebe7666bec",
+      "name": "Wants a job?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Webhook').first().json.body.async === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "41e5bb1b-844d-4b58-ae1e-df114ae0b02b",
+      "name": "New job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        -480
+      ],
+      "parameters": {
+        "jsCode": "// A job id the panel polls with. The poll endpoint takes no key, so the id\n// itself is the permission to read this one reply: long and unguessable.\nconst r = () => Math.random().toString(36).slice(2, 12);\nreturn [{ json: { job: [$execution.id, r(), r(), r()].join('-') } }];"
+      }
+    },
+    {
+      "id": "f7c940a9-f575-4302-bde7-a7ac32244a92",
+      "name": "Clear old jobs",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        840,
+        -480
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "resource": "row",
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "weft_assistant_jobs"
+        },
+        "options": {},
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "createdAt",
+              "condition": "lt",
+              "keyValue": "={{ $now.minus({ days: 1 }).toISO() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f047bda6-bada-4d62-8ee7-c0b516ab88f8",
+      "name": "Job row",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        -480
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "weft_assistant_jobs"
+        },
+        "options": {},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "schema": [
+            {
+              "id": "job",
+              "displayName": "job",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "result",
+              "displayName": "result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "value": {
+            "job": "={{ $('New job').first().json.job }}",
+            "status": "running",
+            "result": ""
+          }
+        }
+      }
+    },
+    {
+      "id": "694fb9ef-835e-4b2f-b06d-07efef6b8419",
+      "name": "Job accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        -480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "options": {
+          "responseCode": 202
+        },
+        "responseBody": "={{ JSON.stringify({ job: $('New job').first().json.job, poll: $('Webhook').first().json.webhookUrl.replace(/[^\\/]+$/, 'weft-assistant-job') }) }}"
+      }
+    },
+    {
+      "id": "f0df6002-b495-4aca-9c27-5cdc66c07351",
+      "name": "Failed step",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        160
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// A step before or after the model threw. Say so in the panel rather than\n// leaving a job running forever (or, without a job, an opaque 500).\nconst e = $json.error;\nconst msg = String((e && (e.message || e.description)) || e || 'unknown error').slice(0, 300);\nreturn { json: { reply: '(the assistant workflow failed before it could answer: ' + msg + ')', ops: null, model: '', finish: 'error', error: 'workflow' } };"
+      }
+    },
+    {
+      "id": "34ecc8f9-c6b3-412e-9ed1-f2eb07186a6f",
+      "name": "Has a job?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        -80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Webhook').first().json.body.async === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "562c9a5a-3e3c-4f24-baa3-6a867168f510",
+      "name": "Save result",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -240
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "weft_assistant_jobs"
+        },
+        "options": {},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "schema": [
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "result",
+              "displayName": "result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "value": {
+            "status": "done",
+            "result": "={{ JSON.stringify({ reply: $json.reply, ops: $json.ops, model: $json.model, error: $json.error }) }}"
+          }
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "job",
+              "condition": "eq",
+              "keyValue": "={{ $('New job').first().json.job }}"
+            }
+          ]
+        }
+      }
     }
   ],
   "connections": {
@@ -257,7 +525,7 @@
       "main": [
         [
           {
-            "node": "Model",
+            "node": "Wants a job?",
             "type": "main",
             "index": 0
           }
@@ -290,6 +558,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Failed step",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -301,6 +576,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Failed step",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -309,6 +591,13 @@
         [
           {
             "node": "Claude",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed step",
             "type": "main",
             "index": 0
           }
@@ -328,6 +617,104 @@
     },
     "Parse reply": {
       "main": [
+        [
+          {
+            "node": "Has a job?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wants a job?": {
+      "main": [
+        [
+          {
+            "node": "New job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New job": {
+      "main": [
+        [
+          {
+            "node": "Clear old jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear old jobs": {
+      "main": [
+        [
+          {
+            "node": "Job row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job row": {
+      "main": [
+        [
+          {
+            "node": "Job accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job accepted": {
+      "main": [
+        [
+          {
+            "node": "Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Failed step": {
+      "main": [
+        [
+          {
+            "node": "Has a job?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has a job?": {
+      "main": [
+        [
+          {
+            "node": "Save result",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Respond",

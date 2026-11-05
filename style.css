@@ -715,6 +715,12 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   color: var(--white-80); font-size: 11px;
 }
 .gm-pick:hover { border-color: var(--line2); }
+.gm-pick.still { cursor: default; }
+.gm-pick.still:hover { border-color: var(--dark-400); }
+.gm-pick.still .gm-caret { display: none; }
+.gm-past-cap { flex: none; color: var(--white-40); font-size: 10px; }
+.gm-past .gm-name { text-align: right; }
+.gm-past .gm-glyph path, .gm-item .gm-glyph path { stroke-linecap: round; }
 .gm-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gm-caret { color: var(--white-40); font-size: 9px; }
 .gm-glyph { flex: none; width: 14px; height: 14px; overflow: visible; }
@@ -734,6 +740,7 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
   color: var(--white-40); font: 9px var(--font-val);
 }
 .gm-chip:hover { color: var(--white-80); border-color: var(--line2); }
+.gm-chip.still { cursor: default; pointer-events: none; }
 .gm-chip.wired { color: var(--type-number); border-color: color-mix(in srgb, var(--type-number) 45%, transparent); }
 .gm-chip-y { left: 3px; top: 3px; }
 /* the range ports are wire-only: their manual values live behind the corner labels */
@@ -1038,6 +1045,9 @@ main.merged #viewHud { z-index: 2; top: 50px; right: 12px; } /* below the loom t
 .as-msg.note { align-self: center; font-size: 11px; color: var(--accent-hi); background: none; padding: 2px 6px; }
 .as-msg.note.error { color: #f87171; white-space: pre-wrap; }
 .as-msg.shuttle { align-self: flex-start; background: none; padding: 2px 4px; line-height: 0; }
+.as-wait { display: block; margin-top: 6px; font-size: 11px; line-height: 1.4; color: var(--faint); }
+.as-apply { display: block; margin: 6px auto 2px; padding: 4px 10px; font: inherit; color: var(--text); background: none; border: 1px solid var(--accent-dim); border-radius: 6px; cursor: pointer; }
+.as-apply:hover { border-color: var(--accent); }
 /* rendered Markdown in the model's replies */
 .as-msg.md { white-space: normal; }
 .as-msg.md > :first-child { margin-top: 0; }

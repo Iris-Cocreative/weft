@@ -31,8 +31,46 @@ tell them apart, so switching is a matter of which URL you paste in:
 
 | File | Model | Notes |
 |---|---|---|
-| `tools/n8n-weave-assistant-hf.json` | any open model on the **Hugging Face router** (default `Qwen/Qwen3.8-27B`) | the one to start with — see the bench scores in `HF-INTEGRATION-PLAN.md` |
-| `tools/n8n-weave-assistant.json` | **Claude** (default `claude-opus-5-5`) | same pipeline and error handling as the HF one; prompt-cached spec |
+| `tools/n8n-weave-assistant-hf.json` | any open model on the **Hugging Face router** (default `Qwen/Qwen3.8-27B`) | not deployed at the moment; a cheaper option to import — see the bench scores in `HF-INTEGRATION-PLAN.md`. Answers on the open connection, so replies past ~100s fail (see "Load failed") |
+| `tools/n8n-weave-assistant.json` | **Claude** (default `claude-opus-5-5`) | the live one, and the panel's default address (`weft-assistant-claude`); same pipeline and error handling as the HF one; prompt-cached spec; runs long replies as jobs |
+
+## Long replies run as jobs
+
+n8n Cloud sits behind a gateway that gives up on a silent response at about
+100s, and a thinking model can take several minutes. So the panel sends
+`async: true`, and a workflow that supports it answers at once:
+
+```
+POST webhook {…, async: true} ──▶ 202 {job, poll}         the model keeps running
+GET  poll?job=…               ──▶ {status: "running"}     every 8–10s
+GET  poll?job=…               ──▶ {status: "done", reply, ops, model}
+```
+
+Replies wait in the n8n data table `weft_assistant_jobs` (string columns `job`,
+`status`, `result`); each new job clears rows older than a day. The poll
+endpoint, `tools/n8n-weave-assistant-jobs.json`, takes no shared key: the long
+random job id is the permission to read that one reply, and leaving the key
+out also saves a CORS preflight on every check. Each check is one n8n
+execution, about 17 for a 160s reply, and that workflow doesn't save its
+successful runs.
+
+A workflow that ignores `async` and replies directly still works, so the HF
+workflow and anyone's own webhook need no change. A request without `async`
+takes the old path through the Claude workflow too.
+
+While a job runs, the panel keeps its record in `sessionStorage`, so reloading
+the tab picks the reply back up, and a laptop that slept through the wait checks
+once more before giving up. It gives up after 15 minutes (the worst case is two
+7-minute model calls) or about 3 minutes of unreachable checks. If the loom's
+nodes have gone when the reply lands, say because another file was opened, the
+ops wait behind an "apply to this loom anyway" button instead of landing there.
+A failed send puts your words back in the box and takes the unanswered turn out
+of the history. The workflow marks its failure replies with `error`, so they
+show as errors and never reach the model as something it said.
+
+To set this up on another n8n: create the data table, import and activate the
+jobs workflow, then import the Claude workflow. The panel is told where to
+poll by the `poll` field, which sits next to the main webhook's address.
 
 ## Setup — Hugging Face (one time, ~10 minutes)
 
@@ -119,6 +157,15 @@ the gap is the model; if neither does, look at what they reached for: a
 missing recipe or an unclear port in `LLM-AUTHORING.md` is usually the
 cause, and one line there fixes it for every model at once.
 
+**"could not reach the assistant … (browser says: Load failed)"** — the
+connection died with no usable response. `Load failed` is Safari's wording,
+`Failed to fetch` Chrome's. Look at the workflow's runs in n8n: a successful run
+at the same moment means the reply was lost on the way back (on a workflow
+without jobs, usually a run over ~100s), and the run's **Respond** node still
+holds the reply and ops. No run at all means the request never arrived: the
+network, or a webhook address that isn't registered, which fails its CORS
+preflight and so reads the same to the browser.
+
 **"(the model came back with no answer after N tokens of thinking)"** — a
 reasoning model looped on itself (the same plan repeated until the provider
 cut it). Two causes seen so far, both fixed in the workflow file: temperature
@@ -137,8 +184,14 @@ message instead of a failed execution (the router node runs with "on error →
 continue", and Parse reply turns `json.error` into words: 504/502/503, 429,
 402, 401 each get their own line). If it keeps happening on one ask, that ask
 is making the model think too long: split it, or molt so there is less to
-read. Streaming would let the reply trickle past any gateway timeout —
-still open on the roadmap.
+read. The Claude workflow's jobs get past the gateway between panel and n8n;
+the HF workflow would need the same change to do so.
+
+**"the model hit the 7 min limit twice without finishing"** — n8n's own limit on
+the Claude call (`timeout` on the **Claude** node, retried once). 32000 output
+tokens at the speeds seen so far fit inside it, so this means a slow spell at
+the provider or a very long think: ask for a smaller step, or drop `effort` on
+the **Model** node to `medium`.
 
 ## Scoring a model before you switch
 
@@ -164,6 +217,7 @@ fix rejected ops or eval errors, as the panel does through the user.
 | `errors` | current per-node eval errors from the cloth |
 | `history` | the last ~12 chat turns (text only) |
 | `snapshot` | a 640px JPEG of the cloth taken as you press send, so a vision model can judge what you're seeing — color, overlap, "why does it look like this" — not just the wiring (~400 tokens on Qwen; toggle in the panel; models without image input ignore it) |
+| `async` | always `true` from the panel; the workflow reads it to run a job, and it never reaches the model |
 
 ## The ops protocol
 

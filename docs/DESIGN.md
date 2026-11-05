@@ -106,7 +106,7 @@ Vector Dial, XY Slider and XYZ Slider are chromeless too: a drag surface, typed
 readouts in a row beneath it, each with a quiet caption (`.pad-*`). A pad wears
 the wire color of what it outputs, and its output dot sits at the card's center
 right. With the face all drag surface, these and the two dials carry a drag handle
-(`.ctl-head`: a grip and the control's name) along the top. Their glyphs, and those of Clock and Graph Mapper, are code drafts
+(`.ctl-head`: a grip and the control's name) along the top. Their glyphs, and those of Clock, Graph Mapper and Graph Curve, are code drafts
 **awaiting James / Figma**.
 
 ## Known gaps / next steps
