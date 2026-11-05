@@ -1235,7 +1235,7 @@ defNode('params/graph', {
     const xs = scatter ? X : ys.map((_, i) => i);
     const n = Math.min(xs.length, ys.length, 2000);
     if (!n) {
-      g.fillStyle = 'rgba(255,255,255,0.25)';
+      g.fillStyle = Theme.ink(0.25);
       g.font = '10px Consolas, ui-monospace, monospace';
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText('no data', W / 2, H / 2);
@@ -1259,7 +1259,7 @@ defNode('params/graph', {
     const px = x => pad + (x - x0) / (x1 - x0) * (W - pad * 2);
     const py = y => H - pad - (y - y0) / (y1 - y0) * (H - pad * 2);
     /* zero axes, faint, when zero is in range */
-    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 1;
+    g.strokeStyle = Theme.ink(0.12); g.lineWidth = 1;
     if (y0 < 0 && y1 > 0) { g.beginPath(); g.moveTo(pad, py(0)); g.lineTo(W - pad, py(0)); g.stroke(); }
     if (x0 < 0 && x1 > 0) { g.beginPath(); g.moveTo(px(0), pad); g.lineTo(px(0), H - pad); g.stroke(); }
     g.strokeStyle = '#3e9aff'; g.fillStyle = '#3e9aff'; g.lineWidth = 1.4;
@@ -1274,7 +1274,7 @@ defNode('params/graph', {
       g.fill();
     }
     /* range readout, corners */
-    g.fillStyle = 'rgba(255,255,255,0.3)';
+    g.fillStyle = Theme.ink(0.3);
     g.font = '8.5px Consolas, ui-monospace, monospace';
     g.textAlign = 'left'; g.textBaseline = 'bottom';
     g.fillText(LM.fmt(y0), 2, H - 1);
@@ -1363,7 +1363,7 @@ defNode('params/timegraph', {
     }
     lines = Math.min(lines, MAXL); // a lowered line count applies to history too
     if (!lines) {
-      g.fillStyle = 'rgba(255,255,255,0.25)';
+      g.fillStyle = Theme.ink(0.25);
       g.font = '10px Consolas, ui-monospace, monospace';
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText('no data', W / 2, H / 2);
@@ -1373,7 +1373,7 @@ defNode('params/timegraph', {
     const pad = 7, t0 = tg.t - SPAN;
     const px = t => pad + (t - t0) / SPAN * (W - pad * 2);
     const py = y => H - pad - (y - y0) / (y1 - y0) * (H - pad * 2);
-    g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 1;
+    g.strokeStyle = Theme.ink(0.12); g.lineWidth = 1;
     if (y0 < 0 && y1 > 0) { g.beginPath(); g.moveTo(pad, py(0)); g.lineTo(W - pad, py(0)); g.stroke(); }
     const pal = ['#3e9aff', '#5eead4', '#fbbb00', '#fb6c09', '#d730f8', '#8cff14', '#ff3b41', '#8ea4c3'];
     g.lineWidth = 1.4; g.lineJoin = 'round';
@@ -1394,7 +1394,7 @@ defNode('params/timegraph', {
         g.beginPath(); g.arc(px(last.t), py(last.v[k]), 2, 0, LM.TAU); g.fill();
       }
     }
-    g.fillStyle = 'rgba(255,255,255,0.3)';
+    g.fillStyle = Theme.ink(0.3);
     g.font = '8.5px Consolas, ui-monospace, monospace';
     g.textAlign = 'left'; g.textBaseline = 'bottom';
     g.fillText(LM.fmt(y0), 2, H - 1);

@@ -425,11 +425,11 @@ const Viewport = {
         const hot = n === anchorDrag || n === anchorHot;
         // a selected anchor goes selection-green like any other geometry
         const sel = selIds.has(n.id);
-        const ring = sel ? (hot ? '#4ade80' : 'rgba(74,222,128,0.9)') : hot ? '#5eead4' : 'rgba(94,234,212,0.75)';
-        const ticks = sel ? (hot ? '#4ade80' : 'rgba(74,222,128,0.6)') : hot ? '#5eead4' : 'rgba(94,234,212,0.45)';
+        const ring = sel ? Theme.sel(hot ? 1 : 0.9) : Theme.accent(hot ? 1 : 0.75);
+        const ticks = sel ? Theme.sel(hot ? 1 : 0.6) : Theme.accent(hot ? 1 : 0.45);
         g2.beginPath();
         g2.arc(x, y, 6.5 * iz, 0, Math.PI * 2);
-        g2.fillStyle = sel ? 'rgba(74,222,128,0.18)' : 'rgba(11,14,20,0.85)';
+        g2.fillStyle = sel ? Theme.sel(0.18) : Theme.anchorFill;
         g2.fill();
         g2.strokeStyle = ring;
         g2.lineWidth = (hot || sel ? 2 : 1.5) * iz;
@@ -445,7 +445,7 @@ const Viewport = {
         if (hot) {
           g2.font = (10 * iz) + 'px ui-monospace, Consolas, monospace';
           g2.textAlign = 'left'; g2.textBaseline = 'bottom';
-          g2.fillStyle = 'rgba(94,234,212,0.9)';
+          g2.fillStyle = Theme.accent(0.9);
           g2.fillText(Math.round(x) + ', ' + Math.round(y), x + 12 * iz, y - 8 * iz);
         }
       }
@@ -508,7 +508,7 @@ const Viewport = {
       }
 
       g2.setTransform(dpr, 0, 0, dpr, 0, 0);
-      g2.fillStyle = '#0b0e14';
+      g2.fillStyle = Theme.cloth;
       g2.fillRect(0, 0, rect.width, rect.height);
       LM.fillBg(g2, ctx.bg, rect.width, rect.height); // a color or a paint
       g2.save();
@@ -524,14 +524,14 @@ const Viewport = {
       if (Viewport.camActive()) {
         const iz = 1 / cam.z;
         g2.save();
-        g2.strokeStyle = 'rgba(94,234,212,0.5)';
+        g2.strokeStyle = Theme.accent(0.5);
         g2.lineWidth = iz;
         g2.setLineDash([6 * iz, 5 * iz]);
         g2.strokeRect(-rect.width / 2, -rect.height / 2, rect.width, rect.height);
         g2.setLineDash([]);
         g2.font = (10 * iz) + 'px ui-monospace, Consolas, monospace';
         g2.textAlign = 'left'; g2.textBaseline = 'bottom';
-        g2.fillStyle = 'rgba(94,234,212,0.7)';
+        g2.fillStyle = Theme.accent(0.7);
         g2.fillText('stage ' + Math.round(rect.width) + '×' + Math.round(rect.height),
           -rect.width / 2, -rect.height / 2 - 6 * iz);
         g2.restore();
@@ -554,7 +554,7 @@ const Viewport = {
         const trackH = rect.height - 24;
         const thumbH = Math.max(28, trackH * rect.height / (scroll.max + rect.height));
         const y = 12 + (trackH - thumbH) * (scroll.y / scroll.max);
-        g2.fillStyle = 'rgba(94,234,212,' + alpha.toFixed(3) + ')';
+        g2.fillStyle = Theme.accent(alpha.toFixed(3));
         g2.fillRect(rect.width - 5, y, 3, thumbH);
       }
 
