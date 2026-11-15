@@ -428,6 +428,17 @@ is now in, so any of these can be picked up in a workshop pass):
     in the head folds the panel to a 36px strip at the loom's left (label,
     faders glyph, count) that a click reopens — remembered per browser in
     `weft:paramsStrip`, desktop only (on a phone the panel is the loom).
+  - [shipped v0.25.2, 2026-11-15] params panel polish: the wheel scrolls the
+    list instead of zooming the loom; rows are flat plates (no category
+    gradient) and tighter, with names in the loom's small-caps label style;
+    the grid is four columns and each control takes what its widget needs
+    (switch / swatch / button / dial one, anchor and pads two or three,
+    slider and text list the row — the text box fills it); the kind of
+    control is a hover tooltip, not an eyebrow; a double-click on a name
+    renames it in place (an unnamed control offers a faint "name" on
+    hover) and a double-click on a control opens its options sheet as on
+    the loom, laid across the list. On the loom, a slider tick that lands
+    exactly on max is now drawn (the tick layers run 1px past the rule).
   - [shipped v0.19.3, 2026-09-18] **wire mode** on touch: a tap on a port
     arms it (a slow pulse in its type color, a tip saying *now tap an
     input*), the loom pans and pinches freely, and the next tap on a port

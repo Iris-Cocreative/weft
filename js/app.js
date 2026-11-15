@@ -1668,9 +1668,14 @@ const App = {
       App._params = sheet;
       return;
     }
-    // a slider wants the full width; a dial, a toggle, a swatch, a button sit three to a row
-    const COMPACT = new Set(['params/angle', 'params/knob', 'params/toggle', 'params/swatch', 'params/button']);
-    // sliders, knobs and angles carry their own label widget — the rest get a name line
+    // the list is a four-column grid and each control takes the columns its widget
+    // needs: a switch, a swatch, a button or a dial one, a pad two or three, and a
+    // slider or a text list the whole row — so short controls pack side by side
+    const SPAN = {
+      'params/toggle': 1, 'params/swatch': 1, 'params/button': 1, 'params/knob': 1, 'params/angle': 1,
+      'params/anchor': 2, 'params/vecdial': 2, 'params/xyslider': 2, 'params/xyzslider': 3
+    };
+    // sliders, knobs, angles and pads carry their own label widget — the rest get a name line
     const OWN_LABEL = new Set(['params/slider', 'params/knob', 'params/angle', 'params/vecdial', 'params/xyslider', 'params/xyzslider']);
     sheet.innerHTML = `<div class="pm-head"><span class="pm-title">params</span><span class="pm-count">${countText}</span><button class="pm-min" title="fold to a strip">‹</button><button class="pm-x" title="back to the loom">✕</button></div><div class="pm-list"></div>`;
     const list = sheet.querySelector('.pm-list');
@@ -1697,28 +1702,44 @@ const App = {
       for (const n of sec.nodes) {
         const def = NODE_DEFS[n.type];
         const row = document.createElement('div');
-        row.className = 'pm-row ' + (COMPACT.has(n.type) ? 'compact' : 'wide');
+        const span = SPAN[n.type] || 4, own = OWN_LABEL.has(n.type);
+        row.className = 'pm-row' + (span < 4 ? ' cell s' + span : '');
         row.dataset.id = n.id;
-        row.style.setProperty('--cat', CATS[def.cat] || '#6b7891');
-        const lab = document.createElement('div');
-        lab.className = 'pm-label';
-        lab.textContent = def.title; // the eyebrow: what kind of control
-        row.appendChild(lab);
-        const name = n.label || (n.values && n.values.label);
-        if (name && !OWN_LABEL.has(n.type)) {
-          const nm = document.createElement('div');
-          nm.className = 'pm-name';
-          nm.textContent = name;
-          row.appendChild(nm);
+        row.dataset.type = n.type;
+        row.title = def.title; // what kind of control it is, on hover only
+        const touched = () => { App._paramsDirty.add(n.id); App._paramsSelfAt = performance.now(); App.onGraphChanged(); };
+        let nameEl = null;
+        if (!own) {
+          nameEl = document.createElement('div');
+          nameEl.className = 'pm-name';
+          nameEl.textContent = n.label || (n.values && n.values.label) || '';
+          row.appendChild(nameEl);
         }
         const body = document.createElement('div');
         body.className = 'node-body pm-body';
         row.appendChild(body);
-        def.buildBody(n, body, () => { App._paramsDirty.add(n.id); App._paramsSelfAt = performance.now(); App.onGraphChanged(); });
+        def.buildBody(n, body, touched);
+        if (own) nameEl = body.querySelector('.sl-label');
+        if (nameEl) App.pmNameEdit(nameEl, n, own, touched);
         list.appendChild(row);
       }
     }
     if (!count) list.innerHTML = '<p class="pm-empty">no controls on the loom yet — add a slider, knob, toggle, swatch or button and it shows up here.</p>';
+    /* a double-click opens the control's own options sheet, as on the loom. There it
+     * hangs under the card; here it hangs under the row, across the list's width, so
+     * a one-column cell still gets a sheet wide enough to use */
+    new MutationObserver(muts => {
+      for (const m of muts) for (const op of m.addedNodes) {
+        if (!op.classList || !op.classList.contains('sl-opts')) continue;
+        const row = op.closest('.pm-row');
+        if (!row) continue;
+        const lr = list.getBoundingClientRect(), rr = row.getBoundingClientRect();
+        op.style.left = (lr.left + 10 - rr.left - 1) + 'px';
+        op.style.right = 'auto';
+        op.style.width = (list.clientWidth - 20) + 'px';
+        op.scrollIntoView({ block: 'nearest' });
+      }
+    }).observe(list, { childList: true, subtree: true });
     sheet.querySelector('.pm-x').addEventListener('click', () => App.toggleParams(false));
     sheet.querySelector('.pm-min').addEventListener('click', () => App.stripParams(true));
     sheet.addEventListener('pointerdown', e => e.stopPropagation()); // the loom's gestures stop at the sheet
@@ -1727,6 +1748,43 @@ const App = {
     ed.classList.remove('params-strip');
     App._params = sheet;
     if (scrollTop) list.scrollTop = scrollTop;
+  },
+
+  /* a row's name renames in place: double-click, type, Enter or click away
+   * (Escape puts it back). A control with a label widget of its own keeps the
+   * name in values.label, where its card reads it; the rest keep it on the
+   * node's label. An unnamed control shows a faint "name" while hovered. */
+  pmNameEdit(el, n, own, touched) {
+    el.classList.add('pm-edit');
+    el.title = 'double-click to rename';
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (el.isContentEditable) return;
+      const before = el.textContent;
+      el.contentEditable = 'true';
+      el.focus();
+      document.getSelection().selectAllChildren(el);
+      const key = ev => {
+        ev.stopPropagation(); // typing a name is not a loom shortcut
+        if (ev.key === 'Enter') { ev.preventDefault(); el.blur(); }
+        if (ev.key === 'Escape') { el.textContent = before; el.blur(); }
+      };
+      el.addEventListener('keydown', key);
+      el.addEventListener('blur', () => {
+        el.removeEventListener('keydown', key);
+        el.contentEditable = 'false';
+        const t = el.textContent.replace(/\s+/g, ' ').trim();
+        el.textContent = t;
+        el.scrollLeft = 0;
+        if (t === before) return;
+        if (own) n.values.label = t;
+        else {
+          if (t) n.label = t; else delete n.label;
+          if (n.values && n.values.label !== undefined) delete n.values.label; // the name line showed it; the new name replaces it
+        }
+        touched();
+      }, { once: true });
+    });
   },
 
   /* the viewport calls this each frame after Editor.postEval — rows whose

@@ -1558,6 +1558,9 @@ const Editor = (() => {
   }
 
   function onWheel(e) {
+    // over the open params panel the wheel scrolls its list, not the loom
+    // (ctrl+wheel there does nothing, rather than zooming the whole page)
+    if (e.target.closest && e.target.closest('#params:not(.strip)')) { if (e.ctrlKey) e.preventDefault(); return; }
     e.preventDefault();
     // merged view: ctrl+wheel zooms the cloth camera (same gesture as over the
     // cloth in split view); shift+wheel scrubs the scroll simulator instead of

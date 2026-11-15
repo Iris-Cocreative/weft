@@ -543,11 +543,12 @@ defNode('params/slider', {
  * label, or failing that what it is — in the params sheet, only a real label. */
 function _ctlHead(parent, fallback) {
   const head = _mk('div', 'ctl-head', parent);
-  head.title = 'drag to move';
+  const inSheet = !!parent.closest('.pm-body'); // nothing to drag there, and no stand-in name
+  if (!inSheet) head.title = 'drag to move';
   _mk('span', 'ctl-grip', head);
   const name = _mk('span', 'sl-label ctl-name', head);
   return label => {
-    name.textContent = label || fallback;
+    name.textContent = label || (inSheet ? '' : fallback);
     head.classList.toggle('unnamed', !label);
   };
 }
