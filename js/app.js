@@ -1733,6 +1733,12 @@ const App = {
         def.buildBody(n, body, touched);
         if (own) nameEl = body.querySelector('.sl-label');
         if (nameEl) App.pmNameEdit(nameEl, n, own, touched);
+        // right-click a row: find its card on the loom
+        row.addEventListener('contextmenu', e => {
+          if (e.target.closest('input, textarea, [contenteditable="true"]')) return; // fields keep the browser's menu
+          e.preventDefault(); e.stopPropagation();
+          Editor.menu(e, [['Go to card on the loom', () => App.pmGoTo(n.id)]]);
+        });
         list.appendChild(row);
       }
     }
@@ -1754,12 +1760,22 @@ const App = {
     }).observe(list, { childList: true, subtree: true });
     sheet.querySelector('.pm-x').addEventListener('click', () => App.toggleParams(false));
     sheet.querySelector('.pm-min').addEventListener('click', () => App.stripParams(true));
-    sheet.addEventListener('pointerdown', e => e.stopPropagation()); // the loom's gestures stop at the sheet
+    sheet.addEventListener('pointerdown', e => { e.stopPropagation(); Editor.closeCtx(); }); // the loom's gestures stop at the sheet
     ed.appendChild(sheet);
     ed.classList.add('params-open');
     ed.classList.remove('params-strip');
     App._params = sheet;
     if (scrollTop) list.scrollTop = scrollTop;
+  },
+
+  /* from a row to its card: the card is selected and centered in the loom that
+   * shows beside the docked panel. On a phone the panel is the whole loom, so it
+   * closes first. The card catches up on anything turned in the panel on the way. */
+  pmGoTo(id) {
+    if (App.isMobile()) App.toggleParams(false);
+    else if (App._paramsDirty && App._paramsDirty.delete(id)) Editor.rebuildNode(id);
+    const p = App._params, ed = document.getElementById('editor');
+    Editor.goTo(id, p ? p.getBoundingClientRect().right - ed.getBoundingClientRect().left : 0);
   },
 
   /* a row's name renames in place: double-click, type, Enter or click away

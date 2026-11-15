@@ -439,6 +439,9 @@ is now in, so any of these can be picked up in a workshop pass):
     hover) and a double-click on a control opens its options sheet as on
     the loom, laid across the list. On the loom, a slider tick that lands
     exactly on max is now drawn (the tick layers run 1px past the rule).
+    Short controls pack together within a section, and a right-click on a
+    row offers *Go to card on the loom* (selects and centers the card
+    beside the docked panel, unfolding its group if need be).
   - [shipped v0.19.3, 2026-09-18] **wire mode** on touch: a tap on a port
     arms it (a slow pulse in its type color, a tip saying *now tap an
     input*), the loom pans and pinches freely, and the next tap on a port

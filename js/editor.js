@@ -2411,6 +2411,46 @@ const Editor = (() => {
     },
     redrawWires: drawWires,
     pickColor,
+    closeCtx,
+
+    /* a one-off menu at the pointer for something that is not a loom card (a row
+     * in the params panel): items are [label, fn] pairs */
+    menu(e, items) {
+      const r = editorEl.getBoundingClientRect();
+      ctxEl.classList.remove('hidden');
+      ctxEl.style.left = (e.clientX - r.left) + 'px';
+      ctxEl.style.top = (e.clientY - r.top) + 'px';
+      ctxEl.innerHTML = '';
+      items.forEach((it, i) => {
+        const d = document.createElement('div');
+        d.className = 'ctx-item'; d.dataset.i = i; d.textContent = it[0];
+        ctxEl.appendChild(d);
+      });
+      ctxEl.onpointerdown = ev => {
+        ev.stopPropagation();
+        const it = items[ev.target.dataset && ev.target.dataset.i];
+        closeCtx();
+        if (it) it[1]();
+      };
+    },
+
+    /* bring a card to the middle of the visible loom and select it. `left` is how
+     * much of the loom's left edge something is covering (the docked params panel).
+     * A folded group hiding the card unfolds; a far-out zoom comes in to a size
+     * you can read, a comfortable one stays as it is. */
+    goTo(id, left) {
+      const n = nodeById(id);
+      if (!n) return;
+      const f = hiddenBy(id);
+      if (f) setFold(f.id, false);
+      const el = S.els.get(id), r = editorEl.getBoundingClientRect(), off = left || 0;
+      S.zoom = Math.max(S.zoom, 0.7);
+      S.pan.x = off + (r.width - off) / 2 - (n.x + (el ? el.offsetWidth : 140) / 2) * S.zoom;
+      S.pan.y = r.height / 2 - (n.y + (el ? el.offsetHeight : 90) / 2) * S.zoom;
+      applyTransform();
+      selectOnly(id);
+      drawWires();
+    },
 
     /* rebuild one node's card in place — dynamic-port nodes (Custom JS) edit
      * their own ports; wires to a port that no longer exists are pruned */
