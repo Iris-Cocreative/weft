@@ -1699,7 +1699,19 @@ const App = {
         list.appendChild(h);
       }
       if (folded) continue;
+      /* pack the section: a short control joins the first line above it that still
+       * has room, so a switch, a slider and a swatch come out as switch + swatch on
+       * one line and the slider under them, instead of three lines with holes.
+       * Reading order holds within a line and for everything that takes a whole one. */
+      const lines = [];
       for (const n of sec.nodes) {
+        const span = SPAN[n.type] || 4;
+        let line = lines.find(l => l.free >= span);
+        if (!line) { line = { free: 4, nodes: [] }; lines.push(line); }
+        line.free -= span;
+        line.nodes.push(n);
+      }
+      for (const n of lines.flatMap(l => l.nodes)) {
         const def = NODE_DEFS[n.type];
         const row = document.createElement('div');
         const span = SPAN[n.type] || 4, own = OWN_LABEL.has(n.type);
